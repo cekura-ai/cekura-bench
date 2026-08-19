@@ -1,0 +1,14 @@
+{
+  "name": "cekura-benchmarks",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Open-source runner for Cekura voice-agent benchmark scenarios.",
+  "type": "module",
+  "scripts": {
+    "benchmark": "node bin/run-benchmark.mjs",
+    "validate": "node bin/run-benchmark.mjs --validate"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

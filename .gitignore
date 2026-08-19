@@ -1,0 +1,6 @@
+node_modules/
+.env
+benchmark.config.json
+data/
+*.log
+

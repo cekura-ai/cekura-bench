@@ -1,11 +1,15 @@
 {
   "projectId": 1234,
   "catalogAgentId": 5678,
-  "targetAgentId": 9012,
   "agentNumber": "+15555550100",
+  "suite": "appointments",
+  "agentSetup": {
+    "provider": "vapi",
+    "providerAgentId": "your-vapi-assistant-id"
+  },
   "frequency": 3,
   "concurrencyLimit": 5,
+  "watchResults": true,
   "numberMode": "different_numbers",
   "name": "My provider Benchmark v1"
 }
-

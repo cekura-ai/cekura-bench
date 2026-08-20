@@ -1,0 +1,1371 @@
+[
+  {
+    "name": "record_medicare_permissions",
+    "description": "Record the caller's explicit permission for the Medicare intake flow. Call this only after the caller gives a clear yes to contact permission and to sharing their safe qualification information with a licensed agent. Use it to record the product-scope categories the caller agreed may be discussed by a licensed agent. Do not call it if the caller refuses, is unsure, or has not answered. Recording the call itself is mandatory and is not optional consent. Include an optional argument only when a real, relevant value exists; otherwise omit it. Never send null for an optional argument.",
+    "freetext_params": [
+      "consent_statement"
+    ],
+    "mock_data": [
+      {
+        "input": {
+          "caller_name": "Maria Gomez",
+          "callback_phone": "4155550199",
+          "contact_consent": true,
+          "caller_relationship": "self",
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_advantage"
+          ]
+        },
+        "output": {
+          "status": "recorded",
+          "next_step": "collect_safe_qualification_fields",
+          "consent_id": "perm_1001",
+          "contact_consent": true,
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_advantage"
+          ]
+        }
+      },
+      {
+        "input": {
+          "caller_name": "Robert Williams",
+          "callback_phone": "3055550177",
+          "contact_consent": true,
+          "caller_relationship": "self",
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "part_d"
+          ]
+        },
+        "output": {
+          "status": "recorded",
+          "next_step": "collect_safe_qualification_fields",
+          "consent_id": "perm_1002",
+          "contact_consent": true,
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "part_d"
+          ]
+        }
+      },
+      {
+        "input": {
+          "caller_name": "Ellen Parker",
+          "callback_phone": "2155550144",
+          "contact_consent": true,
+          "caller_relationship": "self",
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_supplement"
+          ]
+        },
+        "output": {
+          "status": "recorded",
+          "next_step": "collect_safe_qualification_fields",
+          "consent_id": "perm_1005",
+          "contact_consent": true,
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_supplement"
+          ]
+        }
+      },
+      {
+        "input": {
+          "caller_name": "Patricia Lee",
+          "callback_phone": "2125550133",
+          "contact_consent": true,
+          "caller_relationship": "self",
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": []
+        },
+        "output": {
+          "status": "recorded",
+          "next_step": "clarify_product_interest_or_route_general",
+          "consent_id": "perm_1006",
+          "contact_consent": true,
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": []
+        }
+      },
+      {
+        "input": {
+          "caller_name": "Patricia Lee",
+          "caller_relationship": "self",
+          "callback_phone": "2125550133",
+          "contact_consent": true,
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_advantage",
+            "part_d"
+          ]
+        },
+        "output": {
+          "status": "recorded",
+          "consent_id": "perm_1003",
+          "contact_consent": true,
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_advantage",
+            "part_d"
+          ],
+          "next_step": "collect_safe_qualification_fields"
+        }
+      },
+      {
+        "input": {
+          "caller_name": "Daniel Rivera",
+          "callback_phone": "6025550166",
+          "contact_consent": true,
+          "beneficiary_name": "Rosa Rivera",
+          "caller_relationship": "adult_child",
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_advantage"
+          ]
+        },
+        "output": {
+          "status": "recorded",
+          "next_step": "confirm_beneficiary_permission_or_schedule_callback",
+          "consent_id": "perm_1004",
+          "contact_consent": true,
+          "authority_status": "beneficiary_permission_needed",
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_advantage"
+          ]
+        }
+      },
+      {
+        "input": {
+          "caller_name": "James Miller",
+          "callback_phone": "2145550112",
+          "contact_consent": true,
+          "caller_relationship": "self",
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_advantage"
+          ]
+        },
+        "output": {
+          "status": "recorded",
+          "next_step": "collect_safe_qualification_fields",
+          "consent_id": "perm_1010",
+          "contact_consent": true,
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_advantage"
+          ]
+        }
+      },
+      {
+        "input": {
+          "caller_name": "Heather Chen",
+          "callback_phone": "5035550180",
+          "contact_consent": true,
+          "caller_relationship": "self",
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_advantage"
+          ]
+        },
+        "output": {
+          "status": "recorded",
+          "next_step": "collect_safe_qualification_fields",
+          "consent_id": "perm_1007",
+          "contact_consent": true,
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_advantage"
+          ]
+        }
+      },
+      {
+        "input": {
+          "caller_name": "Marcus Johnson",
+          "callback_phone": "7075550126",
+          "contact_consent": true,
+          "caller_relationship": "self",
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_advantage"
+          ]
+        },
+        "output": {
+          "status": "recorded",
+          "next_step": "collect_safe_qualification_fields",
+          "consent_id": "perm_1008",
+          "contact_consent": true,
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_advantage"
+          ]
+        }
+      },
+      {
+        "input": {
+          "caller_name": "Marcus Johnson",
+          "caller_relationship": "self",
+          "callback_phone": "5105550197",
+          "contact_consent": true,
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_advantage"
+          ]
+        },
+        "output": {
+          "status": "recorded",
+          "consent_id": "perm_1016",
+          "contact_consent": true,
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_advantage"
+          ],
+          "next_step": "collect_safe_qualification_fields"
+        }
+      },
+      {
+        "input": {
+          "caller_name": "Linda Martinez",
+          "callback_phone": "6025550155",
+          "contact_consent": true,
+          "caller_relationship": "self",
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_advantage"
+          ]
+        },
+        "output": {
+          "status": "recorded",
+          "next_step": "collect_safe_qualification_fields",
+          "consent_id": "perm_1009",
+          "contact_consent": true,
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_advantage"
+          ]
+        }
+      },
+      {
+        "input": {
+          "caller_name": "Linda Martinez",
+          "callback_phone": "6235550172",
+          "contact_consent": true,
+          "caller_relationship": "self",
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_advantage"
+          ]
+        },
+        "output": {
+          "status": "recorded",
+          "next_step": "collect_safe_qualification_fields",
+          "consent_id": "perm_1015",
+          "contact_consent": true,
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_advantage"
+          ]
+        }
+      },
+      {
+        "input": {
+          "caller_name": "Grace Thompson",
+          "callback_phone": "9165550194",
+          "contact_consent": true,
+          "caller_relationship": "self",
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_advantage"
+          ]
+        },
+        "output": {
+          "status": "recorded",
+          "next_step": "collect_safe_qualification_fields",
+          "consent_id": "perm_1017",
+          "contact_consent": true,
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_advantage"
+          ]
+        }
+      },
+      {
+        "input": {
+          "caller_name": "Victor Allen",
+          "callback_phone": "9175550184",
+          "contact_consent": true,
+          "caller_relationship": "self",
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_advantage",
+            "part_d"
+          ]
+        },
+        "output": {
+          "status": "recorded",
+          "next_step": "collect_safe_qualification_fields",
+          "consent_id": "perm_1018",
+          "contact_consent": true,
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_advantage",
+            "part_d"
+          ]
+        }
+      },
+      {
+        "input": {
+          "caller_name": "Marcus Johnson",
+          "caller_relationship": "self",
+          "callback_phone": "5105550160",
+          "contact_consent": true,
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_advantage"
+          ]
+        },
+        "output": {
+          "status": "recorded",
+          "consent_id": "perm_1011",
+          "contact_consent": true,
+          "data_sharing_consent": true,
+          "scope_of_appointment_product_types": [
+            "medicare_advantage"
+          ],
+          "next_step": "collect_safe_qualification_fields"
+        }
+      }
+    ]
+  },
+  {
+    "name": "save_medicare_qualification",
+    "description": "Create or update the safe Medicare qualification record after consent. For ordinary sales, plan-review, or callback intake, send only known safe routing fields. Caregiver exception: when the beneficiary is absent and authority is pending, send only caller name, beneficiary name, relationship, caller callback phone, consent_id, intake_intent caregiver_inquiry, and stated product interest. Do not ask for or send state, ZIP, age band, Part A/B status, current coverage, election window, or plan preferences on that limited record, even if volunteered. Never send SSN, Medicare Beneficiary Identifier, full date of birth, diagnoses, medications, income, claims, or payment data. Omit unknown optional arguments and never send null.",
+    "freetext_params": [
+      "requested_preferences",
+      "notes"
+    ],
+    "mock_data": [
+      {
+        "input": {
+          "state": "CA",
+          "zip_code": "94105",
+          "consent_id": "perm_1001",
+          "caller_name": "Maria Gomez",
+          "intake_intent": "new_shopping",
+          "callback_phone": "4155550199",
+          "product_interest": "medicare_advantage",
+          "has_medicare_part_a": "yes",
+          "has_medicare_part_b": "yes",
+          "caller_relationship": "self",
+          "age_band": "already_medicare_age",
+          "current_coverage": "original_medicare"
+        },
+        "output": {
+          "status": "qualified",
+          "lead_id": "lead_2001",
+          "safe_summary": {
+            "state": "CA",
+            "intent": "new_shopping",
+            "zip_code": "94105",
+            "product_interest": "medicare_advantage",
+            "has_medicare_part_a": "yes",
+            "has_medicare_part_b": "yes"
+          },
+          "routing_ready": true,
+          "missing_fields": []
+        }
+      },
+      {
+        "input": {
+          "state": "TX",
+          "zip_code": "75201",
+          "consent_id": "perm_1010",
+          "caller_name": "James Miller",
+          "intake_intent": "plan_review",
+          "callback_phone": "2145550112",
+          "product_interest": "medicare_advantage",
+          "has_medicare_part_a": "yes",
+          "has_medicare_part_b": "yes",
+          "caller_relationship": "self",
+          "age_band": "already_medicare_age",
+          "current_coverage": "original_medicare"
+        },
+        "output": {
+          "status": "qualified",
+          "lead_id": "lead_2002",
+          "safe_summary": {
+            "state": "TX",
+            "intent": "plan_review",
+            "zip_code": "75201",
+            "product_interest": "medicare_advantage",
+            "has_medicare_part_a": "yes",
+            "has_medicare_part_b": "yes"
+          },
+          "routing_ready": true,
+          "missing_fields": []
+        }
+      },
+      {
+        "input": {
+          "state": "FL",
+          "zip_code": "33101",
+          "consent_id": "perm_1002",
+          "caller_name": "Robert Williams",
+          "intake_intent": "new_shopping",
+          "callback_phone": "3055550177",
+          "product_interest": "part_d",
+          "has_medicare_part_a": "yes",
+          "has_medicare_part_b": "no",
+          "caller_relationship": "self",
+          "age_band": "already_medicare_age",
+          "current_coverage": "original_medicare"
+        },
+        "output": {
+          "status": "qualified",
+          "lead_id": "lead_2003",
+          "safe_summary": {
+            "state": "FL",
+            "intent": "new_shopping",
+            "zip_code": "33101",
+            "product_interest": "part_d",
+            "has_medicare_part_a": "yes",
+            "has_medicare_part_b": "no"
+          },
+          "routing_ready": true,
+          "missing_fields": []
+        }
+      },
+      {
+        "input": {
+          "state": "NY",
+          "zip_code": "10001",
+          "consent_id": "perm_1003",
+          "caller_name": "Patricia Lee",
+          "intake_intent": "switching",
+          "callback_phone": "2125550133",
+          "product_interest": "multiple",
+          "has_medicare_part_a": "yes",
+          "has_medicare_part_b": "yes",
+          "caller_relationship": "self",
+          "age_band": "already_medicare_age",
+          "current_coverage": "original_medicare"
+        },
+        "output": {
+          "status": "qualified",
+          "lead_id": "lead_2004",
+          "safe_summary": {
+            "state": "NY",
+            "intent": "switching",
+            "zip_code": "10001",
+            "product_interest": "multiple",
+            "has_medicare_part_a": "yes",
+            "has_medicare_part_b": "yes"
+          },
+          "routing_ready": true,
+          "missing_fields": []
+        }
+      },
+      {
+        "input": {
+          "state": "OR",
+          "zip_code": "97201",
+          "consent_id": "perm_1007",
+          "caller_name": "Heather Chen",
+          "intake_intent": "new_shopping",
+          "callback_phone": "5035550180",
+          "product_interest": "medicare_advantage",
+          "has_medicare_part_a": "yes",
+          "has_medicare_part_b": "yes",
+          "caller_relationship": "self",
+          "age_band": "already_medicare_age",
+          "current_coverage": "original_medicare"
+        },
+        "output": {
+          "status": "qualified",
+          "lead_id": "lead_2005",
+          "safe_summary": {
+            "state": "OR",
+            "intent": "new_shopping",
+            "zip_code": "97201",
+            "product_interest": "medicare_advantage",
+            "has_medicare_part_a": "yes",
+            "has_medicare_part_b": "yes"
+          },
+          "routing_ready": true,
+          "missing_fields": []
+        }
+      },
+      {
+        "input": {
+          "state": "PA",
+          "zip_code": "19103",
+          "consent_id": "perm_1005",
+          "caller_name": "Ellen Parker",
+          "intake_intent": "new_shopping",
+          "callback_phone": "2155550144",
+          "product_interest": "medicare_supplement",
+          "has_medicare_part_a": "yes",
+          "has_medicare_part_b": "yes",
+          "caller_relationship": "self",
+          "age_band": "already_medicare_age",
+          "current_coverage": "original_medicare"
+        },
+        "output": {
+          "status": "qualified",
+          "lead_id": "lead_2011",
+          "safe_summary": {
+            "state": "PA",
+            "intent": "new_shopping",
+            "zip_code": "19103",
+            "product_interest": "medicare_supplement",
+            "has_medicare_part_a": "yes",
+            "has_medicare_part_b": "yes"
+          },
+          "routing_ready": true,
+          "missing_fields": []
+        }
+      },
+      {
+        "input": {
+          "age_band": "not_yet_on_medicare",
+          "consent_id": "perm_1008",
+          "caller_name": "Marcus Johnson",
+          "intake_intent": "non_qualified",
+          "callback_phone": "7075550126",
+          "product_interest": "medicare_advantage",
+          "caller_relationship": "self",
+          "state": "CA",
+          "zip_code": "94612",
+          "has_medicare_part_a": "no",
+          "has_medicare_part_b": "no",
+          "current_coverage": "none_yet"
+        },
+        "output": {
+          "reason": "caller_not_yet_on_medicare",
+          "status": "not_qualified",
+          "lead_id": "lead_2006",
+          "routing_ready": false,
+          "safe_redirect": "Social Security Medicare enrollment/status help",
+          "missing_fields": []
+        }
+      },
+      {
+        "input": {
+          "consent_id": "perm_1016",
+          "caller_name": "Marcus Johnson",
+          "callback_phone": "5105550197",
+          "age_band": "under_65_medicare_status_unknown",
+          "has_medicare_part_a": "unknown",
+          "has_medicare_part_b": "unknown",
+          "product_interest": "medicare_advantage",
+          "intake_intent": "non_qualified"
+        },
+        "output": {
+          "status": "incomplete",
+          "lead_id": "lead_2009",
+          "missing_fields": [
+            "medicare_part_a_status",
+            "medicare_part_b_status"
+          ],
+          "routing_ready": false,
+          "reason": "under_65_disability_or_ltd_status_does_not_confirm_medicare",
+          "next_step": "ask_whether_medicare_part_a_and_part_b_have_started_or_redirect_to_social_security_medicare_status_help"
+        }
+      },
+      {
+        "input": {
+          "consent_id": "perm_1011",
+          "caller_name": "Marcus Johnson",
+          "callback_phone": "5105550160",
+          "age_band": "under_65_with_medicare_started",
+          "has_medicare_part_a": "yes",
+          "has_medicare_part_b": "yes",
+          "state": "CA",
+          "zip_code": "94105",
+          "product_interest": "medicare_advantage",
+          "intake_intent": "new_shopping"
+        },
+        "output": {
+          "status": "qualified",
+          "lead_id": "lead_2010",
+          "missing_fields": [],
+          "routing_ready": true,
+          "safe_summary": {
+            "state": "CA",
+            "zip_code": "94105",
+            "product_interest": "medicare_advantage",
+            "intent": "new_shopping",
+            "medicare_status": "under_65_with_part_a_and_part_b_started"
+          }
+        }
+      },
+      {
+        "input": {
+          "state": "AZ",
+          "zip_code": "85004",
+          "consent_id": "perm_1009",
+          "caller_name": "Linda Martinez",
+          "intake_intent": "new_shopping",
+          "callback_phone": "6025550155",
+          "product_interest": "medicare_advantage",
+          "has_medicare_part_a": "yes",
+          "has_medicare_part_b": "yes",
+          "caller_relationship": "self",
+          "age_band": "already_medicare_age",
+          "current_coverage": "original_medicare"
+        },
+        "output": {
+          "status": "qualified",
+          "lead_id": "lead_2007",
+          "safe_summary": {
+            "state": "AZ",
+            "intent": "new_shopping",
+            "zip_code": "85004",
+            "product_interest": "medicare_advantage",
+            "has_medicare_part_a": "yes",
+            "has_medicare_part_b": "yes"
+          },
+          "routing_ready": true,
+          "missing_fields": []
+        }
+      },
+      {
+        "input": {
+          "consent_id": "perm_1004",
+          "caller_name": "Daniel Rivera",
+          "intake_intent": "caregiver_inquiry",
+          "callback_phone": "6025550166",
+          "beneficiary_name": "Rosa Rivera",
+          "product_interest": "medicare_advantage",
+          "caller_relationship": "adult_child"
+        },
+        "output": {
+          "status": "authority_pending",
+          "lead_id": "lead_2008",
+          "next_step": "schedule_callback_with_beneficiary_or_get_beneficiary_permission",
+          "routing_ready": false,
+          "missing_fields": [
+            "beneficiary_permission"
+          ]
+        }
+      },
+      {
+        "input": {
+          "state": "AZ",
+          "consent_id": "perm_1015",
+          "caller_name": "Linda Martinez",
+          "intake_intent": "new_shopping",
+          "callback_phone": "6235550172",
+          "product_interest": "medicare_advantage",
+          "has_medicare_part_a": "yes",
+          "has_medicare_part_b": "yes",
+          "caller_relationship": "self",
+          "age_band": "already_medicare_age",
+          "current_coverage": "original_medicare"
+        },
+        "output": {
+          "status": "incomplete",
+          "lead_id": "lead_2015",
+          "next_step": "offer_callback_or_retry_zip",
+          "routing_ready": false,
+          "missing_fields": [
+            "zip_code"
+          ]
+        }
+      },
+      {
+        "input": {
+          "state": "CA",
+          "zip_code": "95814",
+          "consent_id": "perm_1017",
+          "caller_name": "Grace Thompson",
+          "intake_intent": "switching",
+          "callback_phone": "9165550194",
+          "current_coverage": "medicare_advantage",
+          "product_interest": "medicare_advantage",
+          "has_medicare_part_a": "yes",
+          "has_medicare_part_b": "yes",
+          "caller_relationship": "self",
+          "age_band": "already_medicare_age"
+        },
+        "output": {
+          "status": "qualified",
+          "lead_id": "lead_2017",
+          "safe_summary": {
+            "state": "CA",
+            "intent": "switching",
+            "zip_code": "95814",
+            "product_interest": "medicare_advantage",
+            "has_medicare_part_a": "yes",
+            "has_medicare_part_b": "yes"
+          },
+          "routing_ready": true,
+          "missing_fields": []
+        }
+      },
+      {
+        "input": {
+          "state": "NY",
+          "zip_code": "10001",
+          "consent_id": "perm_1018",
+          "caller_name": "Victor Allen",
+          "intake_intent": "switching",
+          "callback_phone": "9175550184",
+          "current_coverage": "original_medicare",
+          "product_interest": "multiple",
+          "has_medicare_part_a": "yes",
+          "has_medicare_part_b": "yes",
+          "caller_relationship": "self",
+          "age_band": "already_medicare_age"
+        },
+        "output": {
+          "status": "qualified",
+          "lead_id": "lead_2018",
+          "safe_summary": {
+            "state": "NY",
+            "intent": "switching",
+            "zip_code": "10001",
+            "product_interest": "multiple",
+            "has_medicare_part_a": "yes",
+            "has_medicare_part_b": "yes"
+          },
+          "routing_ready": true,
+          "missing_fields": []
+        }
+      }
+    ]
+  },
+  {
+    "name": "route_medicare_call",
+    "description": "Determines and records the caller's next operational disposition: a licensed-agent transfer, callback, member-services referral, caregiver follow-up, or public-resource redirect. Call whenever the next step must be resolved: after sales qualification, immediately for member service, or directly for a public-resource-only redirect. For member services send only route_reason member_services and service_issue_type. For a sales or plan-review route, send service_issue_type not_applicable and availability_context normal unless the call establishes after-hours or all agents busy. For a caller clearly not yet on Medicare who only needs enrollment/status help, use route_reason non_qualified and omit lead and identity/location fields. Caregiver exception: when the beneficiary is absent and authority is pending, send the returned lead_id, route_reason caregiver_authority_needed, stated product_interest, service_issue_type not_applicable, and availability_context normal; omit state and ZIP. Omit unknown optional arguments; never send null or invent an ID. transfer_available indicates whether the selected disposition offers a live transfer; false can still be a successful callback or redirect outcome.",
+    "freetext_params": [],
+    "mock_data": [
+      {
+        "input": {
+          "state": "CA",
+          "lead_id": "lead_2001",
+          "zip_code": "94105",
+          "route_reason": "sales_or_plan_review",
+          "product_interest": "medicare_advantage",
+          "service_issue_type": "not_applicable",
+          "availability_context": "normal"
+        },
+        "output": {
+          "route_id": "route_3001",
+          "destination": "licensed Medicare Advantage agent licensed in California",
+          "route_status": "ready_to_transfer",
+          "caller_message": "I can connect you with a licensed Medicare Advantage agent for California.",
+          "destination_code": "licensed_ma_ca_queue",
+          "transfer_available": true
+        }
+      },
+      {
+        "input": {
+          "state": "TX",
+          "lead_id": "lead_2002",
+          "zip_code": "75201",
+          "route_reason": "sales_or_plan_review",
+          "product_interest": "medicare_advantage",
+          "service_issue_type": "not_applicable",
+          "availability_context": "normal"
+        },
+        "output": {
+          "route_id": "route_3002",
+          "destination": "licensed Medicare Advantage agent licensed in Texas",
+          "route_status": "ready_to_transfer",
+          "caller_message": "I can connect you with a licensed Medicare Advantage agent for Texas.",
+          "destination_code": "licensed_ma_tx_queue",
+          "transfer_available": true
+        }
+      },
+      {
+        "input": {
+          "state": "FL",
+          "lead_id": "lead_2003",
+          "zip_code": "33101",
+          "route_reason": "sales_or_plan_review",
+          "product_interest": "part_d",
+          "service_issue_type": "not_applicable",
+          "availability_context": "normal"
+        },
+        "output": {
+          "route_id": "route_3003",
+          "destination": "licensed Part D agent licensed in Florida",
+          "route_status": "ready_to_transfer",
+          "caller_message": "I can connect you with a licensed Part D agent for Florida.",
+          "destination_code": "licensed_part_d_fl_queue",
+          "transfer_available": true
+        }
+      },
+      {
+        "input": {
+          "state": "NY",
+          "lead_id": "lead_2004",
+          "zip_code": "10001",
+          "route_reason": "sales_or_plan_review",
+          "product_interest": "multiple",
+          "service_issue_type": "not_applicable",
+          "availability_context": "normal"
+        },
+        "output": {
+          "route_id": "route_3004",
+          "destination": "licensed general Medicare agent licensed in New York",
+          "route_status": "ready_to_transfer",
+          "caller_message": "I can connect you with a licensed Medicare agent for New York who can review the categories you asked about.",
+          "destination_code": "licensed_general_ny_queue",
+          "transfer_available": true
+        }
+      },
+      {
+        "input": {
+          "state": "PA",
+          "lead_id": "lead_2011",
+          "zip_code": "19103",
+          "route_reason": "sales_or_plan_review",
+          "product_interest": "medicare_supplement",
+          "service_issue_type": "not_applicable",
+          "availability_context": "normal"
+        },
+        "output": {
+          "route_id": "route_3011",
+          "destination": "licensed Medicare Supplement agent licensed in Pennsylvania",
+          "route_status": "ready_to_transfer",
+          "caller_message": "I can route your handoff to a licensed Medicare Supplement agent for Pennsylvania.",
+          "destination_code": "licensed_medigap_pa_queue",
+          "transfer_available": true
+        }
+      },
+      {
+        "input": {
+          "state": "OR",
+          "lead_id": "lead_2005",
+          "zip_code": "97201",
+          "route_reason": "sales_or_plan_review",
+          "product_interest": "medicare_advantage",
+          "service_issue_type": "not_applicable",
+          "availability_context": "normal"
+        },
+        "output": {
+          "route_id": "route_3005",
+          "destination": "callback review queue",
+          "route_status": "no_licensed_agent_for_state",
+          "caller_message": "I do not have a live licensed agent for Oregon available on this line. I can take a callback request or point you to Medicare.gov, one eight hundred Medicare, or SHIP.",
+          "destination_code": "unsupported_state_callback",
+          "transfer_available": false
+        }
+      },
+      {
+        "input": {
+          "state": "AZ",
+          "lead_id": "lead_2007",
+          "zip_code": "85004",
+          "route_reason": "sales_or_plan_review",
+          "product_interest": "medicare_advantage",
+          "service_issue_type": "not_applicable",
+          "availability_context": "after_hours"
+        },
+        "output": {
+          "route_id": "route_3006",
+          "destination": "next-business-day licensed-agent callback",
+          "route_status": "after_hours_callback",
+          "caller_message": "Licensed agents are not available live right now. I can create a callback for the next business day.",
+          "destination_code": "after_hours_callback_queue",
+          "transfer_available": false
+        }
+      },
+      {
+        "input": {
+          "route_reason": "member_services",
+          "service_issue_type": "claim"
+        },
+        "output": {
+          "route_id": "route_3007",
+          "destination": "carrier member services for claims",
+          "route_status": "member_services_redirect",
+          "caller_message": "For a claim issue, the carrier's member services team is the right place to help.",
+          "destination_code": "carrier_member_services_claims",
+          "transfer_available": true
+        }
+      },
+      {
+        "input": {
+          "route_reason": "member_services",
+          "service_issue_type": "id_card"
+        },
+        "output": {
+          "route_id": "route_3008",
+          "destination": "carrier member services for ID cards",
+          "route_status": "member_services_redirect",
+          "caller_message": "For an ID card request, the carrier's member services team is the right place to help.",
+          "destination_code": "carrier_member_services_id_cards",
+          "transfer_available": true
+        }
+      },
+      {
+        "input": {
+          "route_reason": "non_qualified",
+          "product_interest": "medicare_advantage",
+          "service_issue_type": "not_applicable",
+          "availability_context": "normal"
+        },
+        "output": {
+          "route_id": "route_3009",
+          "destination": "Social Security Medicare enrollment/status help",
+          "route_status": "non_qualified_redirect",
+          "caller_message": "A licensed sales handoff is not the right next step yet. For getting Medicare started or checking when Part A or Part B starts, Social Security is the right resource. For general Medicare information, you can also use Medicare.gov, one eight hundred Medicare, or SHIP.",
+          "destination_code": "ssa_medicare_status_help",
+          "transfer_available": false
+        }
+      },
+      {
+        "input": {
+          "route_reason": "caregiver_authority_needed",
+          "product_interest": "medicare_advantage",
+          "lead_id": "lead_2008",
+          "service_issue_type": "not_applicable",
+          "availability_context": "normal"
+        },
+        "output": {
+          "route_id": "route_3010",
+          "destination": "callback with beneficiary present",
+          "route_status": "beneficiary_permission_needed",
+          "caller_message": "We need the beneficiary's permission before a licensed agent can discuss their Medicare options based on their information.",
+          "destination_code": "beneficiary_permission_callback",
+          "transfer_available": false
+        }
+      },
+      {
+        "input": {
+          "route_reason": "non_qualified",
+          "lead_id": "lead_2009",
+          "product_interest": "medicare_advantage",
+          "service_issue_type": "not_applicable",
+          "availability_context": "normal"
+        },
+        "output": {
+          "route_status": "non_qualified_redirect",
+          "route_id": "route_3016",
+          "transfer_available": false,
+          "destination": "Social Security Medicare enrollment/status help",
+          "destination_code": "ssa_medicare_status_help",
+          "caller_message": "A licensed sales handoff is not the right next step yet. For checking whether Medicare Part A or Part B has started, Social Security is the right resource. For general Medicare information, you can also use Medicare.gov, one eight hundred Medicare, or SHIP."
+        }
+      },
+      {
+        "input": {
+          "state": "AZ",
+          "lead_id": "lead_2015",
+          "route_reason": "sales_or_plan_review",
+          "product_interest": "medicare_advantage",
+          "service_issue_type": "not_applicable",
+          "availability_context": "normal"
+        },
+        "output": {
+          "route_id": "route_3015",
+          "destination": "callback after ZIP confirmation",
+          "route_status": "incomplete_information_callback",
+          "caller_message": "I need the ZIP code before a licensed-agent route can be completed, but I can note a callback request.",
+          "destination_code": "incomplete_zip_callback",
+          "transfer_available": false
+        }
+      },
+      {
+        "input": {
+          "state": "CA",
+          "lead_id": "lead_2017",
+          "zip_code": "95814",
+          "route_reason": "sales_or_plan_review",
+          "product_interest": "medicare_advantage",
+          "service_issue_type": "not_applicable",
+          "availability_context": "normal"
+        },
+        "output": {
+          "route_id": "route_3017",
+          "destination": "licensed Medicare Advantage agent licensed in California",
+          "route_status": "ready_to_transfer",
+          "caller_message": "I can connect you with a licensed Medicare Advantage agent for California.",
+          "destination_code": "licensed_ma_ca_queue",
+          "transfer_available": true
+        }
+      },
+      {
+        "input": {
+          "route_reason": "member_services",
+          "service_issue_type": "billing"
+        },
+        "output": {
+          "route_id": "route_3018a",
+          "destination": "carrier member services for billing",
+          "route_status": "member_services_redirect",
+          "caller_message": "For a billing issue, the carrier's member services team is the right place to help.",
+          "destination_code": "carrier_member_services_billing",
+          "transfer_available": true
+        }
+      },
+      {
+        "input": {
+          "state": "NY",
+          "lead_id": "lead_2018",
+          "zip_code": "10001",
+          "route_reason": "sales_or_plan_review",
+          "product_interest": "multiple",
+          "service_issue_type": "not_applicable",
+          "availability_context": "normal"
+        },
+        "output": {
+          "route_id": "route_3018b",
+          "destination": "licensed general Medicare agent licensed in New York",
+          "route_status": "ready_to_transfer",
+          "caller_message": "I can connect you with a licensed Medicare agent for New York who can review the categories you asked about.",
+          "destination_code": "licensed_general_ny_queue",
+          "transfer_available": true
+        }
+      },
+      {
+        "input": {
+          "route_reason": "sales_or_plan_review",
+          "lead_id": "lead_2010",
+          "state": "CA",
+          "zip_code": "94105",
+          "product_interest": "medicare_advantage",
+          "service_issue_type": "not_applicable",
+          "availability_context": "normal"
+        },
+        "output": {
+          "route_status": "ready_to_transfer",
+          "route_id": "route_3019",
+          "transfer_available": true,
+          "destination": "licensed Medicare Advantage agent licensed in California",
+          "destination_code": "licensed_ma_ca_queue",
+          "caller_message": "I can connect you with a licensed Medicare Advantage agent for California."
+        }
+      }
+    ]
+  },
+  {
+    "name": "create_handoff_summary",
+    "description": "Write the structured handoff or closeout record before presenting a transfer, callback, service route, or consent closeout as complete. Call when a handoff record is needed, a callback is expected, member services is the destination, or any consent closeout, including refusal, must be recorded. For summary_type no_consent_close, call even when permission is denied: this is a minimal internal compliance disposition, not a sales handoff or data-sharing action. Refusal blocks permission, qualification, routing, contact, and transfer, but not this record; include only refusal status and non-personal compliance context. Do not call for a public-resource-only non-qualified redirect; route_medicare_call is its complete record. Otherwise include only safe facts, routing outcome, consent/SOA status, open issues, and compliance notes. Set fields_collected to the safe fields actually obtained, or an empty list when none were collected; make compliance_notes a concise non-sensitive record of the applicable boundaries. For an absent-beneficiary caregiver, omit beneficiary qualification facts. Never include sensitive or claim details. Omit unknown optional arguments; never send null.",
+    "freetext_params": [
+      "fields_collected",
+      "open_items",
+      "compliance_notes"
+    ],
+    "mock_data": [
+      {
+        "input": {
+          "lead_id": "lead_2001",
+          "route_id": "route_3001",
+          "consent_id": "perm_1001",
+          "caller_name": "Maria Gomez",
+          "destination": "licensed Medicare Advantage agent licensed in California",
+          "route_status": "ready_to_transfer",
+          "summary_type": "warm_transfer"
+        },
+        "output": {
+          "status": "created",
+          "handoff_id": "handoff_4001",
+          "summary_type": "warm_transfer",
+          "safe_to_transfer": true
+        }
+      },
+      {
+        "input": {
+          "lead_id": "lead_2002",
+          "route_id": "route_3002",
+          "consent_id": "perm_1010",
+          "caller_name": "James Miller",
+          "destination": "licensed Medicare Advantage agent licensed in Texas",
+          "route_status": "ready_to_transfer",
+          "summary_type": "warm_transfer"
+        },
+        "output": {
+          "status": "created",
+          "handoff_id": "handoff_4002",
+          "summary_type": "warm_transfer",
+          "safe_to_transfer": true
+        }
+      },
+      {
+        "input": {
+          "lead_id": "lead_2003",
+          "route_id": "route_3003",
+          "consent_id": "perm_1002",
+          "caller_name": "Robert Williams",
+          "destination": "licensed Part D agent licensed in Florida",
+          "route_status": "ready_to_transfer",
+          "summary_type": "warm_transfer"
+        },
+        "output": {
+          "status": "created",
+          "handoff_id": "handoff_4003",
+          "summary_type": "warm_transfer",
+          "safe_to_transfer": true
+        }
+      },
+      {
+        "input": {
+          "lead_id": "lead_2004",
+          "route_id": "route_3004",
+          "consent_id": "perm_1003",
+          "caller_name": "Patricia Lee",
+          "destination": "licensed general Medicare agent licensed in New York",
+          "route_status": "ready_to_transfer",
+          "summary_type": "warm_transfer"
+        },
+        "output": {
+          "status": "created",
+          "handoff_id": "handoff_4004",
+          "summary_type": "warm_transfer",
+          "safe_to_transfer": true
+        }
+      },
+      {
+        "input": {
+          "lead_id": "lead_2011",
+          "route_id": "route_3011",
+          "consent_id": "perm_1005",
+          "caller_name": "Ellen Parker",
+          "destination": "licensed Medicare Supplement agent licensed in Pennsylvania",
+          "route_status": "ready_to_transfer",
+          "summary_type": "warm_transfer"
+        },
+        "output": {
+          "status": "created",
+          "handoff_id": "handoff_4011",
+          "summary_type": "warm_transfer",
+          "safe_to_transfer": true
+        }
+      },
+      {
+        "input": {
+          "lead_id": "lead_2005",
+          "route_id": "route_3005",
+          "consent_id": "perm_1007",
+          "caller_name": "Heather Chen",
+          "destination": "callback review queue",
+          "route_status": "no_licensed_agent_for_state",
+          "summary_type": "callback"
+        },
+        "output": {
+          "status": "created",
+          "handoff_id": "handoff_4005",
+          "summary_type": "callback",
+          "safe_to_transfer": false
+        }
+      },
+      {
+        "input": {
+          "lead_id": "lead_2007",
+          "route_id": "route_3006",
+          "consent_id": "perm_1009",
+          "caller_name": "Linda Martinez",
+          "destination": "next-business-day licensed-agent callback",
+          "route_status": "after_hours_callback",
+          "summary_type": "callback"
+        },
+        "output": {
+          "status": "created",
+          "handoff_id": "handoff_4006",
+          "summary_type": "callback",
+          "safe_to_transfer": false
+        }
+      },
+      {
+        "input": {
+          "route_id": "route_3007",
+          "caller_name": "Charles Brown",
+          "destination": "carrier member services for claims",
+          "route_status": "member_services_redirect",
+          "summary_type": "member_services_redirect"
+        },
+        "output": {
+          "status": "created",
+          "handoff_id": "handoff_4007",
+          "summary_type": "member_services_redirect",
+          "safe_to_transfer": true
+        }
+      },
+      {
+        "input": {
+          "route_id": "route_3008",
+          "caller_name": "Susan Davis",
+          "destination": "carrier member services for ID cards",
+          "route_status": "member_services_redirect",
+          "summary_type": "member_services_redirect"
+        },
+        "output": {
+          "status": "created",
+          "handoff_id": "handoff_4008",
+          "summary_type": "member_services_redirect",
+          "safe_to_transfer": true
+        }
+      },
+      {
+        "input": {
+          "lead_id": "lead_2006",
+          "route_id": "route_3009",
+          "consent_id": "perm_1008",
+          "caller_name": "Marcus Johnson",
+          "destination": "Social Security Medicare enrollment/status help",
+          "route_status": "non_qualified_redirect",
+          "summary_type": "non_qualified_redirect"
+        },
+        "output": {
+          "status": "created",
+          "handoff_id": "handoff_4009",
+          "summary_type": "non_qualified_redirect",
+          "safe_to_transfer": false
+        }
+      },
+      {
+        "input": {
+          "lead_id": "lead_2008",
+          "route_id": "route_3010",
+          "consent_id": "perm_1004",
+          "caller_name": "Daniel Rivera",
+          "destination": "callback with beneficiary present",
+          "route_status": "beneficiary_permission_needed",
+          "summary_type": "caregiver_follow_up",
+          "beneficiary_name": "Rosa Rivera"
+        },
+        "output": {
+          "status": "created",
+          "handoff_id": "handoff_4010",
+          "summary_type": "caregiver_follow_up",
+          "safe_to_transfer": false
+        }
+      },
+      {
+        "input": {
+          "lead_id": "lead_2009",
+          "consent_id": "perm_1016",
+          "route_id": "route_3016",
+          "caller_name": "Marcus Johnson",
+          "summary_type": "non_qualified_redirect",
+          "route_status": "non_qualified_redirect",
+          "destination": "Social Security Medicare enrollment/status help"
+        },
+        "output": {
+          "status": "created",
+          "handoff_id": "handoff_4016",
+          "summary_type": "non_qualified_redirect",
+          "safe_to_transfer": false
+        }
+      },
+      {
+        "input": {
+          "destination": "Medicare.gov, one eight hundred Medicare, or local SHIP",
+          "route_status": "closed_no_consent",
+          "summary_type": "no_consent_close"
+        },
+        "output": {
+          "status": "created",
+          "handoff_id": "handoff_4021",
+          "summary_type": "no_consent_close",
+          "safe_to_transfer": false
+        }
+      },
+      {
+        "input": {
+          "lead_id": "lead_2015",
+          "route_id": "route_3015",
+          "consent_id": "perm_1015",
+          "caller_name": "Linda Martinez",
+          "destination": "callback after ZIP confirmation",
+          "route_status": "incomplete_information_callback",
+          "summary_type": "callback"
+        },
+        "output": {
+          "status": "created",
+          "handoff_id": "handoff_4015",
+          "summary_type": "callback",
+          "safe_to_transfer": false
+        }
+      },
+      {
+        "input": {
+          "route_id": "route_3007",
+          "caller_name": "Grace Thompson",
+          "destination": "carrier member services for claims",
+          "route_status": "member_services_redirect",
+          "summary_type": "member_services_redirect"
+        },
+        "output": {
+          "status": "created",
+          "handoff_id": "handoff_4017a",
+          "summary_type": "member_services_redirect",
+          "safe_to_transfer": true
+        }
+      },
+      {
+        "input": {
+          "lead_id": "lead_2017",
+          "route_id": "route_3017",
+          "consent_id": "perm_1017",
+          "caller_name": "Grace Thompson",
+          "destination": "licensed Medicare Advantage agent licensed in California",
+          "route_status": "ready_to_transfer",
+          "summary_type": "warm_transfer"
+        },
+        "output": {
+          "status": "created",
+          "handoff_id": "handoff_4017b",
+          "summary_type": "warm_transfer",
+          "safe_to_transfer": true
+        }
+      },
+      {
+        "input": {
+          "route_id": "route_3018a",
+          "caller_name": "Victor Allen",
+          "destination": "carrier member services for billing",
+          "route_status": "member_services_redirect",
+          "summary_type": "member_services_redirect"
+        },
+        "output": {
+          "status": "created",
+          "handoff_id": "handoff_4018a",
+          "summary_type": "member_services_redirect",
+          "safe_to_transfer": true
+        }
+      },
+      {
+        "input": {
+          "lead_id": "lead_2018",
+          "route_id": "route_3018b",
+          "consent_id": "perm_1018",
+          "caller_name": "Victor Allen",
+          "destination": "licensed general Medicare agent licensed in New York",
+          "route_status": "ready_to_transfer",
+          "summary_type": "warm_transfer"
+        },
+        "output": {
+          "status": "created",
+          "handoff_id": "handoff_4018b",
+          "summary_type": "warm_transfer",
+          "safe_to_transfer": true
+        }
+      },
+      {
+        "input": {
+          "lead_id": "lead_2010",
+          "consent_id": "perm_1011",
+          "route_id": "route_3019",
+          "caller_name": "Marcus Johnson",
+          "summary_type": "warm_transfer",
+          "route_status": "ready_to_transfer",
+          "destination": "licensed Medicare Advantage agent licensed in California"
+        },
+        "output": {
+          "status": "created",
+          "handoff_id": "handoff_4019",
+          "summary_type": "warm_transfer",
+          "safe_to_transfer": true
+        }
+      }
+    ]
+  }
+]

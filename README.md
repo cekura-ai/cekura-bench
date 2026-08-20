@@ -3,10 +3,6 @@
 Run Cekura's Appointment and Medicare voice-agent benchmark suites against your
 own Cekura-connected agent.
 
-## License
-
-License selection is intentionally pending before the first public push.
-
 ## What this runner does
 
 Given a Cekura API key and a local configuration, the runner:

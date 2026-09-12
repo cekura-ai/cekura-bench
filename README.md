@@ -13,8 +13,8 @@ agent's real telephony, speech, model, and tool path.
 
 Use this option first if you want to build or inspect a compatible agent. It
 does not require a Cekura account, API key, or the runner. Follow the public
-agent definition below, deploy the agent on a telephone number, and exercise
-the fixture-backed tools in your own environment.
+[agent definitions](agent-definitions/), deploy the agent on a telephone
+number, and exercise the fixture-backed tools in your own environment.
 
 ### Option 2: Run the official Cekura benchmark
 

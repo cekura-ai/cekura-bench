@@ -7,33 +7,25 @@ against an agent you configure, then records the exact launch payload and links
 to the resulting report. It is not a local simulator: calls traverse your
 agent's real telephony, speech, model, and tool path.
 
-## Reproduce a benchmark
+## Two ways to use this repository
 
-You need Node.js 20+, a Cekura project API key, a catalog agent containing the
-benchmark scenarios, and a phone number that reaches the agent under test. The
-runner has no third-party runtime dependencies.
+### Option 1: Set up a benchmark-compatible agent
 
-```bash
-git clone https://github.com/cekura-ai/cekura-bench.git
-cd cekura-bench
-cp config/benchmark.example.json benchmark.config.json
-export CEKURA_API_KEY='your-project-api-key'
-```
+Use this option first if you want to build or inspect a compatible agent. It
+does not require a Cekura account, API key, or the runner. Follow the public
+agent definition below, deploy the agent on a telephone number, and exercise
+the fixture-backed tools in your own environment.
 
-Edit `benchmark.config.json` with your IDs and target number. Start with a
-dry-run: it fetches the selected catalog scenarios and writes the resolved
-payload, but does not provision an agent or place calls.
+### Option 2: Run the official Cekura benchmark
 
-```bash
-npm run benchmark -- --config benchmark.config.json
-```
+Use this option after the agent is ready. The runner launches Cekura's private
+scenario catalog and records results in Cekura, so it requires a Cekura
+workspace, an API key, a catalog agent ID, and a reachable target number. New
+to Cekura? [Create a Cekura account](https://dashboard.cekura.ai/sign-up?utm_source=benchmarks), then obtain the project API key and benchmark catalog details from your workspace.
 
-When the output looks right, add `--execute` to provision (when applicable)
-and launch the suite.
-
-```bash
-npm run benchmark -- --config benchmark.config.json --execute
-```
+The command-line runner is a launch client, not the agent setup mechanism. Its
+dry-run is useful for inspecting the request it will make, but it still calls
+the Cekura API to read the scenario catalog.
 
 ## 1. Set up the agent under test
 
@@ -55,10 +47,22 @@ For a self-hosted or custom-provider agent, publish the completed transcript
 and native tool calls to Cekura and associate them with the run before hangup.
 Follow the [transcript-ingestion contract](docs/transcript-ingestion.md).
 
-## 2. Configure the environment and run
+## 2. Run the benchmark through Cekura
+
+Clone the repository and create a local launch configuration:
+
+```bash
+git clone https://github.com/cekura-ai/cekura-bench.git
+cd cekura-bench
+cp config/benchmark.example.json benchmark.config.json
+```
 
 `CEKURA_API_KEY` is required for every command. Keep it in your shell or secret
 manager; do not put it in `benchmark.config.json` or commit it.
+
+```bash
+export CEKURA_API_KEY='your-project-api-key'
+```
 
 Create a configuration from the example. These are the required fields:
 

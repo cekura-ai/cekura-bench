@@ -1,58 +1,66 @@
-# Cekura Benchmarks
+# Cekura Bench
 
-Run Cekura's Appointment and Medicare voice-agent benchmark suites against your
-own Cekura-connected agent.
+Cekura Bench is the open-source runner and agent contract for reproducing
+Cekura's telephone-based **Appointment** and **Medicare** voice-agent
+benchmarks. It launches the published scenario catalog in your Cekura project
+against an agent you configure, then records the exact launch payload and links
+to the resulting report. It is not a local simulator: calls traverse your
+agent's real telephony, speech, model, and tool path.
 
-## What this runner does
+## Reproduce a benchmark
 
-Given a Cekura API key and a local configuration, the runner:
-
-1. Reads the selected Appointment (`AS`) or Medicare (`MS`) scenarios from your
-   catalog agent.
-2. Validates the target agent/run configuration.
-3. Launches the complete suite against your target agent with your selected
-   repetition count and concurrency.
-4. Prints the result URL and a machine-readable launch record.
-
-It is dry-run by default. Add `--execute` only after reviewing the resolved
-payload.
-
-## Current runner behavior
-
-On `--execute`, the runner provisions a target agent when `targetAgentId` is
-omitted, launches the selected suite, then stays active while the result set
-completes. It waits for the suite's conservative completion window (84 minutes
-for Medicare; 192 minutes for Appointments), polls the result set, creates a
-public report, and writes its links to `data/benchmark-report-<result-id>.md`.
-
-Watching is enabled by default. Set `"watchResults": false` to return as soon
-as the run launches. `watchInitialWaitMinutes` and `watchPollSeconds` can tune
-the wait and polling cadence.
-
-## Prerequisites
-
-- Node.js 20 or later.
-- A Cekura project API key in `CEKURA_API_KEY`.
-- A catalog agent in your project containing the benchmark scenarios.
-- A dedicated target number. For custom transcript publishers, use
-  `different_numbers` so each run can be associated to its provider call.
-
-For Vapi, Retell, ElevenLabs, or Synthflow setup, also export that provider's
-API key. LiveKit setup needs `LIVEKIT_API_KEY` and the secret environment
-variable named in `agentSetup.livekit.apiSecretEnv`. Pipecat and custom
-phone-connected agents must publish the final transcript and tool-call events
-using the [transcript-ingestion format](docs/transcript-ingestion.md).
-
-## Quick start
+You need Node.js 20+, a Cekura project API key, a catalog agent containing the
+benchmark scenarios, and a phone number that reaches the agent under test. The
+runner has no third-party runtime dependencies.
 
 ```bash
+git clone https://github.com/cekura-ai/cekura-bench.git
+cd cekura-bench
 cp config/benchmark.example.json benchmark.config.json
-export CEKURA_API_KEY='...'
+export CEKURA_API_KEY='your-project-api-key'
+```
+
+Edit `benchmark.config.json` with your IDs and target number. Start with a
+dry-run: it fetches the selected catalog scenarios and writes the resolved
+payload, but does not provision an agent or place calls.
+
+```bash
 npm run benchmark -- --config benchmark.config.json
+```
+
+When the output looks right, add `--execute` to provision (when applicable)
+and launch the suite.
+
+```bash
 npm run benchmark -- --config benchmark.config.json --execute
 ```
 
-## Configuration
+## 1. Set up the agent under test
+
+Choose one suite per agent run: `appointments` or `medicare`. Load the matching
+directory from [agent-definitions](agent-definitions/README.md) into the agent:
+
+1. Set `system-prompt.txt` as the system prompt.
+2. Use `first-message.txt` verbatim as the opening message.
+3. Register every function from `tool-definitions.json`, without renaming a
+   function or changing its input schema.
+4. Back those functions with the matching fixture data in `mock-tools.json`,
+   either locally or through your provider's mock-tool feature.
+5. Put the agent behind the dedicated `agentNumber` in your configuration.
+
+Keep the suites separate. The evaluator expects the selected suite's prompt,
+opening message, functions, and fixture outputs as one compatible contract.
+
+For a self-hosted or custom-provider agent, publish the completed transcript
+and native tool calls to Cekura and associate them with the run before hangup.
+Follow the [transcript-ingestion contract](docs/transcript-ingestion.md).
+
+## 2. Configure the environment and run
+
+`CEKURA_API_KEY` is required for every command. Keep it in your shell or secret
+manager; do not put it in `benchmark.config.json` or commit it.
+
+Create a configuration from the example. These are the required fields:
 
 ```json
 {
@@ -60,28 +68,38 @@ npm run benchmark -- --config benchmark.config.json --execute
   "catalogAgentId": 5678,
   "targetAgentId": 9012,
   "agentNumber": "+15555550100",
-  "suite": "appointments",
-  "frequency": 3,
-  "concurrencyLimit": 5,
-  "numberMode": "different_numbers",
-  "name": "My provider Benchmark v1"
+  "suite": "appointments"
 }
 ```
 
-`catalogAgentId` owns the canonical evaluator scenarios. `targetAgentId` is an
-optional existing Cekura agent. `suite` is required and must be either
-`appointments` or `medicare`; each launch runs only that suite.
+`catalogAgentId` is the Cekura agent that owns the canonical scenarios;
+`targetAgentId` is the existing Cekura record for the agent being measured.
+`agentNumber` must be able to receive benchmark calls. `numberMode` defaults to
+`different_numbers`, which is the appropriate mode for custom transcript
+publishers because it supports reliable run-to-call association.
 
-## Optional provider setup
+Useful optional fields are `frequency` (default `3` repetitions per scenario),
+`concurrencyLimit` (default `5`), `name`, `watchResults`,
+`watchInitialWaitMinutes`, and `watchPollSeconds`. Set `watchResults` to
+`false` if you want the command to return immediately after launch; otherwise
+it waits, polls to completion, creates a public report, and writes its links to
+`data/benchmark-report-<result-id>.md`.
 
-The same command can create the target agent and launch the benchmark. Omit
-`targetAgentId` and provide `agentSetup`. For the native integrations below,
-export the provider API key, then add the provider and agent ID to the same
-benchmark config:
+Use `npm run validate -- --config benchmark.config.json` to validate the
+configuration and selected catalog without launching a run. (It still needs
+`CEKURA_API_KEY` because it reads the catalog.)
+
+## 3. Optional: have the runner register an agent
+
+Instead of `targetAgentId`, omit it and provide `agentSetup`. Do not provide
+both. The runner registers/imports the target agent on `--execute`, waits for
+an import if necessary, then launches the selected suite.
+
+For native providers, export the provider credential and identify the existing
+provider-side agent:
 
 ```bash
-export VAPI_API_KEY='...'
-npm run benchmark -- --config benchmark.config.json --execute
+export VAPI_API_KEY='your-vapi-api-key'
 ```
 
 ```json
@@ -97,73 +115,70 @@ npm run benchmark -- --config benchmark.config.json --execute
 }
 ```
 
-Supported native providers and their default key variables are:
-
-| Provider | `agentSetup.provider` | Environment variable |
+| Provider | `agentSetup.provider` | Default credential variable |
 | --- | --- | --- |
 | Vapi | `vapi` | `VAPI_API_KEY` |
 | Retell | `retell` | `RETELL_API_KEY` |
 | ElevenLabs | `elevenlabs` | `ELEVENLABS_API_KEY` |
 | Synthflow | `synthflow` | `SYNTHFLOW_API_KEY` |
 
-Set `providerApiKeyEnv` when your key uses a different environment-variable
-name. The runner imports native-provider details, waits for the agent setup to
-finish, then launches the selected suite as one command.
+Set `providerApiKeyEnv` when your secret has a different name. For LiveKit,
+use `provider: "livekit"` with `livekit.url`, `livekit.agentName`, and
+`livekit.apiSecretEnv`, plus `LIVEKIT_API_KEY` (or `providerApiKeyEnv`). For
+Pipecat, use `provider: "pipecat"` and `pipecat.agentName`; its `webhookUrl`,
+`config`, and `roomProperties` are optional. See the submitted
+[provider configurations](provider-configurations/README.md) for examples.
 
-Provider setup is optional. If you supply only the phone number (and omit both
-`targetAgentId` and `agentSetup`), the runner creates a phone-connected target
-record and launches the suite. To score those calls, the agent must publish its
-final transcript and native tool calls in the
-[transcript-ingestion format](docs/transcript-ingestion.md). Reach out to us if
-you need help wiring that connection.
+If you supply neither `targetAgentId` nor `agentSetup`, the runner creates a
+phone-connected `self_hosted` target record. This is suitable only when your
+agent already meets the transcript-ingestion contract.
 
-For [LiveKit](provider-configurations/livekit-agent.py) and
-[Pipecat](provider-configurations/pipecat-bot.py), setup remains optional and
-uses their respective provider fields. LiveKit requires `LIVEKIT_API_KEY` plus
-the secret variable named by `apiSecretEnv`; Pipecat requires `agentName`.
-These settings are sent directly when the runner creates the Cekura agent.
+## 4. Optional: serve the mock data from tool endpoints
 
-```json
-{
-  "agentSetup": {
-    "provider": "livekit",
-    "providerApiKeyEnv": "LIVEKIT_API_KEY",
-    "livekit": {
-      "url": "wss://your-livekit-host",
-      "apiSecretEnv": "LIVEKIT_API_SECRET",
-      "agentName": "your-livekit-agent",
-      "config": {}
-    }
-  }
-}
+The benchmark does not require a particular tool-hosting model. The simplest
+option is your platform's native mock-tool feature. Alternatively, expose one
+endpoint per function (or a single dispatcher endpoint) in your own service.
+The files in `agent-definitions/<suite>/` are the source of truth:
+
+- `tool-definitions.json` defines the function names and JSON input schemas.
+- `mock-tools.json` maps each exact fixture input to the output the endpoint
+  must return, including no-match and error cases.
+
+For example, an Appointment `lookup_patient` endpoint must accept the exact
+schema for `lookup_patient` and return the fixture output for the normalized
+caller phone number. Preserve tool names, required arguments, result fields,
+and tool-call ordering. Do not replace fixture data with a live CRM or alter it
+between repetitions: the scenarios are scored against this fixed contract.
+
+The repository deliberately does not run a hosted mock-data service or set a
+tool URL in the runner. Configure the endpoint URL in your provider/agent
+runtime, then verify a call reaches it before launching the benchmark. The
+included [LiveKit](provider-configurations/livekit-agent.py) and
+[Pipecat](provider-configurations/pipecat-bot.py) examples show an alternative:
+they load `mock-tools.json` directly and resolve functions in-process.
+
+## 5. Execute and find the results
+
+```bash
+# Inspect the resolved scenario count, target, and payload; no calls are made.
+npm run benchmark -- --config benchmark.config.json
+
+# Launch the selected suite.
+npm run benchmark -- --config benchmark.config.json --execute
 ```
 
-```json
-{
-  "agentSetup": {
-    "provider": "pipecat",
-    "pipecat": {
-      "agentName": "your-pipecat-agent",
-      "webhookUrl": "https://your-service.example/cekura",
-      "config": {},
-      "roomProperties": {}
-    }
-  }
-}
-```
+Every invocation writes a machine-readable launch record to
+`data/benchmark-launch-<timestamp>.json`. An executed run prints the Cekura
+dashboard URL. With result watching enabled, it also creates a shareable report
+and writes `data/benchmark-report-<result-id>.md` when the result set reaches a
+terminal state. Conservative default wait windows are 84 minutes for Medicare
+and 192 minutes for Appointments; these reflect the full call batch, not a
+local command failure.
 
 ## Reference implementations
 
 Reference-agent examples for LiveKit, Pipecat, OpenAI Realtime, and Gemini
 Live are described in [reference-agents](reference-agents/README.md).
-
-## Agent definition and mock-tool contract
-
-The configuration required to score an agent is in
-[agent-definitions](agent-definitions/README.md). It includes the canonical
-system prompt, required first message, tool schemas, and mock data for both
-Appointment and Medicare runs. Providers may host equivalent tools themselves
-or use their platform's mock-tool mechanism.
 
 ## Methodology
 

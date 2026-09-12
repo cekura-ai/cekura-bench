@@ -137,29 +137,24 @@ If you supply neither `targetAgentId` nor `agentSetup`, the runner creates a
 phone-connected `self_hosted` target record. This is suitable only when your
 agent already meets the transcript-ingestion contract.
 
-## 4. Optional: serve the mock data from tool endpoints
+## 4. Optional: configure a mock-tool server
 
-The benchmark does not require a particular tool-hosting model. The simplest
-option is your platform's native mock-tool feature. Alternatively, expose one
-endpoint per function (or a single dispatcher endpoint) in your own service.
-The files in `agent-definitions/<suite>/` are the source of truth:
+Each benchmark tool must resolve against the fixture data in
+`agent-definitions/<suite>/mock-tools.json`. Use your provider's native mock
+tools or point the agent's tools at your own mock-tool endpoints; one endpoint
+per tool or a dispatcher endpoint are both fine. The endpoint must expose the
+names and input schemas in `tool-definitions.json`, then return the matching
+fixture output (including error and no-match responses).
 
-- `tool-definitions.json` defines the function names and JSON input schemas.
-- `mock-tools.json` maps each exact fixture input to the output the endpoint
-  must return, including no-match and error cases.
+Match inputs flexibly: first use normalized exact matches, then use the same
+fuzzy fallback as Cekura mock serving (a closest-match score of at least 30) to
+absorb harmless speech-to-text variation. Do not use live production data or
+change fixture responses during a run.
 
-For example, an Appointment `lookup_patient` endpoint must accept the exact
-schema for `lookup_patient` and return the fixture output for the normalized
-caller phone number. Preserve tool names, required arguments, result fields,
-and tool-call ordering. Do not replace fixture data with a live CRM or alter it
-between repetitions: the scenarios are scored against this fixed contract.
-
-The repository deliberately does not run a hosted mock-data service or set a
-tool URL in the runner. Configure the endpoint URL in your provider/agent
-runtime, then verify a call reaches it before launching the benchmark. The
-included [LiveKit](provider-configurations/livekit-agent.py) and
-[Pipecat](provider-configurations/pipecat-bot.py) examples show an alternative:
-they load `mock-tools.json` directly and resolve functions in-process.
+This repository does not host a mock server or prescribe its URLs; configure
+the endpoint in your agent runtime. The [LiveKit](provider-configurations/livekit-agent.py)
+and [Pipecat](provider-configurations/pipecat-bot.py) references are both
+mock-tool servers implemented in-process and demonstrate the expected behavior.
 
 ## 5. Execute and find the results
 

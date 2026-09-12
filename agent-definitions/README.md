@@ -42,29 +42,21 @@ An implementation may normalize benign representations (for example, a phone
 number's punctuation) when matching inputs, but must preserve the fixture's
 meaning and return the documented output shape.
 
-## Optional tool-endpoint setup
+## Optional mock-tool endpoints
 
-You may use provider-native mock tools, an in-process fixture resolver, or
-your own HTTPS tool endpoints. The benchmark does not prescribe endpoint URLs
-and this repository does not host one.
+Serve `mock-tools.json` through provider-native mock tools, an in-process mock
+server, or your own endpoints. The endpoint(s) must use the names and schemas
+in `tool-definitions.json` and return the matching fixture response.
 
-If you host endpoints yourself, use `tool-definitions.json` as the request
-contract and `mock-tools.json` as the response fixture table. One endpoint per
-tool or a dispatcher endpoint are both fine, provided the agent exposes the
-same tool names to its model. In particular:
-
-- accept only the schema defined for the invoked tool;
-- return the matching fixture output, including deliberate error/no-match
-  outputs;
-- preserve native tool-call names, arguments, results, and ordering in the
-  transcript sent to Cekura; and
-- do not substitute live production data or change fixture responses during a
-  benchmark run.
+Match inputs with normalized exact matching first, then the Cekura mock
+server's fuzzy fallback (closest match at a score of at least 30). This lets
+minor speech-to-text variation resolve to the intended fixture without
+overriding explicit error or no-match cases. Do not use live data or mutate
+fixtures during a run.
 
 The [LiveKit](../provider-configurations/livekit-agent.py) and
-[Pipecat](../provider-configurations/pipecat-bot.py) reference configurations
-load these fixtures directly, which is a useful model if your platform does
-not support remote mock tools.
+[Pipecat](../provider-configurations/pipecat-bot.py) examples are in-process
+mock-tool servers; use them as references if you host your own implementation.
 
 For self-hosted and custom-provider agents, also follow the
 [transcript-ingestion contract](../docs/transcript-ingestion.md). A missing

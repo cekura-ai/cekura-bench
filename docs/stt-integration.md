@@ -13,8 +13,9 @@ Source commit: `821fa89a77af6ddfa792fcb04520c598be6b1865`
 
 Destination base: `52c45edb18e54e064a424d52b0ebab41042784e1`
 
-The import contains all 150 files tracked at that source commit, exported with
-`git archive`. It contains no nested Git repository. The original STT checkout,
+The import retains 148 of the 150 files tracked at that source commit, exported
+with `git archive`. The two historical model-access records are excluded.
+It contains no nested Git repository. The original STT checkout,
 its history, and its uncommitted work are unaffected. This is a snapshot import;
 there is no automatic synchronization between repositories.
 
@@ -25,6 +26,9 @@ included. Review publication scope before publishing the branch.
 
 ## Deliberate changes from the snapshot
 
+- Removed `comparisons/providers-20260912/google-model-access.json` and
+  `openai-model-access.json`. These are historical provider-access records with
+  no references in the benchmark code, scripts, tests, or configuration.
 - The STT README explains that commands run inside `stt-bench/`.
 - `scripts/vercel_benchmark_controller.mjs` derives its local workspace from its
   script location instead of a developer's absolute checkout path. Its remote
@@ -75,8 +79,10 @@ working source; reconcile subsequent changes explicitly before switching over.
 
 Validated against the imported snapshot on 2026-09-15:
 
-- All 150 source files are present. 148 are byte-identical to the source commit;
-  the two deliberate differences are listed above. All 21 existing non-README
+- After removing the two historical access records, 148 source files remain.
+  146 are byte-identical to the source commit; the two edited files are listed
+  above. The cleanup was checked for references and import integrity; the
+  runtime tests below were performed on the original import. All 21 existing non-README
   files in the destination are byte-identical to its base commit.
 - The STT CLI help and model listing work from the nested project directory;
   the catalog lists 21 configured model selectors.

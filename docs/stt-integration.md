@@ -1,117 +1,72 @@
 # STT integration
 
-## Layout and import provenance
+## Project layout
 
-The existing voice-agent runner remains at the repository root. The independent
-Python STT project lives in `stt-bench/`, with its own configuration, `uv.lock`,
-`.gitignore`, tests, and operating directory. No common runner or metric schema
-is introduced by this import.
+The voice-agent runner lives at the repository root. The Python STT project lives
+in `stt-bench/`, with its own configuration, dependencies, tests, and output
+folders. Run each project's commands from its respective directory.
 
-Source repository: `https://github.com/cekura-ai/stt-bench`
+See the [STT README](../stt-bench/README.md) for provider setup, dataset preparation,
+benchmark commands, and scoring.
 
-Source commit: `821fa89a77af6ddfa792fcb04520c598be6b1865`
+## Source and changes
 
-Destination base: `52c45edb18e54e064a424d52b0ebab41042784e1`
+The STT project was imported from [cekura-ai/stt-bench](https://github.com/cekura-ai/stt-bench)
+at commit `821fa89a77af6ddfa792fcb04520c598be6b1865`.
+The destination base was `52c45edb18e54e064a424d52b0ebab41042784e1`.
+This is a snapshot import; changes do not automatically sync between repositories.
 
-The import retains 148 of the 150 files tracked at that source commit, exported
-with `git archive`. The two historical model-access records are excluded.
-It contains no nested Git repository. The original STT checkout,
-its history, and its uncommitted work are unaffected. This is a snapshot import;
-there is no automatic synchronization between repositories.
+The import retains 148 source files, with these adjustments:
 
-The source STT repository is private and this destination is public. Publishing
-this branch would publish the imported source and tracked metadata. Local
-credentials, private audio, generated reports, and virtual environments are not
-included. Review publication scope before publishing the branch.
+- Excluded the unused `google-model-access.json` and `openai-model-access.json`
+  records from `comparisons/providers-20260912/`.
+- Updated the STT README to explain the working directory.
+- Updated `scripts/vercel_benchmark_controller.mjs` to derive its local workspace
+  from the script location instead of a fixed checkout path.
 
-## Deliberate changes from the snapshot
+The root README links to both projects. Existing voice-agent commands and
+configuration paths are unchanged.
 
-- Removed `comparisons/providers-20260912/google-model-access.json` and
-  `openai-model-access.json`. These are historical provider-access records with
-  no references in the benchmark code, scripts, tests, or configuration.
-- The STT README explains that commands run inside `stt-bench/`.
-- `scripts/vercel_benchmark_controller.mjs` derives its local workspace from its
-  script location instead of a developer's absolute checkout path. Its remote
-  sandbox path, target account, and run IDs are unchanged.
+## Setup and local files
 
-The parent README links to both benchmark families. The existing voice-agent
-runner, Node package settings, configuration, and documentation paths stay intact.
-
-## Operating boundaries
-
-Install and run STT from its own directory:
+From the repository root:
 
 ```sh
 cd stt-bench
 uv sync --locked
 uv run --locked stt-bench models
-uv run --locked pytest -q
-node --test tests/*.test.mjs
 ```
 
-Some Python integration tests require the original local FLEURS audio in `test/`
-and the prepared audio referenced by the committed FLEURS manifests. A fresh
-clone does not contain those files. Missing audio is a fixture prerequisite,
-not evidence that a provider failed. Protocol tests use local fixtures and
-WebSocket servers; they do not establish live provider access.
+Keep STT credentials, the Python environment, audio, run checkpoints, and reports
+inside `stt-bench/`. These local files are ignored by Git and are not part of the
+import.
 
-Dashboard generation requires saved comparison reports. Remote packaging also
-requires verified prepared inputs and FLEURS regression audio. Neither generated
-reports nor audio should be committed as part of routine development.
+Some Python integration tests require FLEURS source audio in `test/` and prepared
+audio matching the committed dataset manifests. Dashboard generation requires
+saved comparison reports. Remote packaging requires verified prepared inputs
+and FLEURS regression audio.
 
-Vercel scripts and `config/vercel-models.json` retain deployment-specific settings
-from the source project. Review the account, project, snapshot, and run IDs before
-using them. This migration does not provision or validate remote compute.
+Vercel scripts and `config/vercel-models.json` contain deployment-specific
+settings. Check the account, project, snapshot, and run IDs before using them.
+Continue existing benchmark runs in their original environment; resume checks
+require matching source code, configuration, data, and timing environment.
 
-The voice-agent runner's `--validate` and default dry-run modes still read the
-Cekura scenario catalog over the network. They are not offline checks. Local
-migration checks must stub that API or supply explicitly authorized access.
+## Validation
 
-Existing benchmark runs should finish in their original execution environment.
-Do not rewrite saved run identities or bypass source/configuration/timing checks
-to resume a run from a different checkout. Preserve original run evidence.
+The initial import was checked locally on 2026-09-15:
 
-After this integration is merged and adopted, make future STT changes here and
-link the old repository to this location. Until then, the original remains the
-working source; reconcile subsequent changes explicitly before switching over.
+- 441 Python tests passed across the suite and fixture rechecks; 1 was skipped.
+  The tests used the existing Python 3.12 environment and locally supplied public
+  FLEURS audio.
+- All 24 JavaScript controller tests passed.
+- The STT CLI help and model listing worked from the nested project directory.
+- Existing voice-agent validation and dry-run commands passed with a mocked
+  scenario catalog. The actual commands require network access to Cekura.
+- Source-file integrity and Git ignore rules were verified. The later removal
+  of the two access records was checked for references and import integrity.
 
-## Local migration validation
-
-Validated against the imported snapshot on 2026-09-15:
-
-- After removing the two historical access records, 148 source files remain.
-  146 are byte-identical to the source commit; the two edited files are listed
-  above. The cleanup was checked for references and import integrity; the
-  runtime tests below were performed on the original import. All 21 existing non-README
-  files in the destination are byte-identical to its base commit.
-- The STT CLI help and model listing work from the nested project directory;
-  the catalog lists 21 configured model selectors.
-- All 11 direct and development dependency pins match the existing Python 3.12
-  environment used for testing. The imported source directory was explicitly
-  selected with `PYTHONPATH=src` and its import location verified.
-- On the exported files without local audio, Python tests reported 433 passed,
-  8 missing-fixture failures, and 1 skipped. With the original public FLEURS
-  fixtures supplied, 438 passed and 3 failed because temporary audio symlinks
-  crossed the loader's allowed dataset boundary. Replacing those symlinks with
-  hard links inside the dataset and rerunning those exact 3 tests passed.
-  Thus all 441 non-skipped Python tests passed across the suite and rechecks.
-  The temporary fixture links were removed after validation.
-- All 24 JavaScript controller tests passed with their local mocks. These include
-  remote orchestration checks; no remote benchmark was launched.
-- The existing `npm run validate -- --config config/benchmark.example.json` and
-  default `npm run benchmark -- --config config/benchmark.example.json` commands
-  passed with a stubbed scenario catalog and dummy credentials. Suite filtering,
-  plan mode, credential redaction, and absence of a launched result were checked.
-  This is offline runner validation, not proof of live Cekura access.
-- Nested ignore rules were checked for credentials, private data, public audio,
-  virtual environments, and generated output. A basic credential-pattern scan
-  found no matches in the imported files; this is not an exhaustive security audit.
-
-A fresh `uv sync --locked --offline --link-mode hardlink` could not complete
-because the local cache lacked a required matplotlib wheel. A clean dependency
-installation is therefore not claimed. The failed empty environment was removed;
-run the documented `uv sync --locked` with package-network access when setting up.
-
-Live provider calls, Vercel provisioning, full audio bundle generation, and the
-saved-report dashboard browser check were not performed. Existing remote-job,
-bundle-selection, and dashboard-data unit tests are included in the Python checks.
+A fresh offline dependency installation could not complete because the local
+cache lacked a required matplotlib wheel. Use `uv sync --locked` with package
+network access for setup. Live provider calls, Vercel provisioning, complete
+audio bundle generation, and the saved-report dashboard browser check were not
+part of this validation.

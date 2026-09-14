@@ -1,7 +1,33 @@
 # Cekura Benchmarks
 
-Run Cekura's Appointment and Medicare voice-agent benchmark suites against your
-own Cekura-connected agent.
+Run voice-agent and speech-to-text benchmarks from one repository. Each project
+keeps its own runtime, configuration, and results.
+
+## Choose a benchmark
+
+| Benchmark | What it measures | Where to run commands |
+| --- | --- | --- |
+| Voice agents | Complete Appointment and Medicare workflows against a Cekura-connected agent | Repository root; Node.js 20+ |
+| [Speech-to-text](stt-bench/README.md) | Streaming transcription accuracy, text availability, completion, and reliability | `stt-bench/`; Python 3.12 or 3.13 and `uv` |
+
+For speech-to-text setup and a local model listing (no provider requests):
+
+```sh
+cd stt-bench
+uv sync --locked
+uv run --locked stt-bench models
+```
+
+Run all STT commands from `stt-bench/`: configuration, `.env`, datasets, and
+outputs are resolved within that directory. Keep its Python environment and
+lockfile there. Voice-agent users do not need the Python dependencies.
+
+See the [STT guide](stt-bench/README.md) for dataset preparation, provider
+credentials, live benchmarks, and offline scoring. See the
+[integration notes](docs/stt-integration.md) for import provenance and validation.
+
+The rest of this page describes the existing voice-agent runner. Run its `npm`
+commands from the repository root. Its commands and configuration are unchanged.
 
 ## What this runner does
 

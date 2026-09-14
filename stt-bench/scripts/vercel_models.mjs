@@ -1,4 +1,4 @@
-// A separate launcher: the historical Nova controller is deliberately untouched.
+// Launch and collect model benchmarks from a prepared Vercel snapshot.
 // Importing this module or omitting --live never contacts Vercel or an STT API.
 import { readFile, writeFile, rename, mkdir, open } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';

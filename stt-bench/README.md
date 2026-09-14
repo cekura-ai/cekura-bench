@@ -55,8 +55,8 @@ uv run --locked stt-bench prepare-check
 ```
 
 `prepare-audio` creates the 24 kHz derivatives required by OpenAI and Gradium.
-Configuration and credential presence do not establish live access or benchmark
-completion. Check the saved run evidence for those results.
+The model listing shows configured models and whether their credentials are set.
+A provider may require additional account access for a particular model.
 
 | Provider | Configured models | Credential variable |
 | --- | --- | --- |
@@ -108,6 +108,15 @@ The supplement is selected for entity coverage, so its accuracy is reported
 separately from the anchor. Private recordings and short trial cohorts also remain
 separate from the full public benchmark. Audio and run outputs are local artifacts.
 
+## Configuration
+
+- [config/models](config/models) contains the provider settings used by each model,
+  including the endpoint, audio format, completion behavior, and pricing.
+- [config/datasets](config/datasets) pins the dataset revision and sample selection.
+- [config/vercel-models.json](config/vercel-models.json) records the Vercel account,
+  compute settings, and model jobs. Set these for your own environment before
+  launching remote jobs.
+
 ## Measurement
 
 The common clock starts when the client finishes sending the last retained speech
@@ -141,16 +150,15 @@ pre-finalization silence. AssemblyAI retains native turn detection. These differ
 must accompany comparisons. Specialized private-recording runners may also use a
 different retry policy.
 
-Deadline reports expose invalid pacing and unavailable observations. Diagnostic
-coverage is broader than the subset suitable for controlled comparisons. Human
-listening review is needed to verify speech boundaries, references, and annotations;
-automatic preparation alone does not establish that review. Grouped confidence
-intervals require explicit dependency groups, such as recordings sharing speakers.
-Missing review or grouping information must remain visible in published results.
+Sending audio too early or too late can change deadline accuracy. Reports flag
+clips that fail the timing checks and deadlines with no available transcript;
+inspect those flags when comparing providers. To check reference transcripts,
+speech boundaries, or entity labels by listening to the audio, use `export-review`
+and `validate-review`.
 
 ## Results and offline scoring
 
-The named workflow saves evidence under:
+Each benchmark run saves its inputs and results under:
 
 ```text
 datasets/<dataset>/<revision>/{smoke,full}/manifest.json
@@ -158,10 +166,9 @@ runs/<dataset>/<model>/<run-id>/
 reports/<dataset>/<model>/<run-id>/
 ```
 
-Stage reports include `results.json`, metric tables, per-clip results, deadline
-observations, and entity diagnostics. They identify the dataset, configuration,
-model identity evidence, and measurement version. An accepted model alias does
-not necessarily identify an immutable server version.
+Stage reports include `results.json`, metric tables, per-clip results, and deadline
+observations. They record the dataset, model configuration, measurement version,
+and any model-version information returned by the provider.
 
 Score saved raw events into a new directory without provider requests:
 
@@ -210,9 +217,9 @@ working tree and verified inputs while excluding credentials and old run outputs
 Vercel launchers use [config/vercel-models.json](config/vercel-models.json) and an
 installed Sandbox SDK selected through `VERCEL_SANDBOX_SDK_DIR`. Review the target
 team, project, snapshot, and selected jobs before using the launchers; the checked-in
-configuration contains deployment-specific values. Preserve saved session and command
-IDs after interruptions. Download and verify evidence before stopping or deleting
-compute. Compare latency only with its recorded host, region, and protocol context.
+configuration contains the original run settings. Keep the local checkpoint files
+to resume or collect remote jobs, and download results before deleting a sandbox.
+The [script guide](scripts/README.md) explains the preparation and launch sequence.
 
 ### Concurrent public and private runs
 
@@ -248,9 +255,9 @@ uv run --locked pytest -q
 ```
 
 Some integration tests need the locally supplied FLEURS audio. Protocol tests use
-fixtures and local WebSocket servers; they do not establish live provider access.
+fixtures and local WebSocket servers, so they can run without provider credentials.
 
 The main code lives in [src/stt_bench](src/stt_bench): preparation freezes inputs,
 adapters capture timestamped responses, scoring replays those responses, and
-reporting assembles metrics and coverage. Operational scripts live in [scripts](scripts)
-and regression tests in [tests](tests).
+reporting assembles metrics and coverage. The [script guide](scripts/README.md) describes the additional launch and reporting
+tools. Regression tests live in [tests](tests).

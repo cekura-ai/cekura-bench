@@ -24,7 +24,7 @@ lockfile there. Voice-agent users do not need the Python dependencies.
 
 See the [STT guide](stt-bench/README.md) for dataset preparation, provider
 credentials, live benchmarks, and offline scoring. See the
-[integration notes](docs/stt-integration.md) for import provenance and validation.
+[integration notes](docs/stt-integration.md) for project layout and local files.
 
 The rest of this page describes the existing voice-agent runner. Run its `npm`
 commands from the repository root. Its commands and configuration are unchanged.

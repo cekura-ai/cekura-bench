@@ -1,7 +1,7 @@
 # Offline benchmark dashboard
 
 Generate the report with the system Python; no extra packages or network access
-are needed. Run from the repository root:
+are needed. Run from `stt-bench/`:
 
 ```sh
 python3 scripts/build_benchmark_html.py
@@ -15,9 +15,8 @@ reports, audio files, server, or internet connection are needed to view it.
 
 The generator explicitly selects the ten non-Speechmatics final run summaries
 under `reports/vercel-models/<run-id>/hourly/summary.json`. Nova-2 uses the corrected
-`vocera-deepgram-nova-2-20260912-unformatted` run. Both Speechmatics models remain
-excluded even if their results later become complete. Earlier interim and
-seven-model comparisons are not inputs.
+`vocera-deepgram-nova-2-20260912-unformatted` run. This public comparison includes ten models; Speechmatics is not part of its
+selected input set.
 
 Rerun the generator to take a fresh snapshot of those saved inputs. It does not
 download results, monitor jobs, modify inputs, or call a provider. The output
@@ -37,8 +36,7 @@ template, documentation, and tests are source-controlled files.
 - Deadline WER uses only the first attempt, at 0/250/500/1,000 milliseconds after
   speech end. Missing observations stay unavailable. Default deadline summaries
   retain invalid pacing as diagnostics and disclose their counts in CSV export.
-- The page uses each model's usable final results. The former sample-set controls
-  have been removed to keep the interface simple; coverage remains in the table.
+- The page uses each model's usable final results and shows coverage in the table.
 - The main comparison switches between final WER and median finalize latency.
   The scatter plot shows these same two metrics. Its timing axis retains the
   provider-acknowledgment definition and does not claim equivalent final-word timing.
@@ -46,32 +44,23 @@ template, documentation, and tests are source-controlled files.
 - Deadline observations, completion timing, reliability, and source identifiers
   remain available in CSV export without adding more panels to the page.
 - Unknown prices remain unavailable. Recorded cost excludes smoke, setup, and
-  Vercel compute. No confidence intervals or reviewed entity metrics are invented.
+  Vercel compute. Confidence intervals and reviewed entity metrics are not shown.
 
 The generator verifies complete status, ordered unique clip coverage, frozen
 manifest identity, normalization, and the shared measurement contract. It
 recomputes WER, deadline totals, timing percentiles, failures, and retry counts
 and checks them against the source summaries before writing any HTML.
 
-## Interface and design
+## Using the dashboard
 
-The public view takes visual inspiration from the user-supplied Coval screenshots:
-light neutral surfaces, two summary cards, spacious charts, and a compact results
-table. It contains one Accuracy/Latency switch, a clickable model legend, a
-latency-versus-accuracy scatter plot, and a sortable results table. There is no
-filter sidebar, search form, sample-set selector, or per-model detail panel.
-Metric definitions and source provenance live under one collapsed "About this
-benchmark" section. Actual Coval scores and time-series data are not used.
-
-System fonts, visible keyboard focus, hover/focus tooltips, and tabular numerals
-support comparison. Charts and the table scroll internally on narrow screens.
-There are no external assets, dependencies, or animated decorations. Model colors
-stay consistent across both charts and the table. CSV export follows selected
-models and table sorting and retains source precision and unavailable values.
+Switch between accuracy and latency, toggle models in the legend, and sort the
+results table. The scatter plot compares latency with accuracy. Metric definitions
+and input sources are under "About this benchmark". CSV export follows the selected
+models and table sorting, including missing values and source precision.
 
 ## Validation
 
-From the repository root:
+From `stt-bench/`:
 
 ```sh
 .venv/bin/python -m pytest tests/test_benchmark_html.py -q
@@ -83,7 +72,7 @@ The browser check requires an installed Playwright package and Chromium. Set
 in the repository. It opens the actual HTML through `file://` with the browser
 offline, verifies interactions and displayed values, downloads a filtered CSV,
 and captures desktop/mobile screenshots beside the HTML. It makes no provider
-calls. Synthetic Python tests do not represent live benchmark results.
+calls. The Python tests use synthetic data to check report calculations.
 
 ## Separate private benchmark
 

@@ -6,7 +6,7 @@ Run from `stt-bench/` to build the offline page from locally saved evidence:
 .venv/bin/python scripts/build_benchmark_html.py
 ```
 
-The output is `reports/benchmark-dashboard/index.html`. Share or open that single
+The output is `reports/benchmark-dashboard-combined-v1/index.html`. Share or open that single
 file: data, charts, styles, and scripts are embedded. No provider calls, downloads,
 server, or internet access are needed. Reports are ignored by Git and are not
 included in a fresh clone. `--reports-root` accepts a copied reports directory;
@@ -42,7 +42,7 @@ word-count arithmetic, private archive-verification flags, and full-run audit
 receipts. It validates the original totals, then recomputes WER with punctuation-only
 tokens removed on both sides and calculates percentiles from saved observations.
 The corrected totals and per-item before/after audit are written separately to
-`reports/offline-rescore-v2/`; see [the correction guide](../OFFLINE_RESCORING.md).
+`reports/offline-rescore-combined-v1/`; see [the correction guide](../OFFLINE_RESCORING.md).
 The Inworld note additionally requires its selected public raw archives under
 `full-parallel-20260915/batches/`; raw receipt checksums are verified locally.
 It does not re-download archives or repeat the underlying provider benchmarks.
@@ -57,7 +57,7 @@ For a review containing all 1,180 public clips plus the eight private recordings
 .venv/bin/python scripts/build_benchmark_html.py --include-private-review --share-zip
 ```
 
-Send `reports/benchmark-dashboard/benchmark-review.zip`. The recipient extracts
+Send `reports/benchmark-dashboard-combined-v1/benchmark-review.zip`. The recipient extracts
 the entire ZIP and opens `index.html`; the `audio` folder must stay beside it.
 Everything works offline. The current bundle is about 270 MB, including private
 audio and transcripts. Sending the HTML alone preserves transcripts and diffs,
@@ -106,24 +106,33 @@ failed, and not-run counts; adding a metric does not create missing observations
 
 The page retains Flux English and Nova-3 as distinct Deepgram families, and one
 OpenAI entry: GPT-4o Transcribe. It removes Nova-2, Flux Multilingual, Whisper,
-GPT-4o Mini, Chirp 2, Chirp 3, Sarvam Saaras v3, and Soniox STT-RT v5. Speechmatics Standard and Enhanced remain separate
+GPT-4o Mini, and Chirp 2. Chirp 3, Sarvam Saaras v3, and Soniox STT-RT v5 remain visible with incomplete coverage and no combined rank. Speechmatics Standard and Enhanced remain separate
 operating modes. This is an explicit display selection, not a live model-catalog
 claim. Source benchmark artifacts and model configurations remain unchanged.
 
-## Common-public ranking and separate datasets
+## Provisional combined ranking
 
 The suite has 1,000 Pipecat clips, 180 FLEURS clips, and eight private recordings.
-The 13 previously eligible models are ranked on their shared usable public clips:
-864 clips and 20,865 reference words. Each common reference word has equal weight.
-The set is frozen in the report; UI filtering cannot change scores or ranks.
+The 13 eligible models use exactly the same 864 public clips plus all eight
+private recordings: 20,865 public and 12,555 private reference words. Combined
+WER is total substitutions, insertions, and deletions divided by 33,420 words.
+FLEURS does not contribute. Each word has equal weight; dataset percentages are
+not averaged. The frozen IDs and per-item word counts are versioned in
+`config/rankings/combined-public-private-v1.json`.
 
-All-available public WER uses each model's own usable public clips. Private and
-FLEURS WER are separate and do not affect rank. The page shows public and private
-WER; FLEURS WER and the private-minus-public gap are omitted from its tables and CSV.
-Coverage, failures and retries remain visible. The page contains 13 ranked models.
-Unavailable measurements contribute neither errors nor reference words. The
-shared subset excludes failures for everyone, so its ranking must be read
-alongside reliability and full-dataset coverage.
+A missing or unusable ranking item makes that model unranked; it does not shrink
+the set. UI filtering cannot change scores or rank. All-available public WER,
+common-public WER, private WER, and their coverage remain separately visible.
+The page contains 13 ranked and three incomplete models. The shared public subset
+excludes 136 clips, so accuracy must be read alongside reliability and coverage.
+
+The private files are eight speaker tracks from four conversations. Their 37.6%
+influence reflects word counts, not a validated production traffic mix. Pipecat
+currently describes its references as Gemini-generated and human-reviewed;
+review coverage for the exact frozen revision remains unverified here. Private
+reference provenance and independent listening review also remain unresolved.
+See [the benchmark assessment](../BENCHMARK_ASSESSMENT.md) for sensitivity checks
+and prioritized follow-up work. Eventual WER alone is not a voice-agent ranking.
 
 ## Timing
 
@@ -167,21 +176,21 @@ timing definition and percentile, hide models, sort the table, and inspect
 accuracy versus timing. Dataset details and methodology use expandable sections.
 Charts and wide tables scroll internally on mobile.
 
-CSV exports the visible sorted models, common-public WER and denominator, the
-scoring version, all timing metrics,
+CSV exports the visible sorted models, combined WER and integer counts, ranking
+version and basis, common-public WER and denominator, scoring version, all timing metrics,
 coverage, reference words, deadline scores, failures, retries, and source hashes.
 Values retain source precision. Missing values are explicitly `Unavailable`.
 
 ## Validation
 
-The model comparison graph has an accuracy dataset selector for shared-public
+The model comparison graph has an accuracy dataset selector for combined, shared-public,
 and private WER. Nova-3 and ElevenLabs use the same saved scores as the leaderboard;
 there is no separate comparison card. Hiding models does not change scores or ranks.
 The separate September 15 settings-trial note is diagnostic context;
 it does not replace any leaderboard score or timing observation.
 
 ```sh
-.venv/bin/python -m pytest tests/test_unified_benchmark.py tests/test_benchmark_html.py -q
+.venv/bin/python -m pytest tests/test_combined_ranking.py tests/test_unified_benchmark.py tests/test_benchmark_html.py -q
 node tests/benchmark_dashboard.browser.cjs
 .venv/bin/python -m pytest tests/test_benchmark_clip_review.py -q
 node tests/benchmark_clip_review.browser.cjs

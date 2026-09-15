@@ -180,6 +180,48 @@ def finalization_contract(model):
     return dict(group='signal_at_speech_end', label=signals[model] + ' at speech end')
 
 
+def rank_frozen_combined(models, records, manifest):
+    """Pool integer counts on pinned IDs; missing results never shrink the set."""
+    datasets = manifest['datasets']
+    require(set(datasets) == {'pipecat', 'private'} and all(datasets.values()),
+            'Ranking requires nonempty public and private datasets')
+    dataset_meta = {c: dict(clip_ids=sorted(ids), clips=len(ids),
+                           reference_words=sum(ids.values())) for c, ids in datasets.items()}
+    for m in models:
+        index = {(r['cohort'], r['id']): r for r in records[m['id']]}
+        require(len(index) == len(records[m['id']]), 'Duplicate dataset item')
+        scores = {}
+        for cohort, ids in datasets.items():
+            counts = []
+            for cid, words in ids.items():
+                row = index.get((cohort, cid))
+                if row is not None and row['counts'] is not None:
+                    require(row['counts']['reference_words'] == words,
+                            f'Frozen reference words differ: {m["id"]} {cohort} {cid}')
+                    counts.append(row['counts'])
+            scores[cohort] = dict(usable=len(counts), complete=len(counts) == len(ids),
+                                  **aggregate(counts))
+        public_complete = m['terminal'] and scores['pipecat']['complete']
+        m['headline'] = aggregate([scores['pipecat']]) if public_complete else aggregate([])
+        m['headline']['n'] = len(datasets['pipecat']) if public_complete else 0
+        m['public_rank'] = None
+        m['rankable'] = bool(m['rankable'] and all(s['complete'] for s in scores.values()))
+        m['ranking_score'] = dict(**aggregate(list(scores.values()) if m['rankable'] else []),
+                                  n=sum(len(ids) for ids in datasets.values()) if m['rankable'] else 0,
+                                  datasets=scores, version=manifest['version'])
+        m['rank'] = None
+        public, private = (m['cohorts'][c]['wer'] for c in ('pipecat', 'private'))
+        m['private_minus_public_pp'] = (private - public) * 100 if public is not None and private is not None else None
+    for score, rank in [('headline', 'public_rank'), ('ranking_score', 'rank')]:
+        ordered = sorted((m for m in models if m[score]['wer'] is not None),
+                         key=lambda m: (m[score]['wer'], m['id']))
+        for i, m in enumerate(ordered, 1):
+            m[rank] = i
+    return dict(version=manifest['version'], basis=manifest['basis'], datasets=dataset_meta,
+                reference_words=sum(d['reference_words'] for d in dataset_meta.values()),
+                models=sorted(m['id'] for m in models if m['rankable']))
+
+
 def build(reports):
     from offline_rescore import rescore_records, score_projection
     from stt_bench.score import NORMALIZATION
@@ -283,12 +325,22 @@ def build(reports):
     before = {m: reduce_model(m, records[m], planned, terminal[m], model_sources[m]) for m in LABELS}
     records, audit = rescore_records(records)
     models = [reduce_model(m, records[m], planned, terminal[m], model_sources[m]) for m in LABELS]
-    common = rank_common_public(models, records)
+    ranking_path = Path(__file__).resolve().parents[1] / 'config/rankings/combined-public-private-v1.json'
+    ranking_raw = ranking_path.read_bytes()
+    manifest = json.loads(ranking_raw)
+    require(manifest['normalization'] == NORMALIZATION['version'], 'Frozen ranking normalization differs')
+    ranking = rank_frozen_combined(models, records, manifest)
+    ranking['manifest_sha256'] = hashlib.sha256(ranking_raw).hexdigest()
+    ranking['source_results_sha256'] = manifest['source_results_sha256']
+    common = dict(**ranking['datasets']['pipecat'], models=manifest['original_public_models'],
+                  basis='Frozen shared public clips from the original public-only report')
     audit['models'] = {m['id']: dict(before=before[m['id']]['cohorts'], after=m['cohorts'],
-                                    headline=m['headline'], reliability=m['reliability']) for m in models}
+                                    headline=m['headline'], ranking_score=m['ranking_score'],
+                                    rank=m['rank'], reliability=m['reliability']) for m in models}
     audit['corrected_records'] = score_projection(records)
     audit['sources'] = list(sources.values())
     audit['common_public'] = common
+    audit['ranking'] = ranking
     for m in models:
         require(m['reliability'] == before[m['id']]['reliability'], 'Re-scoring changed reliability')
     for m in models:
@@ -307,8 +359,8 @@ def build(reports):
             m['note'] = 'Private audio uses nine-minute session handoffs.'
         elif m['id'] == 'inworld-stt-1':
             m['note'] = 'Later text after stream closure extends last-final-text latency. Repetition also occurred before speech end; see evidence notes.'
-    return dict(schema_version=2, title='English STT benchmark — corrected offline scores',
-                normalization=dict(NORMALIZATION), common_public=common, _rescore_audit=audit,
+    return dict(schema_version=3, title='English STT benchmark — combined public and private ranking',
+                normalization=dict(NORMALIZATION), common_public=common, ranking=ranking, _rescore_audit=audit,
                 generated_at=datetime.now(timezone.utc).isoformat(), planned=planned,
                 models=sorted(models, key=lambda m: m['rank'] or 999),
                 sources=list(sources.values()),

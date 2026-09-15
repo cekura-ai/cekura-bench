@@ -4,7 +4,7 @@ const assert=require('node:assert/strict');
 const path=require('node:path');
 const {pathToFileURL}=require('node:url');
 (async()=>{
- const file=path.resolve(process.argv[2]||'reports/benchmark-dashboard/index.html');
+ const file=path.resolve(process.argv[2]||'reports/benchmark-dashboard-combined-v1/index.html');
  const browser=await chromium.launch({headless:true,channel:process.env.PLAYWRIGHT_CHANNEL||undefined});
  try{
   const context=await browser.newContext({viewport:{width:1440,height:1050},offline:true});
@@ -21,6 +21,21 @@ const {pathToFileURL}=require('node:url');
    const rows=review.clips.filter(c=>c.cohort===cohort).map(c=>c.results[model.id]).filter(r=>r?.counts);
    assert.equal(rows.length,model.cohorts[cohort].usable);
    for(const key of ['substitutions','insertions','deletions','reference_words'])assert.equal(rows.reduce((n,r)=>n+r.counts[key],0),model.cohorts[cohort][key]);
+  }
+  // Derive the shared set independently from the per-clip review evidence.
+  const ranked=data.models.filter(m=>m.rankable);
+  const shared=review.clips.filter(c=>c.cohort==='pipecat'&&ranked.every(m=>c.results[m.id]?.counts));
+  assert.deepEqual(shared.map(c=>c.id).sort(),data.common_public.clip_ids);
+  for(const model of ranked){
+   for(const key of ['substitutions','insertions','deletions','reference_words']){
+    assert.equal(shared.reduce((n,c)=>n+c.results[model.id].counts[key],0),model.headline[key]);
+   }
+   const combined=[...shared,...review.clips.filter(c=>c.cohort==='private')];
+   for(const key of ['substitutions','insertions','deletions','reference_words']){
+    assert.equal(combined.reduce((n,c)=>n+c.results[model.id].counts[key],0),model.ranking_score[key]);
+   }
+   const h=model.headline;
+   assert.equal(h.wer,(h.substitutions+h.insertions+h.deletions)/h.reference_words);
   }
   for(const cohort of ['pipecat','fleurs','private']){
    await page.locator('#review-cohort').selectOption(cohort);
@@ -50,7 +65,7 @@ const {pathToFileURL}=require('node:url');
   await page.locator('#review-raw').click();
   assert.ok((await page.locator('#review-transcript').textContent()).endsWith('so...'));
   await page.locator('#review-diff').click();
-  assert.equal(await page.locator('#review-model option[value="google-chirp-3"]').count(),0);
+  assert.equal(await page.locator('#review-model option[value="google-chirp-3"]').count(),1);
   await page.locator('#review-cohort').selectOption('fleurs');
   assert.match(await page.locator('#review-score').textContent(),/No scored result/);
   assert.equal(await page.locator('#review-diff').isDisabled(),true);

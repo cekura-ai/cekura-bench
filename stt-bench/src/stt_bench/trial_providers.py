@@ -38,7 +38,10 @@ def validate(config):
     if p == 'smallest':
         expected.update(word_timestamps=True)
     if p == 'inworld':
-        expected.update(voice_profile={'enableVoiceProfile': True, 'topN': 3}, vad_threshold=0)
+        expected.update(vad_threshold=0)
+        if config.get('voice_profile') not in ({'enableVoiceProfile': True, 'topN': 3},
+                                               {'enableVoiceProfile': False}):
+            raise ValueError('Expected the baseline or disabled voice profile configuration')
     for key, value in expected.items():
         if config.get(key) != value:
             raise ValueError(f'Trial provider contract mismatch: {key}')

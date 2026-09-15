@@ -129,7 +129,7 @@ def write_correction(reports, data, audit):
         path = reports / source['path'].removeprefix('reports/')
         if hashlib.sha256(path.read_bytes()).hexdigest() != source['sha256']:
             raise ValueError(f'Source changed during re-scoring: {source["path"]}')
-    output = reports / 'offline-rescore-v2'
+    output = reports / ('offline-rescore-combined-v1' if 'ranking' in data else 'offline-rescore-v2')
     output.mkdir(parents=True, exist_ok=True)
     for name, value in [('audit.json', audit), ('results.json', data)]:
         (output / name).write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n')

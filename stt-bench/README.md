@@ -189,15 +189,23 @@ Build the offline dashboard from the saved comparison cohorts:
 .venv/bin/python scripts/build_benchmark_html.py
 ```
 
-The output is `reports/benchmark-dashboard/index.html`. It ranks 13 models on
-864 shared usable public clips. The simplified page shows public and private
-scores; all-available public and FLEURS scores remain separate in the corrected
-reports. Public timing uses Pipecat only, with plots separated by finalization
-method. Corrected totals and the before/after audit are saved separately under
-`reports/offline-rescore-v2/`; original evidence is preserved. The page works
-offline and requires locally saved reports to build; a fresh clone does not
-include them. See the [dashboard guide](scripts/BENCHMARK_DASHBOARD.md) for inputs
-and exports.
+The output is `reports/benchmark-dashboard-combined-v1/index.html`. It ranks
+13 eligible models on the same 864 public clips and eight private speaker
+recordings by pooling errors over 33,420 reference words. The page also shows
+three incomplete models without a combined rank. Public/private component scores,
+coverage, deadline accuracy, and historical timing remain separately visible.
+FLEURS does not contribute to rank.
+
+This is a provisional accuracy ranking for the frozen dataset mix. The private
+recordings come from four conversations. See the
+[benchmark assessment](BENCHMARK_ASSESSMENT.md) for limitations and next steps,
+and [future finalization profiles](config/profiles/finalization-v1/README.md) for
+opt-in settings that have offline validation only.
+
+Corrected totals and the audit are saved in `reports/offline-rescore-combined-v1/`.
+The original public-only reports remain unchanged. The generator requires locally
+saved reports; a fresh clone does not include them. Use `--out` to refresh another
+local `index.html`, including the previous `reports/benchmark-dashboard/index.html`.
 
 To include public audio, reference transcripts, and scored word differences:
 
@@ -207,7 +215,7 @@ uv run --locked python scripts/build_benchmark_html.py --with-clip-review --shar
 
 Use `--include-private-review` instead of `--with-clip-review` to also include the
 locally supplied private recordings and transcripts. Extract the generated
-`reports/benchmark-dashboard/benchmark-review.zip` and open `index.html`, keeping
+`reports/benchmark-dashboard-combined-v1/benchmark-review.zip` and open `index.html`, keeping
 the audio folder beside it. See the [dashboard guide](scripts/BENCHMARK_DASHBOARD.md)
 for source selection, metric definitions, and export options.
 

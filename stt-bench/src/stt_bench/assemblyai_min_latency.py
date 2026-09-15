@@ -13,8 +13,8 @@ from .assemblyai_pacing import stream_audio
 
 class Protocol(shared.Protocol):
     def finalize(self):
-        # Preserve native endpointing throughout long conversations.
-        return None
+        # Opt-in only; historical profiles retain native endpointing.
+        return {'type': 'ForceEndpoint'} if self.config.get('force_endpoint') else None
 
     def finish(self, frames):
         return {'type': 'Terminate'}

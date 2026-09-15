@@ -46,7 +46,8 @@ class Protocol:
             return {'message': 'StartRecognition', 'audio_format': {
                 'type': 'raw', 'encoding': 'pcm_s16le', 'sample_rate': 16000},
                 'transcription_config': {'language': 'en', 'enable_partials': True,
-                    'model': c['model'], 'enable_entities': False}}
+                    'model': c['model'], 'enable_entities': False,
+                    **{k: c[k] for k in ('max_delay', 'max_delay_mode') if k in c}}}
         if p == 'gemini':
             return {'setup': {'model': 'models/' + c['model'],
                 'generationConfig': {'responseModalities': ['TEXT']},
@@ -65,6 +66,8 @@ class Protocol:
         return frame
 
     def finalize(self):
+        if self.provider == 'speechmatics' and self.config.get('force_end_of_utterance'):
+            return {'message': 'ForceEndOfUtterance'}
         return {'openai': {'type': 'input_audio_buffer.commit'},
                 'elevenlabs': {'message_type': 'input_audio_chunk', 'audio_base_64': '',
                                'commit': True, 'sample_rate': 16000},
@@ -147,6 +150,8 @@ class Protocol:
         elif p == 'speechmatics':
             if kind == 'RecognitionStarted':
                 self.ready = True
+            if (self.requested and kind == 'EndOfUtterance' and m.get('forced') is True):
+                self.ack = True
             if kind in ('AddTranscript', 'AddPartialTranscript'):
                 meta = m.get('metadata', {})
                 key = (meta.get('start_time'), meta.get('end_time'))
@@ -290,9 +295,9 @@ async def exchange(ws, pcm, speech_frames, config, log, secret='', *, protocol_f
             command = protocol.finalize()
             if command is not None:
                 protocol.requested = True
-                log.emit('finalize_requested', t0_seconds=t0)
+                log.emit('finalize_requested', t0_seconds=t0, message=command)
                 await send(command)
-                log.emit('finalize_sent', t0_seconds=t0)
+                log.emit('finalize_sent', t0_seconds=t0, message=command)
         sender = asyncio.create_task((streamer or stream_audio)(pcm, speech_frames, send_audio, finalize, log,
                                                  sample_rate=config['sample_rate']))
         done, _ = await asyncio.wait({sender, receiver}, return_when=asyncio.FIRST_COMPLETED)
@@ -300,7 +305,7 @@ async def exchange(ws, pcm, speech_frames, config, log, secret='', *, protocol_f
             await receiver
             raise ProviderError('Connection ended before all audio was sent')
         await sender
-        if protocol.finalize() is not None:
+        if protocol.finalize() is not None and config.get('finalize_ack_supported') is not False:
             await wait_signal(ack, max(0, speech_end + config['finalize_timeout_seconds'] - log.now()))
         protocol.closing = True
         log.emit('close_stream_requested')

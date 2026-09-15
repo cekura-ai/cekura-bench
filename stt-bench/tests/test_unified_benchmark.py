@@ -103,3 +103,25 @@ def test_no_attempts_is_unavailable_failure_rate_not_zero():
     result = reduce([], planned=dict(pipecat=4, fleurs=0, private=0))
     assert result['reliability']['failure_rate'] is None
     assert result['reliability']['not_run_rate'] == 1
+
+
+def test_equal_attempted_sets_rank_only_shared_successes_and_keep_all_available():
+    # Both models attempted every clip. One failed clip must be excluded from
+    # both ranking scores, even though the other model transcribed it correctly.
+    rows = {
+        'deepgram-nova-3': [record('shared', errors=1), record('failed-elsewhere', words=100),
+                            record('private', 'private')],
+        'cartesia-ink-2': [record('shared'), record('failed-elsewhere', valid=False),
+                           record('private', 'private')],
+    }
+    models = [report.reduce_model(model, records, dict(pipecat=2, fleurs=0, private=1), True, [])
+              for model, records in rows.items()]
+    original = {m['id']: dict(m['cohorts']['pipecat']) for m in models}
+    common = report.rank_common_public(models, rows)
+    assert common['clip_ids'] == ['shared']
+    assert common['reference_words'] == 10
+    assert all(m['headline']['n'] == 1 and m['headline']['reference_words'] == 10 for m in models)
+    assert [(m['rank'], m['headline']['wer']) for m in models] == [(2, .1), (1, 0)]
+    assert all(m['cohorts']['pipecat'] == original[m['id']] for m in models)
+    assert models[0]['cohorts']['pipecat']['wer'] == 1 / 110
+    assert models[1]['reliability']['failed'] == 1

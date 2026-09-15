@@ -228,8 +228,8 @@ def load_private(path):
 
 
 def render(data, template):
-    # Omit these limited-coverage entries from the page, without changing scores.
-    excluded = {'google-chirp-3', 'sarvam-saaras-v3-realtime', 'soniox-stt-rt-v5'}
+    # Incomplete models stay visible with their coverage and no combined rank.
+    excluded = set()
     data = deepcopy(data)
     if 'models' in data:
         data['models'] = [m for m in data['models'] if m.get('id') not in excluded]
@@ -372,7 +372,7 @@ def main():
     from unified_benchmark import build
     parser = argparse.ArgumentParser(description="Build the unified English benchmark from saved evidence; no provider calls.")
     parser.add_argument("--reports-root", type=Path, default=ROOT / "reports")
-    parser.add_argument("--out", type=Path, default=ROOT / "reports/benchmark-dashboard/index.html")
+    parser.add_argument("--out", type=Path, default=ROOT / "reports/benchmark-dashboard-combined-v1/index.html")
     parser.add_argument('--with-clip-review', action='store_true', help='Include public transcripts, diffs, and lossless listening audio')
     parser.add_argument('--include-private-review', action='store_true', help='Also package the eight private recordings and transcripts')
     parser.add_argument('--share-zip', action='store_true', help='Package the review HTML and audio into one ZIP')
@@ -393,7 +393,7 @@ def main():
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(page, encoding="utf-8")
         print(f"Created {args.out.resolve()} ({len(page.encode()):,} bytes)")
-        print(f"{len(data['models'])} models; {sum(m['rankable'] for m in data['models'])} ranked on {data['common_public']['clips']} common public clips; zero provider calls.")
+        print(f"{len(data['models'])} models; {sum(m['rankable'] for m in data['models'])} ranked on {data['common_public']['clips']} public clips + {data['ranking']['datasets']['private']['clips']} private recordings; zero provider calls.")
         if args.share_zip:
             from benchmark_clip_review import share_zip
             bundle = share_zip(args.out, data['clip_review'])

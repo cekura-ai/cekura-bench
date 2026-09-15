@@ -1,5 +1,5 @@
 """Provider registry used by capture, replay and readiness checks."""
-from . import deepgram, provider_protocol, chirp, trial_providers, gradium, reson8, assemblyai
+from . import deepgram, provider_protocol, chirp, trial_providers, gradium, reson8, assemblyai, assemblyai_min_latency
 from .credentials import credential
 
 MODELS = {
@@ -70,16 +70,20 @@ def sample_rate(config):
 async def transcribe(pcm, speech_frames, config, key, log):
     validate(config)
     adapter = (deepgram if is_nova(config) else chirp if config['provider'] == 'google'
-               else assemblyai if config['provider'] == 'assemblyai'
+               else assembly_adapter(config) if config['provider'] == 'assemblyai'
                else gradium if config['provider'] == 'gradium'
                else reson8 if config['provider'] == 'reson8'
                else trial_providers if config['provider'] in trial_providers.MODELS else provider_protocol)
     await adapter.transcribe(pcm, speech_frames, config, key, log)
 
 
+def assembly_adapter(config):
+    return assemblyai_min_latency if config.get('mode') == 'min_latency' else assemblyai
+
+
 def reduce_events(events, config):
     if config['provider'] == 'assemblyai':
-        return assemblyai.replay(events, config)[1]
+        return assembly_adapter(config).replay(events, config)[1]
     if config['provider'] == 'reson8':
         return reson8.replay(events, config)[1]
     if config['provider'] == 'gradium':
@@ -93,7 +97,7 @@ def reduce_events(events, config):
 
 def transcript_at(events, cutoff, config=None):
     if config and config['provider'] == 'assemblyai':
-        return assemblyai.replay(events, config, cutoff)[0]
+        return assembly_adapter(config).replay(events, config, cutoff)[0]
     # Old report callers and v3 files retain the exact Nova reconstruction.
     if config is None or is_nova(config):
         return deepgram.transcript_at(events, cutoff)

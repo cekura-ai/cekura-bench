@@ -31,6 +31,7 @@ from .score import aggregate_wer, percentiles, word_errors
 from .streaming import EventLog, read_events
 
 MODELS = ('smallest-pulse', 'gradium-default', 'reson8-realtime', 'inworld-stt-1')
+PUBLIC_LIVE_MODELS = ('gemini-3.8-live', 'gemini-3.8-live-extended-thinking')
 PUBLIC = Path('datasets/pipecat-stt-benchmark/3fe50170d520c951957b86996ef082a6ab87b394/full')
 PRIVATE = Path('reports/assemblyai-private-20260914/dataset')
 PRIVATE_MANIFEST = Path('workspaces/private-longform-recovery-v2/dataset/manifest.json')
@@ -45,11 +46,25 @@ def load_plan(path, expected=None, runtime=None, runtime_hash=None):
     if expected and sha256(path) != expected:
         raise ValueError('Run plan hash changed')
     p = json.loads(path.read_text())
-    if p['models'] != list(MODELS) or p['max_attempts'] != 2 or p['workers_per_model'] != 10:
+    models, workers = p['models'], p['workers_per_model']
+    legacy = p.get('version', 1) == 1
+    public_only = p.get('version') == 3 and p.get('public_only') is True
+    if (p.get('version', 1) not in (1, 2, 3)
+            or (p.get('version') == 3 and not public_only)
+            or not models or len(models) != len(set(models)) or not set(models).issubset(PUBLIC_LIVE_MODELS if public_only else MODELS)
+            or p['max_attempts'] != 2 or type(workers) is not int or not 1 <= workers <= 12
+            or (legacy and (models != list(MODELS) or workers != 10))):
         raise ValueError('Unexpected model or execution scope')
+    if p.get('ramp_after_public_pilot') and (models != ['inworld-stt-1']
+            or p.get('private_pilot') is not None
+            or p['configs']['inworld-stt-1'].get('transmitted_silence_frames') != 0):
+        raise ValueError('Fast ramp requires the corrected Inworld-only configuration')
     ids = [c['clip_id'] for c in p['items']]
-    if len(set(ids)) != 1008 or len(ids) != 1008 or Counter(c['cohort'] for c in p['items']) != {'public': 1000, 'private': 8}:
+    counts = {'public': 1000} if public_only else {'public': 1000, 'private': 8}
+    if len(set(ids)) != sum(counts.values()) or len(ids) != sum(counts.values()) or Counter(c['cohort'] for c in p['items']) != counts:
         raise ValueError('Full dataset coverage changed')
+    if public_only and (p.get('private_pilot') is not None or p.get('private_manifest_sha256') is not None):
+        raise ValueError('Public-only run cannot include a private dataset')
     if runtime:
         if not runtime_hash or sha256(Path(runtime)) != runtime_hash:
             raise ValueError('Runtime amendment hash changed')
@@ -62,10 +77,15 @@ def load_plan(path, expected=None, runtime=None, runtime_hash=None):
     return p
 
 
-def prepare(root):
+def prepare(root, models=MODELS, workers=10, fast_inworld=False, public_only=False):
+    if (not models or len(models) != len(set(models)) or not set(models).issubset(PUBLIC_LIVE_MODELS if public_only else MODELS)
+            or type(workers) is not int or not 1 <= workers <= 12):
+        raise ValueError('Invalid model selection or worker count')
+    if fast_inworld and tuple(models) != ('inworld-stt-1',):
+        raise ValueError('Fast ramp is limited to the validated Inworld adapter')
     root.mkdir(parents=True, exist_ok=False)
     public = json.loads((PUBLIC/'manifest.json').read_text())
-    private = json.loads(PRIVATE_MANIFEST.read_text())
+    private = {'clips': []} if public_only else json.loads(PRIVATE_MANIFEST.read_text())
     items = []
     for clip in public['clips']:
         source = PUBLIC/clip['audio']
@@ -92,12 +112,15 @@ def prepare(root):
                     *Path('scripts').glob('*.mjs'), *Path('scripts').glob('*.py'),
                     *Path('tests').glob('*.py'), *Path('tests').glob('*.mjs')])
     hashes = {str(p): sha256(p) for p in files if '__pycache__' not in str(p)}
-    plan = dict(version=1, run_id=root.name, created_at=now(), models=list(MODELS),
-                workers_per_model=10, max_workers=40, max_attempts=2,
+    plan = dict(version=3 if public_only else 2, run_id=root.name, created_at=now(), models=list(models),
+                workers_per_model=workers, max_workers=workers*len(models), max_attempts=2,
                 public_manifest_sha256=sha256(PUBLIC/'manifest.json'),
-                private_manifest_sha256=sha256(PRIVATE_MANIFEST),
-                private_pilot=private['clips'][0]['clip_id'], items=items, code_hashes=hashes,
-                configs={m: json.loads(Path(f'config/models/{m}.json').read_text()) for m in MODELS})
+                private_manifest_sha256=None if public_only else sha256(PRIVATE_MANIFEST),
+                private_pilot=None if fast_inworld or public_only else private['clips'][0]['clip_id'],
+                ramp_after_public_pilot=fast_inworld, items=items, code_hashes=hashes,
+                configs={m: json.loads(Path(f'config/models/{m}.json').read_text()) for m in models})
+    if public_only:
+        plan['public_only'] = True
     write_json(root/'plan.json', plan)
     load_plan(root/'plan.json')
     with tarfile.open(root/'input.tar.gz', 'w:gz', compresslevel=1) as t:
@@ -155,7 +178,7 @@ def classify(events):
         return 'credits'
     if statuses.intersection({401,403}) or any(x in value for x in ('unauthorized', 'invalid api', 'authentication', 'required scopes', 'permission denied', 'access denied')):
         return 'authentication'
-    if 429 in statuses or any(x in value for x in ('concurrent', 'concurrency', 'too many', 'rate limit')):
+    if 429 in statuses or any(x in value for x in ('concurrent', 'concurrency', 'too many', 'rate limit', 'resource_exhausted', 'quota exceeded')):
         return 'concurrency'
     if any(x in value for x in ('different model', 'model mismatch', 'different audio or delay')):
         return 'model_identity'
@@ -274,7 +297,7 @@ def evaluate(events, clip, config, number, raw_hash):
 async def worker(args):
     plan = load_plan(Path(args.plan), args.plan_hash, args.runtime, args.runtime_hash)
     assignment = json.loads(Path(args.assignment).read_text())
-    if assignment['plan_hash'] != args.plan_hash or assignment['model'] not in MODELS:
+    if assignment['plan_hash'] != args.plan_hash or assignment['model'] not in plan['models']:
         raise ValueError('Assignment identity mismatch')
     if assignment.get('runtime_hash') != plan.get('runtime_hash'):
         raise ValueError('Assignment runtime identity mismatch')
@@ -422,7 +445,7 @@ def combine(plan, states):
                 raise ValueError('Duplicate attempt in merge')
             all_rows[key] = row
     output = {}
-    for model in MODELS:
+    for model in plan.get('models', MODELS):
         records = []
         for clip in plan['items']:
             attempts = [all_rows[(model,clip['clip_id'],n)] for n in (1,2) if (model,clip['clip_id'],n) in all_rows]
@@ -483,12 +506,16 @@ def combine(plan, states):
 def main():
     p=argparse.ArgumentParser()
     p.add_argument('mode', choices=('prepare','verify','worker','replay','report'))
+    p.add_argument('--models', nargs='+', choices=(*MODELS, *PUBLIC_LIVE_MODELS), default=list(MODELS))
+    p.add_argument('--workers', type=int, default=10)
+    p.add_argument('--fast-inworld', action='store_true')
+    p.add_argument('--public-only', action='store_true')
     p.add_argument('--root'); p.add_argument('--plan',default='full-input/plan.json'); p.add_argument('--plan-hash')
     p.add_argument('--assignment'); p.add_argument('--session-id'); p.add_argument('--out')
     p.add_argument('--archive'); p.add_argument('--archive-hash'); p.add_argument('--convert',action='store_true')
     p.add_argument('--runtime'); p.add_argument('--runtime-hash')
     a=p.parse_args()
-    if a.mode=='prepare': prepare(Path(a.root)); return
+    if a.mode=='prepare': prepare(Path(a.root), a.models, a.workers, a.fast_inworld, a.public_only); return
     plan=load_plan(Path(a.plan),a.plan_hash,a.runtime,a.runtime_hash)
     if a.mode=='verify': verify_inputs(plan,convert=a.convert)
     elif a.mode=='worker': asyncio.run(worker(a))

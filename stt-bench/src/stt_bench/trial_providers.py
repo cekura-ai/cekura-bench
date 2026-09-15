@@ -13,7 +13,7 @@ from websockets.asyncio.client import connect
 
 from . import provider_protocol as shared
 from .credentials import redact
-from .streaming import stream_audio
+from .streaming import stream_audio, transmitted_silence_frames
 
 MODELS = {'soniox': {'stt-rt-v5'}, 'smallest': {'pulse'},
           'sarvam': {'saaras:v3-realtime'}, 'inworld': {'inworld/inworld-stt-1'}}
@@ -28,6 +28,7 @@ COMPLETION = {'soniox': 'finished_after_empty_audio', 'smallest': 'is_last_after
 
 
 def validate(config):
+    transmitted_silence_frames(config)
     p = config['provider']
     expected = dict(sample_rate=16000, channels=1, encoding='pcm_s16le', frame_ms=20,
                     finalization='manual_at_speech_end', completion_basis=COMPLETION[p],
@@ -279,18 +280,20 @@ async def exchange(ws, pcm, speech_frames, config, log, secret=''):
             log.emit('finalize_sent', t0_seconds=t0)
 
         sender = asyncio.create_task(stream_audio(pcm, speech_frames, send_audio, finalize, log,
-                                                 sample_rate=config['sample_rate']))
+                                                 sample_rate=config['sample_rate'],
+                                                 transmitted_silence_frames=transmitted_silence_frames(config)))
         done, _ = await asyncio.wait({sender, receiver}, return_when=asyncio.FIRST_COMPLETED)
         if receiver in done:
             await receiver
-            raise shared.ProviderError('Connection ended before all audio was sent')
+            if not sender.done():
+                raise shared.ProviderError('Connection ended before all audio was sent')
         await sender
         # Only Soniox supplies a documented, unambiguous finalize acknowledgment.
         if config['finalize_ack_supported']:
             await wait_signal(ack, max(0, speech_end + config['finalize_timeout_seconds'] - log.now()))
         protocol.closing = True
         log.emit('close_stream_requested')
-        await send(protocol.finish(speech_frames + 50))
+        await send(protocol.finish(speech_frames + transmitted_silence_frames(config)))
         await wait_signal(terminal, config['close_timeout_seconds'])
         if protocol.snapshot()['partial_text']:
             raise shared.ProviderError('Stream ended with unresolved partial text')

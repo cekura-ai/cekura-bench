@@ -169,6 +169,8 @@ async def fake_provider(ws, c, *, text='hello world', fault=None):
         if 'activityEnd' in m.get('realtimeInput', {}):
             await send({'serverContent': {'inputTranscription': {'text': text}}})
             await send({'serverContent': {'generationComplete': True}})
+            if c['model'].startswith('gemini-3.8-'):
+                await send({'serverContent': {'turnComplete': True, 'interactionStatus': 'IDLE'}})
         if kind == 'Finalize':
             await send({'type': 'Results', 'is_final': True, 'from_finalize': True, 'start': 0, 'duration': .2,
                 'channel': {'alternatives': [{'transcript': text}]},
@@ -178,7 +180,7 @@ async def fake_provider(ws, c, *, text='hello world', fault=None):
             await ws.close(); return
 
 
-@pytest.mark.parametrize('name', [n for n in MODELS if config(n)['provider'] not in ('google', 'soniox', 'smallest', 'sarvam', 'inworld', 'gradium', 'reson8', 'assemblyai')])
+@pytest.mark.parametrize('name', [n for n in MODELS if n != 'speechmatics-linden-1' and config(n)['provider'] not in ('google', 'soniox', 'smallest', 'sarvam', 'inworld', 'gradium', 'reson8', 'assemblyai')])
 @pytest.mark.parametrize('text', ['hello world', ''])
 def test_local_websocket_success_and_empty_completed_transcript(name, text, tmp_path, monkeypatch):
     c = config(name)
@@ -191,7 +193,9 @@ def test_local_websocket_success_and_empty_completed_transcript(name, text, tmp_
             rate = c.get('sample_rate', 16000)
             async with connect(f'ws://127.0.0.1:{server.sockets[0].getsockname()[1]}') as ws:
                 try:
-                    await (deepgram if is_nova(c) else wire).exchange(ws, bytes(rate//50*2*60), 10, c, log)
+                    from stt_bench import gemini_live
+                    kwargs = {'protocol_factory': gemini_live.Protocol} if c['model'] in gemini_live.MODELS else {}
+                    await (deepgram if is_nova(c) else wire).exchange(ws, bytes(rate//50*2*60), 10, c, log, **kwargs)
                 finally:
                     log.emit('clip_end'); log.close()
         reduced = reduce_events(read_events(tmp_path / 'events.jsonl'), c)
@@ -201,7 +205,7 @@ def test_local_websocket_success_and_empty_completed_transcript(name, text, tmp_
     asyncio.run(scenario())
 
 
-@pytest.mark.parametrize('name', [n for n in MODELS if 'nova' not in n and config(n)['provider'] not in ('google', 'soniox', 'smallest', 'sarvam', 'inworld', 'gradium', 'reson8', 'assemblyai')])
+@pytest.mark.parametrize('name', [n for n in MODELS if n != 'speechmatics-linden-1' and 'nova' not in n and config(n)['provider'] not in ('google', 'soniox', 'smallest', 'sarvam', 'inworld', 'gradium', 'reson8', 'assemblyai')])
 @pytest.mark.parametrize('fault', ['auth', 'disconnect', 'timeout'])
 def test_local_websocket_failure_never_becomes_success(name, fault, tmp_path, monkeypatch):
     c = config(name); c.update(finalize_timeout_seconds=.05, close_timeout_seconds=.05, ready_timeout_seconds=.05)

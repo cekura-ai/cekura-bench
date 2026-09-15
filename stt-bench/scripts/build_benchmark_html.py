@@ -242,7 +242,8 @@ def render(data, template):
     require(template.count("__BENCHMARK_DATA__") == 1, "Template must contain exactly one data placeholder")
     review_ui = (Path(__file__).with_name('benchmark_clip_review.html').read_text()
                  if data.get('clip_review') else '')
-    return template.replace("__BENCHMARK_DATA__", encoded).replace('__CLIP_REVIEW_UI__', review_ui)
+    turn_ui = Path(__file__).with_name('benchmark_turns.html').read_text() if data.get('turns') else ''
+    return template.replace("__BENCHMARK_DATA__", encoded).replace('__CLIP_REVIEW_UI__', review_ui).replace('__TURN_OVERVIEW__', turn_ui)
 
 
 def refresh_private(data, directory):
@@ -389,6 +390,8 @@ def main():
             from benchmark_clip_review import build_review
             data['clip_review'] = build_review(data, args.reports_root, ROOT, args.out.parent,
                                              include_private=args.include_private_review)
+        from turn_dashboard import attach_turns
+        data['turns'] = attach_turns(data, args.reports_root, args.out.parent)
         page = render(data, Path(__file__).with_name("benchmark_dashboard.html").read_text())
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(page, encoding="utf-8")
@@ -396,7 +399,7 @@ def main():
         print(f"{len(data['models'])} models; {sum(m['rankable'] for m in data['models'])} ranked on {data['common_public']['clips']} public clips + {data['ranking']['datasets']['private']['clips']} private recordings; zero provider calls.")
         if args.share_zip:
             from benchmark_clip_review import share_zip
-            bundle = share_zip(args.out, data['clip_review'])
+            bundle = share_zip(args.out, data['clip_review'], args.out.parent / 'turn-proof' if data.get('turns') else None)
             print(f'Share {bundle.resolve()} ({bundle.stat().st_size / 1_000_000:.1f} MB); extract and open index.html.')
     except (OSError, ValueError, KeyError, TypeError) as exc:
         parser.exit(1, f"Cannot build benchmark report: {exc}\n")

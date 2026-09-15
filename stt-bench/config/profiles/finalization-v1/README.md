@@ -19,8 +19,10 @@ The standard provider dispatch now selects AssemblyAI's dedicated adapter when
 `mode=min_latency`, including during replay. This preserves that mode's wire
 parameters and server identity checks.
 
-The benchmark requests finalization at t=0 (speech end). It still sends the
-original one-second silence tail and waits for terminal completion. Completion
+The benchmark requests finalization at t=0 (speech end). The AssemblyAI and
+Speechmatics profiles still send the original one-second silence tail. The
+Inworld profile now inherits the base configuration's `transmitted_silence_frames: 0`
+fix and sends no audio after `endTurn`. All profiles wait for terminal completion. Completion
 is measured separately; the request does not guarantee immediate final text.
 Speechmatics acknowledges only a forced `EndOfUtterance` after our request.
 AssemblyAI and Inworld have no distinct finalization acknowledgment in these
@@ -31,6 +33,10 @@ The original pilot is retained unchanged. Its AssemblyAI default profile cannot
 validate the published `min_latency` profile. Speechmatics changed two controls
 together, so it cannot isolate either control's causal effect. Inworld profiling
 changes do not establish a fix for repetition.
+
+The later [Inworld stream-ending comparison](../../../INWORLD_STREAM_END_FIX.md)
+tests omission of the artificial silence tail separately from voice profiling.
+Saved pilot configurations and evidence remain unchanged.
 
 ## Offline verification
 

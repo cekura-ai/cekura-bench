@@ -12,6 +12,7 @@ const {pathToFileURL}=require('node:url');
   page.on('pageerror',e=>errors.push(e.message));
   context.on('request',r=>{if(/^https?:/.test(r.url()))remote.push(r.url());});
   await page.goto(pathToFileURL(file).href);
+  if(await page.locator('#tab-overall').count())await page.locator('#tab-overall').click();
   const data=JSON.parse(await page.locator('#benchmark-data').textContent()),review=data.clip_review;
   assert.equal(review.clips.length,1188);assert.equal(review.includes_private,true);
   assert.equal(await page.locator('#review-clip option').count(),1000);

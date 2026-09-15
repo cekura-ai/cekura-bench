@@ -7,10 +7,44 @@ Run from `stt-bench/` to build the offline page from locally saved evidence:
 ```
 
 The output is `reports/benchmark-dashboard-combined-v1/index.html`. Share or open that single
-file: data, charts, styles, and scripts are embedded. No provider calls, downloads,
+file for the summary: data, charts, styles, and scripts are embedded. Linked audio
+and detailed turn proofs require the accompanying folders. No provider calls, downloads,
 server, or internet access are needed. Reports are ignored by Git and are not
 included in a fresh clone. `--reports-root` accepts a copied reports directory;
 `--out` changes the destination.
+
+## Latest turn results and proof
+
+When `reports/private-turns-consolidated-20260915/final/` is present, the builder
+adds three views: **Latest results**, **Overall benchmark**, and **Proof & methodology**.
+Latest results shows all 19 included turn models, each with 206 attempted clips
+from four conversations. The overall score appears beside turn WER;
+its fixed comparison set and weighting stay unchanged. The same calls are
+not counted a second time in that overall score.
+
+The overview supports search, sorting, p50/p90/p95 latency, and separate first-attempt
+and after-recovery views. Each model's proof panel includes valid observation
+counts, failures, deadline accuracy, recovery outcomes, timing statuses, and
+its effective completion settings. Google Chirp's observed delay is separate
+from controlled TTFS. Automatic clip selection and the lack of independent
+listening review are disclosed in the methodology.
+
+The builder verifies saved totals, per-clip timing percentiles, receipt hashes,
+dataset identity, and completion checks. It writes a portable `turn-proof/`
+folder with all 206 audio clips, per-model listening pages, exact result JSON,
+compressed original provider logs, session metadata, and hash indexes. Original
+benchmark evidence is not modified and no provider is called. The proof package
+contains private audio and transcripts whenever the final turn report is present;
+the older `--include-private-review` flag controls only the whole-recording review.
+
+To share the complete integrated dashboard, use:
+
+```sh
+.venv/bin/python scripts/build_benchmark_html.py --include-private-review --share-zip
+```
+
+Extract the entire `benchmark-review.zip` and keep both `audio/` and `turn-proof/`
+beside `index.html`. The dashboard and evidence work offline.
 
 ## Explicit source selection
 
@@ -32,6 +66,14 @@ file modification times or live controller progress as a score:
   clips and eight private recordings. It receives a rank only after the saved
   execution status, evidence audit, and compute-stop receipt confirm completion.
   An incomplete saved snapshot remains visible and unranked.
+- The completed, audited `inworld-full-stream-end-v2-20260915` rerun replaces
+  Inworld's older `full-parallel-20260915` observations in every score, timing,
+  chart, table, and listening transcript. It covers the same 1,000 public clips
+  and eight private recordings with corrected stream ending.
+- The completed `linden-full-20260915` run has 998 usable public clips and all
+  eight private recordings. Its archived logs and merged scores pass the local
+  audit; its saved controller records stopped workers. Two missing ranking
+  items leave Linden unranked rather than shrinking the common comparison set.
 - Sarvam and Soniox's Pipecat trial observations, marked small-trial and unranked.
   Private excerpts are excluded from the full-recording suite. Trial Pipecat
   results for models with full runs are not counted again.
@@ -43,11 +85,14 @@ receipts. It validates the original totals, then recomputes WER with punctuation
 tokens removed on both sides and calculates percentiles from saved observations.
 The corrected totals and per-item before/after audit are written separately to
 `reports/offline-rescore-combined-v1/`; see [the correction guide](../OFFLINE_RESCORING.md).
-The Inworld note additionally requires its selected public raw archives under
+The historical Inworld diagnostic additionally requires its old public raw archives under
 `full-parallel-20260915/batches/`; raw receipt checksums are verified locally.
+Those diagnostic receipts do not supply the current Inworld score; the verified
+full rerun listed above does.
 It does not re-download archives or repeat the underlying provider benchmarks.
-The default summary export contains no private transcript, audio, or individual
-word annotation. Listening review is an explicit export option described below.
+Without the final turn report described above, the default summary export contains
+no private transcript, audio, or individual word annotation. Whole-recording
+listening review is an explicit export option described below.
 
 ## Share a listening review
 
@@ -59,11 +104,13 @@ For a review containing all 1,180 public clips plus the eight private recordings
 
 Send `reports/benchmark-dashboard-combined-v1/benchmark-review.zip`. The recipient extracts
 the entire ZIP and opens `index.html`; the `audio` folder must stay beside it.
-Everything works offline. The current bundle is about 270 MB, including private
+Everything works offline. The whole-recording assets are about 270 MB, including private
 audio and transcripts. Sending the HTML alone preserves transcripts and diffs,
 but audio requires the accompanying files. Nothing is uploaded by the build.
-For public clips only, use `--with-clip-review --share-zip` instead. Rebuilding
-without either review flag returns the HTML to the summary-only version.
+For public whole-recording clips only, use `--with-clip-review --share-zip` instead;
+this does not exclude the separate private turn proof package when its final report
+is available. Rebuilding without either review flag removes the whole-recording
+listening interface.
 
 The Verify clips section has dataset/model selection, reference-text and clip-ID
 search, previous/next navigation, an errors-only filter, and sorting by WER.
@@ -86,8 +133,9 @@ does not accidentally include old private audio from the output directory.
 
 ## Failure rate on a fixed denominator
 
-The main table replaces varying clip-count columns with **Failure rate** and
-**Not run**, and the comparison chart includes a failure-rate view. Every model
+The main table shows **Failure rate**, and the comparison chart includes a
+failure-rate view. The separate **Not run** column has been removed; those
+counts remain in dataset details and CSV evidence. Every model
 uses the same 1,188 planned recordings as the denominator:
 
 - Failure rate = attempted recordings with no usable result after retries / 1,188.
@@ -104,16 +152,50 @@ failed, and not-run counts; adding a metric does not create missing observations
 
 ## Model selection
 
-The page retains Flux English and Nova-3 as distinct Deepgram families, and one
-OpenAI entry: GPT-4o Transcribe. It removes Nova-2, Flux Multilingual, Whisper,
-GPT-4o Mini, and Chirp 2. Chirp 3, Sarvam Saaras v3, and Soniox STT-RT v5 remain visible with incomplete coverage and no combined rank. Speechmatics Standard and Enhanced remain separate
-operating modes. This is an explicit display selection, not a live model-catalog
-claim. Source benchmark artifacts and model configurations remain unchanged.
+Flux Multilingual, GPT Realtime Whisper, GPT-4o Mini Transcribe, and Chirp 2
+are restored to the overall view. Chirp 2 and Chirp 3 now use their completed
+1,000-clip public summaries collected from the original sandboxes, alongside
+their eight verified private recordings. Their public/private counts and
+normalized transcripts are checked during the build. The sandboxes were
+stopped again after reading these files; no provider calls were started.
+
+AssemblyAI normal and minimum-latency profiles are separate. The normal
+profile's saved full public run has zero scored clips, and Sarvam has a
+10-public-clip pilot with no full private run. Their overall WER stays
+unavailable with an explicit explanation; their 206-turn scores stay visible.
+
+Nova-2 remains excluded. The restored models appear beside the existing
+models; full-run eligibility is determined from saved coverage, rather than
+an old display filter. Speechmatics Standard, Enhanced, and Linden remain
+separate profiles. Source benchmark artifacts and model configurations remain
+unchanged.
 
 ## Provisional combined ranking
 
+The default **Combined · available results** chart pools each model's usable
+Pipecat results and selected private recordings. It requires usable results in
+both datasets, excludes FLEURS, and shows coverage and exclusions. Linden is
+visible with 1,006 included recordings and two public failures. The separate
+**Combined · fixed ranking set** preserves the original comparison set and
+scoring rules; ranks are recomputed when eligible models are restored.
+
+At the user's request, Inworld's selected private accuracy excludes
+`conversation-04-B` because of excessive repeated output. The selected result is
+3.95% across seven of eight recordings; its combined available result is 3.10%
+across 1,000 public clips and seven private recordings. This is an explicitly
+selected subset, not a corrected result for all eight. Original cohorts,
+transcripts, fixed-set ranks and timing observations remain intact. The full
+eight-recording private result is still 10.56% and remains visible in details.
+
+The chart offers **Public Pipecat · all available** for every model's usable
+results from the 1,000 planned public clips, including Linden's 998 usable clips.
+Each bar shows coverage and failed clips. **Shared public clips · fixed set**
+remains a separate comparison; models missing a required clip have no score there.
+The all-available chart and scatter plot do not require a combined rank. Coverage
+can differ, so they are not a replacement for the fixed-set ranking.
+
 The suite has 1,000 Pipecat clips, 180 FLEURS clips, and eight private recordings.
-The 13 eligible models use exactly the same 864 public clips plus all eight
+Eligible models use exactly the same 864 public clips plus all eight
 private recordings: 20,865 public and 12,555 private reference words. Combined
 WER is total substitutions, insertions, and deletions divided by 33,420 words.
 FLEURS does not contribute. Each word has equal weight; dataset percentages are
@@ -123,7 +205,7 @@ not averaged. The frozen IDs and per-item word counts are versioned in
 A missing or unusable ranking item makes that model unranked; it does not shrink
 the set. UI filtering cannot change scores or rank. All-available public WER,
 common-public WER, private WER, and their coverage remain separately visible.
-The page contains 13 ranked and three incomplete models. The shared public subset
+The page now contains the restored full-run models alongside profiles with incomplete coverage; ranks follow the fixed-set eligibility checks. The shared public subset
 excludes 136 clips, so accuracy must be read alongside reliability and coverage.
 
 The private files are eight speaker tracks from four conversations. Their 37.6%

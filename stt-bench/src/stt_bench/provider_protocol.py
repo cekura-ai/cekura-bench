@@ -35,6 +35,41 @@ class Protocol:
         self.seen = set()
         self.sequence = 0
         self.unsupported = False
+        self.eleven_pending = []
+        self.eleven_ranges = {}
+
+    def eleven_segment(self, kind, message):
+        """V2: plain commits are authoritative text; timestamps annotate them.
+
+        ElevenLabs can auto-commit at about 36 seconds even in manual mode.
+        Its delayed timestamp event is a second representation of that same
+        segment, occasionally with different capitalization.
+        """
+        text = message.get('text', '')
+        if kind == 'committed_transcript':
+            if self.eleven_pending and self.finals[self.eleven_pending[-1]] == text:
+                return
+            key = ('eleven-segment', self.sequence)
+            self.sequence += 1
+            self.partials.clear()
+            self.put(key, text, True)
+            self.eleven_pending.append(key)
+            if self.requested:
+                self.ack = True
+        else:
+            words = message.get('words') or []
+            boundary = (words[0].get('start'), words[-1].get('end')) if words else None
+            if boundary is not None and boundary in self.eleven_ranges:
+                key = self.eleven_ranges[boundary]
+            elif self.eleven_pending:
+                key = self.eleven_pending.pop(0)
+                if boundary is not None:
+                    self.eleven_ranges[boundary] = key
+            else:
+                self.unsupported = True
+                return
+            if ' '.join(self.finals[key].split()).casefold() != ' '.join(text.split()).casefold():
+                self.unsupported = True
 
     def setup(self):
         c, p = self.config, self.provider
@@ -131,12 +166,21 @@ class Protocol:
                 model = m.get('config', {}).get('model_id')
                 self.model_mismatch |= bool(model and model != self.config['model'])
             if kind == 'partial_transcript':
-                self.put('utterance', m.get('text', ''), False)
+                # V3 suppresses a late duplicate of the just-committed text.
+                # A different partial remains visible and can invalidate an
+                # incomplete stream; this never drops new unfinished words.
+                duplicate=(self.config.get('transcript_reconstruction') == 'elevenlabs-committed-segments-v3' and
+                           self.eleven_pending and
+                           m.get('text','').strip()==self.finals[self.eleven_pending[-1]].strip())
+                if not duplicate:self.put('utterance', m.get('text', ''), False)
             elif kind in ('committed_transcript', 'committed_transcript_with_timestamps'):
-                # This adapter sends exactly one manual commit per clip.
-                self.put('utterance', m.get('text', ''), True)
-                if self.requested:
-                    self.ack = True
+                if self.config.get('transcript_reconstruction') in ('elevenlabs-committed-segments-v2','elevenlabs-committed-segments-v3'):
+                    self.eleven_segment(kind, m)
+                else:
+                    # Preserve historical reconstruction for existing reports.
+                    self.put('utterance', m.get('text', ''), True)
+                    if self.requested:
+                        self.ack = True
         elif p == 'deepgram':
             if kind == 'Connected':
                 self.ready = True
@@ -159,6 +203,8 @@ class Protocol:
                     self.unsupported = True
                 elif kind == 'AddTranscript' and any(
                         old != key and None not in old and key[0] < old[1] and old[0] < key[1]
+                        and (self.config.get('transcript_reconstruction') != 'speechmatics-empty-silence-ranges-v2'
+                             or (self.finals[old].strip() and meta.get('transcript','').strip()))
                         for old in self.finals):
                     self.unsupported = True
                 text = meta.get('transcript', '')

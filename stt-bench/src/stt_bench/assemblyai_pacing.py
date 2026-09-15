@@ -30,7 +30,9 @@ async def stream_audio(pcm,speech_frames,send_audio,finalize,log,*,sample_rate=1
             ideal=start+(offset+frames)*.02
             due=ideal if last_start is None else max(ideal,last_start+seconds-.001,last_complete+.001)
             await wait_until(log.origin+due,time.perf_counter,timer=timer)
-            at=log.now();await send_audio(pcm[offset*640:(offset+frames)*640]);completed=log.now()
+            at=log.now()
+            if index==0:log.emit('audio_start',at=at)
+            await send_audio(pcm[offset*640:(offset+frames)*640]);completed=log.now()
             log.emit('audio_sent',at=at,index=index,bytes=frames*640,sample_rate=sample_rate,phase=phase,
                      source_frames=frames,ideal_seconds=ideal,scheduled_seconds=due,
                      wakeup_delay_ms=max(0,at-due)*1000,send_duration_ms=(completed-at)*1000,

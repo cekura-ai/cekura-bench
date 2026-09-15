@@ -15,19 +15,21 @@ import numpy as np
 from websockets.asyncio.client import connect
 
 from .data import FRAME_BYTES, write_json, sha256
-from .streaming import EventLog, pacing_metrics, read_events, stream_audio
+from .streaming import EventLog, pacing_metrics, read_events, stream_audio, transmitted_silence_frames
 from .timing import process_activity_identity, scheduler_backend
 
 
 def audit_pacing(run_dir, out):
     manifest = json.loads((run_dir / 'manifest.json').read_text())
+    run_path = run_dir / 'run.json'
+    config = json.loads(run_path.read_text()).get('config', {}) if run_path.exists() else {}
     clips = {c['clip_id']: c for c in manifest['clips']}
     rows = []
     for path in sorted((run_dir / 'raw').glob('*.jsonl')):
         events = read_events(path, allow_truncated_final=True)
         start = next((e for e in events if e['kind'] == 'clip_start'), {})
         clip = clips.get(start.get('clip_id'), {})
-        metrics = pacing_metrics(events)
+        metrics = pacing_metrics(events, transmitted_silence_frames=transmitted_silence_frames(config))
         rows.append(dict(raw_file=path.name, clip_id=start.get('clip_id'), attempt=start.get('attempt', 1),
                          submitted_seconds=clip.get('submitted_seconds'), **metrics))
     report = dict(attempts=len(rows), valid_attempts=sum(r['valid'] for r in rows),

@@ -1,6 +1,8 @@
 """Provider registry used by capture, replay and readiness checks."""
-from . import deepgram, provider_protocol, chirp, trial_providers, gradium, reson8, assemblyai, assemblyai_min_latency
+from . import deepgram, provider_protocol, chirp, trial_providers, gradium, reson8, assemblyai, assemblyai_min_latency, speechmatics_agent
 from .credentials import credential
+from .streaming import transmitted_silence_frames
+from . import gemini_live
 
 MODELS = {
     'assemblyai': {'universal-3-5-pro'},
@@ -9,9 +11,9 @@ MODELS = {
     **trial_providers.MODELS,
     'deepgram': {'nova-2', 'nova-3', 'flux-general-en', 'flux-general-multi'},
     'openai': {'gpt-realtime-whisper', 'gpt-4o-transcribe', 'gpt-4o-mini-transcribe'},
-    'gemini': {'gemini-3.5-transcribe-live'},
+    'gemini': {'gemini-3.5-transcribe-live', *gemini_live.MODELS},
     'elevenlabs': {'scribe_v2_realtime'},
-    'speechmatics': {'standard', 'enhanced'},
+    'speechmatics': {'standard', 'enhanced', 'linden-1'},
     'cartesia': {'ink-2'},
     'google': {'chirp_2', 'chirp_3'},
 }
@@ -24,7 +26,7 @@ ENDPOINTS = {
     'openai': {'wss://api.openai.com/v1/realtime'},
     'gemini': {'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent'},
     'elevenlabs': {'wss://api.elevenlabs.io/v1/speech-to-text/realtime'},
-    'speechmatics': {'wss://us.rt.speechmatics.com/v2'},
+    'speechmatics': {'wss://us.rt.speechmatics.com/v2', 'wss://global.rt.speechmatics.com/v2/agent'},
     'cartesia': {'wss://api.cartesia.ai/stt/websocket'},
     'google': {'https://us-speech.googleapis.com', 'https://us-central1-speech.googleapis.com'},
 }
@@ -35,11 +37,19 @@ def is_nova(config):
 
 
 def validate(config):
+    transmitted_silence_frames(config)
     p = config.get('provider')
     if p not in MODELS or config.get('model') not in MODELS[p]:
         raise ValueError('Unknown provider/model combination')
     if config.get('endpoint') not in ENDPOINTS[p]:
         raise ValueError('Unexpected provider endpoint')
+    if config['model'] in gemini_live.MODELS:
+        gemini_live.validate(config)
+    if p == 'speechmatics':
+        if config['model'] == 'linden-1':
+            speechmatics_agent.validate(config)
+        elif config['endpoint'] != 'wss://us.rt.speechmatics.com/v2':
+            raise ValueError('Legacy Speechmatics requires its legacy endpoint')
     if p == 'google':
         chirp.validate(config)
     if p == 'gradium':
@@ -70,6 +80,8 @@ def sample_rate(config):
 async def transcribe(pcm, speech_frames, config, key, log):
     validate(config)
     adapter = (deepgram if is_nova(config) else chirp if config['provider'] == 'google'
+               else gemini_live if config['model'] in gemini_live.MODELS
+               else speechmatics_agent if config['model'] == 'linden-1'
                else assembly_adapter(config) if config['provider'] == 'assemblyai'
                else gradium if config['provider'] == 'gradium'
                else reson8 if config['provider'] == 'reson8'
@@ -82,6 +94,10 @@ def assembly_adapter(config):
 
 
 def reduce_events(events, config):
+    if config['model'] in gemini_live.MODELS:
+        return gemini_live.replay(events, config)[1]
+    if config['model'] == 'linden-1':
+        return speechmatics_agent.replay(events, config)[1]
     if config['provider'] == 'assemblyai':
         return assembly_adapter(config).replay(events, config)[1]
     if config['provider'] == 'reson8':
@@ -96,6 +112,10 @@ def reduce_events(events, config):
 
 
 def transcript_at(events, cutoff, config=None):
+    if config and config['model'] in gemini_live.MODELS:
+        return gemini_live.replay(events, config, cutoff)[0]
+    if config and config['model'] == 'linden-1':
+        return speechmatics_agent.replay(events, config, cutoff)[0]
     if config and config['provider'] == 'assemblyai':
         return assembly_adapter(config).replay(events, config, cutoff)[0]
     # Old report callers and v3 files retain the exact Nova reconstruction.

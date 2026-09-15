@@ -69,6 +69,8 @@ function show(){
  }else{$('review-reference').textContent=c.reference;$('review-transcript').textContent=r?.transcript??'Transcript unavailable in this snapshot.';if(r?.transcript==='')$('review-transcript').textContent='(Empty transcript)';}
  $('review-reference').scrollTop=0;$('review-transcript').scrollTop=0;
  const manifest=review.manifests.find(m=>m.path.includes(c.cohort==='private'?'private-longform':c.cohort==='fleurs'?'fleurs':'pipecat'));
+ const excluded=data.models.find(m=>m.id===$('review-model').value)?.comparison_exclusions?.find(e=>e.clip_id===c.id);
+ if(excluded)$('review-attempt').textContent+=' Excluded from the selected private/combined accuracy comparison: '+excluded.reason+' Original result retained below.';
  const source=data.sources.find(s=>s.path==='reports/'+r?.source);
  $('review-provenance').textContent=`Clip: ${c.id}\nDataset: ${c.cohort}\nScored source: ${r?.source??'Unavailable'}\nSource SHA-256: ${source?.sha256??'Unavailable'}\nAttempt event SHA-256: ${r?.raw_sha256??'Unavailable'}\nManifest: ${manifest?.path??'Unavailable'}\nManifest SHA-256: ${manifest?.sha256??'Unavailable'}\nFrozen 16 kHz WAV SHA-256: ${c.input_sha256}\nListening FLAC SHA-256: ${c.sha256}\nThe build verified every decoded audio sample and recomputed each included word alignment against the saved counts.`;
  $('review-original').textContent=c.original_reference;

@@ -25,6 +25,16 @@ def comparison(reference, transcript, counts):
             for a in alignment.alignments[0]]
 
 
+def review_counts(reference, transcript, counts):
+    """Accept either saved scoring version, then verify and apply current scoring."""
+    from stt_bench.score import NORMALIZER, normalize_words, rescore_saved_word_errors
+    require(any(normalize(reference) == counts['reference_normalized'] and
+                normalize(transcript) == counts['hypothesis_normalized']
+                for normalize in (NORMALIZER, normalize_words)),
+            'Original review text differs from saved scoring text')
+    return rescore_saved_word_errors(counts)
+
+
 def prepare_audio(source, expected_hash, destination):
     """Lossless listening copy of frozen 16 kHz input, including its silence tail."""
     import numpy as np
@@ -111,15 +121,11 @@ def build_review(data, reports, root, output, include_private=False):
                 shown = chosen if chosen is not None else (attempts[-1] if attempts else None)
                 transcript = shown.get('transcript') if shown else None
                 if counts is not None:
-                    from stt_bench.score import NORMALIZER, rescore_saved_word_errors
                     require(chosen is not None and chosen['valid'] and isinstance(transcript, str),
                             'Scored review has no valid selected transcript')
                     if 'reference' in row:
                         require(row['reference'] == clip['reference'], 'Reference differs from frozen manifest')
-                    require(NORMALIZER(clip['reference']) == counts['reference_normalized'] and
-                            NORMALIZER(transcript) == counts['hypothesis_normalized'],
-                            'Original review text differs from saved scoring text')
-                    counts = rescore_saved_word_errors(counts)
+                    counts = review_counts(clip['reference'], transcript, counts)
                     diff = comparison(clip['reference'], transcript, counts)
                 else:
                     diff = None
@@ -139,7 +145,7 @@ def build_review(data, reports, root, output, include_private=False):
                 audio_format='Lossless FLAC of the frozen mono 16 kHz input; terminal silence retained.')
 
 
-def share_zip(page, review):
+def share_zip(page, review, proof_root=None):
     """Package exactly this build's assets, excluding stale files and screenshots."""
     destination = page.parent / 'benchmark-review.zip'
     readme = ('Extract this entire ZIP, then open index.html in Chrome, Edge, Firefox, or Safari.\n'
@@ -148,9 +154,16 @@ def share_zip(page, review):
               f"Includes {len(review['clips'])} recordings. Private recordings included: {review['includes_private']}.\n"
               'Audio is losslessly compressed; transcript scores come from the saved benchmark.\n'
               'Listening can verify transcript errors, but cannot independently verify network latency.\n')
+    if proof_root is not None:
+        readme += 'Keep turn-proof beside index.html. It contains turn audio, model proof pages, compressed provider receipt logs, and source hashes.\n'
     with zipfile.ZipFile(destination, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=1) as archive:
         archive.writestr('README.txt', readme)
         archive.write(page, 'index.html')
         for clip in review['clips']:
             archive.write(page.parent / clip['audio'], clip['audio'], compress_type=zipfile.ZIP_STORED)
+        if proof_root is not None:
+            require(proof_root.parent.resolve() == page.parent.resolve(), 'Proof must be beside the dashboard')
+            for asset in sorted(proof_root.rglob('*')):
+                if asset.is_file():
+                    archive.write(asset, str(asset.relative_to(page.parent)))
     return destination

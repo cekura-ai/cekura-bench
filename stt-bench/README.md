@@ -5,6 +5,10 @@ quickly text becomes available, and whether each request completes reliably.
 Audio is sent at real-time speed. Timestamped responses are saved so results can
 be scored again without another provider request.
 
+For the private conversational-turn workflow, including local listening review,
+immutable audio/transcript pairs, and TTFT/TTFS measurement, see
+[Private turn benchmark](TURN_BENCHMARK.md).
+
 ## Quick start
 
 Use Python 3.12 or 3.13 and `uv`. In this repository, first run `cd stt-bench`
@@ -142,6 +146,13 @@ Most adapters send 20 ms frames followed by one second of silence. AssemblyAI se
 60 ms wire packets, with 80 or 100 ms remainder packets where needed, and uses
 packet-duration-aware timing checks. OpenAI and Gradium receive 24 kHz audio;
 the original frozen input remains unchanged.
+
+New Inworld runs omit the prepared artificial silence tail: they send all speech,
+then `endTurn`, then `closeStream`, and retain every final result through the
+provider's terminal usage response. `transmitted_silence_frames: 0` records this
+contract. Historical configurations without the field retain the original
+50-frame tail when replayed. See [Inworld stream-ending fix](INWORLD_STREAM_END_FIX.md)
+for the live comparison and remaining repetition limitation.
 
 Completion is provider-specific: an acknowledgment, final segment, closed socket,
 and completed stream are different events. Exact contracts are recorded in the

@@ -10,6 +10,7 @@
   "encoding": "pcm_s16le",
   "channels": 1,
   "frame_ms": 20,
+  "transmitted_silence_frames": 0,
   "ready_timeout_seconds": 15,
   "finalize_timeout_seconds": 5,
   "close_timeout_seconds": 5,

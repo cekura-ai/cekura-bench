@@ -64,6 +64,20 @@ def test_replay_rejects_tampered_archive_before_reading(tmp_path):
     p=tmp_path/'evidence.tar.gz';p.write_bytes(b'changed')
     with pytest.raises(ValueError,match='checksum'):replay_archive({},p,'incorrect',tmp_path/'verified.json')
 
+
+def test_inworld_only_twelve_worker_plan_keeps_full_coverage(tmp_path):
+    p=tmp_path/'plan.json'
+    data=dict(version=2,models=['inworld-stt-1'],max_attempts=2,workers_per_model=12,
+        ramp_after_public_pilot=True,private_pilot=None,
+        configs={'inworld-stt-1': {'transmitted_silence_frames':0}},
+        items=[dict(clip_id=str(i),cohort='public' if i<1000 else 'private') for i in range(1008)])
+    p.write_text(json.dumps(data));assert load_plan(p)['workers_per_model']==12
+    data['workers_per_model']=13;p.write_text(json.dumps(data))
+    with pytest.raises(ValueError,match='scope'):load_plan(p)
+    data['workers_per_model']=12;data['configs']['inworld-stt-1']['transmitted_silence_frames']=50
+    p.write_text(json.dumps(data))
+    with pytest.raises(ValueError,match='corrected'):load_plan(p)
+
 def test_unverified_results_never_enter_report():
     with pytest.raises(ValueError,match='Unverified'):combine({},[{'verified':False}])
 

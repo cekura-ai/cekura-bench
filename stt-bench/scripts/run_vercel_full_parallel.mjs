@@ -50,7 +50,7 @@ export function claim(plan,m,stamp=Date.now()){
   }
   const pilot=privateItems.find(c=>c.clip_id===plan.private_pilot);
   const pilotHistory=pilot?history(pilot):[];
-  const pilotPassed=pilotHistory.some(a=>a.valid);
+  const pilotPassed=!pilot||pilotHistory.some(a=>a.valid);
   let items=[],attempt=1;
   if(!m.successes){
     if(Object.keys(m.active).length)return null;
@@ -95,7 +95,8 @@ export function accept(m,assignment,rows,stamp=Date.now()){
   }
   if(failedCapacityProbe&&!m.blocked)m.blocked='capacity_probe_failed';
   const capacity=m.capacitySuccesses??m.successes;
-  if(!m.throttled)m.ceiling=Math.min(m.capacityStageMax??10,capacity>=6?10:capacity>=1?5:1);
+  const cap=m.capacityStageMax??10;
+  if(!m.throttled)m.ceiling=Math.min(cap,capacity>=6||(m.rampAfterPublicPilot&&capacity>=1)?cap:capacity>=1?5:1);
 }
 export function compact(state){return {run:state.runId,status:state.status,updatedAt:state.updatedAt,
   models:Object.fromEntries(Object.entries(state.models||{}).map(([k,m])=>[k,{ceiling:m.ceiling,peak:m.peak,
@@ -169,7 +170,8 @@ export async function main(argv=process.argv.slice(2)){
   try{
     if(state&&state.planHash!==identity.plan_sha256)throw new Error('Controller plan changed');
     state??={runId:plan.run_id,planHash:identity.plan_sha256,status:'preparing',startedAt:new Date().toISOString(),
-      models:Object.fromEntries(plan.models.map(m=>[m,newModel()])),workers:{},batches:{},nextBatch:0,
+      models:Object.fromEntries(plan.models.map(m=>[m,{...newModel(),capacityStageMax:plan.workers_per_model,
+        rampAfterPublicPilot:plan.ramp_after_public_pilot===true}])),workers:{},batches:{},nextBatch:0,
       preparation:{name:`vocera-${plan.run_id}-base`,stage:'new'}};
     await save();
     if(runtime){
@@ -217,7 +219,7 @@ assert not (r/'.env').exists()
 uv=shutil.which('uv') or str(pathlib.Path.home()/'.local/bin/uv')
 subprocess.run([uv,'sync','--locked','--python','3.12'],cwd=r,check=True)
 subprocess.run(['.venv/bin/python','-m','stt_bench.full_benchmark','verify','--plan-hash',${JSON.stringify(identity.plan_sha256)},'--convert'],cwd=r,check=True)
-subprocess.run(['.venv/bin/python','-m','pytest','-q','tests/test_full_benchmark.py','tests/test_gradium.py','tests/test_reson8.py','tests/test_trial_providers.py'],cwd=r,check=True)
+subprocess.run(['.venv/bin/python','-m','pytest','-q','tests/test_full_benchmark.py','tests/test_gradium.py','tests/test_reson8.py','tests/test_trial_providers.py','tests/test_gemini_live.py'],cwd=r,check=True)
 print('Full inputs and adapters verified; no provider calls')`;
           const receipt=await command(sb,prep,'install',{cmd:'python3',args:['-c',code],cwd:REMOTE});
           await writeFile(join(root,'preparation.log'),await(await sb.currentSession().getCommand(receipt.commandId)).output('both'));
@@ -233,9 +235,9 @@ print('Full inputs and adapters verified; no provider calls')`;
     const inventory=await Sandbox.list(await account());let others=0;
     const owned=new Set(Object.values(state.workers).map(w=>w.name));
     for await(const s of inventory)if(['pending','running','stopping','snapshotting'].includes(s.status)&&!owned.has(s.name))others++;
-    const total=Math.min(40,accountPlan.accountConcurrencyLimit-others);
-    if(total<4)throw new Error('Insufficient sandbox capacity');
-    const perModel=Math.min(10,Math.floor(total/4));state.availableWorkersPerModel=perModel;
+    const total=Math.min(plan.max_workers,accountPlan.accountConcurrencyLimit-others);
+    if(total<plan.models.length)throw new Error('Insufficient sandbox capacity');
+    const perModel=Math.min(plan.workers_per_model,Math.floor(total/plan.models.length));state.availableWorkersPerModel=perModel;
     // Credentials stay in memory and command environments only.
     const environments={};
     for(const model of plan.models){
@@ -329,7 +331,7 @@ print('Full inputs and adapters verified; no provider calls')`;
       }
     }));
     state.finishedAt=new Date().toISOString();
-    const complete=Object.values(state.models).every(m=>Object.keys(m.attempts).length===1008&&!m.blocked&&!m.privateBlocked);
+    const complete=Object.values(state.models).every(m=>Object.keys(m.attempts).length===plan.items.length&&!m.blocked&&!m.privateBlocked);
     state.status=complete&&Object.values(state.workers).every(w=>w.computeStopped)?'complete':'partial_or_blocked';await save();
     await exec('.venv/bin/python',['-m','stt_bench.full_benchmark','report','--plan',join(root,'plan.json'),'--root',root,
       ...(runtimeHash?['--runtime',join(root,'runtime.json'),'--runtime-hash',runtimeHash]:[])],{maxBuffer:1024*1024});

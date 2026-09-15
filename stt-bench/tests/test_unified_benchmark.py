@@ -68,6 +68,40 @@ def test_percentiles_tail_interpolation_and_empty_values():
         report.percentiles([float('nan')])
 
 
+def test_linden_uses_its_manual_speech_end_contract():
+    contract = report.finalization_contract('speechmatics-linden-1')
+    assert contract['group'] == 'signal_at_speech_end'
+    assert 'ForceEndOfUtterance' in contract['label']
+    assert report.finalization_contract('speechmatics-standard')['group'] == 'stream_end'
+
+
+def test_restored_models_have_explicit_full_run_sources():
+    for mid in ('deepgram-flux-multilingual', 'google-chirp-2', 'google-chirp-3',
+                'openai-gpt-realtime-whisper', 'openai-gpt-4o-mini-transcribe'):
+        assert mid in report.LABELS and mid in report.PUBLIC_RUNS
+        assert mid not in report.REMOVED
+    assert report.finalization_contract('google-chirp-2')['group'] == 'stream_end'
+
+
+def test_selected_private_exclusion_changes_only_available_comparison():
+    from copy import deepcopy
+    private = dict(usable=8, attempted=8, planned=8, **report.aggregate([counts(20, 100)]))
+    public = dict(usable=998, attempted=1000, planned=1000, **report.aggregate([counts(10, 1000)]))
+    models = [dict(id=mid, cohorts=dict(private=deepcopy(private), pipecat=deepcopy(public)), ranking_score={'wer': .1})
+              for mid in ('inworld-stt-1', 'speechmatics-linden-1')]
+    before = deepcopy(models)
+    report.apply_comparison_selection(models, {'inworld-stt-1': [record('conversation-04-B', 'private', errors=15, words=20)]})
+    assert models[0]['comparison_private']['wer'] == 5 / 80
+    assert models[0]['comparison_combined']['wer'] == 15 / 1080
+    assert models[0]['comparison_private']['usable'] == 7
+    assert models[0]['comparison_combined']['excluded'] == 1
+    assert models[1]['comparison_combined']['wer'] == 30 / 1100
+    assert models[1]['comparison_combined']['failed'] == 2
+    for m, original in zip(models, before):
+        assert m['cohorts'] == original['cohorts']
+        assert m['ranking_score'] == original['ranking_score']
+
+
 def test_attempt_one_deadlines_retained_from_selected_clip_summary():
     first = dict(attempt=1, valid=False)
     row = dict(clip_id='x', attempts=[first, dict(attempt=2, valid=True)],

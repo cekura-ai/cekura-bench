@@ -50,12 +50,31 @@ class EventLog:
             raise RuntimeError("Event log writer failed") from self.error
 
 
-async def stream_audio(pcm: bytes, speech_frames: int, send_audio, finalize, log: EventLog, *, sample_rate=16000):
+def transmitted_silence_frames(config):
+    """Absent means the historical 50-frame contract, including saved replays."""
+    count = config.get('transmitted_silence_frames', 50)
+    if type(count) is not int or count not in (0, 50):
+        raise ValueError('Expected zero or 50 transmitted silence frames')
+    if count != 50 and config.get('provider') != 'inworld':
+        raise ValueError('Only Inworld supports omitting the prepared silence tail')
+    return count
+
+
+async def stream_audio(pcm: bytes, speech_frames: int, send_audio, finalize, log: EventLog, *, sample_rate=16000,
+                       transmitted_silence_frames=50):
     if sample_rate not in (16000, 24000):
         raise ValueError("Unsupported sample rate")
     frame_bytes = sample_rate // 50 * 2
     if len(pcm) % frame_bytes or len(pcm) // frame_bytes != speech_frames + 50:
         raise ValueError("Audio must have whole 20 ms frames and exactly 50 silence frames")
+    if type(transmitted_silence_frames) is not int or transmitted_silence_frames not in (0, 50):
+        raise ValueError('Expected zero or 50 transmitted silence frames')
+    if transmitted_silence_frames == 0:
+        # The frozen file stays unchanged. Never omit actual audio: only the
+        # verified, artificial zero tail may be excluded from this transport.
+        if any(pcm[speech_frames * frame_bytes:]):
+            raise ValueError('Cannot omit a nonzero audio tail')
+        pcm = pcm[:speech_frames * frame_bytes]
     async with deadline_timer() as timer:
         start = log.now()
         due = start + FRAME_SECONDS
@@ -66,6 +85,8 @@ async def stream_audio(pcm: bytes, speech_frames: int, send_audio, finalize, log
             # are scheduled at least 19 ms apart, inside the frozen 18 ms minimum.
             await wait_until(log.origin + due, time.perf_counter, timer=timer)
             sent_at = log.now()
+            if index == 0:
+                log.emit('audio_start', at=sent_at)
             await send_audio(pcm[index * frame_bytes:(index + 1) * frame_bytes])
             completed_at = log.now()
             log.emit("audio_sent", at=sent_at, index=index, bytes=frame_bytes, sample_rate=sample_rate,
@@ -83,7 +104,9 @@ async def stream_audio(pcm: bytes, speech_frames: int, send_audio, finalize, log
         log.emit("audio_complete", t0_seconds=t0)
 
 
-def pacing_metrics(events: list[dict]) -> dict:
+def pacing_metrics(events: list[dict], *, transmitted_silence_frames=50) -> dict:
+    if type(transmitted_silence_frames) is not int or transmitted_silence_frames not in (0, 50):
+        raise ValueError('Expected zero or 50 transmitted silence frames')
     if any(e["kind"] == "transport_packetization" for e in events):
         from .assemblyai_pacing import pacing_metrics as packet_metrics
         return packet_metrics(events)
@@ -97,12 +120,12 @@ def pacing_metrics(events: list[dict]) -> dict:
     if len(rates) != 1 or rate not in (16000, 24000):
         reasons.append("invalid_sample_rate")
         rate = 16000
-    if silence != 50 or any(e.get("bytes") != rate // 50 * 2 for e in frames):
+    if silence != transmitted_silence_frames or any(e.get("bytes") != rate // 50 * 2 for e in frames):
         reasons.append("invalid_frame_shape")
     if any(type(e.get("index")) is not int or e["index"] != index
            for index, e in enumerate(frames)):
         reasons.append("invalid_frame_indexes")
-    speech_frames = len(frames) - 50
+    speech_frames = len(frames) - transmitted_silence_frames
     if speech_frames < 1 or any(e.get("phase") != ("speech" if index < speech_frames else "silence")
                                for index, e in enumerate(frames)):
         reasons.append("invalid_frame_phase_order")

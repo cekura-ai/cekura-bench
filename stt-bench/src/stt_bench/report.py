@@ -8,7 +8,7 @@ from .data import sha256, write_json
 from .providers import reduce_events, is_nova, sample_rate
 from .run import assess, select_attempt
 from .score import ENTITY_TYPES, NORMALIZATION, aggregate_wer, entity_errors, percentiles, plot, word_errors
-from .streaming import pacing_metrics, read_events
+from .streaming import pacing_metrics, read_events, transmitted_silence_frames
 from .entities import aggregate_values, value_errors
 from .measurement import deadline_observations, grouped_interval, summarize_deadlines
 from .review import load_review
@@ -69,7 +69,8 @@ def attempts_for_clip(root, clip, run, legacy):
             raise ValueError(f'Raw evidence changed or missing: {raw.name}')
         if raw.exists():
             events = read_events(raw)
-            reduced, pacing = reduce_events(events, config), pacing_metrics(events)
+            reduced, pacing = reduce_events(events, config), pacing_metrics(
+                events, transmitted_silence_frames=transmitted_silence_frames(config))
             reasons = []
             if not reduced['transcript_complete']:
                 reasons.append('incomplete_transcript')

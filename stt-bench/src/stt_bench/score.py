@@ -128,6 +128,9 @@ def percentiles(values: list[float]) -> dict:
 
 
 def score(run_dir: Path, out: Path, review: Path | None = None) -> dict:
+    if json.loads((run_dir / 'run.json').read_text()).get('measurement_version') == 5:
+        from .turn_report import build_turn_report
+        return build_turn_report(run_dir, out)
     from .report import build_report
     return build_report(run_dir, out, review)
 

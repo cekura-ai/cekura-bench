@@ -14,6 +14,28 @@ from .compare import compare_reports
 def main():
     parser = argparse.ArgumentParser(description="Small reproducible streaming STT benchmarks")
     sub = parser.add_subparsers(dest="command", required=True)
+    p = sub.add_parser('prepare-turns', help='Propose conversational turns and export a local listening review')
+    p.add_argument('--source', type=Path, required=True)
+    p.add_argument('--out', type=Path, required=True)
+    p = sub.add_parser('auto-prepare-turns', help='Estimate speech ends locally and freeze valid turns without human approval')
+    p.add_argument('--draft', type=Path, required=True)
+    p.add_argument('--out', type=Path, required=True)
+    p = sub.add_parser('freeze-turns', help='Freeze approved conversational audio/transcript pairs')
+    p.add_argument('--draft', type=Path, required=True)
+    p.add_argument('--review', type=Path, required=True)
+    p.add_argument('--out', type=Path, required=True)
+    p = sub.add_parser('plan-turn-run', help='Write a reviewed dataset/model session budget; no provider calls')
+    p.add_argument('--manifest', type=Path, required=True)
+    p.add_argument('--configs', type=Path, nargs='+', required=True)
+    p.add_argument('--out', type=Path, required=True)
+    p = sub.add_parser('run-turns', help='Stream frozen manual or automatic turns with independent sessions and TTFT/TTFS')
+    p.add_argument('--manifest', type=Path, required=True)
+    p.add_argument('--config', type=Path, required=True)
+    p.add_argument('--out', type=Path, required=True)
+    p.add_argument('--dry-run', action='store_true')
+    p.add_argument('--resume', action='store_true')
+    p.add_argument('--pacing-check', type=Path)
+    p.add_argument('--authorized-private-manifest-sha256')
     p = sub.add_parser('prepare-audio', help='Build hash-bound 24 kHz derivatives without provider calls')
     p.add_argument('--dataset', default='pipecat-stt-benchmark')
     p = sub.add_parser('import-baseline', help='Offline verification and import of historical Nova-3 batches')
@@ -81,7 +103,32 @@ def main():
     p.add_argument("--review", type=Path, help="Hash-bound human listening review inventory")
     args = parser.parse_args()
     try:
-        if args.command == 'prepare-audio':
+        if args.command == 'prepare-turns':
+            from .turns import prepare_turns
+            print(prepare_turns(args.source, args.out))
+        elif args.command == 'auto-prepare-turns':
+            from .turn_auto import automatic_preparation
+            from .turns import freeze_turns
+            import tempfile
+            with tempfile.TemporaryDirectory(prefix='turn-auto-') as temp:
+                evidence = automatic_preparation(args.draft, Path(temp)/'preparation.json')
+                manifest = freeze_turns(args.draft, evidence, args.out)
+            print(manifest)
+        elif args.command == 'freeze-turns':
+            from .turns import freeze_turns
+            print(freeze_turns(args.draft, args.review, args.out))
+        elif args.command == 'plan-turn-run':
+            from .turn_runner import prepare_run_plan
+            print(prepare_run_plan(args.manifest, args.configs, args.out))
+        elif args.command == 'run-turns':
+            from .turn_runner import run_turns
+            outcomes = asyncio.run(run_turns(args.manifest, args.config, args.out, dry_run=args.dry_run,
+                resume=args.resume, pacing_check=args.pacing_check,
+                authorized_private_manifest_sha256=args.authorized_private_manifest_sha256))
+            if any(not r['valid'] for r in outcomes) or len(outcomes) != len(__import__('json').loads(args.manifest.read_text())['clips']):
+                parser.exit(1, 'Turn run incomplete or invalid; inspect raw attempts and score the run.\n')
+            print(args.out)
+        elif args.command == 'prepare-audio':
             from .audio_formats import prepare_derivatives
             result = prepare_derivatives(args.dataset)
             print({s: len(d['clips']) for s, d in result.items()})
@@ -138,7 +185,10 @@ def main():
         else:
             result = score(args.run, args.out, args.review)
             print(args.out / "results.json")
-            print(f"Scored {sum(r['scored_clips'] for r in result['results'])} clips")
+            if result.get('measurement_version') == 5:
+                print(f"Scored {result['accuracy']['measured_turns']} private turns")
+            else:
+                print(f"Scored {sum(r['scored_clips'] for r in result['results'])} clips")
     except (ValueError, FileExistsError, FileNotFoundError) as exc:
         parser.exit(2, f"{exc}\n")
 

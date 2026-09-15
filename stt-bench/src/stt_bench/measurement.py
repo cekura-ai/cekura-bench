@@ -14,9 +14,12 @@ def deadline_observations(events, reference, entities, attempt, mode, config=Non
     t0 = next((e['time_seconds'] for e in events if e['kind'] == 'speech_end'), None)
     last = max((e['time_seconds'] for e in events), default=-1)
     errors = [e['time_seconds'] for e in events if
-              (e['kind'] == 'error' and e.get('error_type') != 'Interrupted') or e.get('message', {}).get('type') == 'Error']
+        (e['kind'] == 'error' and e.get('error_type') != 'Interrupted') or
+        (isinstance(e.get('message'), dict) and e['message'].get('type') == 'Error')]
     interrupted = [e['time_seconds'] for e in events if e.get('error_type') == 'Interrupted']
-    closed = [e['time_seconds'] for e in events if e.get('message', {}).get('type') == 'Metadata' or e['kind'] == 'provider_terminal']
+    closed = [e['time_seconds'] for e in events if
+              (isinstance(e.get('message'), dict) and e['message'].get('type') == 'Metadata') or
+              e['kind'] == 'provider_terminal']
     observations = []
     for deadline in DEADLINES_MS:
         state = dict(text='', final_text='', partial_text='', provisional=False, reconstruction_status='supported')

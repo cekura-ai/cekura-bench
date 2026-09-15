@@ -2,6 +2,22 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {claim,newModel,accept,reconcileCredits,amendUndispatched} from '../scripts/run_vercel_full_parallel.mjs';
 const plan={private_pilot:'private0',items:[...Array.from({length:30},(_,i)=>({clip_id:'public'+i,cohort:'public',submitted_seconds:i+1})),...Array.from({length:8},(_,i)=>({clip_id:'private'+i,cohort:'private',submitted_seconds:900}))]};
+test('Inworld fast ramp uses twelve workers after public smoke and admits intact private recordings',()=>{
+ const p={...plan,private_pilot:null,items:[...plan.items,
+  ...Array.from({length:30},(_,i)=>({clip_id:'public-extra'+i,cohort:'public',submitted_seconds:i+31}))]};
+ const m={...newModel(),capacityStageMax:12,rampAfterPublicPilot:true};
+ const smoke=claim(p,m,0);assert.equal(smoke.items[0].clip_id,'public0');
+ finish(m,smoke);assert.equal(m.ceiling,12);
+ for(let i=0;i<12;i++){
+  const a=claim(p,m,0);assert(a);m.active['worker'+i]=a;
+ }
+ assert.equal(claim(p,m,0),null);
+ const held=Object.values(m.active).flatMap(a=>a.items.map(i=>i.clip_id));
+ assert.equal(new Set(held).size,held.length);
+ assert.equal(held.filter(c=>c.startsWith('private')).length,8);
+ finish(m,m.active.worker0,false,{failure_class:'concurrency'});
+ assert.equal(m.ceiling,6);assert(m.throttled);
+});
 function finish(m,a,valid=true,extra={}){accept(m,a,a.items.map(i=>({...i,valid,...extra})),0);}
 test('one then five then ten; intact private pilot gate',()=>{
  const m=newModel();let a=claim(plan,m,0);assert.equal(a.items.length,1);assert.equal(a.items[0].clip_id,'public0');

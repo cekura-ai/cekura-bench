@@ -14,7 +14,7 @@ from stt_bench import trial_providers as wire
 from stt_bench.catalog import model_config
 from stt_bench.credentials import command_environment, redact
 from stt_bench.providers import validate, transcript_at, reduce_events
-from stt_bench.streaming import EventLog, read_events
+from stt_bench.streaming import EventLog, read_events, transmitted_silence_frames
 
 NAMES = ['soniox-stt-rt-v5', 'smallest-pulse', 'sarvam-saaras-v3-realtime', 'inworld-stt-1']
 
@@ -203,7 +203,7 @@ def test_loopback_exchange_completion_and_failures(tmp_path, name, failure):
         assert 'fixture-secret' not in (tmp_path / 'events.jsonl').read_text()
         if not failure:
             assert reduce_events(events, c)['transcript_complete']
-            assert len([e for e in events if e['kind'] == 'audio_sent']) == 60
+            assert len([e for e in events if e['kind'] == 'audio_sent']) == 10 + transmitted_silence_frames(c)
             assert received[-1] == wire.Protocol(c).finish(60)
             assert not any(e['kind'] == 'model_accepted' for e in events[:1])
     asyncio.run(check())

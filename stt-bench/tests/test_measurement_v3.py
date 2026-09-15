@@ -113,6 +113,14 @@ def test_future_error_does_not_change_deadline_status():
     assert observations[3]['status'] == 'request_failed'
 
 
+def test_deadlines_accept_string_control_messages():
+    events = base() + [msg('hello', .12),
+        dict(kind='client_message', time_seconds=.021, message='finalize')]
+    observations = deadline_observations(events, 'hello', [], assess(events, CONFIG), 'live')
+    assert observations[1]['text'] == 'hello'
+    assert observations[1]['status'] == 'text_available'
+
+
 def test_truncated_observation_is_unavailable_not_backfilled():
     events = [dict(kind='speech_end', time_seconds=.02), msg('hello', .12)]
     observations = deadline_observations(events, 'hello there', [], assess(events, CONFIG), 'live')

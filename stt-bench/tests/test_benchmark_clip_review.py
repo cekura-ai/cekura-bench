@@ -10,7 +10,7 @@ import pytest
 import soundfile as sf
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-from benchmark_clip_review import comparison, prepare_audio, share_zip
+from benchmark_clip_review import comparison, prepare_audio, share_zip, review_counts
 from build_benchmark_html import render
 from stt_bench.score import word_errors
 
@@ -39,6 +39,20 @@ def test_reject_different_text_and_saved_scores():
     counts['substitutions'] = 0
     with pytest.raises(ValueError, match='counts differ'):
         comparison('hello world', 'hello there', counts)
+
+
+def test_review_handles_legacy_and_current_runs_without_changing_words():
+    from stt_bench.score import NORMALIZER, aligned_word_errors
+    ref, hyp = 'Hello ... there', 'Hello ... world'
+    legacy = aligned_word_errors(NORMALIZER(ref), NORMALIZER(hyp))
+    current = word_errors(ref, hyp)
+    assert review_counts(ref, hyp, legacy) == current
+    assert review_counts(ref, hyp, current) == current
+    with pytest.raises(ValueError, match='text differs'):
+        review_counts(ref, 'Different words', current)
+    corrupt = {**current, 'substitutions': 0}
+    with pytest.raises(ValueError, match='counts differ'):
+        review_counts(ref, hyp, corrupt)
 
 
 def test_audio_hash_and_lossless_samples_checked_even_on_rebuild(tmp_path):
@@ -74,3 +88,19 @@ def test_transcript_markup_stays_data():
     assert '\\u003c/script\\u003e' in page
     assert 'id="verify-clips"' in page
     assert '__CLIP_REVIEW_UI__' not in page
+
+
+def test_share_zip_includes_linked_turn_proof_package(tmp_path):
+    page = tmp_path / 'index.html'
+    page.write_text('dashboard')
+    proof = tmp_path / 'turn-proof'
+    receipt = proof / 'model' / 'raw' / 'turn.jsonl.gz'
+    receipt.parent.mkdir(parents=True)
+    receipt.write_bytes(b'compressed receipt')
+    (proof / 'comparison.json').write_text('{}')
+    bundle = share_zip(page, dict(clips=[], includes_private=False), proof)
+    with zipfile.ZipFile(bundle) as archive:
+        assert archive.testzip() is None
+        assert archive.read('turn-proof/model/raw/turn.jsonl.gz') == b'compressed receipt'
+        assert 'turn-proof/comparison.json' in archive.namelist()
+        assert b'turn-proof' in archive.read('README.txt')

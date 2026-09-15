@@ -11,20 +11,30 @@ from pathlib import Path
 
 COUNTS = ('substitutions', 'insertions', 'deletions', 'reference_words')
 COHORTS = ('pipecat', 'fleurs', 'private')
-REMOVED = {'deepgram-nova-2', 'deepgram-flux-multilingual',
-           'openai-gpt-realtime-whisper', 'openai-gpt-4o-mini-transcribe', 'google-chirp-2'}
+REMOVED = {'deepgram-nova-2'}
 LABELS = {
+    'deepgram-flux-multilingual': 'Deepgram Flux Multilingual',
+    'openai-gpt-realtime-whisper': 'GPT Realtime Whisper',
+    'openai-gpt-4o-mini-transcribe': 'GPT-4o Mini Transcribe',
+    'google-chirp-2': 'Google Chirp 2',
     'deepgram-nova-3': 'Deepgram Nova-3', 'deepgram-flux-en': 'Deepgram Flux English',
     'openai-gpt-4o-transcribe': 'GPT-4o Transcribe',
     'gemini-3.5-transcribe-live': 'Gemini 3.5', 'google-chirp-3': 'Google Chirp 3',
     'elevenlabs-scribe-v2-realtime': 'ElevenLabs Scribe v2', 'cartesia-ink-2': 'Cartesia Ink 2',
     'speechmatics-standard': 'Speechmatics Standard', 'speechmatics-enhanced': 'Speechmatics Enhanced',
+    'speechmatics-linden-1': 'Speechmatics Linden',
     'smallest-pulse': 'Smallest Pulse', 'gradium-default': 'Gradium',
     'reson8-realtime': 'Reson8', 'inworld-stt-1': 'Inworld STT-1',
-    'assemblyai-universal-3-5-pro-min-latency': 'AssemblyAI Universal 3.5 Pro',
+    'assemblyai-universal-3-5-pro-min-latency': 'AssemblyAI Universal 3.5 Pro · Min latency',
+    'assemblyai-universal-3-5-pro': 'AssemblyAI Universal 3.5 Pro',
     'sarvam-saaras-v3-realtime': 'Sarvam Saaras v3', 'soniox-stt-rt-v5': 'Soniox STT-RT v5',
 }
 PUBLIC_RUNS = {
+    'google-chirp-2': 'vocera-google-chirp-2-20260913-genlang',
+    'google-chirp-3': 'vocera-google-chirp-3-20260913-genlang',
+    'deepgram-flux-multilingual': 'vocera-deepgram-flux-multilingual-20260912',
+    'openai-gpt-realtime-whisper': 'vocera-openai-gpt-realtime-whisper-20260912',
+    'openai-gpt-4o-mini-transcribe': 'vocera-openai-gpt-4o-mini-transcribe-20260912',
     'deepgram-nova-3': 'vocera-deepgram-nova-3-20260912',
     'deepgram-flux-en': 'vocera-deepgram-flux-en-20260912',
     'openai-gpt-4o-transcribe': 'vocera-openai-gpt-4o-transcribe-20260912',
@@ -34,6 +44,15 @@ PUBLIC_RUNS = {
     'speechmatics-standard': 'vocera-speechmatics-standard-20260912',
     'speechmatics-enhanced': 'vocera-speechmatics-enhanced-20260912-serial',
 }
+
+# Ordered replacements on the same frozen public/private datasets. A later
+# turn run or small diagnostic cannot replace a full-recording comparison.
+FULL_RUNS = (
+    ('full-parallel-20260915', False),
+    ('assemblyai-min-latency-full-20260915', True),
+    ('inworld-full-stream-end-v2-20260915', False),
+    ('linden-full-20260915', False),
+)
 
 
 def require(ok, message):
@@ -90,6 +109,32 @@ def full_record(row):
                 selected_attempt=row['selected_attempt'],
                 counts=chosen['word_errors'] if chosen else None, first=first,
                 attempts=attempts, words=first.get('private_latency') if first else None)
+
+
+def apply_comparison_selection(models, records):
+    """User-selected accuracy view, separate from immutable full-set evidence/ranks."""
+    for model in models:
+        private = dict(model['cohorts']['private'])
+        exclusions = []
+        if model['id'] == 'inworld-stt-1':
+            cid = 'conversation-04-B'
+            matches = [r for r in records[model['id']] if r['cohort'] == 'private' and r['id'] == cid]
+            require(len(matches) == 1 and matches[0]['counts'] is not None, 'Missing Inworld exclusion evidence')
+            removed = matches[0]['counts']
+            totals = {k: private[k] - removed[k] for k in COUNTS}
+            private.update(aggregate([totals]), usable=private['usable'] - 1)
+            exclusions = [dict(clip_id=cid, reason='Excluded at user request because of excessive repeated provider output.',
+                               word_errors=removed)]
+        private['excluded'] = len(exclusions)
+        public = model['cohorts']['pipecat']
+        combined = aggregate([public, private] if public['usable'] and private['usable'] else [])
+        combined.update(usable=public['usable'] + private['usable'], planned=public['planned'] + private['planned'],
+                        attempted=public['attempted'] + private['attempted'],
+                        failed=public['attempted'] - public['usable'] + model['cohorts']['private']['attempted'] - model['cohorts']['private']['usable'],
+                        excluded=len(exclusions))
+        model['comparison_private'] = private
+        model['comparison_combined'] = combined
+        model['comparison_exclusions'] = exclusions
 
 
 def reduce_model(model, records, planned, terminal, sources):
@@ -166,14 +211,18 @@ def rank_common_public(models, records):
 
 
 def finalization_contract(model):
-    if model == 'google-chirp-3':
-        return dict(group='unavailable', label='No full public results')
+    if model in ('google-chirp-2', 'google-chirp-3'):
+        return dict(group='stream_end', label='Input stream closure after silence tail')
+    if model == 'speechmatics-linden-1':
+        return dict(group='signal_at_speech_end', label='ForceEndOfUtterance at speech end; EndOfTranscript after tail')
     if model.startswith('speechmatics'):
         return dict(group='stream_end', label='EndOfStream after silence tail')
     if model.startswith('assemblyai'):
         return dict(group='stream_end', label='Native endpointing; Terminate after silence tail')
     signals = {'deepgram-nova-3': 'Finalize', 'deepgram-flux-en': 'ForceEndTurn',
-               'openai-gpt-4o-transcribe': 'commit', 'gemini-3.5-transcribe-live': 'activityEnd',
+               'openai-gpt-4o-transcribe': 'commit', 'openai-gpt-4o-mini-transcribe': 'commit',
+               'openai-gpt-realtime-whisper': 'commit', 'deepgram-flux-multilingual': 'ForceEndTurn',
+               'gemini-3.5-transcribe-live': 'activityEnd',
                'elevenlabs-scribe-v2-realtime': 'commit', 'cartesia-ink-2': 'finalize',
                'smallest-pulse': 'finalize', 'gradium-default': 'flush', 'reson8-realtime': 'flush_request',
                'inworld-stt-1': 'endTurn', 'sarvam-saaras-v3-realtime': 'speech_end', 'soniox-stt-rt-v5': 'finalize'}
@@ -241,7 +290,8 @@ def build(reports):
     planned = dict(pipecat=1000, fleurs=len(fleurs_ids), private=8)
     public_ids = None
     for model, run in PUBLIC_RUNS.items():
-        name = f'vercel-models/{run}/hourly/summary.json'
+        folder = 'vercel-chirp' if model.startswith('google-chirp-') else 'vercel-models'
+        name = f'{folder}/{run}/hourly/summary.json'
         saved = read(name)
         require(saved['model'] == model and saved['status'] == 'complete', 'Public run identity or status differs')
         ids = [r['clip_id'] for r in saved['clips']]
@@ -283,7 +333,7 @@ def build(reports):
         records[model] += rows
         model_sources[model].append(private_name)
 
-    for folder, allow_partial in [('full-parallel-20260915', False), ('assemblyai-min-latency-full-20260915', True)]:
+    for folder, allow_partial in FULL_RUNS:
         name = folder + '/results.json'
         saved = read(name)
         complete = saved['execution']['status'] == 'complete'
@@ -291,8 +341,16 @@ def build(reports):
         if complete:
             audit = read(folder + '/evidence-audit.json')
             require(audit['status'] == 'passed' and audit['run_status'] == 'complete', 'Full evidence audit missing')
-            require(read(folder + '/compute-stop-verification.json')['allStopped'], 'Full stop verification missing')
+            if folder == 'linden-full-20260915':
+                control = read(folder + '/controller.json')
+                require(control['status'] == 'complete' and control['preparation'].get('computeStopped')
+                        and bool(control['workers']) and all(w.get('computeStopped') and w.get('remoteStatus') == 'stopped'
+                        for w in control['workers'].values()), 'Linden saved stop receipts incomplete')
+            else:
+                require(read(folder + '/compute-stop-verification.json')['allStopped'], 'Full stop verification missing')
         for model, data in saved['models'].items():
+            if folder == 'inworld-full-stream-end-v2-20260915':
+                require(model == 'inworld-stt-1', 'Unexpected model in Inworld replacement run')
             require(model in records, 'Unselected full-run model')
             rows = [full_record(r) for r in data['items']]
             require({r['id'] for r in rows if r['cohort'] == 'pipecat'} == public_ids, 'Full public IDs differ')
@@ -322,6 +380,12 @@ def build(reports):
         model_sources[model].append(name)
         terminal[model] = False
 
+    normal_assembly = 'assemblyai-full-20260914/pipecat/wire60/summary.json'
+    normal_saved = read(normal_assembly)
+    require(normal_saved['model'] == 'assemblyai-universal-3-5-pro' and normal_saved['scored_clips'] == 0,
+            'AssemblyAI normal profile now has scores; select and verify its completed evidence')
+    model_sources['assemblyai-universal-3-5-pro'] = [normal_assembly]
+    terminal['assemblyai-universal-3-5-pro'] = False
     before = {m: reduce_model(m, records[m], planned, terminal[m], model_sources[m]) for m in LABELS}
     records, audit = rescore_records(records)
     models = [reduce_model(m, records[m], planned, terminal[m], model_sources[m]) for m in LABELS]
@@ -347,8 +411,10 @@ def build(reports):
         m.setdefault('rank', None)
         m['note'] = ''
         m['finalization_contract'] = finalization_contract(m['id'])
-        if m['id'] == 'google-chirp-3':
-            m['note'] = 'Private results verified; full Pipecat scores unavailable locally.'
+        if m['id'] in ('google-chirp-2', 'google-chirp-3'):
+            m['note'] = 'Completed 1,000-clip public run collected from its saved sandbox output; private full recordings verified separately.'
+        elif m['id'] == 'assemblyai-universal-3-5-pro':
+            m['note'] = 'Normal profile: saved full public attempt stopped before any clips were scored. Its separate 206-turn result does not supply public-plus-private overall WER.'
         elif m['id'].startswith('assemblyai'):
             m['note'] = ('Verified complete public and private run; ' if m['terminal'] else 'Partial scored snapshot; ') + 'Universal 3.5 Pro in min_latency mode, 60 ms packets.'
         elif not m['terminal']:
@@ -358,7 +424,11 @@ def build(reports):
         elif m['id'] == 'gemini-3.5-transcribe-live':
             m['note'] = 'Private audio uses nine-minute session handoffs.'
         elif m['id'] == 'inworld-stt-1':
-            m['note'] = 'Later text after stream closure extends last-final-text latency. Repetition also occurred before speech end; see evidence notes.'
+            m['note'] = 'Updated from the verified full stream-ending rerun: 1,000 public clips and eight private recordings. No artificial silence is sent after endTurn; all final text remains scored.'
+            m['finalization_contract'] = dict(group='signal_at_speech_end', label='endTurn then closeStream at speech end; no artificial silence tail')
+        elif m['id'] == 'speechmatics-linden-1':
+            m['note'] = 'Completed full run; archived receipts and merged scores verified. Two public clips remain invalid, including two frozen ranking items, so no combined rank is assigned.'
+    apply_comparison_selection(models, records)
     return dict(schema_version=3, title='English STT benchmark — combined public and private ranking',
                 normalization=dict(NORMALIZATION), common_public=common, ranking=ranking, _rescore_audit=audit,
                 generated_at=datetime.now(timezone.utc).isoformat(), planned=planned,

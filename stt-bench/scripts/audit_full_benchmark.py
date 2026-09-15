@@ -9,7 +9,7 @@ from pathlib import Path
 import tarfile
 import soundfile as sf
 
-from stt_bench.full_benchmark import MODELS, combine, load_plan
+from stt_bench.full_benchmark import combine, load_plan
 
 
 def digest(path):
@@ -22,6 +22,9 @@ def audit(root):
     assert digest(root / 'plan.json') == identity['plan_sha256'], 'Frozen plan changed'
     assert digest(root / 'input.tar.gz') == identity['bundle_sha256'], 'Frozen bundle changed'
     original = json.loads((root / 'plan.json').read_text())
+    plan_loader, reducer = load_plan, combine
+    if original['models'] == ['speechmatics-linden-1']:
+        from stt_bench.linden_full_benchmark import load_plan as plan_loader, combine as reducer
     audio_checked = 0
     with tarfile.open(root / 'input.tar.gz') as bundle:
         for name, expected_hash in original['code_hashes'].items():
@@ -41,7 +44,7 @@ def audit(root):
                 assert audio.frames == (clip['speech_frames'] + 50) * rate * 20
                 audio_checked += 1
     runtime = root / 'runtime.json'
-    plan = load_plan(root / 'plan.json', identity['plan_sha256'],
+    plan = plan_loader(root / 'plan.json', identity['plan_sha256'],
                      str(runtime) if runtime.exists() else None,
                      digest(runtime) if runtime.exists() else None)
     runtime_source = root / 'runtime-source.json'
@@ -91,25 +94,27 @@ def audit(root):
                 assert raw and hashlib.file_digest(raw, 'sha256').hexdigest() == row['raw_sha256']
         archives.append({'batch_id': batch['id'], 'sha256': batch['archiveHash']})
         states.append(state)
-    merged = combine(plan, states)
+    merged = reducer(plan, states)
     assert merged['models'] == report['models'], 'Saved merged metrics do not reproduce'
     assert merged['previous_private_transport_attempts'] == report['previous_private_transport_attempts'], 'Prior attempts changed'
     # Exercise a different partitioning/order of the same saved observations.
-    reversed_merge = combine(plan, list(reversed(states)))
+    reversed_merge = reducer(plan, list(reversed(states)))
     assert reversed_merge['models'] == merged['models'], 'Metrics depend on worker partition order'
     expected = {(c['clip_id'], c['cohort']) for c in plan['items']}
     coverage = {}
-    for model in MODELS:
+    for model in plan['models']:
         items = report['models'][model]['items']
-        assert len(items) == 1008 and {(i['clip_id'], i['cohort']) for i in items} == expected
-        assert Counter(i['cohort'] for i in items) == {'public': 1000, 'private': 8}
+        assert len(items) == len(plan['items']) and {(i['clip_id'], i['cohort']) for i in items} == expected
+        assert Counter(i['cohort'] for i in items) == Counter(i['cohort'] for i in plan['items'])
         coverage[model] = dict(Counter(i['status'] for i in items))
         for item in items:
             assert len(item['attempts']) <= 2
             assert [a['attempt'] for a in item['attempts']] == list(range(1, len(item['attempts']) + 1))
     return {'status': 'passed', 'run_status': control['status'], 'plan_sha256': identity['plan_sha256'],
             'local_audio_hashes_and_shapes_checked': audio_checked,
-            'private_24khz_verification': 'Converted and hash-checked in the preparation sandbox and again before each Gradium dispatch.',
+            'private_24khz_verification': ('Not used by the Linden run; its private 16 kHz input was checked above.'
+                if original['models'] == ['speechmatics-linden-1'] else
+                'Converted and hash-checked in the preparation sandbox and again before each Gradium dispatch.'),
             'archives': archives, 'raw_attempts_checked': len(raw_attempts),
             'reconciled_pre_provider_failures_checked': pre_provider_failures,
             'coverage': coverage, 'scores_reproduce': True, 'partition_order_invariant': True,

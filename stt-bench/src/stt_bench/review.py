@@ -46,7 +46,8 @@ def load_review(manifest_path, review_path=None):
                 or r.get('reference') != clip['reference'] or r.get('entities') != clip.get('entities')):
             raise ValueError('Reviewed content changed; correct and freeze a new dataset before reviewing')
         verified = bool(r.get('reviewed_by') and r.get('reviewed_at') and review.get('transcription_policy')
-                        and all(r.get(k) is True for k in ('reference_listened_verified', 'boundary_listened_verified', 'entities_listened_verified')))
+                        and all(r.get(k) is True for k in ('reference_listened_verified', 'boundary_listened_verified'))
+                        and (not clip.get('entities') or r.get('entities_listened_verified') is True))
         group = r.get('dependency_group')
         if group is not None and (not isinstance(group, str) or not group.strip() or not review.get('grouping_policy')):
             raise ValueError('Dependency groups require nonempty IDs and an explicit grouping policy')

@@ -19,6 +19,9 @@ dependencies = [
 [dependency-groups]
 dev = ["pytest==8.4.1"]
 
+[project.optional-dependencies]
+turn-preparation = ["silero-vad==6.2.1"]
+
 [project.scripts]
 stt-bench = "stt_bench.cli:main"
 

@@ -76,6 +76,7 @@ def clip_record(row, cohort):
     if first and 'deadlines' in row:
         first = {**first, 'deadlines': row['deadlines']}
     return dict(id=row['clip_id'], cohort=cohort,
+                selected_attempt=row.get('selected_attempt'),
                 counts=row['word_errors'] if row['accuracy_usable'] else None,
                 first=first, attempts=attempts, words=None)
 
@@ -86,6 +87,7 @@ def full_record(row):
     require(chosen is None or chosen['valid'], 'Selected full-run attempt is invalid')
     first = next((a for a in attempts if a['attempt'] == 1), None)
     return dict(id=row['clip_id'], cohort='pipecat' if row['cohort'] == 'public' else 'private',
+                selected_attempt=row['selected_attempt'],
                 counts=chosen['word_errors'] if chosen else None, first=first,
                 attempts=attempts, words=first.get('private_latency') if first else None)
 
@@ -98,7 +100,7 @@ def reduce_model(model, records, planned, terminal, sources):
         good = [r for r in rows if r['counts'] is not None]
         groups[cohort] = dict(usable=len(good), attempted=sum(bool(r['attempts']) for r in rows),
                               planned=planned[cohort], **aggregate([r['counts'] for r in good]))
-    public_first = [r['first'] for r in records if r['cohort'] != 'private' and r['first'] and r['first']['valid']]
+    public_first = [r['first'] for r in records if r['cohort'] == 'pipecat' and r['first'] and r['first']['valid']]
     final = [(a['final_transcript_received_seconds'] - a['t0_seconds']) * 1000
              for a in public_first if a.get('final_transcript_received_seconds') is not None and a.get('t0_seconds') is not None]
     interim = [(a.get('first_partial_after_t0') or {}).get('latency_ms') for a in public_first]
@@ -106,7 +108,7 @@ def reduce_model(model, records, planned, terminal, sources):
     words = [w['delay_ms'] for r in word_records for w in r['words']]
     deadlines = []
     for ms in (0, 250, 500, 1000):
-        observations = [d for r in records if r['cohort'] != 'private' and r['first']
+        observations = [d for r in records if r['cohort'] == 'pipecat' and r['first']
                         for d in r['first'].get('deadlines', [])
                         if d['deadline_ms'] == ms and d.get('word_errors') is not None and d.get('pacing_valid')]
         deadlines.append(dict(deadline_ms=ms, n=len(observations), **aggregate([d['word_errors'] for d in observations])))
@@ -138,7 +140,49 @@ def reduce_model(model, records, planned, terminal, sources):
                 retries=sum(max(0, len(r['attempts']) - 1) for r in records))
 
 
+def rank_common_public(models, records):
+    """Compute once over the full ranked set, independently of UI filtering."""
+    ranked = [m for m in models if m['rankable']]
+    sets = [{r['id'] for r in records[m['id']] if r['cohort'] == 'pipecat' and r['counts'] is not None}
+            for m in ranked]
+    common = set.intersection(*sets) if sets else set()
+    denominators = set()
+    for m in models:
+        rows = [r for r in records[m['id']] if r['cohort'] == 'pipecat' and r['id'] in common]
+        m['headline'] = aggregate([r['counts'] for r in rows]) if m['rankable'] else aggregate([])
+        m['headline']['n'] = len(common) if m['rankable'] else 0
+        if m['rankable']:
+            denominators.add(m['headline']['reference_words'])
+        public, private = (m['cohorts'][c]['wer'] for c in ('pipecat', 'private'))
+        m['private_minus_public_pp'] = (private - public) * 100 if public is not None and private is not None else None
+        m['rank'] = None
+    require(len(denominators) <= 1, 'Common public reference-word denominators differ')
+    ordered = sorted(ranked, key=lambda m: (m['headline']['wer'] if m['headline']['wer'] is not None else math.inf, m['id']))
+    for i, m in enumerate(ordered, 1):
+        if common:
+            m['rank'] = i
+    return dict(clip_ids=sorted(common), clips=len(common), reference_words=next(iter(denominators), 0),
+                models=sorted(m['id'] for m in ranked), basis='Usable public clips shared by every ranked model')
+
+
+def finalization_contract(model):
+    if model == 'google-chirp-3':
+        return dict(group='unavailable', label='No full public results')
+    if model.startswith('speechmatics'):
+        return dict(group='stream_end', label='EndOfStream after silence tail')
+    if model.startswith('assemblyai'):
+        return dict(group='stream_end', label='Native endpointing; Terminate after silence tail')
+    signals = {'deepgram-nova-3': 'Finalize', 'deepgram-flux-en': 'ForceEndTurn',
+               'openai-gpt-4o-transcribe': 'commit', 'gemini-3.5-transcribe-live': 'activityEnd',
+               'elevenlabs-scribe-v2-realtime': 'commit', 'cartesia-ink-2': 'finalize',
+               'smallest-pulse': 'finalize', 'gradium-default': 'flush', 'reson8-realtime': 'flush_request',
+               'inworld-stt-1': 'endTurn', 'sarvam-saaras-v3-realtime': 'speech_end', 'soniox-stt-rt-v5': 'finalize'}
+    return dict(group='signal_at_speech_end', label=signals[model] + ' at speech end')
+
+
 def build(reports):
+    from offline_rescore import rescore_records, score_projection
+    from stt_bench.score import NORMALIZATION
     sources = {}
     def read(name):
         raw = (reports / name).read_bytes()
@@ -188,6 +232,7 @@ def build(reports):
                 continue
             e = r['evidence']
             rows.append(dict(id=r['clip_id'], cohort='private',
+                             selected_attempt=e['selected']['attempt'] if e['selected'] else None,
                              counts=e['selected']['word_errors'] if e['selected'] else None,
                              first=e['attempts'][0] if e['attempts'] else None,
                              attempts=e['attempts'], words=e['first_attempt_latency']))
@@ -235,13 +280,21 @@ def build(reports):
         model_sources[model].append(name)
         terminal[model] = False
 
+    before = {m: reduce_model(m, records[m], planned, terminal[m], model_sources[m]) for m in LABELS}
+    records, audit = rescore_records(records)
     models = [reduce_model(m, records[m], planned, terminal[m], model_sources[m]) for m in LABELS]
-    ranked = sorted((m for m in models if m['rankable']), key=lambda m: m['combined']['wer'])
-    for i, m in enumerate(ranked, 1):
-        m['rank'] = i
+    common = rank_common_public(models, records)
+    audit['models'] = {m['id']: dict(before=before[m['id']]['cohorts'], after=m['cohorts'],
+                                    headline=m['headline'], reliability=m['reliability']) for m in models}
+    audit['corrected_records'] = score_projection(records)
+    audit['sources'] = list(sources.values())
+    audit['common_public'] = common
+    for m in models:
+        require(m['reliability'] == before[m['id']]['reliability'], 'Re-scoring changed reliability')
     for m in models:
         m.setdefault('rank', None)
         m['note'] = ''
+        m['finalization_contract'] = finalization_contract(m['id'])
         if m['id'] == 'google-chirp-3':
             m['note'] = 'Private results verified; full Pipecat scores unavailable locally.'
         elif m['id'].startswith('assemblyai'):
@@ -252,7 +305,10 @@ def build(reports):
             m['note'] = 'Private audio uses consecutive sessions of up to 270 seconds.'
         elif m['id'] == 'gemini-3.5-transcribe-live':
             m['note'] = 'Private audio uses nine-minute session handoffs.'
-    return dict(schema_version=1, title='Unified English STT benchmark',
+        elif m['id'] == 'inworld-stt-1':
+            m['note'] = 'Later text after stream closure extends last-final-text latency. Repetition also occurred before speech end; see evidence notes.'
+    return dict(schema_version=2, title='English STT benchmark — corrected offline scores',
+                normalization=dict(NORMALIZATION), common_public=common, _rescore_audit=audit,
                 generated_at=datetime.now(timezone.utc).isoformat(), planned=planned,
                 models=sorted(models, key=lambda m: m['rank'] or 999),
                 sources=list(sources.values()),

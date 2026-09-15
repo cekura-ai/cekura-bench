@@ -21,6 +21,6 @@ Keep the STT `.env`, `.venv`, prepared audio, run checkpoints, and reports insid
 FLEURS audio; dashboard generation requires saved reports.
 
 The benchmark code is synchronized from [cekura-ai/stt-bench](https://github.com/cekura-ai/stt-bench)
-at commit `8e09cc7ea9cb6cbbe2ddaa5c6258af41cc8dfad1`, with documentation adapted for this repository
+at commit `0bd77d7157bfcc12ebc5b879bce2d34868b906d0`, with documentation adapted for this repository
 and experimental or incident-specific helpers excluded. The repositories do not
 automatically synchronize changes.

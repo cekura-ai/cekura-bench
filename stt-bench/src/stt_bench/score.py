@@ -3,6 +3,7 @@ import json
 import importlib.metadata
 from pathlib import Path
 import re
+import unicodedata
 
 import jiwer
 import numpy as np
@@ -13,15 +14,41 @@ from .providers import reduce_events
 from .streaming import pacing_metrics, read_events
 
 NORMALIZER = EnglishTextNormalizer()
+SCORING_VERSION = 'english-wer-v2-punctuation-tokens'
+NORMALIZATION = {'package': 'whisper-normalizer==0.1.12', 'class': 'EnglishTextNormalizer',
+                 'scorer': 'jiwer==4.0.0', 'version': SCORING_VERSION,
+                 'postprocess': 'Remove Unicode punctuation-only whitespace tokens on both sides'}
 ENTITY_TYPES = {"number", "identifier", "date", "phone", "email", "amount", "spelled_sequence"}
 
 
-def word_errors(reference: str, hypothesis: str) -> dict:
-    ref, hyp = NORMALIZER(reference), NORMALIZER(hypothesis)
+def strip_punctuation_tokens(text: str) -> str:
+    """Keep numbers, currency and within-word punctuation; drop only whole marks."""
+    return ' '.join(token for token in text.split()
+                    if not all(unicodedata.category(char).startswith('P') for char in token))
+
+
+def normalize_words(text: str) -> str:
+    return strip_punctuation_tokens(NORMALIZER(text))
+
+
+def aligned_word_errors(ref: str, hyp: str) -> dict:
     alignment = jiwer.process_words(ref, hyp)
     return dict(substitutions=alignment.substitutions, insertions=alignment.insertions,
                 deletions=alignment.deletions, reference_words=len(ref.split()),
                 reference_normalized=ref, hypothesis_normalized=hyp)
+
+
+def rescore_saved_word_errors(saved: dict) -> dict:
+    """Verify legacy alignment, then align cleaned saved text without renormalizing numbers."""
+    ref, hyp = saved['reference_normalized'], saved['hypothesis_normalized']
+    original = aligned_word_errors(ref, hyp)
+    if any(original[k] != saved[k] for k in ('substitutions', 'insertions', 'deletions', 'reference_words')):
+        raise ValueError('Saved word counts differ from stored normalized text')
+    return aligned_word_errors(strip_punctuation_tokens(ref), strip_punctuation_tokens(hyp))
+
+
+def word_errors(reference: str, hypothesis: str) -> dict:
+    return aligned_word_errors(normalize_words(reference), normalize_words(hypothesis))
 
 
 def aggregate_wer(rows: list[dict]) -> dict:

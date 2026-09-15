@@ -11,8 +11,8 @@ from unified_benchmark import COUNTS, aggregate, check_counts, require
 def comparison(reference, transcript, counts):
     """Use the scorer's normalizer and jiwer alignment; reject different scores."""
     import jiwer
-    from stt_bench.score import NORMALIZER
-    ref, hyp = NORMALIZER(reference), NORMALIZER(transcript)
+    from stt_bench.score import normalize_words
+    ref, hyp = normalize_words(reference), normalize_words(transcript)
     require(ref == counts['reference_normalized'] and hyp == counts['hypothesis_normalized'],
             'Review text differs from saved scoring text')
     alignment = jiwer.process_words(ref, hyp)
@@ -111,10 +111,15 @@ def build_review(data, reports, root, output, include_private=False):
                 shown = chosen if chosen is not None else (attempts[-1] if attempts else None)
                 transcript = shown.get('transcript') if shown else None
                 if counts is not None:
+                    from stt_bench.score import NORMALIZER, rescore_saved_word_errors
                     require(chosen is not None and chosen['valid'] and isinstance(transcript, str),
                             'Scored review has no valid selected transcript')
                     if 'reference' in row:
                         require(row['reference'] == clip['reference'], 'Reference differs from frozen manifest')
+                    require(NORMALIZER(clip['reference']) == counts['reference_normalized'] and
+                            NORMALIZER(transcript) == counts['hypothesis_normalized'],
+                            'Original review text differs from saved scoring text')
+                    counts = rescore_saved_word_errors(counts)
                     diff = comparison(clip['reference'], transcript, counts)
                 else:
                     diff = None

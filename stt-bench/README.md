@@ -133,7 +133,8 @@ they were received by that time.
 | Entity accuracy | Separate scoring of annotated values and exact formatting. Unsupported types or missing annotations remain unavailable. |
 | Estimated cost | Configured rates applied to submitted audio, including failures and retries. Unknown rates remain unavailable. |
 
-WER uses the pinned `jiwer` and `whisper-normalizer` dependencies. Deadline accuracy
+WER uses the pinned `jiwer` and `whisper-normalizer` dependencies, followed by
+removal of punctuation-only tokens on both sides. See [offline scoring corrections](OFFLINE_RESCORING.md). Deadline accuracy
 always uses attempt one; a retry cannot improve an earlier observation. The standard
 runner permits one retry per failed or invalid clip and retains every attempt.
 
@@ -185,14 +186,18 @@ saved model-batch summaries. Run `uv run --locked stt-bench --help` for all comm
 Build the offline dashboard from the saved comparison cohorts:
 
 ```sh
-python3 scripts/build_benchmark_html.py
+.venv/bin/python scripts/build_benchmark_html.py
 ```
 
-The output is `reports/benchmark-dashboard/index.html`. It combines Pipecat,
-FLEURS, and private recordings in a word-weighted leaderboard. Dataset coverage,
-failure and not-run rates, and transcript timing remain visible. Incomplete runs
-are shown without a rank. The page works offline and requires locally saved
-reports to build; a fresh clone does not include those reports.
+The output is `reports/benchmark-dashboard/index.html`. It ranks 13 models on
+864 shared usable public clips. The simplified page shows public and private
+scores; all-available public and FLEURS scores remain separate in the corrected
+reports. Public timing uses Pipecat only, with plots separated by finalization
+method. Corrected totals and the before/after audit are saved separately under
+`reports/offline-rescore-v2/`; original evidence is preserved. The page works
+offline and requires locally saved reports to build; a fresh clone does not
+include them. See the [dashboard guide](scripts/BENCHMARK_DASHBOARD.md) for inputs
+and exports.
 
 To include public audio, reference transcripts, and scored word differences:
 

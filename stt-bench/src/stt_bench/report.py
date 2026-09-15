@@ -7,7 +7,7 @@ from pathlib import Path
 from .data import sha256, write_json
 from .providers import reduce_events, is_nova, sample_rate
 from .run import assess, select_attempt
-from .score import ENTITY_TYPES, aggregate_wer, entity_errors, percentiles, plot, word_errors
+from .score import ENTITY_TYPES, NORMALIZATION, aggregate_wer, entity_errors, percentiles, plot, word_errors
 from .streaming import pacing_metrics, read_events
 from .entities import aggregate_values, value_errors
 from .measurement import deadline_observations, grouped_interval, summarize_deadlines
@@ -212,7 +212,7 @@ def build_report(root: Path, out: Path, review_path: Path | None = None):
                                                      for name in (tuple(run.get('source_hashes', {})) if run.get('measurement_version') == 4 else ('deepgram.py', 'streaming.py', 'timing.py', 'macos_timer.py', 'macos_activity.py'))}},
               'scoring_source_hashes': {name: sha256(Path(__file__).parent / name)
                                        for name in ('score.py', 'report.py', 'deepgram.py', 'streaming.py', 'run.py', 'measurement.py', 'entities.py', 'review.py', 'providers.py', 'provider_protocol.py')},
-              'normalization': {'package': 'whisper-normalizer==0.1.12', 'class': 'EnglishTextNormalizer', 'scorer': 'jiwer==4.0.0'},
+              'normalization': dict(NORMALIZATION),
               'entity_comparison': 'Case-sensitive raw characters, whitespace ignored; annotated reference spans; no semantic equivalence. Unrelated hallucinated entities outside reference spans are not measured.',
               'shared_measurement_contract': {'version': 4, 'frame_ms': config.get('frame_ms', 20), 'tail_ms': 1000, 'deadlines_ms': [0, 250, 500, 1000], 'attempt_policy': 'first-request-deadlines-first-valid-recovery', 'reference_manifest': manifest.get('batch', {}).get('parent_manifest_sha256', run['manifest_sha256']), 'scoring_hashes': {name: sha256(Path(__file__).parent / name) for name in ('score.py', 'report.py', 'measurement.py', 'streaming.py', 'timing.py')}},
               'provider_contract': {'finalization': config.get('finalization', 'manual_at_speech_end'), 'completion_basis': config.get('completion_basis', 'close_stream_metadata'), 'sample_rate': sample_rate(config)},

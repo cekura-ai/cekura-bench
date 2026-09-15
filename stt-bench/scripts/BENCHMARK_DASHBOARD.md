@@ -3,7 +3,7 @@
 Run from `stt-bench/` to build the offline page from locally saved evidence:
 
 ```sh
-python3 scripts/build_benchmark_html.py
+.venv/bin/python scripts/build_benchmark_html.py
 ```
 
 The output is `reports/benchmark-dashboard/index.html`. Share or open that single
@@ -39,7 +39,12 @@ file modification times or live controller progress as a score:
 Each selected source has a SHA-256 in the page. The generator checks source
 identities, unique item coverage, public dataset consistency, normalization,
 word-count arithmetic, private archive-verification flags, and full-run audit
-receipts. It recomputes pooled WER and percentiles from saved item observations.
+receipts. It validates the original totals, then recomputes WER with punctuation-only
+tokens removed on both sides and calculates percentiles from saved observations.
+The corrected totals and per-item before/after audit are written separately to
+`reports/offline-rescore-v2/`; see [the correction guide](../OFFLINE_RESCORING.md).
+The Inworld note additionally requires its selected public raw archives under
+`full-parallel-20260915/batches/`; raw receipt checksums are verified locally.
 It does not re-download archives or repeat the underlying provider benchmarks.
 The default summary export contains no private transcript, audio, or individual
 word annotation. Listening review is an explicit export option described below.
@@ -101,25 +106,24 @@ failed, and not-run counts; adding a metric does not create missing observations
 
 The page retains Flux English and Nova-3 as distinct Deepgram families, and one
 OpenAI entry: GPT-4o Transcribe. It removes Nova-2, Flux Multilingual, Whisper,
-GPT-4o Mini, and Chirp 2. Speechmatics Standard and Enhanced remain separate
+GPT-4o Mini, Chirp 2, Chirp 3, Sarvam Saaras v3, and Soniox STT-RT v5. Speechmatics Standard and Enhanced remain separate
 operating modes. This is an explicit display selection, not a live model-catalog
 claim. Source benchmark artifacts and model configurations remain unchanged.
 
-## Combined ranking and coverage
+## Common-public ranking and separate datasets
 
 The suite has 1,000 Pipecat clips, 180 FLEURS clips, and eight private recordings.
-Combined WER is the sum of substitutions, insertions, and deletions divided by
-reference words across all usable items. Each reference word has equal weight;
-dataset percentages are never averaged.
+The 13 previously eligible models are ranked on their shared usable public clips:
+864 clips and 20,865 reference words. Each common reference word has equal weight.
+The set is frozen in the report; UI filtering cannot change scores or ranks.
 
-The ordinal ranking includes terminal full runs with every Pipecat and private
-item attempted and usable results in both datasets. FLEURS scores enter the same
-combined total wherever available. FLEURS coverage and exclusions differ across
-models, so this is an **available-results ranking**, not a matched-sample ranking.
-The page shows usable/planned counts for every dataset, plus failures and retries.
-It keeps Chirp 3 and the two trial models visible and unranked. AssemblyAI is now
-included among the 13 completed full-run rankings; it has no FLEURS observations.
-Unavailable measurements contribute neither errors nor reference words.
+All-available public WER uses each model's own usable public clips. Private and
+FLEURS WER are separate and do not affect rank. The page shows public and private
+WER; FLEURS WER and the private-minus-public gap are omitted from its tables and CSV.
+Coverage, failures and retries remain visible. The page contains 13 ranked models.
+Unavailable measurements contribute neither errors nor reference words. The
+shared subset excludes failures for everyone, so its ranking must be read
+alongside reliability and full-dataset coverage.
 
 ## Timing
 
@@ -127,8 +131,9 @@ All four timing views show p50, p90, p95, and p99, calculated using linear
 interpolation over individual observations. The chart has a percentile selector;
 the table always shows all four percentiles and the measurement denominator.
 
-- **Final transcript:** last final-text receipt minus speech end, across valid
-  first attempts on Pipecat and FLEURS. This is not finalize-acknowledgment latency.
+- **Last final text received after speech end:** last final-text receipt minus
+  speech end, across valid first attempts on Pipecat only. Later extra text can
+  extend this measurement. This is not finalize-acknowledgment latency.
   Negative values mean final text arrived before the reference speech boundary.
 - **Interim after speech end:** first nonempty partial update received after speech
   end. This saved metric is not time to first interim text from speech start.
@@ -138,11 +143,18 @@ the table always shows all four percentiles and the measurement denominator.
   actual delivery time of that word's ending audio. Private words are never
   pooled with public clip timings. The table shows timed/reference words.
 - **Stream completion:** provider completion receipt minus speech end, for valid
-  first Pipecat/FLEURS attempts. Provider completion signals vary.
+  first Pipecat attempts. Provider completion signals vary.
 
 Accuracy may use a valid retry. Timing never substitutes a recovery for the
 original first attempt. Public deadline WER includes pacing-valid first-attempt
-observations at 0/250/500/1,000 ms, with measurement counts shown.
+Pipecat observations at 0/250/500/1,000 ms, with measurement counts shown.
+These deadline scores use available observations, not the common ranking set.
+
+Public latency charts and scatterplots separate signals sent at speech end from
+native endpointing/stream closure after the tail. Inworld sends `endTurn` and
+Gradium sends `flush` at speech end. No silence duration is subtracted. Private
+word timing preserves the original saved word mapping and denominator. The
+Inworld evidence note does not report an unverified hallucination rate.
 
 The page explains differing run dates, concurrency, session handoffs, AssemblyAI
 packet timing, automatic reference boundaries, and incomplete listening review.
@@ -155,11 +167,18 @@ timing definition and percentile, hide models, sort the table, and inspect
 accuracy versus timing. Dataset details and methodology use expandable sections.
 Charts and wide tables scroll internally on mobile.
 
-CSV exports the visible sorted models, all four timing metrics and percentiles,
+CSV exports the visible sorted models, common-public WER and denominator, the
+scoring version, all timing metrics,
 coverage, reference words, deadline scores, failures, retries, and source hashes.
 Values retain source precision. Missing values are explicitly `Unavailable`.
 
 ## Validation
+
+The model comparison graph has an accuracy dataset selector for shared-public
+and private WER. Nova-3 and ElevenLabs use the same saved scores as the leaderboard;
+there is no separate comparison card. Hiding models does not change scores or ranks.
+The separate September 15 settings-trial note is diagnostic context;
+it does not replace any leaderboard score or timing observation.
 
 ```sh
 .venv/bin/python -m pytest tests/test_unified_benchmark.py tests/test_benchmark_html.py -q
@@ -180,8 +199,9 @@ existing tests; the default command now calls the unified reducer.
 
 ## Actual cost
 
-The combined leaderboard and CSV reserve actual cost in USD for charges verified
-against provider billing records and attributed to each model’s benchmark runs.
+Actual cost is omitted from the page and CSV. Saved data reserves actual cost in
+USD for charges verified against provider billing records and attributed to each
+model’s benchmark runs.
 This includes smoke tests, billable failed requests, retries, and reruns; hosting
 costs are separate. No reconciled billing evidence is currently available, so
 `actual_cost_usd` is null and `actual_cost_status` is `unverified` for every model.

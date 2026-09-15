@@ -34,13 +34,13 @@ def test_combined_wer_uses_words_not_average_of_dataset_percentages():
     assert result['rankable']
 
 
-def test_percentiles_pool_individual_samples_and_do_not_mix_private_timing():
+def test_public_percentiles_exclude_fleurs_and_private_timing():
     rows = [record('p', delay=0), record('f', 'fleurs', delay=100), record('r', 'private', delay=100000)]
     rows[-1]['words'] = dict(reference_words=10, words=[{'delay_ms': v} for v in (1000, 2000, 3000)])
     result = reduce(rows)
-    assert result['timings']['final'] == pytest.approx(dict(n=2, p50_ms=50, p90_ms=90, p95_ms=95, p99_ms=99))
+    assert result['timings']['final'] == pytest.approx(dict(n=1, p50_ms=0, p90_ms=0, p95_ms=0, p99_ms=0))
     assert result['timings']['word']['p99_ms'] == 2980
-    assert result['timings']['interim']['n'] == 2
+    assert result['timings']['interim']['n'] == 1
 
 
 def test_missing_values_and_invalid_first_attempts_never_use_recovery_timing():

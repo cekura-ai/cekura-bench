@@ -228,6 +228,14 @@ def load_private(path):
 
 
 def render(data, template):
+    # Omit these limited-coverage entries from the page, without changing scores.
+    excluded = {'google-chirp-3', 'sarvam-saaras-v3-realtime', 'soniox-stt-rt-v5'}
+    data = deepcopy(data)
+    if 'models' in data:
+        data['models'] = [m for m in data['models'] if m.get('id') not in excluded]
+    for clip in data.get('clip_review', {}).get('clips', []):
+        clip['results'] = {key: value for key, value in clip['results'].items()
+                           if key not in excluded}
     # JSON is data, not executable markup, even if a source string contains </script>.
     encoded = json.dumps(data, ensure_ascii=True, allow_nan=False, separators=(",", ":"))
     encoded = encoded.replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
@@ -371,6 +379,10 @@ def main():
     args = parser.parse_args()
     try:
         data = build(args.reports_root)
+        from offline_rescore import inworld_evidence, write_correction
+        correction = data.pop('_rescore_audit')
+        correction['inworld_evidence'] = inworld_evidence(args.reports_root)
+        write_correction(args.reports_root, data, correction)
         if args.include_private_review or args.share_zip:
             args.with_clip_review = True
         if args.with_clip_review:
@@ -381,7 +393,7 @@ def main():
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(page, encoding="utf-8")
         print(f"Created {args.out.resolve()} ({len(page.encode()):,} bytes)")
-        print(f"{len(data['models'])} models; {sum(m['rankable'] for m in data['models'])} completed full-run rankings; pooled counts and individual timing percentiles.")
+        print(f"{len(data['models'])} models; {sum(m['rankable'] for m in data['models'])} ranked on {data['common_public']['clips']} common public clips; zero provider calls.")
         if args.share_zip:
             from benchmark_clip_review import share_zip
             bundle = share_zip(args.out, data['clip_review'])

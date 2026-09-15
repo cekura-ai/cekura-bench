@@ -2,7 +2,7 @@ import copy
 import json
 from pathlib import Path
 import pytest
-from stt_bench.full_benchmark import MODELS, combine, classify, final_snapshots, load_plan, replay_archive
+from stt_bench.full_benchmark import MODELS, combine, classify, final_snapshots, load_plan, replay_archive, evaluate
 from stt_bench.score import word_errors
 from stt_bench.measurement import deadline_observations
 
@@ -66,3 +66,77 @@ def test_replay_rejects_tampered_archive_before_reading(tmp_path):
 
 def test_unverified_results_never_enter_report():
     with pytest.raises(ValueError,match='Unverified'):combine({},[{'verified':False}])
+
+def test_text_exception_does_not_break_deadline_scoring():
+    config=json.loads(Path('config/models/gradium-default.json').read_text())
+    events=[dict(kind='clip_start',time_seconds=0),
+        dict(kind='provider_message',time_seconds=.1,message={'type':'error','message':'Concurrency limit exceeded: 3 active sessions'}),
+        dict(kind='error',time_seconds=.2,error_type='ProviderError',message='Provider rejected request'),
+        dict(kind='clip_end',time_seconds=.3)]
+    result=evaluate(events,dict(clip_id='a',cohort='public',reference='hello'),config,1,'hash')
+    assert result['failure_class']=='concurrency' and not result['valid']
+    assert result['deadlines'][0]['status']=='failed_before_speech_end'
+    assert events[2]['message']=='Provider rejected request'
+
+def test_failure_codes_ignore_timestamp_digits():
+    for stamp in (.0014017,.002403,.429402):
+        assert classify([dict(kind='error',time_seconds=stamp,error_message='Temporary failure in name resolution')])=='transient'
+
+def test_consecutive_sessions_preserve_every_source_frame(monkeypatch):
+    import asyncio
+    from stt_bench import full_benchmark as full
+    captures=[];events=[]
+    class Log:
+        origin=0
+        def now(self):return 0
+        def emit(self,kind,**fields):events.append(dict(kind=kind,**fields))
+    async def fake(pcm,frames,config,key,log):captures.append((pcm,frames))
+    monkeypatch.setattr(full.gradium,'transcribe',fake)
+    source=b'\x01\x00'*(13501*480)
+    asyncio.run(full.gradium_sessions(source+bytes(48000),13501,{'sample_rate':24000},'fixture',Log()))
+    assert [n for _,n in captures]==[13500,1]
+    assert b''.join(pcm[:n*960] for pcm,n in captures)==source
+    assert all(pcm[n*960:]==bytes(48000) for pcm,n in captures)
+    assert events[0]['additional_tail_seconds']==1
+    assert events[-1]['kind']=='longform_complete'
+
+def test_nested_credit_error_is_terminal():
+    assert classify([{'kind':'provider_message','message':{'error':{'code':7,'message':'You have no credits remaining. Please add credits to continue using the service.'}}}])=='credits'
+
+def test_missing_provider_scopes_are_terminal_authentication_failure():
+    assert classify([{'kind':'provider_message','message':{'error':{'code':7,'message':'api key does not have required scopes','details':[]}}}])=='authentication'
+
+def test_consecutive_sessions_use_real_stream_clock_and_terminal_events(tmp_path,monkeypatch):
+    import asyncio
+    from websockets.asyncio.server import serve
+    from stt_bench import full_benchmark as full
+    from stt_bench.streaming import EventLog,read_events
+    async def check():
+        config=json.loads(Path('config/models/gradium-default.json').read_text())
+        sessions=[]
+        async def server(ws):
+            received=[];sessions.append(received)
+            async for raw in ws:
+                m=json.loads(raw);received.append(m)
+                if m['type']=='setup':await ws.send(json.dumps(dict(type='ready',model_name='55966eda@500',sample_rate=24000,delay_in_frames=10)))
+                elif m['type']=='flush':
+                    for reply in [dict(type='text',text='hello'),dict(type='end_text'),dict(type='flushed',flush_id=1)]:await ws.send(json.dumps(reply))
+                elif m['type']=='end_of_stream':
+                    await ws.send(json.dumps(dict(type='end_of_stream')));await ws.close();return
+        async with serve(server,'127.0.0.1',0) as local:
+            monkeypatch.setattr(full,'GRADIUM_SESSION_FRAMES',2)
+            monkeypatch.setattr(full.gradium,'connection',lambda c,k:(f'ws://127.0.0.1:{local.sockets[0].getsockname()[1]}',{}))
+            path=tmp_path/'raw.jsonl';log=EventLog(path)
+            try:await full.gradium_sessions(bytes(54*960),4,config,'fixture',log)
+            finally:log.close()
+        events=read_events(path)
+        clip=dict(clip_id='private',cohort='private',speech_frames=4,reference='hello hello',words=[])
+        result,snaps,frames=full.session_assessment(events,clip,config)
+        assert result['transcript_complete'] and result['model_verified']
+        assert result['transcript']=='hello hello' and result['context_resets']==1
+        assert set(frames)=={0,1,2,3}
+        assert len(sessions)==2 and all(sum(m['type']=='audio' for m in s)==52 for s in sessions)
+        assert len(result['pacing']['transition_gaps_seconds'])==1
+        incomplete=events[:-1]
+        assert not full.session_assessment(incomplete,clip,config)[0]['transcript_complete']
+    asyncio.run(check())

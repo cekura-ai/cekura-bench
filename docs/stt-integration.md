@@ -20,6 +20,7 @@ Keep the STT `.env`, `.venv`, prepared audio, run checkpoints, and reports insid
 `stt-bench/`. These local files are ignored by Git. Some integration tests require
 FLEURS audio; dashboard generation requires saved reports.
 
-The project originated in [cekura-ai/stt-bench](https://github.com/cekura-ai/stt-bench)
-at commit `821fa89a77af6ddfa792fcb04520c598be6b1865`. The repositories do not
+The benchmark code is synchronized from [cekura-ai/stt-bench](https://github.com/cekura-ai/stt-bench)
+at commit `8e09cc7ea9cb6cbbe2ddaa5c6258af41cc8dfad1`, with documentation adapted for this repository
+and experimental or incident-specific helpers excluded. The repositories do not
 automatically synchronize changes.

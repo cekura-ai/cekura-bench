@@ -232,7 +232,9 @@ def render(data, template):
     encoded = json.dumps(data, ensure_ascii=True, allow_nan=False, separators=(",", ":"))
     encoded = encoded.replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
     require(template.count("__BENCHMARK_DATA__") == 1, "Template must contain exactly one data placeholder")
-    return template.replace("__BENCHMARK_DATA__", encoded)
+    review_ui = (Path(__file__).with_name('benchmark_clip_review.html').read_text()
+                 if data.get('clip_review') else '')
+    return template.replace("__BENCHMARK_DATA__", encoded).replace('__CLIP_REVIEW_UI__', review_ui)
 
 
 def refresh_private(data, directory):
@@ -359,35 +361,31 @@ def load_short_tests(root):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source-root", type=Path, default=ROOT / "reports/vercel-models")
-    parser.add_argument("--manifest", type=Path, default=MANIFEST)
+    from unified_benchmark import build
+    parser = argparse.ArgumentParser(description="Build the unified English benchmark from saved evidence; no provider calls.")
+    parser.add_argument("--reports-root", type=Path, default=ROOT / "reports")
     parser.add_argument("--out", type=Path, default=ROOT / "reports/benchmark-dashboard/index.html")
-    parser.add_argument("--private-source", type=Path,
-                        default=ROOT / "reports/private-longform-v1/comparison/comparison.json")
-    parser.add_argument("--recovery-root", type=Path, default=ROOT / "reports/private-longform-recovery-v2")
+    parser.add_argument('--with-clip-review', action='store_true', help='Include public transcripts, diffs, and lossless listening audio')
+    parser.add_argument('--include-private-review', action='store_true', help='Also package the eight private recordings and transcripts')
+    parser.add_argument('--share-zip', action='store_true', help='Package the review HTML and audio into one ZIP')
     args = parser.parse_args()
     try:
-        manifest_bytes = args.manifest.read_bytes()
-        summaries, sources = [], []
-        for *_, run_id in MODELS:
-            path = args.source_root / run_id / "hourly/summary.json"
-            raw = path.read_bytes()
-            summaries.append(json.loads(raw))
-            try:
-                display = str(path.resolve().relative_to(ROOT))
-            except ValueError:
-                display = str(path.resolve())
-            sources.append({"path": display, "sha256": hashlib.sha256(raw).hexdigest()})
-        data = build_data(summaries, json.loads(manifest_bytes), hashlib.sha256(manifest_bytes).hexdigest(), sources)
-        data['private_benchmark'] = refresh_private(load_private(args.private_source), args.recovery_root)
-        data['short_tests'] = load_short_tests(ROOT / 'reports')
-        html = render(data, Path(__file__).with_name("benchmark_dashboard.html").read_text())
+        data = build(args.reports_root)
+        if args.include_private_review or args.share_zip:
+            args.with_clip_review = True
+        if args.with_clip_review:
+            from benchmark_clip_review import build_review
+            data['clip_review'] = build_review(data, args.reports_root, ROOT, args.out.parent,
+                                             include_private=args.include_private_review)
+        page = render(data, Path(__file__).with_name("benchmark_dashboard.html").read_text())
         args.out.parent.mkdir(parents=True, exist_ok=True)
-        args.out.write_text(html, encoding="utf-8")
-        print(f"Created {args.out.resolve()} ({len(html.encode()):,} bytes)")
-        print(f"Verified 10 models, 1,000 clips each. Shared final: {len(data['shared_final_ids'])}; "
-              f"shared deadlines: {len(data['shared_deadline_ids'])} clips.")
+        args.out.write_text(page, encoding="utf-8")
+        print(f"Created {args.out.resolve()} ({len(page.encode()):,} bytes)")
+        print(f"{len(data['models'])} models; {sum(m['rankable'] for m in data['models'])} completed full-run rankings; pooled counts and individual timing percentiles.")
+        if args.share_zip:
+            from benchmark_clip_review import share_zip
+            bundle = share_zip(args.out, data['clip_review'])
+            print(f'Share {bundle.resolve()} ({bundle.stat().st_size / 1_000_000:.1f} MB); extract and open index.html.')
     except (OSError, ValueError, KeyError, TypeError) as exc:
         parser.exit(1, f"Cannot build benchmark report: {exc}\n")
 

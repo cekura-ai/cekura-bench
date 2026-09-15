@@ -188,10 +188,23 @@ Build the offline dashboard from the saved comparison cohorts:
 python3 scripts/build_benchmark_html.py
 ```
 
-The output is `reports/benchmark-dashboard/index.html`. Its data is embedded, so
-it can be viewed without a server. The generator requires locally saved reports;
-a fresh clone does not include them. See the
-[dashboard guide](scripts/BENCHMARK_DASHBOARD.md) for inputs and exports.
+The output is `reports/benchmark-dashboard/index.html`. It combines Pipecat,
+FLEURS, and private recordings in a word-weighted leaderboard. Dataset coverage,
+failure and not-run rates, and transcript timing remain visible. Incomplete runs
+are shown without a rank. The page works offline and requires locally saved
+reports to build; a fresh clone does not include those reports.
+
+To include public audio, reference transcripts, and scored word differences:
+
+```sh
+uv run --locked python scripts/build_benchmark_html.py --with-clip-review --share-zip
+```
+
+Use `--include-private-review` instead of `--with-clip-review` to also include the
+locally supplied private recordings and transcripts. Extract the generated
+`reports/benchmark-dashboard/benchmark-review.zip` and open `index.html`, keeping
+the audio folder beside it. See the [dashboard guide](scripts/BENCHMARK_DASHBOARD.md)
+for source selection, metric definitions, and export options.
 
 ## Timing checks and remote execution
 
@@ -247,6 +260,56 @@ require reconciliation before another request. Collected archives are checksum-c
 and replayed before entering `results.json`, `RESULTS.md`, and `index.html`. Public
 deadline accuracy and private word-finalization timing use original attempts and
 remain separate; recovery accuracy is reported independently.
+
+Gradium can process long private recordings as consecutive sessions of at most
+270 seconds. Every original audio frame is sent once in order, and the complete
+recording is scored as one item. Recognition context resets between sessions;
+reconnect gaps and extra silence tails are recorded. Timing checks apply within
+each session, so these results are labeled separately from uninterrupted streams.
+
+Runtime amendments bind code corrections and provider limits to saved hashes.
+Previously dispatched commands retain their original identities. Credit or
+credential recovery preserves completed work and checks capacity again before
+increasing concurrency.
+
+After capture and result merging, generate a detailed report and audit the saved
+evidence. The stop check reads remote sandbox state using the configured Vercel
+account; it does not stop or launch jobs.
+
+```sh
+uv run --locked python scripts/render_full_benchmark_report.py reports/full-parallel-new
+uv run --locked python scripts/audit_full_benchmark.py reports/full-parallel-new
+node scripts/verify_full_benchmark_stops.mjs reports/full-parallel-new
+```
+
+The report includes first-pass and recovered coverage, deadline accuracy, private
+word delays, completion timing, failures, measured overlap, and compute-stop status.
+A blocked provider leaves the overall result partial.
+
+### AssemblyAI low-latency concurrent profile
+
+The isolated AssemblyAI runner uses `universal-3-5-pro`, `mode=min_latency`, and
+`language_codes=["en"]` on the same 1,000 public clips and eight private recordings.
+It uses 60 ms packet-aware timing checks and can stage up to 20 workers. A shared
+start-rate gate persists reservations across restarts. The original account policy
+was five new streams per minute; configure and confirm your account's limit in the
+frozen runtime amendment before dispatch. The provider must confirm the model and
+mode, and connection parameters record the language list.
+
+```sh
+uv run --locked python -m stt_bench.assemblyai_full_benchmark prepare --root reports/assemblyai-new
+node scripts/run_vercel_assemblyai_parallel.mjs run reports/assemblyai-new
+node scripts/run_vercel_assemblyai_parallel.mjs status reports/assemblyai-new
+uv run --locked python scripts/audit_assemblyai_full_benchmark.py reports/assemblyai-new
+uv run --locked python scripts/summarize_stream_concurrency.py reports/assemblyai-new
+node scripts/verify_full_benchmark_stops.mjs reports/assemblyai-new
+uv run --locked python scripts/render_full_benchmark_report.py reports/assemblyai-new
+```
+
+The Vercel commands require the Sandbox SDK and preparation records described in
+the [script guide](scripts/README.md#vercel). Prepare each run root once and retain
+its checkpoint files when resuming. Audit, concurrency, and report commands read
+saved evidence without submitting audio.
 
 ## Development
 

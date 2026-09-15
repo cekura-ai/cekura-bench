@@ -10,6 +10,27 @@ import {waitForCompletion} from './vercel_command_wait.mjs';
 
 const exec=promisify(execFile);
 const REMOTE='/vercel/sandbox/stt-bench-v4';
+// Rate-limit waits can outlive the token stored in an SDK sandbox instance.
+// Refresh the client before dispatch; never retry an uncertain command write.
+export async function freshDispatchSandbox(previous,getFresh){
+  const fresh=await getFresh();
+  if(fresh.currentSession().sessionId!==previous.currentSession().sessionId)
+    throw new Error('Sandbox session changed before dispatch; reconciliation required');
+  return fresh;
+}
+// An unacknowledged reservation holds a slot indefinitely. Only a remote
+// handshake/failure receipt, or collected command evidence, starts its expiry.
+export function reserveStart(gate,id,worker,stamp=Date.now()){
+  if(gate.limit!==5||gate.windowMs<62000)throw new Error('Expected confirmed five starts per minute');
+  if(gate.entries[id])return true;
+  const occupied=Object.values(gate.entries).filter(e=>e.ackAt==null||stamp-e.ackAt<gate.windowMs).length;
+  if(occupied>=gate.limit)return false;
+  gate.entries[id]={worker,reservedAt:stamp,ackAt:null};return true;
+}
+export function acknowledgeStart(gate,id,stamp=Date.now()){
+  const entry=gate.entries[id];if(entry&&entry.ackAt==null)entry.ackAt=stamp;
+}
+
 export function newModel(){return {ceiling:1,successes:0,throttled:false,cooldown:0,blocked:null,privateBlocked:false,attempts:{},active:{},reductions:[],peak:0};}
 export function amendUndispatched(b,command,runtimeHash){
   if(b.status!=='assigned'||b.assignment.runtime_hash===runtimeHash)return false;
@@ -25,7 +46,7 @@ export function reconcileCredits(m,authorization){
   if(!authorization)return;
   if(['credits','authentication','capacity_probe_failed'].includes(m.blocked))m.blocked=null;
   if(m.creditResume?.id!==authorization.id){
-    m.capacityStageMax=Math.min(m.capacityStageMax??10,m.throttled?m.ceiling:10);
+    m.capacityStageMax=Math.min(m.capacityStageMax??20,m.throttled?m.ceiling:20);
     m.creditResume=authorization;m.capacitySuccesses=0;m.ceiling=1;m.throttled=false;m.cooldown=0;
   }
 }
@@ -66,7 +87,7 @@ export function claim(plan,m,stamp=Date.now()){
   }
   if(!items.length){
     if(pilotPassed&&!m.privateBlocked)items=privateItems.filter(c=>!history(c).length&&!held.has(c.clip_id)).slice(0,1);
-    if(!items.length)items=publicItems.filter(c=>!history(c).length&&!held.has(c.clip_id)).slice(0,m.ceiling===1?1:10);
+    if(!items.length)items=publicItems.filter(c=>!history(c).length&&!held.has(c.clip_id)).slice(0,1);
   }
   if(!items.length&&(!pilot||pilotPassed||m.privateBlocked)&&!Object.values(m.active).some(a=>a.items.some(i=>i.attempt===1))){
     const eligible=[...publicItems,...(pilotPassed&&!m.privateBlocked?privateItems:[])];
@@ -95,16 +116,17 @@ export function accept(m,assignment,rows,stamp=Date.now()){
   }
   if(failedCapacityProbe&&!m.blocked)m.blocked='capacity_probe_failed';
   const capacity=m.capacitySuccesses??m.successes;
-  if(!m.throttled)m.ceiling=Math.min(m.capacityStageMax??10,capacity>=6?10:capacity>=1?5:1);
+  if(!m.throttled)m.ceiling=Math.min(m.capacityStageMax??20,capacity>=16?20:capacity>=6?10:capacity>=1?5:1);
 }
 export function compact(state){return {run:state.runId,status:state.status,updatedAt:state.updatedAt,
+  startRate:state.startRate?{limit:state.startRate.limit,windowMs:state.startRate.windowMs,unacknowledged:Object.values(state.startRate.entries).filter(e=>e.ackAt==null).length}:null,
   models:Object.fromEntries(Object.entries(state.models||{}).map(([k,m])=>[k,{ceiling:m.ceiling,peak:m.peak,
     active:Object.keys(m.active).length,attempted:Object.keys(m.attempts).length,
     successful:Object.values(m.attempts).filter(a=>a.some(x=>x.valid)).length,blocked:m.blocked,privateBlocked:m.privateBlocked,
     reductions:m.reductions}])),workersStopped:Object.values(state.workers||{}).filter(w=>w.computeStopped).length};}
 
 export async function main(argv=process.argv.slice(2)){
-  const mode=argv[0]||'status',root=resolve(argv[1]||'reports/full-parallel-20260915');
+  const mode=argv[0]||'status',root=resolve(argv[1]||'reports/assemblyai-min-latency-full-20260915');
   if(!['prepare','run','status'].includes(mode))throw new Error('Use prepare, run, or status');
   const path=join(root,'controller.json');
   let state;try{state=JSON.parse(await readFile(path,'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}
@@ -140,6 +162,7 @@ export async function main(argv=process.argv.slice(2)){
   function save(){state.updatedAt=new Date().toISOString();const value=JSON.stringify(state,null,2)+'\n';
     writes=writes.then(async()=>{await writeFile(path+'.tmp',value);await rename(path+'.tmp',path);});return writes;}
   async function command(sb,w,stage,params){
+    sb=await freshDispatchSandbox(sb,()=>get(w.name));
     return dispatchOnce(sb,w,save,stage,params,async(_,id)=>waitForCompletion({getCommand:async(cid,options)=>{
       const fresh=await get(w.name);if(fresh.currentSession().sessionId!==w.command.sessionId)throw new Error('Command session changed');
       return fresh.currentSession().getCommand(cid,options);
@@ -178,7 +201,7 @@ export async function main(argv=process.argv.slice(2)){
       // Reconcile already-collected scorer failures from their immutable raw files.
       for(const b of Object.values(state.batches).filter(b=>b.status==='collected'&&(!runtime.reconcile_batches||runtime.reconcile_batches.includes(b.id)))){
         const dir=join(root,'batches',b.id);
-        await exec('.venv/bin/python',['-m','stt_bench.full_benchmark','replay','--plan',join(root,'plan.json'),'--archive',join(dir,'evidence.tar.gz'),'--archive-hash',b.archiveHash,'--out',join(dir,'verified.json')]);
+        await exec('.venv/bin/python',['-m','stt_bench.assemblyai_full_benchmark','replay','--plan',join(root,'plan.json'),'--archive',join(dir,'evidence.tar.gz'),'--archive-hash',b.archiveHash,'--out',join(dir,'verified.json')]);
         const fixed=JSON.parse(await readFile(join(dir,'verified.json'),'utf8'));
         const m=state.models[b.model];
         if(fixed.status==='finished'&&fixed.reconstructed_from_raw&&m.blocked==='worker_failed')m.blocked=null;
@@ -191,8 +214,20 @@ export async function main(argv=process.argv.slice(2)){
       for(const m of Object.values(state.models))if(m.blocked==='authentication'&&!Object.values(m.attempts).some(a=>a.some(r=>r.failure_class==='authentication')))m.blocked=null;
       for(const [model,m] of Object.entries(state.models))reconcileCredits(m,runtime.credit_resumes?.[model]);
       for(const [model,limit] of Object.entries(runtime.verified_provider_caps||{})){
-        const m=state.models[model];m.ceiling=Math.min(10,limit);m.throttled=true;
+        const m=state.models[model];m.ceiling=Math.min(20,limit);m.throttled=true;
         m.reductions.push({at:new Date().toISOString(),to:m.ceiling,reason:'explicit_provider_limit_in_saved_raw_response'});
+      }
+      await save();
+    }
+    if(!runtime?.confirmed_start_rate||runtime.confirmed_start_rate.limit!==5)throw new Error('User-confirmed start-rate policy required');
+    if(state.startRate?.authorization!==runtime.confirmed_start_rate.id){
+      const stamp=Date.now();
+      state.startRate={authorization:runtime.confirmed_start_rate.id,limit:5,windowMs:62000,
+        entries:Object.fromEntries(Array.from({length:5},(_,i)=>['cutover-'+i,{reservedAt:stamp,ackAt:stamp,worker:null}]))};
+      for(const m of Object.values(state.models)){
+        m.ceiling=Math.min(20,m.successes>=16?20:m.successes>=6?10:m.successes>=1?5:1);
+        m.throttled=false;m.cooldown=stamp+62000;
+        m.reductions.push({at:new Date(stamp).toISOString(),to:m.ceiling,reason:'user_confirmed_five_new_sessions_per_minute_global_gate'});
       }
       await save();
     }
@@ -216,8 +251,8 @@ with tarfile.open(p) as t: t.extractall(r,filter='data')
 assert not (r/'.env').exists()
 uv=shutil.which('uv') or str(pathlib.Path.home()/'.local/bin/uv')
 subprocess.run([uv,'sync','--locked','--python','3.12'],cwd=r,check=True)
-subprocess.run(['.venv/bin/python','-m','stt_bench.full_benchmark','verify','--plan-hash',${JSON.stringify(identity.plan_sha256)},'--convert'],cwd=r,check=True)
-subprocess.run(['.venv/bin/python','-m','pytest','-q','tests/test_full_benchmark.py','tests/test_gradium.py','tests/test_reson8.py','tests/test_trial_providers.py'],cwd=r,check=True)
+subprocess.run(['.venv/bin/python','-m','stt_bench.assemblyai_full_benchmark','verify','--plan-hash',${JSON.stringify(identity.plan_sha256)},'--convert'],cwd=r,check=True)
+subprocess.run(['.venv/bin/python','-m','pytest','-q','tests/test_assemblyai_full.py','tests/test_assemblyai.py'],cwd=r,check=True)
 print('Full inputs and adapters verified; no provider calls')`;
           const receipt=await command(sb,prep,'install',{cmd:'python3',args:['-c',code],cwd:REMOTE});
           await writeFile(join(root,'preparation.log'),await(await sb.currentSession().getCommand(receipt.commandId)).output('both'));
@@ -233,9 +268,9 @@ print('Full inputs and adapters verified; no provider calls')`;
     const inventory=await Sandbox.list(await account());let others=0;
     const owned=new Set(Object.values(state.workers).map(w=>w.name));
     for await(const s of inventory)if(['pending','running','stopping','snapshotting'].includes(s.status)&&!owned.has(s.name))others++;
-    const total=Math.min(40,accountPlan.accountConcurrencyLimit-others);
-    if(total<4)throw new Error('Insufficient sandbox capacity');
-    const perModel=Math.min(10,Math.floor(total/4));state.availableWorkersPerModel=perModel;
+    const total=Math.min(plan.max_workers,accountPlan.accountConcurrencyLimit-others);
+    if(total<1)throw new Error('Insufficient sandbox capacity');
+    const perModel=Math.min(plan.workers_per_model,Math.floor(total/plan.models.length));state.availableWorkersPerModel=perModel;
     // Credentials stay in memory and command environments only.
     const environments={};
     for(const model of plan.models){
@@ -244,6 +279,37 @@ print('Full inputs and adapters verified; no provider calls')`;
     }
     for(const [model,m] of Object.entries(state.models))m.model=model;
     state.status='running';await save();
+    let startRefresh=null,lastStartRefresh=0;
+    async function refreshStarts(){
+      if(startRefresh)return startRefresh;
+      if(Date.now()-lastStartRefresh<1500)return;
+      startRefresh=(async()=>{
+        let changed=false;
+        for(const [id,entry] of Object.entries(state.startRate.entries)){
+          if(entry.ackAt!=null||!entry.worker)continue;
+          const worker=state.workers[entry.worker],batch=state.batches[id];
+          if(batch?.status==='collected'){acknowledgeStart(state.startRate,id);changed=true;continue;}
+          if(worker?.command?.stage!=='batch-'+id)continue;
+          try{
+            const live=await get(worker.name);
+            const raw=await live.currentSession().readFileToBuffer({path:REMOTE+'/'+batch.remote+'/rate-start.json'});
+            const receipt=JSON.parse(raw.toString());
+            if(receipt.batch_id!==id||!['handshake_complete','connection_attempt_finished'].includes(receipt.stage))throw new Error('Invalid start-rate receipt');
+            acknowledgeStart(state.startRate,id);changed=true;
+          }catch(error){if(error.message==='Invalid start-rate receipt')throw error;}
+        }
+        if(changed)await save();
+        lastStartRefresh=Date.now();
+      })();
+      try{await startRefresh;}finally{startRefresh=null;}
+    }
+    async function permitStart(b,w){
+      if(state.startRate.entries[b.id])return true;
+      await refreshStarts();
+      const allowed=reserveStart(state.startRate,b.id,w.id);
+      if(allowed)await save();
+      return allowed;
+    }
     async function collect(sb,w,b){
       const dir=join(root,'batches',b.id);await mkdir(dir,{recursive:true});
       for(const file of ['state.json','evidence.tar.gz','evidence.sha256']){
@@ -252,7 +318,7 @@ print('Full inputs and adapters verified; no provider calls')`;
       const hash=(await readFile(join(dir,'evidence.sha256'),'utf8')).trim();
       if(await digestFile(join(dir,'evidence.tar.gz'))!==hash)throw new Error('Downloaded archive mismatch');
       const captured=JSON.parse(await readFile(join(dir,'state.json'),'utf8'));
-      await exec('.venv/bin/python',['-m','stt_bench.full_benchmark','replay','--plan',join(root,'plan.json'),
+      await exec('.venv/bin/python',['-m','stt_bench.assemblyai_full_benchmark','replay','--plan',join(root,'plan.json'),
         '--archive',join(dir,'evidence.tar.gz'),'--archive-hash',hash,'--out',join(dir,'verified.json')],{maxBuffer:1024*1024});
       const remoteState=JSON.parse(await readFile(join(dir,'verified.json'),'utf8'));
       if(JSON.stringify(remoteState.assignment)!==JSON.stringify(b.assignment))throw new Error('Remote assignment mismatch');
@@ -260,6 +326,7 @@ print('Full inputs and adapters verified; no provider calls')`;
       b.archiveHash=hash;b.resultStatus=remoteState.status;b.verified=true;
       const m=state.models[b.model];accept(m,b.assignment,remoteState.rows);
       if(remoteState.status==='worker_failed')m.blocked='worker_failed';
+      if(state.startRate)acknowledgeStart(state.startRate,b.id);
       delete m.active[w.id];b.status='collected';w.command.collected=true;w.batch=null;
       if(remoteState.rows.some(r=>r.failure_class==='concurrency'))m.cooldown=Math.max(m.cooldown,Date.now()+30000);
       await save();
@@ -299,12 +366,16 @@ print('Full inputs and adapters verified; no provider calls')`;
               await sb.writeFiles(payload);w.runtimeHash=runtimeHash;await save();
             }
             await sb.writeFiles([{path:REMOTE+`/full-input/assignment-${b.id}.json`,content:Buffer.from(JSON.stringify(b.assignment))}]);
+            while(!await permitStart(b,w)){
+              if(m.blocked){delete m.active[w.id];b.status='skipped_blocked';w.batch=null;await save();return;}
+              await delay(2000);
+            }
             b.status='dispatching';await save();
           }
           const stage='batch-'+b.id;
           if(b.status==='dispatching'&&w.command?.stage!==stage)b.status='running';
           const receipt=await command(sb,w,stage,{cmd:'.venv/bin/python',cwd:REMOTE,
-            args:['-m','stt_bench.full_benchmark','worker','--plan-hash',identity.plan_sha256,
+            args:['-m','stt_bench.assemblyai_full_benchmark','worker','--plan-hash',identity.plan_sha256,
               '--assignment',`full-input/assignment-${b.id}.json`,'--session-id',sb.currentSession().sessionId,'--out',b.remote,
               ...(b.assignment.runtime_hash?['--runtime','full-input/runtime.json','--runtime-hash',b.assignment.runtime_hash]:[])],env:environments[model]});
           sb=await get(w.name);b.exitCode=receipt.exitCode;await collect(sb,w,b);
@@ -323,7 +394,7 @@ print('Full inputs and adapters verified; no provider calls')`;
     const batches=Object.values(state.batches).filter(b=>b.status==='collected'&&!b.verified);let cursor=0;
     await Promise.all(Array.from({length:2},async()=>{
       while(cursor<batches.length){const b=batches[cursor++],dir=join(root,'batches',b.id);
-        await exec('.venv/bin/python',['-m','stt_bench.full_benchmark','replay','--plan',join(root,'plan.json'),
+        await exec('.venv/bin/python',['-m','stt_bench.assemblyai_full_benchmark','replay','--plan',join(root,'plan.json'),
           '--plan-hash',identity.plan_sha256,'--archive',join(dir,'evidence.tar.gz'),'--archive-hash',b.archiveHash,'--out',join(dir,'verified.json')],{maxBuffer:1024*1024});
         b.verified=true;await save();
       }
@@ -331,7 +402,7 @@ print('Full inputs and adapters verified; no provider calls')`;
     state.finishedAt=new Date().toISOString();
     const complete=Object.values(state.models).every(m=>Object.keys(m.attempts).length===1008&&!m.blocked&&!m.privateBlocked);
     state.status=complete&&Object.values(state.workers).every(w=>w.computeStopped)?'complete':'partial_or_blocked';await save();
-    await exec('.venv/bin/python',['-m','stt_bench.full_benchmark','report','--plan',join(root,'plan.json'),'--root',root,
+    await exec('.venv/bin/python',['-m','stt_bench.assemblyai_full_benchmark','report','--plan',join(root,'plan.json'),'--root',root,
       ...(runtimeHash?['--runtime',join(root,'runtime.json'),'--runtime-hash',runtimeHash]:[])],{maxBuffer:1024*1024});
     console.log(JSON.stringify(compact(state),null,2));
   }finally{await writes;await lock.close();await unlink(lockPath);}

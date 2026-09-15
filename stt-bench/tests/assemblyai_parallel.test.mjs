@@ -1,6 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {claim,newModel,accept,reconcileCredits,amendUndispatched} from '../scripts/run_vercel_full_parallel.mjs';
+import {claim,newModel,accept,reconcileCredits,amendUndispatched,reserveStart,acknowledgeStart,freshDispatchSandbox} from '../scripts/run_vercel_assemblyai_parallel.mjs';
+test('dispatch uses a refreshed client after a token expires during a rate-limit wait',async()=>{
+  let calls=0;
+  const old={currentSession:()=>({sessionId:'session-1'}),runCommand:()=>{throw new Error('403 expired token');}};
+  const fresh={currentSession:()=>({sessionId:'session-1'}),runCommand:async()=>{calls++;return 'started';}};
+  const selected=await freshDispatchSandbox(old,async()=>fresh);
+  assert.equal(await selected.runCommand(),'started');assert.equal(calls,1);
+});
+test('dispatch refuses a changed session rather than resubmitting into a new VM',async()=>{
+  await assert.rejects(freshDispatchSandbox({currentSession:()=>({sessionId:'old'})},async()=>({currentSession:()=>({sessionId:'new'})})),/session changed/);
+});
 const plan={private_pilot:'private0',items:[...Array.from({length:30},(_,i)=>({clip_id:'public'+i,cohort:'public',submitted_seconds:i+1})),...Array.from({length:8},(_,i)=>({clip_id:'private'+i,cohort:'private',submitted_seconds:900}))]};
 function finish(m,a,valid=true,extra={}){accept(m,a,a.items.map(i=>({...i,valid,...extra})),0);}
 test('one then five then ten; intact private pilot gate',()=>{
@@ -8,7 +18,7 @@ test('one then five then ten; intact private pilot gate',()=>{
  m.active.w=a;assert.equal(claim(plan,m,0),null);delete m.active.w;finish(m,a);assert.equal(m.ceiling,5);
  a=claim(plan,m,0);assert.equal(a.items[0].clip_id,'private0');m.active.private=a;
  const b=claim(plan,m,0);assert(b.items.every(i=>i.clip_id.startsWith('public')));
- finish(m,b);assert.equal(m.ceiling,10);finish(m,a);delete m.active.private;
+ finish(m,b);for(let i=20;i<24;i++)finish(m,{items:[{clip_id:'public'+i,attempt:1}]});assert.equal(m.ceiling,10);finish(m,a);delete m.active.private;
  assert.equal(claim(plan,m,0).items[0].clip_id,'private1');
 });
 test('throttle is permanent, respects cooldown and never changes active streams',()=>{
@@ -87,4 +97,24 @@ test('public recoveries wait while private pilot recovery still gates first-pass
  assert.equal(claim(plan,m,0),null);
  finish(m,m.active.pilot);delete m.active.pilot;
  const next=claim(plan,m,0);assert.equal(next.items[0].clip_id,'private1');assert.equal(next.items[0].attempt,1);
+});
+
+test('twenty worker ceiling requires sixteen successes and stays bounded',()=>{
+ const m=newModel();
+ for(let i=0;i<30;i++)finish(m,{items:[{clip_id:'public'+i,attempt:1}]});
+ assert.equal(m.ceiling,20);
+ for(let i=0;i<20;i++)m.active['w'+i]={items:[{clip_id:'held'+i,attempt:1}]};
+ assert.equal(claim(plan,m,0),null);
+});
+
+test('five global permits persist across restart and expire only after acknowledgement',()=>{
+ let gate={limit:5,windowMs:62000,entries:{}};
+ for(let i=0;i<5;i++)assert(reserveStart(gate,'b'+i,'w'+i,0));
+ assert(!reserveStart(gate,'sixth','w6',999999));
+ gate=JSON.parse(JSON.stringify(gate));assert(!reserveStart(gate,'sixth','w6',999999));
+ assert(reserveStart(gate,'b0','w0',999999));
+ acknowledgeStart(gate,'b0',1000000);
+ assert(!reserveStart(gate,'sixth','w6',1061999));
+ assert(reserveStart(gate,'sixth','w6',1062000));
+ assert(!reserveStart(gate,'seventh','w7',1062000));
 });

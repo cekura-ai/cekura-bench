@@ -69,6 +69,7 @@ is not distributed with this repository.
 | Short public/private comparison | [prepare_trial_short.py](prepare_trial_short.py), [run_vercel_trial_short.mjs](run_vercel_trial_short.mjs), and [trial_short_run.py](trial_short_run.py). Uses ten Pipecat smoke clips and ten private excerpts. |
 | Limited-duration public comparison | [prepare_credit_benchmark.py](prepare_credit_benchmark.py), [run_vercel_credit_benchmark.mjs](run_vercel_credit_benchmark.mjs), and [credit_benchmark_run.py](credit_benchmark_run.py). Uses selected Pipecat and FLEURS cohorts with a 300-second audio budget per provider. |
 | Concurrent full public/private comparison | [run_vercel_full_parallel.mjs](run_vercel_full_parallel.mjs) and [full_benchmark.py](../src/stt_bench/full_benchmark.py). Runs Smallest, Gradium, Reson8, and Inworld on the public dataset and eight private recordings. See the [workflow commands](../README.md#concurrent-public-and-private-runs). |
+| AssemblyAI low-latency concurrent profile | [run_vercel_assemblyai_parallel.mjs](run_vercel_assemblyai_parallel.mjs) and [assemblyai_full_benchmark.py](../src/stt_bench/assemblyai_full_benchmark.py). Uses the public dataset and private recordings, with a saved account-wide stream-start limit. See the [profile setup](../README.md#assemblyai-low-latency-concurrent-profile). |
 
 ## Reporting
 
@@ -76,3 +77,19 @@ is not distributed with this repository.
 [benchmark_dashboard.html](benchmark_dashboard.html) generate the offline dashboard
 from saved comparison reports. The [dashboard guide](BENCHMARK_DASHBOARD.md)
 describes the selected runs, required inputs, metric definitions, and exports.
+
+[unified_benchmark.py](unified_benchmark.py) selects and combines the saved evidence.
+[benchmark_clip_review.py](benchmark_clip_review.py) and its
+[HTML template](benchmark_clip_review.html) add optional audio playback and scored
+transcript differences. The default summary export excludes private transcripts
+and audio; including them requires the explicit private-review option.
+
+For concurrent runs:
+
+| Script | Purpose |
+| --- | --- |
+| [audit_full_benchmark.py](audit_full_benchmark.py), [audit_assemblyai_full_benchmark.py](audit_assemblyai_full_benchmark.py) | Check frozen input identities, archive and raw-event hashes, item coverage, and merged scores. |
+| [summarize_stream_concurrency.py](summarize_stream_concurrency.py) | Reconstruct actual session overlap and stream-start rates from saved events. |
+| [verify_full_benchmark_stops.mjs](verify_full_benchmark_stops.mjs) | Read back every run-owned sandbox's stop status through the Vercel SDK. |
+| [render_full_benchmark_report.py](render_full_benchmark_report.py) | Render detailed HTML and Markdown from a saved run's results and execution records. |
+| [render_concurrent_comparison.py](render_concurrent_comparison.py) | Compare saved concurrent runs with identical item identities. Requires their plans, results, audits, and stop receipts. Its explanatory notes describe the original benchmark configurations. |

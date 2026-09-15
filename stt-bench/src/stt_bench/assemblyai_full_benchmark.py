@@ -1,4 +1,7 @@
-"""Full public/private capture and deterministic offline reduction.
+"""Isolated AssemblyAI full-run profile; frozen fork of the four-model runner.
+
+Kept separate so adding a model cannot change an already-running capture.
+Full public/private capture and deterministic offline reduction.
 
 One process owns one stream. The controller owns assignments and retries.
 """
@@ -18,19 +21,20 @@ import tarfile
 import numpy as np
 import soundfile as sf
 
-from . import gradium, reson8, trial_providers
+from . import gradium, reson8, trial_providers, assemblyai
+from .assemblyai_min_latency import transcribe
 from .audio_formats import derivative, resample_24k
 from .credentials import redact
 from .data import sha256, write_json
 from .diagnostics import local_probe, validate_preflight
 from .full_private_metrics import latency
 from .measurement import deadline_observations, summarize_deadlines
-from .providers import require_credential, transcribe, validate
+from .providers import require_credential, validate
 from .run import assess
 from .score import aggregate_wer, percentiles, word_errors
 from .streaming import EventLog, read_events
 
-MODELS = ('smallest-pulse', 'gradium-default', 'reson8-realtime', 'inworld-stt-1')
+MODELS = ('assemblyai-universal-3-5-pro-min-latency',)
 PUBLIC = Path('datasets/pipecat-stt-benchmark/3fe50170d520c951957b86996ef082a6ab87b394/full')
 PRIVATE = Path('reports/assemblyai-private-20260914/dataset')
 PRIVATE_MANIFEST = Path('workspaces/private-longform-recovery-v2/dataset/manifest.json')
@@ -45,7 +49,7 @@ def load_plan(path, expected=None, runtime=None, runtime_hash=None):
     if expected and sha256(path) != expected:
         raise ValueError('Run plan hash changed')
     p = json.loads(path.read_text())
-    if p['models'] != list(MODELS) or p['max_attempts'] != 2 or p['workers_per_model'] != 10:
+    if p['models'] != list(MODELS) or p['max_attempts'] != 2 or p['workers_per_model'] != 20:
         raise ValueError('Unexpected model or execution scope')
     ids = [c['clip_id'] for c in p['items']]
     if len(set(ids)) != 1008 or len(ids) != 1008 or Counter(c['cohort'] for c in p['items']) != {'public': 1000, 'private': 8}:
@@ -93,7 +97,7 @@ def prepare(root):
                     *Path('tests').glob('*.py'), *Path('tests').glob('*.mjs')])
     hashes = {str(p): sha256(p) for p in files if '__pycache__' not in str(p)}
     plan = dict(version=1, run_id=root.name, created_at=now(), models=list(MODELS),
-                workers_per_model=10, max_workers=40, max_attempts=2,
+                workers_per_model=20, max_workers=20, max_attempts=2,
                 public_manifest_sha256=sha256(PUBLIC/'manifest.json'),
                 private_manifest_sha256=sha256(PRIVATE_MANIFEST),
                 private_pilot=private['clips'][0]['clip_id'], items=items, code_hashes=hashes,
@@ -151,6 +155,8 @@ def classify(events):
         details.append(str(e.get('error_message','')))
     value=' '.join(details).lower()
     statuses.update(int(x) for x in re.findall(r'\bhttp\s+(\d{3})\b',value))
+    if 429 in statuses or any(x in value for x in ('concurrent', 'concurrency', 'too many', 'rate limit')):
+        return 'concurrency'
     if 402 in statuses or any(x in value for x in ('balance_exhausted', 'insufficient_credit', 'insufficient credit', 'credit limit', 'insufficient balance', 'no credits remaining', 'credits exhausted', 'out of credits')):
         return 'credits'
     if statuses.intersection({401,403}) or any(x in value for x in ('unauthorized', 'invalid api', 'authentication', 'required scopes', 'permission denied', 'access denied')):
@@ -227,7 +233,7 @@ def session_assessment(events,clip,config):
 
 
 def final_snapshots(events, config):
-    factory = gradium.Protocol if config['provider'] == 'gradium' else reson8.Protocol if config['provider'] == 'reson8' else trial_providers.Protocol
+    factory = assemblyai.Protocol
     protocol = factory(config)
     snapshots, previous = [], None
     for e in events:
@@ -247,6 +253,20 @@ def final_snapshots(events, config):
     return snapshots
 
 
+def packet_source_frames(events):
+    """Map each original 20 ms frame to its actual enclosing wire send."""
+    result = {}; offset = 0
+    for event in events:
+        if event['kind'] != 'audio_sent': continue
+        count = event.get('source_frames', 0)
+        if type(count) is not int or count <= 0 or event.get('bytes') != count * 640:
+            raise ValueError('Invalid AssemblyAI packet coverage')
+        for index in range(offset, offset + count):
+            result[index] = event['send_completed_seconds']
+        offset += count
+    return result
+
+
 def evaluate(events, clip, config, number, raw_hash):
     # Historical collectors reserve message for provider JSON. Preserve the raw
     # archive, but normalize our own textual exception field before reduction.
@@ -254,10 +274,16 @@ def evaluate(events, clip, config, number, raw_hash):
             if e['kind']=='error' and isinstance(e.get('message'),str) else e for e in events]
     segmented=any(e['kind']=='longform_sessions' for e in events)
     assessment,snapshots,source_frames=session_assessment(events,clip,config) if segmented else (assess(events,config),None,None)
+    begins = [e['message'].get('configuration', {}) for e in events if e['kind']=='provider_message' and e.get('message', {}).get('type')=='Begin']
+    configured = bool(begins) and all(b.get('model')==config['model'] and b.get('mode')==config['mode'] for b in begins)
+    if not configured:
+        assessment['valid'] = False
+        assessment['model_verified'] = False
+        assessment['exclusion_reasons'] = sorted(set(assessment['exclusion_reasons']) | {'requested_configuration_not_confirmed'})
     deadlines = deadline_observations(events, clip['reference'], clip.get('entities'), assessment, 'live', config) if clip['cohort'] == 'public' else None
     private_latency = None
     if clip['cohort'] == 'private' and number == 1:
-        frames = source_frames if segmented else {e['index']: e['send_completed_seconds'] for e in events if e['kind'] == 'audio_sent'}
+        frames = packet_source_frames(events)
         private_latency = latency(clip, snapshots if segmented else final_snapshots(events, config), frames, assessment['valid'])
     retry_after = max((e.get('retry_after_seconds', 0) for e in events), default=0)
     start = next((e.get('wall_time') for e in events if e['kind']=='clip_start'), None)
@@ -321,12 +347,17 @@ async def worker(args):
                 raise ValueError('Worker audio shape/tail mismatch')
             raw = root/f"{clip['clip_id']}--{number}.jsonl"
             state.update(status='running', active=clip['clip_id']); save()
+            starts = Path('full-input/assemblyai-last-start.json')
+            if starts.exists():
+                previous = json.loads(starts.read_text())['wall_seconds']
+                await asyncio.sleep(max(0, previous + config['session_start_interval_seconds'] - datetime.now(timezone.utc).timestamp()))
+            write_json(starts, {'wall_seconds': datetime.now(timezone.utc).timestamp(), 'assignment': assignment['batch_id'], 'clip_id': clip['clip_id']})
             log = EventLog(raw)
             log.emit('clip_start', clip_id=clip['clip_id'], attempt=number, model=assignment['model'], plan_hash=args.plan_hash, wall_time=now())
             try:
                 segmented=assignment.get('private_variant') in ('gradium-consecutive-v1','gradium-consecutive-v2') and clip['cohort']=='private'
                 transport=gradium_sessions if segmented else transcribe
-                transport_config={**config,'private_variant':assignment['private_variant']} if segmented else config
+                transport_config={**config, 'rate_receipt_path':str(root/'rate-start.json'), 'batch_id':assignment['batch_id']}
                 await asyncio.wait_for(transport(pcm.astype('<i2').tobytes(), clip['speech_frames'], transport_config, key, log), 1.2*clip['submitted_seconds']+60)
             except Exception as exc:
                 status = getattr(getattr(exc, 'response', None), 'status_code', None)

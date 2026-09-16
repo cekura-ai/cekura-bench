@@ -9,7 +9,7 @@ from stt_bench import reson8 as wire
 from stt_bench.catalog import model_config
 from stt_bench.credentials import command_environment
 from stt_bench.providers import validate, reduce_events, transcript_at
-from stt_bench.streaming import EventLog, read_events
+from stt_bench.streaming import EventLog, read_events, transmitted_silence_frames
 
 
 def config():
@@ -86,9 +86,12 @@ def test_malformed_messages_fail(payload):
 
 
 @pytest.mark.parametrize('failure', [None, 'disconnect', 'error', 'missing_terminal', 'wrong_final_flush', 'wrong_speech_flush'])
-def test_loopback_exchange(tmp_path, failure):
+@pytest.mark.parametrize('no_tail', [False, True])
+def test_loopback_exchange(tmp_path, failure, no_tail):
     async def check():
         c = config(); c['close_timeout_seconds'] = .08; c['finalize_timeout_seconds'] = 1.1
+        if no_tail:
+            c.update(transport_profile='reson8-stop-after-flush-v2', transmitted_silence_frames=0)
         received = []
         async def server(ws):
             async for raw in ws:
@@ -119,7 +122,40 @@ def test_loopback_exchange(tmp_path, failure):
                 log.close()
         if not failure:
             assert reduce_events(read_events(tmp_path/'events.jsonl'),c)['transcript_complete']
-            assert sum(isinstance(v,bytes) for v in received)==55
+            assert sum(isinstance(v,bytes) for v in received)==(5 if no_tail else 55)
             assert received[5] == wire.Protocol(c).finalize()
             assert received[-1] == wire.Protocol(c).finish(55)
+            if no_tail:
+                # Exactly the speech packets, then only protocol messages.
+                assert not any(isinstance(v, bytes) for v in received[5:])
+    asyncio.run(check())
+
+
+def test_no_tail_requires_versioned_reson8_profile():
+    c = config()
+    assert transmitted_silence_frames(c) == 50
+    with pytest.raises(ValueError):
+        validate(dict(c, transmitted_silence_frames=0))
+    with pytest.raises(ValueError):
+        validate(dict(c, transport_profile='reson8-stop-after-flush-v2'))
+    corrected=dict(c, transport_profile='reson8-stop-after-flush-v2', transmitted_silence_frames=0)
+    assert validate(corrected) == corrected
+    # The shared exception must not silently authorize another provider.
+    with pytest.raises(ValueError):
+        transmitted_silence_frames(dict(corrected, provider='deepgram'))
+
+
+def test_no_tail_rejects_nonzero_prepared_tail(tmp_path):
+    async def check():
+        from stt_bench.streaming import stream_audio
+        sent=[]
+        async def send(data):sent.append(data)
+        async def finalize(t0):raise AssertionError('must fail before sending')
+        log=EventLog(tmp_path/'invalid-tail.jsonl')
+        try:
+            with pytest.raises(ValueError, match='nonzero audio tail'):
+                await stream_audio(bytes(640*5)+b'\x01'+bytes(640*50-1),5,send,finalize,log,
+                                   transmitted_silence_frames=0)
+            assert not sent
+        finally:log.close()
     asyncio.run(check())

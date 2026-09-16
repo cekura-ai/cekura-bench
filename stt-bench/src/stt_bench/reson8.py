@@ -1,13 +1,21 @@
 """Reson8 realtime API: binary PCM and correlated flush confirmations."""
 from urllib.parse import urlencode
+from functools import partial
 from websockets.asyncio.client import connect
 from . import provider_protocol as shared
+from .streaming import stream_audio, transmitted_silence_frames
 
 SPEECH_FLUSH = 'speech-end'
 COMPLETE_FLUSH = 'audio-complete'
 
 
 def validate(config):
+    tail = transmitted_silence_frames(config)
+    profile = config.get('transport_profile')
+    if profile not in (None, 'reson8-stop-after-flush-v2'):
+        raise ValueError('Unknown Reson8 transport profile')
+    if profile == 'reson8-stop-after-flush-v2' and tail != 0:
+        raise ValueError('Reson8 stop-after-flush profile must omit the artificial tail')
     expected = dict(language='en', sample_rate=16000, encoding='pcm_s16le',
                     channels=1, frame_ms=20, include_interim=True, include_timestamps=True,
                     filler_mode='verbatim', finalization='manual_at_speech_end',
@@ -56,7 +64,11 @@ class Protocol(shared.Protocol):
 
 
 async def exchange(ws, pcm, speech_frames, config, log, secret=''):
-    await shared.exchange(ws, pcm, speech_frames, config, log, secret, protocol_factory=Protocol)
+    # A versioned opt-in keeps saved legacy configurations reproducible. Never
+    # send new silence audio while the provider is processing the speech flush.
+    streamer = partial(stream_audio, transmitted_silence_frames=transmitted_silence_frames(config))
+    await shared.exchange(ws, pcm, speech_frames, config, log, secret,
+                          protocol_factory=Protocol, streamer=streamer)
 
 
 async def transcribe(pcm, speech_frames, config, key, log):

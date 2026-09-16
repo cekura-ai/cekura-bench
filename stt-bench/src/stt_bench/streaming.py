@@ -56,7 +56,9 @@ def transmitted_silence_frames(config):
     if type(count) is not int or count not in (0, 50):
         raise ValueError('Expected zero or 50 transmitted silence frames')
     if count != 50 and config.get('provider') != 'inworld':
-        raise ValueError('Only Inworld supports omitting the prepared silence tail')
+        if not (config.get('provider') == 'reson8' and
+                config.get('transport_profile') == 'reson8-stop-after-flush-v2'):
+            raise ValueError('Only Inworld or a versioned Reson8 profile supports omitting the prepared silence tail')
     return count
 
 

@@ -28,11 +28,7 @@
     "status": "account_rate_unverified",
     "billing_basis": "submitted audio including silence and retries; account rate unverified"
   },
-  "protocol_caveat": "Versioned no-tail transport: send the frozen speech audio, flush immediately, send no artificial silence, then require both correlated speech-end and audio-complete flush confirmations. No immutable provider model selector. Legacy configs without transport_profile retain their full silence tail.",
-  "measurement_profile": "private-turns-controlled-v1",
-  "profile_version": "private-turns-v1",
-  "turn_finalization_class": "controlled",
-  "base_config": "config/models/reson8-realtime.json",
+  "protocol_caveat": "Versioned no-tail transport. Only the verified artificial zero tail is omitted; all speech bytes and correlated completion checks are preserved. Legacy configs retain their original behavior.",
   "transport_profile": "reson8-stop-after-flush-v2",
   "transmitted_silence_frames": 0
 }

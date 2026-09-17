@@ -380,14 +380,33 @@ def build(reports):
         model_sources[model].append(name)
         terminal[model] = False
 
-    normal_assembly = 'assemblyai-full-20260914/pipecat/wire60/summary.json'
-    normal_saved = read(normal_assembly)
-    require(normal_saved['model'] == 'assemblyai-universal-3-5-pro' and normal_saved['scored_clips'] == 0,
-            'AssemblyAI normal profile now has scores; select and verify its completed evidence')
+    from assemblyai_standard_evidence import load as load_standard, SOURCE as normal_assembly
+    read(normal_assembly)
+    normal_saved = load_standard(reports)
+    normal_items = normal_saved['models']['assemblyai-universal-3-5-pro']['items']
+    require({r['clip_id'] for r in normal_items if r['cohort'] == 'private'} == private_ids,
+            'AssemblyAI standard private dataset differs')
+    require({r['clip_id'] for r in normal_items if r['cohort'] == 'public'} <= public_ids,
+            'AssemblyAI standard public dataset differs')
+    records['assemblyai-universal-3-5-pro'] = [full_record(r) for r in normal_items]
+    for archive in normal_saved['source_archives']:
+        sources[archive['path'].removeprefix('reports/')] = archive
     model_sources['assemblyai-universal-3-5-pro'] = [normal_assembly]
     terminal['assemblyai-universal-3-5-pro'] = False
     before = {m: reduce_model(m, records[m], planned, terminal[m], model_sources[m]) for m in LABELS}
+    from elevenlabs_private_correction import load as load_eleven, MODEL as eleven, SOURCE as eleven_source
+    corrected_private = load_eleven(reports)
+    read(eleven_source)
+    records[eleven] = [r for r in records[eleven] if r['cohort'] != 'private']
+    for row in corrected_private['recordings']:
+        e = row['evidence']
+        records[eleven].append(dict(id=row['clip_id'], cohort='private',
+            selected_attempt=e['selected']['attempt'], counts=e['selected']['word_errors'],
+            first=e['attempts'][0], attempts=e['attempts'], words=e['first_attempt_latency']))
+    model_sources[eleven] = [s for s in model_sources[eleven] if s != private_name] + [eleven_source]
     records, audit = rescore_records(records)
+    audit['elevenlabs_private_correction'] = {k:corrected_private[k] for k in
+        ('version','before','after','sources','code_hashes','scope','timing','provider_calls')}
     models = [reduce_model(m, records[m], planned, terminal[m], model_sources[m]) for m in LABELS]
     ranking_path = Path(__file__).resolve().parents[1] / 'config/rankings/combined-public-private-v1.json'
     ranking_raw = ranking_path.read_bytes()
@@ -414,13 +433,15 @@ def build(reports):
         if m['id'] in ('google-chirp-2', 'google-chirp-3'):
             m['note'] = 'Completed 1,000-clip public run collected from its saved sandbox output; private full recordings verified separately.'
         elif m['id'] == 'assemblyai-universal-3-5-pro':
-            m['note'] = 'Normal profile: saved full public attempt stopped before any clips were scored. Its separate 206-turn result does not supply public-plus-private overall WER.'
+            m['note'] = normal_saved['note']
         elif m['id'].startswith('assemblyai'):
             m['note'] = ('Verified complete public and private run; ' if m['terminal'] else 'Partial scored snapshot; ') + 'Universal 3.5 Pro in min_latency mode, 60 ms packets.'
         elif not m['terminal']:
             m['note'] = 'Small trial only; no completed full run.'
         elif m['id'] == 'gradium-default':
             m['note'] = 'Private audio uses consecutive sessions of up to 270 seconds.'
+        elif m['id'] == eleven:
+            m['note'] = 'Private full-recording transcripts corrected offline: paired plain/timestamp finals counted once. All eight recordings and original attempts retained; first-attempt word delay replayed. Public coverage and turn results unchanged.'
         elif m['id'] == 'gemini-3.5-transcribe-live':
             m['note'] = 'Private audio uses nine-minute session handoffs.'
         elif m['id'] == 'inworld-stt-1':
@@ -428,6 +449,8 @@ def build(reports):
             m['finalization_contract'] = dict(group='signal_at_speech_end', label='endTurn then closeStream at speech end; no artificial silence tail')
         elif m['id'] == 'speechmatics-linden-1':
             m['note'] = 'Completed full run; archived receipts and merged scores verified. Two public clips remain invalid, including two frozen ranking items, so no combined rank is assigned.'
+    from benchmark_uncertainty import add_uncertainty
+    add_uncertainty({'models': models, 'ranking': ranking}, records)
     apply_comparison_selection(models, records)
     return dict(schema_version=3, title='English STT benchmark — combined public and private ranking',
                 normalization=dict(NORMALIZATION), common_public=common, ranking=ranking, _rescore_audit=audit,

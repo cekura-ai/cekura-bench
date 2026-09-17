@@ -55,10 +55,12 @@ def transmitted_silence_frames(config):
     count = config.get('transmitted_silence_frames', 50)
     if type(count) is not int or count not in (0, 50):
         raise ValueError('Expected zero or 50 transmitted silence frames')
-    if count != 50 and config.get('provider') != 'inworld':
-        if not (config.get('provider') == 'reson8' and
-                config.get('transport_profile') == 'reson8-stop-after-flush-v2'):
-            raise ValueError('Only Inworld or a versioned Reson8 profile supports omitting the prepared silence tail')
+    experimental_gradium = (config.get('provider') == 'gradium' and
+                            config.get('stream_ending_profile') == 'gradium-no-tail-v1')
+    versioned_reson8 = (config.get('provider') == 'reson8' and
+                       config.get('transport_profile') == 'reson8-stop-after-flush-v2')
+    if count != 50 and config.get('provider') != 'inworld' and not (experimental_gradium or versioned_reson8):
+        raise ValueError('Only Inworld or an explicit Gradium or Reson8 profile may omit silence')
     return count
 
 

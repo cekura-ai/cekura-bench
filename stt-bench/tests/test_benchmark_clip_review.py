@@ -73,11 +73,12 @@ def test_audio_hash_and_lossless_samples_checked_even_on_rebuild(tmp_path):
 def test_share_zip_only_includes_current_assets(tmp_path):
     page = tmp_path / 'custom-name.html'
     page.write_text('review')
-    (tmp_path / 'included.flac').write_bytes(b'audio')
+    (tmp_path / 'audio/pipecat').mkdir(parents=True)
+    (tmp_path / 'audio/pipecat/pipecat-included.flac').write_bytes(b'audio')
     (tmp_path / 'old-private.flac').write_bytes(b'private')
-    bundle = share_zip(page, dict(clips=[dict(audio='included.flac')], includes_private=False))
+    bundle = share_zip(page, dict(clips=[dict(cohort='pipecat',audio='audio/pipecat/pipecat-included.flac')], includes_private=False))
     with zipfile.ZipFile(bundle) as archive:
-        assert set(archive.namelist()) == {'index.html', 'README.txt', 'included.flac'}
+        assert set(archive.namelist()) == {'index.html', 'README.txt', 'audio/pipecat/pipecat-included.flac'}
         assert archive.read('index.html') == b'review'
 
 
@@ -98,7 +99,7 @@ def test_share_zip_includes_linked_turn_proof_package(tmp_path):
     receipt.parent.mkdir(parents=True)
     receipt.write_bytes(b'compressed receipt')
     (proof / 'comparison.json').write_text('{}')
-    bundle = share_zip(page, dict(clips=[], includes_private=False), proof)
+    bundle = share_zip(page, dict(clips=[], includes_private=False), proof, visibility='private-review')
     with zipfile.ZipFile(bundle) as archive:
         assert archive.testzip() is None
         assert archive.read('turn-proof/model/raw/turn.jsonl.gz') == b'compressed receipt'

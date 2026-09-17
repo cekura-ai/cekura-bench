@@ -309,5 +309,12 @@ def test_provider_independent_timing_from_native_messages(name,partial,final):
     cfg=controlled_profile(json.loads((Path('config/models')/(name+'.json')).read_text()))
     ev=[dict(kind='audio_sent',time_seconds=0),dict(kind='provider_message',time_seconds=.4,message=partial),
         dict(kind='speech_end',time_seconds=4),dict(kind='provider_message',time_seconds=4.2,message=final)]
+    if name=='gradium-default':
+        corrected=measure(ev,cfg,assessment())
+        assert corrected['ttft_ms']==pytest.approx(400)
+        assert corrected['ttfs_ms']==0 and corrected['final_text_before_boundary']
+        assert corrected['first_text_kind']=='final'
+        # Historical profiles remain reproducible with the original interpretation.
+        cfg=dict(cfg,transcript_reconstruction='gradium-segment-finality-v1')
     r=measure(ev,cfg,assessment());assert r['ttft_ms']==pytest.approx(400) and r['ttfs_ms']==pytest.approx(200)
     assert r['first_text_kind']=='partial'

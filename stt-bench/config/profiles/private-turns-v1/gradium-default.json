@@ -28,9 +28,11 @@
     "status": "account_rate_unverified",
     "billing_basis": "submitted audio including silence and retries; no verified account rate"
   },
-  "protocol_caveat": "The default alias is mutable. Delay is pinned to 10 frames (800 ms context). Flush at speech end, send the common one-second silence tail, then require server end_of_stream. No benchmark launch is authorized.",
+  "protocol_caveat": "The default alias is mutable. Delay is pinned to 10 frames (800 ms context). Appended text is timed at receipt; end_text supplies segment audio stop time. Flush at speech end, retain the one-second tail, and require server end_of_stream for completion. A zero-tail profile is experimental.",
   "measurement_profile": "private-turns-controlled-v1",
   "profile_version": "private-turns-v1",
   "turn_finalization_class": "controlled",
-  "base_config": "config/models/gradium-default.json"
+  "base_config": "config/models/gradium-default.json",
+  "transcript_reconstruction": "gradium-append-only-text-v2",
+  "transmitted_silence_frames": 50
 }

@@ -91,6 +91,9 @@ def build_review(data, reports, root, output, include_private=False):
                 require(hashlib.sha256(raw).hexdigest() == known_hashes[name], 'Review source changed during build')
                 cache[name] = json.loads(raw)
             saved = cache[name]
+            if name == 'assemblyai-full-20260914/private/wire60/state.json':
+                from assemblyai_standard_evidence import load
+                saved = load(reports)
             if 'clips' in saved:
                 rows = [('fleurs' if r['clip_id'].startswith('fleurs-') else 'pipecat', r, None)
                         for r in saved['clips']
@@ -145,8 +148,18 @@ def build_review(data, reports, root, output, include_private=False):
                 audio_format='Lossless FLAC of the frozen mono 16 kHz input; terminal silence retained.')
 
 
-def share_zip(page, review, proof_root=None):
+def share_zip(page, review, proof_root=None, *, visibility='public'):
     """Package exactly this build's assets, excluding stale files and screenshots."""
+    if visibility not in ('public', 'private-review'):
+        raise ValueError('Unknown export visibility')
+    if visibility == 'public' and (review.get('includes_private') or proof_root is not None):
+        raise ValueError('Private evidence requires explicit private-review export')
+    if visibility == 'public':
+        for clip in review['clips']:
+            require(clip['cohort'] in ('pipecat', 'fleurs'), 'Public ZIP cannot include private recordings')
+            asset = page.parent / clip['audio']
+            require(asset.resolve().is_relative_to((page.parent / 'audio' / clip['cohort']).resolve()),
+                    'Public audio must stay inside its dataset directory')
     destination = page.parent / 'benchmark-review.zip'
     readme = ('Extract this entire ZIP, then open index.html in Chrome, Edge, Firefox, or Safari.\n'
               'Keep the audio folder beside index.html. No server or internet is needed.\n'

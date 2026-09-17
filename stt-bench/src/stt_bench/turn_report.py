@@ -127,7 +127,7 @@ def render(result):
     extra += '<p>First text kind: '+esc(json.dumps(result['ttft']['first_text_kind_counts']))+'. Final text available before speech-end boundary: '+str(result['ttfs']['final_before_boundary'])+' turns.</p>'
     if result.get('diagnostics'):
         extra += '<h2>Separate completion diagnostics</h2><table><tr><th>Metric</th><th>Measured turns</th><th>p50 ms</th><th>p90 ms</th><th>p95 ms</th></tr>'
-        for key,label in [('completion','Provider completion'),('finalization_ack','Finalization acknowledgment'),('first_partial_after_speech_end','First partial after speech end')]:
+        for key,label in [('completion','Stream observation completion (includes tail)'),('finalization_ack','Finalization acknowledgment'),('first_partial_after_speech_end','First partial after speech end')]:
             stats=result['diagnostics'][key]
             extra += '<tr><td>'+label+'</td><td>'+str(stats['n'])+'</td>'+''.join('<td>'+num(stats[f'p{p}_ms'])+'</td>' for p in (50,90,95))+'</tr>'
         extra += '</table><p>These diagnostics use separate receipt events and are not TTFT or TTFS. Physical socket-close timing was not separately recorded.</p>'

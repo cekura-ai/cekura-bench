@@ -131,6 +131,9 @@ def attach_turns(data, reports_root, output_dir):
             'overall_unavailable_reason': ('No scored full run' if mid == 'assemblyai-universal-3-5-pro' else
                                            'Public pilot only; no full private run' if mid == 'sarvam-saaras-v3-realtime' else
                                            'No verified combined results'),
+            'private_full': old['cohorts']['private'] if old else None,
+            'overall_fixed': old['ranking_score'] if old else None,
+            'overall_coverage': dict(public_attempted=old['cohorts']['pipecat']['attempted'],public_planned=1000,public_usable=old['cohorts']['pipecat']['usable'],private_usable=old['comparison_private']['usable']) if old else None,
             'overall_rank': old['rank'] if old and old['rankable'] else None,
             'profile': result['config'], 'manifest_sha256': result['manifest_sha256'],
             'result_sha256': digest(source / mid / 'results.json'), 'proof': 'turn-proof/' + mid + '/index.html'})
@@ -154,3 +157,37 @@ def attach_turns(data, reports_root, output_dir):
         'excluded_models': summary['excluded_models'], 'sources': hashes, 'manifest_sha256': digest(proof / 'manifest.json'),
         'preparation': manifest.get('preparation_mode'), 'listening_review_verified': manifest['listening_review_verified'],
         'compute_stopped': compute['verified']}
+
+
+def attach_turn_summary(data, reports_root):
+    """Read aggregate turn statistics without copying any private evidence assets."""
+    source = Path(reports_root) / 'private-turns-consolidated-20260915/final'
+    if not source.exists():
+        return None
+    summary = json.loads((source / 'comparison.json').read_text())
+    validation = json.loads((source / 'validation.json').read_text())
+    compute = json.loads((source / 'remote-compute-verification.json').read_text())
+    require(summary['execution_complete'] and validation['status'] == 'verified' and compute['all_stopped'],
+            'Turn benchmark verification is incomplete')
+    historical = {m['id']: m for m in data['models']}
+    models = []
+    for mid, saved in summary['models'].items():
+        result = json.loads((source / mid / 'results.json').read_text())
+        validate_model(result, saved)
+        old = historical.get(mid)
+        models.append({'id': mid, 'label': LABELS.get(mid, mid), **{k: saved[k] for k in
+            ('counts', 'accuracy', 'ttft', 'ttfs', 'exception_speech_end_to_final', 'deadlines', 'recovery_summary')},
+            'overall': old['comparison_combined'] if old else None,
+            'private_full': old['cohorts']['private'] if old else None,
+            'overall_fixed': old['ranking_score'] if old else None,
+            'overall_coverage': dict(public_attempted=old['cohorts']['pipecat']['attempted'],public_planned=1000,public_usable=old['cohorts']['pipecat']['usable'],private_usable=old['comparison_private']['usable']) if old else None,
+            'overall_rank': old['rank'] if old else None, 'profile': result['config'],
+            'manifest_sha256': result['manifest_sha256'], 'result_sha256': digest(source / mid / 'results.json'),
+            'proof': None, 'public_summary_only': True})
+    return {'models': models, 'generated_at': summary['updated_at'], 'counts': {},
+        'first_attempts': validation['attempted'], 'valid': validation['valid'], 'failed': validation['failures'],
+        'recovery_attempts': len(summary['later_recovery_attempts']),
+        'recovered': sum(m['recovery_summary']['additional_turns_recovered'] for m in models),
+        'excluded_models': summary['excluded_models'], 'sources': [],
+        'manifest_sha256': models[0]['manifest_sha256'], 'compute_stopped': compute['verified'],
+        'public_summary_only': True}

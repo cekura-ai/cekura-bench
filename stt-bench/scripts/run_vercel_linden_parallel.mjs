@@ -11,6 +11,10 @@ import {waitForCompletion} from './vercel_command_wait.mjs';
 const exec=promisify(execFile);
 const REMOTE='/vercel/sandbox/stt-bench-v4';
 export function newModel(){return {ceiling:1,successes:0,throttled:false,cooldown:0,blocked:null,privateBlocked:false,attempts:{},active:{},reductions:[],peak:0};}
+export function applyFixedConcurrency(m,limit){
+  if(!Number.isInteger(limit)||limit<1||limit>20)throw new Error('Fixed concurrency must be an integer from 1 to 20');
+  m.capacityStageMax=limit;m.ceiling=Math.min(m.ceiling,limit);
+}
 export function amendUndispatched(b,command,runtimeHash){
   if(b.status!=='assigned'||b.assignment.runtime_hash===runtimeHash)return false;
   if(command?.stage==='batch-'+b.id)throw new Error('Assigned batch already has command intent; reconcile before amendment');
@@ -197,6 +201,10 @@ export async function main(argv=process.argv.slice(2)){
         const m=state.models[model];m.ceiling=Math.min(10,limit);m.throttled=true;
         m.reductions.push({at:new Date().toISOString(),to:m.ceiling,reason:'explicit_provider_limit_in_saved_raw_response'});
       }
+      if(runtime.fixed_concurrency!==undefined){
+        for(const m of Object.values(state.models))applyFixedConcurrency(m,runtime.fixed_concurrency);
+        state.fixedConcurrency=runtime.fixed_concurrency;
+      }
       await save();
     }
     const prep=state.preparation;
@@ -238,7 +246,7 @@ print('Full inputs and adapters verified; no provider calls')`;
     for await(const s of inventory)if(['pending','running','stopping','snapshotting'].includes(s.status)&&!owned.has(s.name))others++;
     const total=Math.min(40,accountPlan.accountConcurrencyLimit-others);
     if(total<4)throw new Error('Insufficient sandbox capacity');
-    const perModel=Math.min(20,Math.floor(total/plan.models.length));state.availableWorkersPerModel=perModel;
+    const perModel=Math.min(runtime?.fixed_concurrency??20,Math.floor(total/plan.models.length));state.availableWorkersPerModel=perModel;
     // Credentials stay in memory and command environments only.
     const environments={};
     for(const model of plan.models){

@@ -18,11 +18,12 @@ const crypto=require('node:crypto');
    const model=t.models.find(m=>m.id===id),full=data.models.find(m=>m.id===id);
    assert.ok(model.overall?.wer>0,id+' missing overall WER');
    assert.equal(model.overall.wer,full.comparison_combined.wer);
-   assert.ok((await page.locator(`[data-turn-model="${id}"] td`).nth(1).textContent()).includes((model.overall.wer*100).toFixed(2)+'%'));
+   const displayed=model.overall.wer;
+   assert.ok((await page.locator(`[data-turn-model="${id}"] td`).nth(1).textContent()).includes(displayed==null?'—':(displayed*100).toFixed(2)+'%'));
   }
-  assert.equal(t.models.find(m=>m.id==='assemblyai-universal-3-5-pro').overall,null);
-  assert.match(await page.locator('[data-turn-model="assemblyai-universal-3-5-pro"] td').nth(1).textContent(),/No scored full run/);
-  assert.match(await page.locator('[data-turn-model="sarvam-saaras-v3-realtime"] td').nth(1).textContent(),/Public pilot only/);
+  assert.equal(t.models.find(m=>m.id==='assemblyai-universal-3-5-pro').overall.usable,17);
+  assert.match(await page.locator('[data-turn-model="assemblyai-universal-3-5-pro"] td').nth(1).textContent(),/17 \/ 1,008 included recordings/);
+  assert.match(await page.locator('[data-turn-model="sarvam-saaras-v3-realtime"] td').nth(1).textContent(),/Public pilot only|Incomplete fixed set/);
   assert.equal(t.models.length,19);assert.equal(t.first_attempts,3914);assert.equal(t.failed,65);
   assert.equal(await page.locator('#latest-view').isVisible(),true);assert.equal(await page.locator('#historical-view').isVisible(),false);
   assert.equal(await page.locator('#turn-table-body tr').count(),19);

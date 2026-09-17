@@ -228,9 +228,24 @@ def load_private(path):
 
 
 def render(data, template):
-    # Incomplete models stay visible with their coverage and no combined rank.
-    excluded = set()
+    # User-selected display scope; archived evidence and fixed scores stay intact.
+    excluded = {'assemblyai-universal-3-5-pro', 'sarvam-saaras-v3-realtime', 'soniox-stt-rt-v5'}
     data = deepcopy(data)
+    if data.get('turns'):
+        turns = data['turns']
+        turns['models'] = [m for m in turns['models'] if m['id'] not in excluded]
+        for field, count in (('first_attempts', 'attempted'), ('valid', 'valid'), ('failed', 'failed')):
+            turns[field] = sum(m['counts'][count] for m in turns['models'])
+        turns['recovery_attempts'] = sum(m['recovery_summary']['attempted'] for m in turns['models'])
+        turns['recovered'] = sum(m['recovery_summary']['additional_turns_recovered'] for m in turns['models'])
+    # Public-only accuracy is distinct from the available public/private pool.
+    # Derive it here so every export uses the same selected source as Overall.
+    full_models = {m['id']: m for m in data.get('models', [])}
+    for model in (data.get('turns') or {}).get('models', []):
+        model['public_full'] = full_models.get(model['id'], {}).get('cohorts', {}).get('pipecat')
+    from benchmark_publication import timing_contracts, turn_timing_contracts
+    timing_contracts(data)
+    turn_timing_contracts(data)
     if 'models' in data:
         data['models'] = [m for m in data['models'] if m.get('id') not in excluded]
     for clip in data.get('clip_review', {}).get('clips', []):
@@ -243,6 +258,9 @@ def render(data, template):
     review_ui = (Path(__file__).with_name('benchmark_clip_review.html').read_text()
                  if data.get('clip_review') else '')
     turn_ui = Path(__file__).with_name('benchmark_turns.html').read_text() if data.get('turns') else ''
+    if (data.get('turns') or {}).get('public_summary_only'):
+        import re
+        turn_ui = re.sub(r'<a[^>]+href="turn-proof/[^"]*"[^>]*>.*?</a>', '<span>Private evidence withheld from public export</span>', turn_ui)
     return template.replace("__BENCHMARK_DATA__", encoded).replace('__CLIP_REVIEW_UI__', review_ui).replace('__TURN_OVERVIEW__', turn_ui)
 
 
@@ -378,6 +396,8 @@ def main():
     parser.add_argument('--include-private-review', action='store_true', help='Also package the eight private recordings and transcripts')
     parser.add_argument('--share-zip', action='store_true', help='Package the review HTML and audio into one ZIP')
     args = parser.parse_args()
+    if not args.include_private_review and args.out.parent.exists() and any(args.out.parent.iterdir()):
+        parser.error('Public export requires a new empty output directory to exclude stale private assets')
     try:
         data = build(args.reports_root)
         from offline_rescore import inworld_evidence, write_correction
@@ -390,8 +410,12 @@ def main():
             from benchmark_clip_review import build_review
             data['clip_review'] = build_review(data, args.reports_root, ROOT, args.out.parent,
                                              include_private=args.include_private_review)
-        from turn_dashboard import attach_turns
-        data['turns'] = attach_turns(data, args.reports_root, args.out.parent)
+        from turn_dashboard import attach_turns, attach_turn_summary
+        data['turns'] = (attach_turns(data, args.reports_root, args.out.parent) if args.include_private_review
+                         else attach_turn_summary(data, args.reports_root))
+        if not args.include_private_review:
+            from benchmark_publication import public_data
+            data = public_data(data)
         page = render(data, Path(__file__).with_name("benchmark_dashboard.html").read_text())
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(page, encoding="utf-8")
@@ -399,8 +423,12 @@ def main():
         print(f"{len(data['models'])} models; {sum(m['rankable'] for m in data['models'])} ranked on {data['common_public']['clips']} public clips + {data['ranking']['datasets']['private']['clips']} private recordings; zero provider calls.")
         if args.share_zip:
             from benchmark_clip_review import share_zip
-            bundle = share_zip(args.out, data['clip_review'], args.out.parent / 'turn-proof' if data.get('turns') else None)
+            bundle = share_zip(args.out, data['clip_review'], args.out.parent / 'turn-proof' if data.get('turns') and args.include_private_review else None,
+                               visibility='private-review' if args.include_private_review else 'public')
             print(f'Share {bundle.resolve()} ({bundle.stat().st_size / 1_000_000:.1f} MB); extract and open index.html.')
+        if not args.include_private_review:
+            from benchmark_publication import verify_public_directory
+            verify_public_directory(args.out.parent)
     except (OSError, ValueError, KeyError, TypeError) as exc:
         parser.exit(1, f"Cannot build benchmark report: {exc}\n")
 

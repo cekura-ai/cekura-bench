@@ -53,7 +53,7 @@ class Protocol(shared.Protocol):
 
 
 def connection(config, key):
-    if config.get('model') != 'universal-3-5-pro' or config.get('mode') != 'min_latency' or config.get('language_codes') != ['en']:
+    if config.get('model') not in ('universal-3-5-pro', 'universal-3-6-pro') or config.get('mode') != 'min_latency' or config.get('language_codes') != ['en']:
         raise ValueError('Unexpected AssemblyAI benchmark configuration')
     params = dict(sample_rate=16000, speech_model=config['model'], encoding='pcm_s16le',
                   inactivity_timeout=20, mode=config['mode'], language_codes=json.dumps(config['language_codes']))

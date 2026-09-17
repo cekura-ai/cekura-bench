@@ -13,7 +13,9 @@ from stt_bench.streaming import EventLog, read_events
 
 
 def config():
-    return json.loads(model_config('gradium-default').read_text())
+    # These fixtures preserve the original interpretation for historical replay.
+    return dict(json.loads(model_config('gradium-default').read_text()),
+                transcript_reconstruction='gradium-segment-finality-v1')
 
 
 def msg(value, at):

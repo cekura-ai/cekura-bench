@@ -191,6 +191,10 @@ def summarize_group(cells: Sequence[dict[str, Any]]) -> dict[str, Any]:
     return out
 
 
+def _is_exclusion(cell: dict[str, Any]) -> bool:
+    return str(cell.get("void") or "").startswith("configuration not supported")
+
+
 def _void_class(reason: str) -> str:
     if reason.startswith("configuration not supported"):
         return "excluded: " + reason.split(": ", 1)[1]
@@ -223,7 +227,8 @@ def summarize_run(run: dict[str, Any]) -> dict[str, Any]:
             "planned": len(run["plan"]) or None,
             "completed": len(cells),
             "voids": sum(1 for c in cells if c.get("void")),
-            "errors": sum(1 for c in cells if c.get("error")),
+            # A declared exclusion is never an error, whatever the record stored.
+            "errors": sum(1 for c in cells if c.get("error") and not _is_exclusion(c)),
         },
         "rules": {
             "tie_ms": TIE_MS, "min_tail_n": MIN_TAIL_N, "bootstrap_draws": BOOTSTRAP_DRAWS, "bootstrap_seed": BOOTSTRAP_SEED,

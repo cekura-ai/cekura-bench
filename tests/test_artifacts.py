@@ -222,3 +222,22 @@ class TestSentinelAndTransforms:
         )
         with pytest.raises(KeyError):
             Runner(spec, corpus_or_skip(), api_key="unused")
+
+
+class TestDeclaredExclusions:
+    async def test_an_unsupported_configuration_is_a_void_not_an_error(self, tmp_path, monkeypatch):
+        """The gap is published with its reason; nothing is dialled and nothing is a failure."""
+        from lane_a.adapters import fake
+
+        monkeypatch.setattr(fake.FakeAdapter, "supports_manual_commit", False)
+        spec = RunSpec(
+            provider="fake", probes=[ResponseLatency()], configs=[TurnDetection("manual")],
+            voices=["f-us"], repeats=1, sentinel=False, out_root=str(tmp_path),
+        )
+        runner = Runner(spec, corpus_or_skip(), api_key="unused")
+        await runner.run()
+        cell = runner.cells[0]
+        assert cell.void == "configuration not supported: fake has no manual commit"
+        assert cell.error is None
+        record = json.loads((Path(cell.artifacts["dir"]) / "cell.json").read_text())
+        assert record["error"] is None

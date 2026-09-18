@@ -113,6 +113,7 @@ class TestRunReport:
         plan.append({"cell_id": sentinel["artifacts"]["slug"], "sentinel": True})
         voided = _cell("response_latency", "response_latency-open.book", "semantic_vad", "f-us", "clean", 1,
                        void="configuration not supported: fake has no semantic turn detection")
+        voided["error"] = "AdapterError: fake has no semantic turn detection"  # as older records stored it
         cells.append(voided)
         plan.append({"cell_id": voided["artifacts"]["slug"], "sentinel": False})
 
@@ -129,5 +130,6 @@ class TestRunReport:
         assert not any(key.startswith("sentinel") for key in groups)
         excluded = groups["response_latency/response_latency-open.book/semantic_vad/f-us/clean"]
         assert excluded["scored"] == 0 and list(excluded["voids"]) == ["excluded: fake has no semantic turn detection"]
+        assert report["counts"]["voids"] == 1 and report["counts"]["errors"] == 0
         text = render_markdown(report)
         assert "Sentinel" in text and "telephone" in text and "Voids" in text

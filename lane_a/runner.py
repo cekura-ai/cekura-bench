@@ -285,11 +285,14 @@ class Runner:
                     # Our own host, not the provider. Voiding is the honest call.
                     result.void = result.void or f"caller pacing slipped {caller.max_slip_ms:.0f} ms"
         except AdapterError as exc:
-            failure = {"type": type(exc).__name__, "message": str(exc), "traceback": traceback.format_exc()}
-            result = ProbeResult(
-                probe.name,
-                void=f"configuration not supported: {exc}" if excluded else f"provider refused the session: {exc}",
-            )
+            if excluded:
+                # Declared, not failed: no traceback and no error count. An
+                # exclusion is a fact about the provider's surface, and a
+                # published table that showed it as an error would be wrong.
+                result = ProbeResult(probe.name, void=f"configuration not supported: {exc}")
+            else:
+                failure = {"type": type(exc).__name__, "message": str(exc), "traceback": traceback.format_exc()}
+                result = ProbeResult(probe.name, void=f"provider refused the session: {exc}")
         except Exception as exc:  # noqa: BLE001
             # The repr alone loses where it happened, and a harness bug found in
             # a run that cost an hour of provider time should not need the run

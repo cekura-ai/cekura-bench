@@ -76,8 +76,7 @@ class FakeAdapter(RealtimeAdapter):
             if self._speaker and not self._speaker.done() and self.yields_to_barge_in:
                 self._speaker.cancel()
                 self._speaker = None
-                self._on_agent_audio_done(reason="cancelled")
-                self.log.emit(ev.AGENT_INTERRUPTED)
+                self._on_agent_interrupted()
 
     async def _commit(self) -> None:
         self._start_reply()

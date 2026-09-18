@@ -255,6 +255,7 @@ class BranchingCaller:
             self._current = self._queue.pop(0)
             self._current.first_sample = position
             self._current.t_start = self.log.clock.now()
+            self.adapter.note_utterance_start()
             self.log.emit(
                 ev.CALLER_AUDIO_START,
                 clip=self._current.clip.name,
@@ -376,9 +377,16 @@ class BranchingCaller:
 
     # -- observation ------------------------------------------------------
 
-    def _last_agent_audio_at(self) -> float | None:
-        chunks = self.adapter.agent_timeline.chunks
-        return chunks[-1].t_wall if chunks else None
+    def _agent_playout_end(self) -> float | None:
+        """When a listener stops hearing the agent, not when the bytes stopped arriving.
+
+        Providers deliver audio faster than realtime -- one ships close to a
+        second of speech in its first frame -- so the last chunk of a reply can
+        land seconds before the listener reaches it. A caller taking "no more
+        audio arriving" as its cue would talk over a reply that was still
+        playing, and the provider would correctly treat that as a barge-in.
+        """
+        return self.adapter.agent_timeline.playout_end()
 
     async def wait_agent_onset(self, timeout_s: float, since_sample: int | None = None) -> bool:
         """Until agent audio newer than ``since_sample`` arrives."""
@@ -399,8 +407,8 @@ class BranchingCaller:
         """
         deadline = time.monotonic() + timeout_s
         while time.monotonic() < deadline:
-            last = self._last_agent_audio_at()
-            if last is not None and (self.log.clock.now() - last) * 1000.0 >= gap_ms:
+            end = self._agent_playout_end()
+            if end is not None and (self.log.clock.now() - end) * 1000.0 >= gap_ms:
                 return True
             await asyncio.sleep(POLL_S)
         return False

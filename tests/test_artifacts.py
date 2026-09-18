@@ -42,6 +42,7 @@ async def run_one(tmp_path: Path):
         configs=[TurnDetection("server_vad", silence_duration_ms=300)],
         voices=["f-us"],
         repeats=1,
+        sentinel=False,   # the sentinel has its own test; here it would only slow the rest
         out_root=str(tmp_path),
     )
     runner = Runner(spec, corpus_or_skip(), api_key="unused")
@@ -134,6 +135,7 @@ class TestTheRecordIsComplete:
             configs=[TurnDetection("server_vad", silence_duration_ms=300)],
             voices=["f-us"],
             repeats=3,
+            sentinel=False,
             out_root=str(tmp_path),
         )
         runner = Runner(spec, corpus_or_skip(), api_key="unused")
@@ -186,3 +188,37 @@ class TestTheRecordStaysARecord:
         assert len(json.dumps(record)) < 500
         assert record["pcm"]["bytes"] == 1_000_000
         assert record["pcm"]["sha256"], "the audio must still be identified"
+
+
+class TestSentinelAndTransforms:
+    def test_the_sentinel_leads_every_plan(self, tmp_path):
+        """Even a campaign cut short after one cell has the day's noise floor on record."""
+        spec = RunSpec(
+            provider="fake", probes=[ResponseLatency()], configs=[TurnDetection("manual")],
+            voices=["f-us"], repeats=2, out_root=str(tmp_path),
+        )
+        runner = Runner(spec, corpus_or_skip(), api_key="unused")
+        planned = runner.planned
+        assert [c.sentinel for c in planned[:3]] == [True, True, True]
+        assert all(not c.sentinel for c in planned[3:])
+        assert planned[0].cell_id.startswith("sentinel_latency-open.book/server_vad-500ms/f-us/clean/r1")
+
+    def test_a_transform_is_its_own_stratum_with_its_own_directory(self, tmp_path):
+        spec = RunSpec(
+            provider="fake", probes=[ResponseLatency()], configs=[TurnDetection("manual")],
+            voices=["f-us"], repeats=1, transforms=("clean", "telephone"), sentinel=False, out_root=str(tmp_path),
+        )
+        runner = Runner(spec, corpus_or_skip(), api_key="unused")
+        ids = [c.cell_id for c in runner.planned]
+        assert ids == [
+            "response_latency-open.book/manual/f-us/clean/r1",
+            "response_latency-open.book/manual/f-us/telephone/r1",
+        ]
+
+    def test_an_unknown_transform_is_refused_before_anything_runs(self, tmp_path):
+        spec = RunSpec(
+            provider="fake", probes=[ResponseLatency()], configs=[TurnDetection("manual")],
+            voices=["f-us"], repeats=1, transforms=("clean", "louder"), out_root=str(tmp_path),
+        )
+        with pytest.raises(KeyError):
+            Runner(spec, corpus_or_skip(), api_key="unused")

@@ -69,21 +69,27 @@ def agent_onset_after(adapter: RealtimeAdapter, after_t: float) -> AgentOnset | 
 
 
 def speech_runs(adapter: RealtimeAdapter, gap_ms: float = 250.0) -> list[tuple[float, float]]:
-    """Agent audio grouped into contiguous stretches of speaking, as (start, end).
+    """Agent audio grouped into stretches a listener would hear, as (start, end).
 
     A realtime provider does not mark its own turns reliably -- a response
     cancelled in flight may never send a done event -- so stretches are derived
-    from arrival times. A gap wider than ``gap_ms`` between the end of one chunk's
-    playout and the arrival of the next starts a new stretch.
+    from the audio itself, on the **playout** clock: each chunk plays at its
+    arrival or when the previous one drains, whichever is later. On arrival
+    times alone a provider that ships a reply in one burst would be credited
+    with finishing seconds before anyone heard the end of it. A gap wider than
+    ``gap_ms`` between one chunk draining and the next starting begins a new
+    stretch.
     """
     runs: list[tuple[float, float]] = []
-    rate = adapter.agent_timeline.rate
-    for chunk in adapter.agent_timeline.chunks:
-        end = chunk.t_wall + chunk.n_samples / rate
-        if runs and (chunk.t_wall - runs[-1][1]) * 1000.0 <= gap_ms:
+    timeline = adapter.agent_timeline
+    for chunk in timeline.chunks:
+        start, end = timeline.playout_span(chunk.seq)
+        if end <= start:
+            continue  # delivered, then discarded at a cut before anyone heard it
+        if runs and (start - runs[-1][1]) * 1000.0 <= gap_ms:
             runs[-1] = (runs[-1][0], end)
         else:
-            runs.append((chunk.t_wall, end))
+            runs.append((start, end))
     return runs
 
 
@@ -140,26 +146,57 @@ def response_latency(adapter: RealtimeAdapter, utterance: Utterance) -> Response
 
 @dataclass(frozen=True)
 class BargeIn:
-    """Did the agent yield the floor, and how fast."""
+    """Did the agent yield the floor, and how fast.
+
+    ``stop_ms`` is what a listener experiences: caller onset to the agent going
+    quiet, on the reference client -- one that plays audio in realtime and
+    clears its buffer when the provider reports that the caller started
+    speaking or that it interrupted its reply, which is what these protocols
+    document a client should do. A provider whose endpointer reacts promptly
+    stops the listener hearing it promptly, however much reply it had already
+    pushed down the wire; one that never signals is heard to the end of
+    whatever it sent, because a client has no other way to know.
+    ``discarded_ms`` is the audio the signal threw away: delivered, paid for,
+    never heard. ``cancelled_by_provider`` says whether the provider also
+    stopped generating, which is its decision rather than the client's.
+    """
 
     stopped: bool
-    stop_ms: float | None      # caller onset -> agent audio ceases
+    stop_ms: float | None            # caller onset -> the listener stops hearing the agent
+    discarded_ms: float | None       # reply delivered but never heard, thanks to the interrupt
     cancelled_by_provider: bool
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            "stopped": self.stopped,
+            "stop_ms": None if self.stop_ms is None else round(self.stop_ms, 1),
+            "discarded_ms": None if self.discarded_ms is None else round(self.discarded_ms, 1),
+            "provider_cancelled": self.cancelled_by_provider,
+        }
 
 
 def barge_in(adapter: RealtimeAdapter, utterance: Utterance, settle_ms: float = 2000.0) -> BargeIn:
     """Measured from the caller's first authored speech sample, not the clip start."""
     caller_start_t = adapter.caller_timeline.time_of_sample(utterance.speech_start_sample)
     if caller_start_t is None:
-        return BargeIn(False, None, False)
+        return BargeIn(False, None, None, False)
     cancelled = any(e.kind == ev.AGENT_INTERRUPTED and e.t >= caller_start_t for e in adapter.log.events)
-    ceases = agent_audio_ends_at(adapter, caller_start_t)
-    if ceases is None:
+    runs = [run for run in speech_runs(adapter) if run[0] <= caller_start_t]
+    if not runs:
         # The agent was not speaking when we started. The probe guards against
         # this, so reaching here means it stopped on its own; not a barge-in.
-        return BargeIn(True, 0.0, cancelled)
-    stop_ms = max((ceases - caller_start_t) * 1000.0, 0.0)
-    return BargeIn(stopped=stop_ms < settle_ms, stop_ms=stop_ms, cancelled_by_provider=cancelled)
+        return BargeIn(True, 0.0, 0.0, cancelled)
+    run = runs[-1]
+    stop_ms = max((run[1] - caller_start_t) * 1000.0, 0.0)
+    timeline = adapter.agent_timeline
+    in_run = [c.seq for c in timeline.chunks if run[0] <= timeline.playout_span(c.seq)[0] <= run[1]]
+    discarded_ms = 1000.0 * timeline.discarded_s(min(in_run), max(in_run)) if in_run else 0.0
+    return BargeIn(
+        stopped=stop_ms < settle_ms,
+        stop_ms=stop_ms,
+        discarded_ms=discarded_ms,
+        cancelled_by_provider=cancelled,
+    )
 
 
 def spoke_between(adapter: RealtimeAdapter, start_t: float, end_t: float) -> bool:

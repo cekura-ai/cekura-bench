@@ -36,6 +36,7 @@ CALLER_SLIP = "caller.pacing.slip"             # we fell behind realtime; the ru
 AGENT_AUDIO_START = "agent.audio.start"        # first audio chunk of a response arrived
 AGENT_AUDIO_END = "agent.audio.end"            # provider said the response audio is done
 AGENT_TRANSCRIPT = "agent.transcript"
+AGENT_THOUGHT = "agent.thought"                # a reasoning step the provider chose to expose
 AGENT_INTERRUPTED = "agent.interrupted"
 
 VAD_SPEECH_START = "vad.speech.start"          # the provider's own endpointer fired

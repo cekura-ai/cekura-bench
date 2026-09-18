@@ -63,6 +63,12 @@ class TurnDetection:
 @dataclass
 class SessionConfig:
     instructions: str = ""
+    # The agent's opening line, seeded into the conversation as already said.
+    # The published contracts open with the agent speaking, so a scenario that
+    # started cold would have the model greet the caller's first request instead
+    # of answering it -- which was observed, and scores the missing greeting
+    # rather than the agent.
+    first_message: str | None = None
     voice: str | None = None
     tools: tuple[ToolSpec, ...] = ()
     turn_detection: TurnDetection = field(default_factory=TurnDetection)
@@ -81,6 +87,26 @@ class RealtimeAdapter(ABC):
     output_rate: ClassVar[int] = 24000
     supports_manual_commit: ClassVar[bool] = True
     supports_text_modality: ClassVar[bool] = True
+    # Whether the provider reports its own speech start/stop decisions. A probe
+    # that needs them must say so and void where they are absent, rather than
+    # read a provider that stays silent about its endpointer as one that never
+    # heard the caller.
+    emits_vad_events: ClassVar[bool] = True
+
+    @classmethod
+    def unsupported_reason(cls, config: "SessionConfig") -> str | None:
+        """Why this adapter cannot run ``config``, or None if it can.
+
+        Declared up front so a configuration a provider has no equivalent for is
+        published as an exclusion with its reason, instead of costing a
+        connection per cell to discover the same refusal again.
+        """
+        detection = config.turn_detection
+        if detection.is_manual and not cls.supports_manual_commit:
+            return f"{cls.name} has no manual commit"
+        if config.modality == "text" and not cls.supports_text_modality:
+            return f"{cls.name} has no text modality"
+        return None
 
     def __init__(self, *, model: str, api_key: str, log: ev.EventLog, config: SessionConfig | None = None) -> None:
         self.model = model
@@ -147,6 +173,15 @@ class RealtimeAdapter(ABC):
         self.caller_pcm.extend(pcm)
         await self._send_audio_chunk(pcm)
 
+    def note_utterance_start(self) -> None:
+        """The caller is about to send the first chunk of an authored utterance.
+
+        A no-op for protocols that take a continuous stream. Protocols that
+        need the client to bracket each turn explicitly open their window here,
+        immediately before the speech rather than at connect time -- opening it
+        early was measured to read as a barge-in the moment the model replied.
+        """
+
     async def commit(self) -> None:
         """Declare the caller's turn over at exactly this sample. Manual mode only."""
         if not self.supports_manual_commit:
@@ -203,9 +238,39 @@ class RealtimeAdapter(ABC):
             self._speaking = False
             self.log.emit(ev.AGENT_AUDIO_END, sample=self.agent_timeline.n_samples, reason=reason)
 
+    def _on_caller_speech_started(self, **data: Any) -> None:
+        """The provider's endpointer heard the caller begin. The reference client
+        stops playback here, which is what these protocols document a client
+        should do on this event; whether the provider *also* cancels the reply
+        it is generating is recorded separately, as its own decision.
+        """
+        at = self.log.clock.now()
+        end = self.agent_timeline.playout_end()
+        cleared = end is not None and end > at
+        if cleared:
+            self.agent_timeline.cut(at)
+        self.log.emit(ev.VAD_SPEECH_START, at=at, cleared_playback=cleared, **data)
+
+    def _on_agent_interrupted(self) -> None:
+        """The provider yielded the floor: a client clears what it was holding.
+
+        The cut lands on the playout model at the instant the signal arrived,
+        which is when a real client would have flushed its buffer. Without it a
+        provider that had already delivered its whole reply could never be
+        credited with stopping, however promptly it yielded.
+        """
+        at = self.log.clock.now()
+        self.agent_timeline.cut(at)
+        self._on_agent_audio_done(reason="cancelled")
+        self.log.emit(ev.AGENT_INTERRUPTED, at=at)
+
     @property
     def agent_speaking(self) -> bool:
-        return self._speaking
+        """Still audible to a listener: either arriving, or received but not yet played out."""
+        if self._speaking:
+            return True
+        end = self.agent_timeline.playout_end()
+        return end is not None and end > self.log.clock.now()
 
     def state(self) -> dict[str, Any]:
         """Everything the adapter knows about its own session, for the record.
@@ -234,6 +299,7 @@ class RealtimeAdapter(ABC):
                 "agent_ms": round(self.agent_timeline.duration_s * 1000.0, 1),
                 "caller_chunks": len(self.caller_timeline.chunks),
                 "agent_chunks": len(self.agent_timeline.chunks),
+                "emits_vad_events": self.emits_vad_events,
             },
             "transcripts": {"agent": list(self.agent_text), "caller_asr": list(self.caller_text)},
             "tools": {"calls": list(self.tool_calls), "results": list(self.tool_results)},

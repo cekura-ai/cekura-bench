@@ -15,7 +15,7 @@ unrealistic pause.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import Any, Protocol, Sequence
 
 import asyncio
 
@@ -25,8 +25,11 @@ from lane_a.audio import pink_noise
 from lane_a.caller import BranchingCaller, Clip
 from lane_a.clips import Corpus
 from lane_a.metrics import barge_in, response_latency, speech_runs, spoke_between, usage
+from lane_a.scenarios import SCENARIOS, ScenarioSpec, by_id
+from lane_a.transcript import compare_transcripts
+from lane_a.transforms import TRANSFORMS, NamedTransform
 from mock_tools.server import MockToolServer
-from mock_tools.verifier import ExpectedCall, verify_trace
+from mock_tools.verifier import verify_trace
 
 
 @dataclass
@@ -37,9 +40,19 @@ class ProbeContext:
     voice: str
     log: ev.EventLog
     tools: MockToolServer | None = None
+    transform: NamedTransform = TRANSFORMS["clean"]
 
     def clip(self, clip_id: str) -> Clip:
-        return self.corpus.load(clip_id, self.voice)
+        """The authored clip, degraded by the cell's transform where one applies.
+
+        The transform runs on the master before any resampling, so a provider
+        with a different input rate receives the same degradation through the
+        same published filter as every other.
+        """
+        clip = self.corpus.load(clip_id, self.voice)
+        if self.transform.name == "clean":
+            return clip
+        return Clip(f"{clip.name}+{self.transform.name}", self.transform.apply(clip.pcm, clip.rate), clip.rate, clip.text)
 
     @property
     def is_text(self) -> bool:
@@ -84,8 +97,16 @@ class ProbeContext:
             # Audio can go quiet while a tool call is still in flight.
             return await self._settle(deadline, settle_ms)
 
-        start = self._activity()
-        while loop.time() < deadline and self._activity() == start:
+        # A reply has landed when a transcript arrives after our turn *and* after
+        # the last tool call: the tool result provokes a further response, and a
+        # caller that took the pre-tool text as the reply spoke into the model's
+        # next sentence and was heard as an interruption.
+        sent_at = self.log.clock.now()
+        while loop.time() < deadline:
+            replies = [e.t for e in self.log.of_kind(ev.AGENT_TRANSCRIPT) if e.t > sent_at]
+            calls = [e.t for e in self.log.of_kind(ev.TOOL_CALL) if e.t > sent_at]
+            if replies and (not calls or max(replies) > max(calls)):
+                break
             await asyncio.sleep(0.01)
         return await self._settle(deadline, settle_ms)
 
@@ -314,12 +335,7 @@ class BargeIn:
         return ProbeResult(
             self.name,
             verdict="pass" if result.stopped else "fail",
-            values={
-                "stopped": result.stopped,
-                "stop_ms": None if result.stop_ms is None else round(result.stop_ms, 1),
-                "provider_cancelled": result.cancelled_by_provider,
-                "after_onset_ms": self.after_onset_ms,
-            },
+            values={**result.as_json(), "after_onset_ms": self.after_onset_ms},
         )
 
 
@@ -373,25 +389,29 @@ class BackchannelTolerance:
                 values={"heard_at": round(heard_at, 3)},
             )
 
-        registered = next(
-            (e.t for e in ctx.log.events if e.kind == ev.VAD_SPEECH_START and e.t >= heard_at), None
-        )
-        if registered is None:
+        # The test is valid only if the whole backchannel was spoken while the
+        # reply was still audible. That is judged from our own audio, which every
+        # provider gets alike. Whether the provider's endpointer *registered* it
+        # is reported separately where the provider says so -- an endpointer
+        # that never fires on "mm hmm" is one way of tolerating it, not a reason
+        # to throw the cell away.
+        spoken_until = ctx.caller.adapter.caller_timeline.time_of_sample(
+            max(utterance.speech_end_sample - 1, 0)
+        ) or heard_at
+        if spoken_until > in_flight[1]:
             return ProbeResult(
                 self.name,
-                void="provider never registered the backchannel as speech at all",
-                values={"held_floor_ms": round((in_flight[1] - heard_at) * 1000.0, 1)},
+                void="reply finished before the backchannel had been fully spoken; nothing was tested",
+                values={"spoken_after_reply_ms": round((spoken_until - in_flight[1]) * 1000.0, 1)},
             )
-        if registered > in_flight[1]:
-            return ProbeResult(
-                self.name,
-                void="reply finished before the provider registered the backchannel",
-                values={"registered_after_reply_ms": round((registered - in_flight[1]) * 1000.0, 1)},
+        registered = None
+        if ctx.adapter.emits_vad_events:
+            registered = next(
+                (e.t for e in ctx.log.events if e.kind == ev.VAD_SPEECH_START and e.t >= heard_at), None
             )
 
-        # The agent was still talking when the provider heard us. Two ways to fail:
-        # stop mid-reply, or answer the backchannel as though it were a turn.
-        kept_talking = in_flight[1] > registered
+        # Two ways to fail: stop mid-reply, or answer the backchannel as a turn.
+        kept_talking = in_flight[1] > spoken_until
         new_response = next((run for run in runs if run[0] > in_flight[1]), None)
         answered_it = new_response is not None
 
@@ -401,42 +421,111 @@ class BackchannelTolerance:
             values={
                 "kept_talking": kept_talking,
                 "answered_the_backchannel": answered_it,
-                "held_floor_after_ms": round((in_flight[1] - registered) * 1000.0, 1),
+                "held_floor_after_ms": round((in_flight[1] - spoken_until) * 1000.0, 1),
                 "new_reply_after_ms": None if not answered_it else round((new_response[0] - in_flight[1]) * 1000.0, 1),
-                "registration_lag_ms": round((registered - heard_at) * 1000.0, 1),
+                "provider_registered_it": None if not ctx.adapter.emits_vad_events else registered is not None,
+                "registration_lag_ms": None if registered is None else round((registered - heard_at) * 1000.0, 1),
+            },
+        )
+
+
+# ── caller transcription ─────────────────────────────────────────────────────
+
+@dataclass
+class CallerTranscription:
+    """How accurately the provider heard what we said, against an exact reference.
+
+    The authored text is the ground truth, so no second transcriber is needed
+    and no judge is involved. Digits are scored separately from words because a
+    phone number heard as nine digits fails the task however good the word
+    error rate looks, and the two are reported apart so a provider's weakness
+    is visible rather than averaged away.
+    """
+
+    clip_id: str = "task.identify"
+    timeout_s: float = 30.0
+    name: str = "caller_transcription"
+
+    @property
+    def slug(self) -> str:
+        return f"{self.name}-{self.clip_id}"
+
+    async def run(self, ctx: ProbeContext) -> ProbeResult:
+        manual = ctx.adapter.config.turn_detection.is_manual
+        clip = ctx.clip(self.clip_id)
+        await ctx.caller.play(clip, trim_tail=manual)
+        if manual:
+            await ctx.adapter.commit()
+        heard = await self._wait_transcript(ctx)
+        await ctx.caller.wait_agent_quiet(400.0, timeout_s=15)
+        if heard is None:
+            return ProbeResult(self.name, void="provider returned no transcript of the caller")
+        scored = compare_transcripts(clip.text, heard)
+        verdict = scored["digits_match"] if scored["digits_expected"] else scored["wer"] <= 0.25
+        return ProbeResult(
+            self.name,
+            verdict="pass" if verdict else "fail",
+            values={**scored, "clip": self.clip_id, "reference": clip.text, "heard": heard},
+        )
+
+    async def _wait_transcript(self, ctx: ProbeContext) -> str | None:
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + self.timeout_s
+        while loop.time() < deadline:
+            if ctx.adapter.caller_text:
+                return ctx.adapter.caller_text[-1]
+            await asyncio.sleep(0.02)
+        return None
+
+
+@dataclass
+class FilledPause:
+    """A mid-utterance pause the caller fills with "um, let me think".
+
+    The unfilled ladder asks whether silence of a given length ends the turn;
+    this asks whether a filler buys the caller more time, as it does with a
+    human listener. Same two halves as the ladder, so the only difference from
+    a rung of the same gap is the filler.
+    """
+
+    gap_ms: float = 1500.0
+    first: str = "phone.part1"
+    filler: str = "token.hesitation"
+    second: str = "phone.part2"
+    name: str = "filled_pause"
+
+    @property
+    def slug(self) -> str:
+        return f"{self.name}-gap{self.gap_ms:.0f}ms"
+
+    async def run(self, ctx: ProbeContext) -> ProbeResult:
+        if ctx.adapter.config.turn_detection.is_manual:
+            return ProbeResult(self.name, void="manual commit has no endpointer to probe")
+        await ctx.caller.play(ctx.clip(self.first))
+        gap_start = ctx.log.clock.now()
+        await ctx.caller.wait(self.gap_ms / 3.0)
+        await ctx.caller.play(ctx.clip(self.filler))
+        await ctx.caller.wait(self.gap_ms / 3.0)
+        gap_end = ctx.log.clock.now()
+        interrupted = spoke_between(ctx.adapter, gap_start, gap_end)
+        await ctx.caller.play(ctx.clip(self.second))
+        await ctx.caller.wait_agent_quiet(400.0, timeout_s=20)
+        return ProbeResult(
+            self.name,
+            verdict="fail" if interrupted else "pass",
+            values={
+                "gap_ms": self.gap_ms,
+                "interrupted_in_gap": interrupted,
+                "caller_asr": " ".join(ctx.adapter.caller_text)[:400],
             },
         )
 
 
 # ── tools and state ──────────────────────────────────────────────────────────
 
-# Deterministic routing for the branching caller. Published with the scenario,
-# because a caller that improvises is a second model in the measurement.
-BOOKING_ROUTES: tuple[tuple[tuple[str, ...], str], ...] = (
-    (("phone number", "number on your account", "phone"), "task.identify"),
-    (("reason for", "what brings", "type of visit"), "task.reason"),
-    (("what day", "which day", "what date", "which date", "come in", "day works", "date works", "day would"), "task.date"),
-    (("book that", "like to book", "shall i", "confirm", "does that work", "sound good", "go ahead"), "task.confirm"),
-)
-
-
-def route_booking_reply(text: str) -> str:
-    """Pick the caller's next line from what the agent just asked.
-
-    Rules are ordered and literal. A model deciding what the caller says next
-    would put a second language model inside the measurement, and two providers
-    would then be scored partly on how well our caller understood them.
-    """
-    lowered = text.lower()
-    for needles, clip_id in BOOKING_ROUTES:
-        if any(needle in lowered for needle in needles):
-            return clip_id
-    return "task.confirm"
-
-
 @dataclass
-class BookingTask:
-    """A multi-turn booking against the published mock-tool contract.
+class TaskScenario:
+    """A multi-turn task against a published mock-tool contract, driven by a scenario.
 
     Scored on the **tool-call trace**, not on a judge's opinion of the
     conversation: a model scoring whether an agent "handled it well" imports the
@@ -448,72 +537,84 @@ class BookingTask:
     for the phone number, the reason and the date in whatever order their prompt
     implies, and a fixed script silently runs out of turns against one that asks
     them in a different order -- scoring the ordering of our script rather than
-    the agent. Routing is a published table of literal patterns.
+    the agent. Routing is the scenario's published table of literal patterns.
 
-    This probe runs in Lane A, and also in the text arm with the identical
-    script. The pair is the point -- it separates "this model cannot do the task"
-    from "this model cannot do the task *by voice*".
+    Runs in Lane A, and in the text arm with the identical script. The pair is
+    the point -- it separates "this model cannot do the task" from "this model
+    cannot do the task *by voice*".
     """
 
-    name: str = "booking_task"
-    opener: str = "open.book"
-    max_turns: int = 8
+    spec: ScenarioSpec = field(default_factory=lambda: by_id("book.morning"))
     settle_ms: float = 800.0
+    name: str = "task"
 
     @property
     def slug(self) -> str:
-        return self.name
+        return f"{self.name}-{self.spec.id}"
 
     async def run(self, ctx: ProbeContext) -> ProbeResult:
         if ctx.tools is None:
             return ProbeResult(self.name, void="no tool server configured")
+        if ctx.tools.suite != self.spec.contract:
+            return ProbeResult(self.name, void=f"scenario needs the {self.spec.contract} contract, got {ctx.tools.suite}")
 
         stop = asyncio.Event()
         pump = asyncio.create_task(pump_tools(ctx, stop), name="tool-pump")
         manual = ctx.adapter.config.turn_detection.is_manual
         script: list[str] = []
+        ended_by = "max_turns"
         try:
-            clip_id = self.opener
-            for _ in range(self.max_turns):
+            clip_id = self.spec.opener
+            for _ in range(self.spec.max_turns):
                 script.append(clip_id)
                 await ctx.say(clip_id, trim_tail=manual)
                 if manual and not ctx.is_text:
                     await ctx.adapter.commit()
                 if not await ctx.wait_reply(self.settle_ms):
-                    return ProbeResult(
-                        self.name,
-                        verdict="fail",
-                        values={"reason": f"no reply after {clip_id}", "script": script},
-                    )
-                if any(call["name"] == "book_appointment" for call in ctx.adapter.tool_calls):
+                    ended_by = f"no reply after {clip_id}"
                     break
-                clip_id = route_booking_reply(ctx.adapter.agent_text[-1] if ctx.adapter.agent_text else "")
+                last = ctx.adapter.agent_text[-1] if ctx.adapter.agent_text else ""
+                if self.spec.finished(last, ctx.adapter.tool_calls):
+                    ended_by = "scenario complete"
+                    break
+                clip_id = self.spec.route(last)
             await asyncio.sleep(1.0)  # let a trailing tool call land
         finally:
             stop.set()
             await asyncio.gather(pump, return_exceptions=True)
 
-        verdict = verify_trace(
-            ctx.adapter.tool_calls,
-            expected=[
-                ExpectedCall("lookup_patient", {"phone": "2025550188"}),
-                ExpectedCall("check_availability", {"date": "2026-07-08"}),
-                ExpectedCall("book_appointment", {"patient_id": "p_1002"}),
-            ],
-        )
+        verdict = verify_trace(ctx.adapter.tool_calls, expected=self.spec.expected, forbidden=self.spec.forbidden)
         return ProbeResult(
             self.name,
             verdict="pass" if verdict.passed else "fail",
             values={
                 **verdict.as_json(),
+                "scenario": self.spec.id,
+                "contract": self.spec.contract,
                 "modality": ctx.adapter.config.modality,
                 "turns": len(script),
                 "script": script,
+                "ended_by": ended_by,
                 "tool_calls": [
                     {"name": c["name"], "arguments": c.get("arguments", {})} for c in ctx.adapter.tool_calls
                 ],
                 "unmatched_tool_inputs": sum(1 for c in ctx.tools.calls if not c.matched),
-                "agent_text": " ".join(ctx.adapter.agent_text)[:600],
+                "agent_text": " ".join(ctx.adapter.agent_text)[:1200],
                 "usage": usage(ctx.adapter),
             },
         )
+
+
+def BookingTask(**kwargs: Any) -> TaskScenario:
+    """The baseline booking scenario, kept under its original name."""
+    return TaskScenario(spec=by_id("book.morning"), **kwargs)
+
+
+def route_booking_reply(text: str) -> str:
+    """The baseline scenario's routing, exposed for the routing tests."""
+    return by_id("book.morning").route(text)
+
+
+def task_probes(contract: str | None = None, scenarios: Sequence[ScenarioSpec] = SCENARIOS) -> list[TaskScenario]:
+    """One probe per scenario, optionally for a single contract."""
+    return [TaskScenario(spec=s) for s in scenarios if contract is None or s.contract == contract]

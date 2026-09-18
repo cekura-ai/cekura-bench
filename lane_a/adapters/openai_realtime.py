@@ -46,6 +46,8 @@ class OpenAIRealtimeAdapter(RealtimeAdapter):
     supports_manual_commit = True
     supports_text_modality = True
 
+    url = URL  # subclasses serving the same protocol elsewhere override this
+
     def __init__(self, *, model: str = "gpt-realtime-2.1", **kwargs: Any) -> None:
         super().__init__(model=model, **kwargs)
         self._ws: websockets.ClientConnection | None = None
@@ -56,28 +58,39 @@ class OpenAIRealtimeAdapter(RealtimeAdapter):
     async def connect(self) -> None:
         try:
             self._ws = await websockets.connect(
-                f"{URL}?model={self.model}",
+                f"{self.url}?model={self.model}",
                 additional_headers={"Authorization": f"Bearer {self._api_key}"},
                 open_timeout=CONNECT_TIMEOUT_S,
                 max_size=None,
             )
         except Exception as exc:  # noqa: BLE001 -- the reason is what we want to publish
-            raise AdapterError(f"openai-realtime connect failed: {exc}") from exc
+            raise AdapterError(f"{self.name} connect failed: {exc}") from exc
 
         first = json.loads(await asyncio.wait_for(self._ws.recv(), CONNECT_TIMEOUT_S))
         self.log.raw(first)
         if first.get("type") != "session.created":
-            raise AdapterError(f"openai-realtime refused the session: {first}")
+            raise AdapterError(f"{self.name} refused the session: {first}")
         self.session_id = first["session"].get("id")
         self.log.emit(ev.SESSION_OPEN, session_id=self.session_id, model=self.model)
 
-        self._receiver = asyncio.create_task(self._receive_loop(), name="openai-realtime-recv")
+        self._receiver = asyncio.create_task(self._receive_loop(), name=f"{self.name}-recv")
         self.session_sent = self._session_payload()
         await self._send_json({"type": "session.update", "session": self.session_sent})
         try:
             await asyncio.wait_for(self._configured.wait(), CONNECT_TIMEOUT_S)
         except asyncio.TimeoutError as exc:
-            raise AdapterError("openai-realtime never acknowledged session.update") from exc
+            raise AdapterError(f"{self.name} never acknowledged session.update") from exc
+        if self.config.first_message:
+            await self._send_json(
+                {
+                    "type": "conversation.item.create",
+                    "item": {
+                        "type": "message",
+                        "role": "assistant",
+                        "content": [{"type": "output_text", "text": self.config.first_message}],
+                    },
+                }
+            )
 
     def _session_payload(self) -> dict[str, Any]:
         config: SessionConfig = self.config
@@ -207,7 +220,7 @@ class OpenAIRealtimeAdapter(RealtimeAdapter):
             self.session_ack = payload.get("session")
             self.log.emit(ev.SESSION_CONFIGURED, turn_detection=self.config.turn_detection.label)
         elif kind == "input_audio_buffer.speech_started":
-            self.log.emit(ev.VAD_SPEECH_START, audio_ms=payload.get("audio_start_ms"))
+            self._on_caller_speech_started(audio_ms=payload.get("audio_start_ms"))
         elif kind == "input_audio_buffer.speech_stopped":
             self.log.emit(ev.VAD_SPEECH_END, audio_ms=payload.get("audio_end_ms"))
         elif kind == "conversation.item.input_audio_transcription.completed":
@@ -225,9 +238,9 @@ class OpenAIRealtimeAdapter(RealtimeAdapter):
         elif kind == "response.done":
             response = payload.get("response", {})
             status = response.get("status")
-            self._on_agent_audio_done(reason=status or "done")
             if status == "cancelled":
-                self.log.emit(ev.AGENT_INTERRUPTED)
+                self._on_agent_interrupted()
+            self._on_agent_audio_done(reason=status or "done")
             self.log.emit(ev.RESPONSE_DONE, status=status, usage=response.get("usage"))
         elif kind == "error":
             self.log.emit(ev.SESSION_ERROR, error=payload.get("error"))

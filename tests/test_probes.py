@@ -44,6 +44,10 @@ class TestRouting:
         assert route_booking_reply("Lovely weather today.") == "task.confirm"
         assert route_booking_reply("") == "task.confirm"
 
+    def test_a_greeting_gets_the_request_restated(self):
+        """An agent that greets instead of answering has not heard the request yet."""
+        assert route_booking_reply("Thanks for calling, how can I help you today?") == "open.book"
+
     def test_a_date_question_phrased_as_an_offer_still_asks_for_the_date(self):
         """"What day would you like" contains "would you like"; order decides."""
         assert route_booking_reply("What day would you like to come in?") == "task.date"

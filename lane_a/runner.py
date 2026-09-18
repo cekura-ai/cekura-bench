@@ -35,11 +35,21 @@ from lane_a.audio import write_wav
 from lane_a.caller import VOID_SLIP_MS, BranchingCaller
 from lane_a.clips import Corpus
 from lane_a.metrics import usage
-from lane_a.probes import Probe, ProbeContext, ProbeResult
+from lane_a.probes import Probe, ProbeContext, ProbeResult, ResponseLatency
 from lane_a.registry import PROVIDERS
+from lane_a.transforms import TRANSFORMS
 from mock_tools.server import MockToolServer
 
-METHODOLOGY_VERSION = "lane-a/0.1"
+METHODOLOGY_VERSION = "lane-a/0.2"
+
+# The sentinel: one fixed cell, same probe, same configuration, same voice, run
+# at the head of every campaign regardless of what the campaign is about. Its
+# spread across campaigns is the run-to-run noise of the instrument plus the
+# provider on that day, and a ranking gap smaller than that spread is not a
+# ranking. Published beside the results, never folded into them.
+SENTINEL_PROBE = ResponseLatency(clip_id="open.book", name="sentinel_latency")
+SENTINEL_CONFIG = TurnDetection("server_vad", silence_duration_ms=500)
+SENTINEL_REPEATS = 3
 
 
 @dataclass
@@ -57,6 +67,8 @@ class RunSpec:
     tools: tuple[ToolSpec, ...] = ()
     modality: str = "audio"
     suite: str | None = None               # agent-definitions/<suite>, enables the tool server
+    transforms: Sequence[str] = ("clean",)  # degradations applied to the caller audio, by name
+    sentinel: bool = True                  # run the fixed sentinel cells at the head of the campaign
     corpus_root: str = "corpus/lane-a"
     out_root: str = "data/lane-a"
     label: str = ""
@@ -70,6 +82,7 @@ class Cell:
     model: str
     config: str
     voice: str
+    transform: str
     repeat: int
     probe: str
     variant: str
@@ -86,14 +99,44 @@ class Cell:
         return asdict(self)
 
 
-def cell_id(probe: Probe, config: TurnDetection, voice: str, repeat: int) -> str:
-    """One spelling of a cell's identity, used as its id *and* as its path.
+@dataclass(frozen=True)
+class PlannedCell:
+    """One cell the campaign intends to produce, named before it runs."""
 
-    The plan, the directory layout and the audit all compare these strings. Three
-    hand-written copies of the convention would agree only by coincidence, and a
-    single divergence would report an intact run as entirely missing.
-    """
-    return f"{probe.slug}/{config.label}/{voice}/r{repeat}"
+    probe: Probe
+    config: TurnDetection
+    voice: str
+    transform: str
+    repeat: int
+    sentinel: bool = False
+
+    @property
+    def cell_id(self) -> str:
+        """One spelling of a cell's identity, used as its id *and* as its path.
+
+        The plan, the directory layout and the audit all compare these strings.
+        Three hand-written copies of the convention would agree only by
+        coincidence, and a single divergence would report an intact run as
+        entirely missing.
+        """
+        return f"{self.probe.slug}/{self.config.label}/{self.voice}/{self.transform}/r{self.repeat}"
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            "cell_id": self.cell_id,
+            "probe": self.probe.name,
+            "variant": self.probe.slug,
+            "probe_params": prov.describe(self.probe),
+            "config": self.config.label,
+            "voice": self.voice,
+            "transform": self.transform,
+            "repeat": self.repeat,
+            "sentinel": self.sentinel,
+        }
+
+
+def cell_id(probe: Probe, config: TurnDetection, voice: str, repeat: int, transform: str = "clean") -> str:
+    return PlannedCell(probe, config, voice, transform, repeat).cell_id
 
 
 class Runner:
@@ -117,35 +160,40 @@ class Runner:
 
     # -- the record, before anything is measured --------------------------
 
-    def plan(self) -> list[dict[str, Any]]:
+    def plan(self) -> list[PlannedCell]:
         """Every cell this run intends to produce, named before it runs.
 
         Written up front so an interrupted campaign shows what is missing rather
         than only what survived. Without it, a directory of twelve cells and a
         directory of twelve cells from a run that meant to do twenty are
-        indistinguishable.
+        indistinguishable. Sentinel cells come first, so even a campaign cut
+        short has the day's noise floor on record.
         """
-        return [
-            {
-                "cell_id": cell_id(probe, config, voice, repeat),
-                "probe": probe.name,
-                "variant": probe.slug,
-                "probe_params": prov.describe(probe),
-                "config": config.label,
-                "voice": voice,
-                "repeat": repeat,
-            }
+        for name in self.spec.transforms:
+            if name not in TRANSFORMS:
+                raise KeyError(f"unknown transform {name!r}")
+        planned: list[PlannedCell] = []
+        if self.spec.sentinel and self.spec.modality == "audio":
+            voice = "f-us" if "f-us" in self.corpus.voices else next(iter(self.spec.voices))
+            planned += [
+                PlannedCell(SENTINEL_PROBE, SENTINEL_CONFIG, voice, "clean", repeat, sentinel=True)
+                for repeat in range(1, SENTINEL_REPEATS + 1)
+            ]
+        planned += [
+            PlannedCell(probe, config, voice, transform, repeat)
             for probe in self.spec.probes
             for config in self.spec.configs
             for voice in self.spec.voices
+            for transform in self.spec.transforms
             for repeat in range(1, self.spec.repeats + 1)
         ]
+        return planned
 
     def open_run(self) -> None:
         """Lay down provenance, plan and corpus manifest before the first call."""
         self.root.mkdir(parents=True, exist_ok=True)
         prov.write_json(self.root / "provenance.json", self._provenance())
-        prov.write_json(self.root / "plan.json", {"run_id": self.root.name, "cells": self.planned})
+        prov.write_json(self.root / "plan.json", {"run_id": self.root.name, "cells": [c.as_json() for c in self.planned]})
         prov.write_json(self.root / "manifest.json", self.corpus.manifest())
         # A commit identifies the code only when the tree is clean. When it is
         # not, the difference travels with the run instead of being lost.
@@ -170,6 +218,10 @@ class Runner:
             "output_voice": self.spec.voice_name or self.entry.default_voice,
             "configs": [c.label for c in self.spec.configs],
             "caller_voices": list(self.spec.voices),
+            "transforms": {name: TRANSFORMS[name].description for name in self.spec.transforms},
+            "sentinel": None if not self.spec.sentinel else {
+                "probe": SENTINEL_PROBE.slug, "config": SENTINEL_CONFIG.label, "repeats": SENTINEL_REPEATS,
+            },
             "repeats": self.spec.repeats,
             "modality": self.spec.modality,
             "probes": [{"name": p.name, "variant": p.slug, "params": prov.describe(p)} for p in self.spec.probes],
@@ -183,8 +235,9 @@ class Runner:
 
     # -- one cell ---------------------------------------------------------
 
-    async def run_cell(self, probe: Probe, config: TurnDetection, voice: str, repeat: int) -> Cell:
-        slug = cell_id(probe, config, voice, repeat)
+    async def run_cell(self, planned: PlannedCell) -> Cell:
+        probe, config, voice, repeat = planned.probe, planned.config, planned.voice, planned.repeat
+        slug = planned.cell_id
         directory = self.root / slug
         directory.mkdir(parents=True, exist_ok=True)
         clock = ev.Clock()
@@ -194,6 +247,7 @@ class Runner:
         tools = MockToolServer(self.spec.suite) if self.spec.suite else None
         session = SessionConfig(
             instructions=self.spec.instructions or (tools.system_prompt if tools else ""),
+            first_message=tools.first_message if tools else None,
             voice=self.spec.voice_name or self.entry.default_voice,
             tools=self.spec.tools or (tools.tool_specs() if tools else ()),
             turn_detection=config,
@@ -204,7 +258,13 @@ class Runner:
         result = ProbeResult(probe.name)
         caller: BranchingCaller | None = None
         failure: dict[str, Any] | None = None
+        excluded = self.entry.adapter.unsupported_reason(session)
         try:
+            if excluded:
+                # A declared exclusion, recorded as a cell so the gap is visible
+                # in the published table, and never dialled: the refusal is
+                # known before the first byte.
+                raise AdapterError(excluded)
             async with adapter:
                 caller = BranchingCaller(adapter, log)
                 # The text arm sends no audio at all, so the carrier stays parked:
@@ -216,7 +276,7 @@ class Runner:
                     result = await probe.run(
                         ProbeContext(
                             adapter=adapter, caller=caller, corpus=self.corpus,
-                            voice=voice, log=log, tools=tools,
+                            voice=voice, log=log, tools=tools, transform=TRANSFORMS[planned.transform],
                         )
                     )
                 finally:
@@ -226,7 +286,10 @@ class Runner:
                     result.void = result.void or f"caller pacing slipped {caller.max_slip_ms:.0f} ms"
         except AdapterError as exc:
             failure = {"type": type(exc).__name__, "message": str(exc), "traceback": traceback.format_exc()}
-            result = ProbeResult(probe.name, void=f"provider refused the session: {exc}")
+            result = ProbeResult(
+                probe.name,
+                void=f"configuration not supported: {exc}" if excluded else f"provider refused the session: {exc}",
+            )
         except Exception as exc:  # noqa: BLE001
             # The repr alone loses where it happened, and a harness bug found in
             # a run that cost an hour of provider time should not need the run
@@ -259,6 +322,7 @@ class Runner:
             model=self.model,
             config=config.label,
             voice=voice,
+            transform=planned.transform,
             repeat=repeat,
             probe=probe.name,
             variant=probe.slug,
@@ -272,7 +336,7 @@ class Runner:
             error=None if failure is None else f"{failure['type']}: {failure['message']}",
         )
         self._write_cell_record(
-            directory, cell, probe=probe, session=session, adapter=adapter, caller=caller,
+            directory, cell, planned=planned, session=session, adapter=adapter, caller=caller,
             log=log, clock=clock, tools=tools, result=result, failure=failure,
             ended_utc=ended.isoformat(),
         )
@@ -281,7 +345,7 @@ class Runner:
         return cell
 
     def _write_cell_record(
-        self, directory: Path, cell: Cell, *, probe: Probe, session: SessionConfig, adapter: Any,
+        self, directory: Path, cell: Cell, *, planned: PlannedCell, session: SessionConfig, adapter: Any,
         caller: BranchingCaller | None, log: ev.EventLog, clock: ev.Clock,
         tools: MockToolServer | None, result: ProbeResult, failure: dict[str, Any] | None,
         ended_utc: str,
@@ -294,6 +358,7 @@ class Runner:
         only if someone remembers to edit this function too, which is the exact
         failure this record exists to prevent.
         """
+        probe = planned.probe
         state = adapter.state()
         record = {
             "schema": prov.CELL_SCHEMA,
@@ -306,6 +371,9 @@ class Runner:
                 "model": cell.model,
                 "config": cell.config,
                 "voice": cell.voice,
+                "transform": cell.transform,
+                "transform_description": TRANSFORMS[cell.transform].description,
+                "sentinel": planned.sentinel,
                 "repeat": cell.repeat,
                 "probe": cell.probe,
                 "variant": cell.variant,
@@ -360,15 +428,12 @@ class Runner:
     async def run(self, on_cell=None) -> Path:
         self.open_run()
         try:
-            for probe in self.spec.probes:
-                for config in self.spec.configs:
-                    for voice in self.spec.voices:
-                        for repeat in range(1, self.spec.repeats + 1):
-                            cell = await self.run_cell(probe, config, voice, repeat)
-                            if on_cell:
-                                on_cell(cell)
-                            self.write_summary(status="running")
-                            await asyncio.sleep(0.5)  # be a polite client, not a load test
+            for planned in self.planned:
+                cell = await self.run_cell(planned)
+                if on_cell:
+                    on_cell(cell)
+                self.write_summary(status="running")
+                await asyncio.sleep(0.5)  # be a polite client, not a load test
         except BaseException as exc:  # noqa: BLE001 -- including Ctrl-C: the record still closes
             self.write_summary(status="interrupted", note=f"{type(exc).__name__}: {exc}")
             self.close()
@@ -388,7 +453,7 @@ class Runner:
             "note": note,
             "planned_cells": len(self.planned),
             "completed_cells": len(self.cells),
-            "missing_cells": [p["cell_id"] for p in self.planned if p["cell_id"] not in done],
+            "missing_cells": [p.cell_id for p in self.planned if p.cell_id not in done],
             "verdicts": self._tally("verdict"),
             "voids": sum(1 for c in self.cells if c.void),
             "errors": sum(1 for c in self.cells if c.error),

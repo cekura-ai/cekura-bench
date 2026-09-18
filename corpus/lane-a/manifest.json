@@ -1,5 +1,5 @@
 {
-  "corpus_version": "0.1.0",
+  "corpus_version": "0.2.0",
   "master_rate": 24000,
   "voices": {
     "f-us": {
@@ -79,6 +79,650 @@
       }
     },
     {
+      "id": "date.part1",
+      "text": "I could come in on the eighth of July,",
+      "note": "second ladder first half",
+      "renders": {
+        "f-us": {
+          "file": "date.part1.f6d5a5b3.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "34359ab64ac36a3d4a2446e6fa167389c4b7092e4cdb44a16fde7ab961030850",
+          "bytes": 95896
+        },
+        "m-us": {
+          "file": "date.part1.f6d5a5b3.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "e08a560d4aa914d01c7a2aa9c2d714fb395bd4b42968c48266903303833b7dc1",
+          "bytes": 98126
+        },
+        "f-gb": {
+          "file": "date.part1.f6d5a5b3.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "3a207489c5becca233d6cd26e51db005125cac02125639dc6442380ddb7b6238",
+          "bytes": 104812
+        }
+      }
+    },
+    {
+      "id": "date.part2",
+      "text": "or the ninth, if that's easier for you.",
+      "note": "second ladder second half",
+      "renders": {
+        "f-us": {
+          "file": "date.part2.947d55f5.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "8b3e0c97916b7ab788d5e5baf2fdd463157d2a71da402c4545b07b674f680fd4",
+          "bytes": 107042
+        },
+        "m-us": {
+          "file": "date.part2.947d55f5.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "3e8d731a629241b5b97f2d55b728f4256b0a2cb6d54349541a930e4dd47b6aa1",
+          "bytes": 109270
+        },
+        "f-gb": {
+          "file": "date.part2.947d55f5.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "ef52a8d4077be8ae62dd1d86adcd307e95c03da40a1fe3c3212d4cc1d8fbb496",
+          "bytes": 107042
+        }
+      }
+    },
+    {
+      "id": "identify.alt",
+      "text": "It's James Carter. Two oh two, triple five, oh one eight eight.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "identify.alt.ae0f8ce2.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "d7650ff7509c4d7d2aa46e6571be3916d83c898d9084b6ba52fda783fafb4333",
+          "bytes": 171686
+        },
+        "m-us": {
+          "file": "identify.alt.ae0f8ce2.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "63210e92483c2581374f5d27130da9eef2a8721a19e6377843260d2b839fe6ee",
+          "bytes": 200664
+        },
+        "f-gb": {
+          "file": "identify.alt.ae0f8ce2.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "ffe4dcb4e98cff28b30b2e6cd68284dd4f820efd43d7f102fc4297c20ffdd4d8",
+          "bytes": 222956
+        }
+      }
+    },
+    {
+      "id": "identify.fail",
+      "text": "Sam Reyes. My number is five zero zero, five five five, zero nine one one.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "identify.fail.27e09d2f.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "3179afe0d0633d07ee1ee1757d3a8cfc9c86a7f0c2f8cb4ddd836da1ad0df699",
+          "bytes": 249704
+        },
+        "m-us": {
+          "file": "identify.fail.27e09d2f.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "3f1d2bb6c054fe3a5df4ce3c656af5c3a58e56e37f12e202d995b8cf81420c52",
+          "bytes": 249704
+        },
+        "f-gb": {
+          "file": "identify.fail.27e09d2f.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "80bc8fe83e00dd38db605a72791ca5eade55d182022a3faee2cd62fa21040ceb",
+          "bytes": 312120
+        }
+      }
+    },
+    {
+      "id": "identify.maria",
+      "text": "This is Maria Gomez. My number is four one five, five five five, zero one two three.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "identify.maria.7902e736.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "160f348060ff5290c8b6afc490da707379b2f3aeae6cdcf4fdcae084af53125b",
+          "bytes": 234102
+        },
+        "m-us": {
+          "file": "identify.maria.7902e736.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "ab1afaba8d110d155c4ec4aed6d02cc2135994f3a79ab24511e122fb7dcdae07",
+          "bytes": 243018
+        },
+        "f-gb": {
+          "file": "identify.maria.7902e736.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "d2a3d7f52f7985bccdbfad083177d67b6471ae260f17f3685d6f4f5c8479ee8b",
+          "bytes": 269766
+        }
+      }
+    },
+    {
+      "id": "identify.robert",
+      "text": "Robert Lane, and my phone number is three one zero, five five five, zero one four seven.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "identify.robert.a91ae52a.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "a4409fdfb9ac8c66221be4afd63a399bb5f77048d1086ab2b82239b79810c4b5",
+          "bytes": 251934
+        },
+        "m-us": {
+          "file": "identify.robert.a91ae52a.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "b736f970e847883699cd3921fcdeb2dae0ab08b493147ffb87f007c07b864bd2",
+          "bytes": 251934
+        },
+        "f-gb": {
+          "file": "identify.robert.a91ae52a.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "7d9ff44a632bc6d602c34a2306df005eac7e61db1b3ca633db30be92392ef6ec",
+          "bytes": 260850
+        }
+      }
+    },
+    {
+      "id": "identify.unknown",
+      "text": "This is Dana Brooks, my number is nine nine nine, five five five, zero zero zero zero.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "identify.unknown.38ea2852.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "99b87e2c4672c2356f0f4ac881765f77dfb5e500c27a12237242d904dc8e434a",
+          "bytes": 238560
+        },
+        "m-us": {
+          "file": "identify.unknown.38ea2852.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "d51454969e0d0d58e064f16a58fcda55d776f8b67be628a7d4b6f99894984935",
+          "bytes": 247476
+        },
+        "f-gb": {
+          "file": "identify.unknown.38ea2852.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "f89266ccfdce8376686495b564769af44105a1e165d9c5f80312d3cce35522db",
+          "bytes": 294288
+        }
+      }
+    },
+    {
+      "id": "identify.wei",
+      "text": "Wei Chen. The number is six one seven, five five five, nine two one zero.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "identify.wei.87397e92.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "fd1cd5c9818c891141e392e79464cd8a452ccdd323fca12f71d8e00ba1bf76b1",
+          "bytes": 231872
+        },
+        "m-us": {
+          "file": "identify.wei.87397e92.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "9cbd49bb45e9844d713426af78a2d103a109b70cfe731db067f380c998472c98",
+          "bytes": 229642
+        },
+        "f-gb": {
+          "file": "identify.wei.87397e92.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "01ac1c014d53dada57747c557da53f527247198f06c42e15af02c21b61927730",
+          "bytes": 249704
+        }
+      }
+    },
+    {
+      "id": "mc.age.on",
+      "text": "I'm sixty-eight, I've been on Medicare for a few years.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "mc.age.on.5c231e39.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "f6a26719f82576edc1471b220c02d3d4825970072fc6fa181f7a49cbbbf9c9ab",
+          "bytes": 144936
+        },
+        "m-us": {
+          "file": "mc.age.on.5c231e39.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "b44275a26565209e6bca4d48bc17c03c69aa3e8fcd84ba2e36ca10d7a12e1612",
+          "bytes": 153852
+        },
+        "f-gb": {
+          "file": "mc.age.on.5c231e39.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "012625ed4fa5b9d93aadb723f11f56c99e02ce93bbcadee6b4b4ec64cb714446",
+          "bytes": 153852
+        }
+      }
+    },
+    {
+      "id": "mc.claim.type",
+      "text": "It's a claim that was denied.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "mc.claim.type.ee6bcd55.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "6de51964449ed8fed301464425c800bf6fcf1955e086749b25917bf1a6bc0e8e",
+          "bytes": 80292
+        },
+        "m-us": {
+          "file": "mc.claim.type.ee6bcd55.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "f97f07f26afd445027440acc2bf614d919d410aac4b5d28d8ebbebdc5556805e",
+          "bytes": 84750
+        },
+        "f-gb": {
+          "file": "mc.claim.type.ee6bcd55.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "490299b480f8531daba507ed5c78b34ff5fcda32b0c57af9b62c3517e2a0bb6f",
+          "bytes": 98126
+        }
+      }
+    },
+    {
+      "id": "mc.consent.no",
+      "text": "No, I don't want to be contacted, and don't share my information.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "mc.consent.no.e8551d61.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "587eea045ecdf7970ab89fe4d3c16539fc7ae310835c7d33b1d04168f6d249f5",
+          "bytes": 160540
+        },
+        "m-us": {
+          "file": "mc.consent.no.e8551d61.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "591cedac0ce425ecdf5507229dc15f710bd91cf37edd1ba1a63673a63686472d",
+          "bytes": 164998
+        },
+        "f-gb": {
+          "file": "mc.consent.no.e8551d61.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "b0a32104738b9f3be6bd0c9fd1ba0f54dd78bed96bb22854389e94daa84ad733",
+          "bytes": 185060
+        }
+      }
+    },
+    {
+      "id": "mc.consent.yes",
+      "text": "Yes, that's fine. You can contact me and share my details with the agent.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "mc.consent.yes.e2327005.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "30678c10724396db2be2ae0e8187a57a239cdb2b8ea3cb9ec4a627ad125e4614",
+          "bytes": 211810
+        },
+        "m-us": {
+          "file": "mc.consent.yes.e2327005.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "68120c9b4437da7cd16d11db670988b5c78c2c0fe864bd7f98c7d350e54fb037",
+          "bytes": 202894
+        },
+        "f-gb": {
+          "file": "mc.consent.yes.e2327005.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "4addaa880ae7260c2f2862b69abba33ca0ea7ec9cc4a8531441eec315df6b066",
+          "bytes": 218498
+        }
+      }
+    },
+    {
+      "id": "mc.coverage.original",
+      "text": "I have Original Medicare right now.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "mc.coverage.original.6c10948c.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "c1ac7213b6b1f311462c03fadc59c04b624dc1a43a35a636c16f9280dccd646f",
+          "bytes": 93666
+        },
+        "m-us": {
+          "file": "mc.coverage.original.6c10948c.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "1abf5bf0d5421b01ee24fb49add6ac97b77f11351dfa83290a33824fb1ed3259",
+          "bytes": 93666
+        },
+        "f-gb": {
+          "file": "mc.coverage.original.6c10948c.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "27b2449ca0b25494bded09e4266097adb1fe065e40895173022684d638226dde",
+          "bytes": 100354
+        }
+      }
+    },
+    {
+      "id": "mc.intent.new",
+      "text": "I'm shopping for a new plan.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "mc.intent.new.feb67c84.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "d91b18e86f6e54f519e9a8fe8c68d8458fe967ac1dfa4c0f3de74ba3ef7d6483",
+          "bytes": 71376
+        },
+        "m-us": {
+          "file": "mc.intent.new.feb67c84.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "b4d7fb1cc95cb47c1b1ab369c68ba7c50bec8c8265d2b68a3b3f5380d648d471",
+          "bytes": 82522
+        },
+        "f-gb": {
+          "file": "mc.intent.new.feb67c84.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "133c6233e34c78d3625ad05baef7a7470173dda79fde27d597fc6dfbc7fff4e9",
+          "bytes": 91438
+        }
+      }
+    },
+    {
+      "id": "mc.interest.ma",
+      "text": "I'm interested in a Medicare Advantage plan.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "mc.interest.ma.260c221b.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "e55fae50b625f1932afa6f12518bf12eeed331a0bccb02ad18c83422fadd74eb",
+          "bytes": 98126
+        },
+        "m-us": {
+          "file": "mc.interest.ma.260c221b.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "d62eee19ccadd5e0f59d1b0d4415d7b264f3936f219e1ea91d9f4994155068a5",
+          "bytes": 129332
+        },
+        "f-gb": {
+          "file": "mc.interest.ma.260c221b.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "a8fbfe75d26267cb6e3514f57c868633850d78aa5eb8980748385d4c4602b814",
+          "bytes": 131562
+        }
+      }
+    },
+    {
+      "id": "mc.location.ca",
+      "text": "I'm in California, ZIP code nine four one zero five.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "mc.location.ca.718cd582.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "59a4da8511da8bfc462a5b9953370274d4087dafc6f5924caf1160845d3468b5",
+          "bytes": 158312
+        },
+        "m-us": {
+          "file": "mc.location.ca.718cd582.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "196c096860a2312c131fa83ea0a12b59dfef7f050ac9a8efb7c154850cd6d36b",
+          "bytes": 180602
+        },
+        "f-gb": {
+          "file": "mc.location.ca.718cd582.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "47122f424090bdc1049d1e7c6475430652f700ce52113c6402b937cde8d41792",
+          "bytes": 191748
+        }
+      }
+    },
+    {
+      "id": "mc.name.charles",
+      "text": "My name is Charles Brown.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "mc.name.charles.1a71e73d.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "3a17ecdaa332eff73eeedfc32633885f2ac39af0de09e1f9d61cd5fd094c6dd7",
+          "bytes": 73604
+        },
+        "m-us": {
+          "file": "mc.name.charles.1a71e73d.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "99fe0a5a68dde54150fa765b6076c81c195175c1d1f3511f3a593b3dc0c37c0b",
+          "bytes": 80292
+        },
+        "f-gb": {
+          "file": "mc.name.charles.1a71e73d.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "c24d721f4c4cf9d4d0ba4a696ad74ffe9fe91d03f5d167eb4234acbce3893507",
+          "bytes": 86980
+        }
+      }
+    },
+    {
+      "id": "mc.name.phone.maria",
+      "text": "My name is Maria Gomez, and my callback number is four one five, five five five, zero one nine nine.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "mc.name.phone.maria.ecf454bd.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "5cc588a0df8d7b1ba526c2e762aaa376c9a23bc8cfdb00669c764a0f8b190c83",
+          "bytes": 263080
+        },
+        "m-us": {
+          "file": "mc.name.phone.maria.ecf454bd.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "a3d43412929ceb2fa84104223594f19bad77c92216a452985694222826753f52",
+          "bytes": 283142
+        },
+        "f-gb": {
+          "file": "mc.name.phone.maria.ecf454bd.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "3172edbd1ebf4ab1c9994dba6e4960dca2355f0064c2ea4bcc44c99a833b75c0",
+          "bytes": 303204
+        }
+      }
+    },
+    {
+      "id": "mc.open.claim",
+      "text": "Hi, I'm calling about a claim on my plan that was denied.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "mc.open.claim.41d5dd33.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "7b2bb816770ed9ec112bd9412fa3e63e873bf9d4f5c475405536e636bc405421",
+          "bytes": 138250
+        },
+        "m-us": {
+          "file": "mc.open.claim.41d5dd33.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "2d94044a7a0f1a88d6724dcf34f34c1f5488d3c377cb360a9638ac4a546e073e",
+          "bytes": 153852
+        },
+        "f-gb": {
+          "file": "mc.open.claim.41d5dd33.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "e121bda24becf7dcab7a264de9a84cb6f8688237f6504133652df7b5b2452224",
+          "bytes": 151624
+        }
+      }
+    },
+    {
+      "id": "mc.open.review",
+      "text": "Hello, I'd like someone to review the Medicare plan I'm on.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "mc.open.review.f5730033.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "ec9354237263f7aca9a5feb66bab42a6ed0a307cbdf08592ace3068d98a723ce",
+          "bytes": 153852
+        },
+        "m-us": {
+          "file": "mc.open.review.f5730033.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "c4f2a87ffd441aadae5e5a240824f80ed61293be5c27d5dd5ce3dcce588da0b8",
+          "bytes": 156082
+        },
+        "f-gb": {
+          "file": "mc.open.review.f5730033.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "8356722c36add1bbf1994b88dfa481ba029b8ab2190b44d86efcf49e45646b80",
+          "bytes": 182832
+        }
+      }
+    },
+    {
+      "id": "mc.open.shop",
+      "text": "Hi, I'd like to look at the Medicare Advantage plans available in my area.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "mc.open.shop.92c05f51.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "f4e9813a59817a4259ff0b1c34c74b3f0fcf90c8df4d481b9e8dcdaf6ede7717",
+          "bytes": 202894
+        },
+        "m-us": {
+          "file": "mc.open.shop.92c05f51.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "977a522642a39d85b045d7aa3c50deae685fff176e513d4c3f5098c44c5e351a",
+          "bytes": 193978
+        },
+        "f-gb": {
+          "file": "mc.open.shop.92c05f51.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "0ae6066f3fa8472c9d9f040d313b7151103df85f615021a72a6be8e19d366767",
+          "bytes": 222956
+        }
+      }
+    },
+    {
+      "id": "mc.parts.yes",
+      "text": "Yes, I have both Part A and Part B.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "mc.parts.yes.15cea689.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "e7234419636704129335c819c8855f60e0517f00091cc5d91e0ba3d76a363180",
+          "bytes": 91438
+        },
+        "m-us": {
+          "file": "mc.parts.yes.15cea689.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "c0204738119466cba1497aa24ad40477f3a9e4744b304f0396fe1e87a0ecac04",
+          "bytes": 113728
+        },
+        "f-gb": {
+          "file": "mc.parts.yes.15cea689.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "01db896b959af4c7ab50d8998a68c23c6cbe016ddc41f5293f1ce92c31df69d8",
+          "bytes": 127104
+        }
+      }
+    },
+    {
+      "id": "mc.self",
+      "text": "I'm calling for myself.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "mc.self.8e8d50e6.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "6b811409faf5b2e039aad2df752cac19d9e0f2555791a7b439b53241ce103a05",
+          "bytes": 58002
+        },
+        "m-us": {
+          "file": "mc.self.8e8d50e6.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "14d64c58891377ddc1fb2cb5ac76330b695f10356a2fac3fef297e3ad71bdf72",
+          "bytes": 71376
+        },
+        "f-gb": {
+          "file": "mc.self.8e8d50e6.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "7dceb69a7cfa02d0a05e56ad0b792680c8db22453a3fd7df9db1061684905f1a",
+          "bytes": 58002
+        }
+      }
+    },
+    {
       "id": "open.book",
       "text": "Hi, I'd like to book an appointment with Doctor Lee, please.",
       "note": "",
@@ -102,6 +746,174 @@
           "provenance": "tts:elevenlabs/f-gb",
           "tts_model": "eleven_turbo_v2_5",
           "sha256": "cb16444d117efb16737e7c29a46cda690f6f6cb0d40abbd4d91123aa89ef30bb",
+          "bytes": 156082
+        }
+      }
+    },
+    {
+      "id": "open.book.patel",
+      "text": "Hello, I'd like to book an appointment with Doctor Patel.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "open.book.patel.d145b307.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "deabac84c8bc173019a687103f66de8e6ab002540e361d95a4309612855be58d",
+          "bytes": 138250
+        },
+        "m-us": {
+          "file": "open.book.patel.d145b307.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "a0e79350bf6d24a69a3cbf426f4391981889cd210f4901bcf5a20cff7f0e2f6d",
+          "bytes": 158312
+        },
+        "f-gb": {
+          "file": "open.book.patel.d145b307.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "009e609d223d980c2c3f3576642c09215ad4af3c7bf5370e0276e3f7649c7c08",
+          "bytes": 158312
+        }
+      }
+    },
+    {
+      "id": "open.cancel",
+      "text": "Hi there. I need to cancel one of my appointments.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "open.cancel.6ccf60c9.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "d718a025ea70ff374f56f45da4b8f7d06546bf0d9a0ba382c355b4c17a6a1865",
+          "bytes": 118188
+        },
+        "m-us": {
+          "file": "open.cancel.6ccf60c9.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "578147e782aeddd6617b160deacf20e9bc3b9d35b4ee7077dd1bd6ab60f59929",
+          "bytes": 140478
+        },
+        "f-gb": {
+          "file": "open.cancel.6ccf60c9.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "3b7d69282b12f7009f8ed44d6e27822b885613969390676b1c82bb0d64ef7607",
+          "bytes": 153852
+        }
+      }
+    },
+    {
+      "id": "open.confirm",
+      "text": "Hi, I just want to check when my next appointment is.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "open.confirm.b4679514.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "e0edf41097ff83699b49923de0f3bd3fa223438e6aa072229f882aa60d7683ba",
+          "bytes": 136020
+        },
+        "m-us": {
+          "file": "open.confirm.b4679514.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "c3077e17e839f6c08ed97261cdb0d1534c6a28c3d683fa2c1d6fa0963169fe3e",
+          "bytes": 142708
+        },
+        "f-gb": {
+          "file": "open.confirm.b4679514.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "ce413ba83760bddeefaf212f28dcae9a40cdff662345df41665bc8b34af53c74",
+          "bytes": 136020
+        }
+      }
+    },
+    {
+      "id": "open.digits",
+      "text": "My account number is seven four two, nine one six, three three eight, zero five.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "open.digits.e5e49a0b.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "e8ed6242f1a6b6067285d358386966a682231f1a0f290b608b99f1ff1a2ba300",
+          "bytes": 220726
+        },
+        "m-us": {
+          "file": "open.digits.e5e49a0b.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "ebe4ebeb23a4b500b47be32fb791cb45634b6950f18b1d835f6295875561d68b",
+          "bytes": 229642
+        },
+        "f-gb": {
+          "file": "open.digits.e5e49a0b.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "adc6f0ba245666d456ba9a1c640bcc28214192316220e3c60c39ed6048dc7968",
+          "bytes": 274226
+        }
+      }
+    },
+    {
+      "id": "open.emergency",
+      "text": "I'm having chest pain right now and I can't catch my breath.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "open.emergency.90572cba.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "61be069e7da5e0985e8b02f5fddb637e3eefc71514ff78df6d8825b9610dd2a0",
+          "bytes": 133790
+        },
+        "m-us": {
+          "file": "open.emergency.90572cba.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "91c717527d6026948e3c9a1e6f7731d4571e9e10f3e5117b5e472de253b05149",
+          "bytes": 160540
+        },
+        "f-gb": {
+          "file": "open.emergency.90572cba.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "abfd61df3f81126aea07571e580748430b3bfde62b1758d5ff0e573dd6b313f7",
+          "bytes": 136020
+        }
+      }
+    },
+    {
+      "id": "open.question",
+      "text": "Hi, what should I bring with me to my first appointment?",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "open.question.78b310e8.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "d2b63ce5e318b14fc62377a4a09f1e04e8947e9d14c12184ef3a7602edab119c",
+          "bytes": 129332
+        },
+        "m-us": {
+          "file": "open.question.78b310e8.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "261a1f77639b89daa2ad7070ae1ecb84500f33258a4436cd03c40055be60ccf9",
+          "bytes": 149394
+        },
+        "f-gb": {
+          "file": "open.question.78b310e8.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "0694b39fa16cee36b3b52a0914896f9d8b4b5a45033534ab8e23be97c6bd3ff2",
           "bytes": 156082
         }
       }
@@ -219,6 +1031,34 @@
       }
     },
     {
+      "id": "task.choose",
+      "text": "The nine o'clock, please.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "task.choose.3cf4990f.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "060bab2c4bf3263caa1f437ef29f78211364cd6cf8c39df1752cee2a8cda5d18",
+          "bytes": 64688
+        },
+        "m-us": {
+          "file": "task.choose.3cf4990f.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "f16815573e249217cfc12f81d5c1bff5546027ac1b4e70e10d318b70f9571798",
+          "bytes": 69146
+        },
+        "f-gb": {
+          "file": "task.choose.3cf4990f.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "b1d60e65cab45932bb80c2aa3c12268f39df9a7e649ddb5e447272bdd97f193e",
+          "bytes": 71376
+        }
+      }
+    },
+    {
       "id": "task.confirm",
       "text": "Yes, that works. Please go ahead and book it.",
       "note": "",
@@ -275,6 +1115,230 @@
       }
     },
     {
+      "id": "task.date.anytime",
+      "text": "July the eighth, any time that day is fine.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "task.date.anytime.a7e009f3.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "e75ef5413ae507b9dedaa388ddb58f37a5d761cbd53a74df118926bfe331493e",
+          "bytes": 118188
+        },
+        "m-us": {
+          "file": "task.date.anytime.a7e009f3.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "c11c8bab07f6227608c3d01107562500657bf3a246b50295b65d7a5244897948",
+          "bytes": 120416
+        },
+        "f-gb": {
+          "file": "task.date.anytime.a7e009f3.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "66c87727df9dd977a17ee21c24caaa08bd27b25ad7f7e54887f72d1971d9eee1",
+          "bytes": 153852
+        }
+      }
+    },
+    {
+      "id": "task.date.correct",
+      "text": "July the ninth. Sorry, no, I mean the eighth. July the eighth.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "task.date.correct.034bab56.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "a15143463a542145df5edc80bcb44eb790ab4bdd273cb8821dea118f8ea72e4e",
+          "bytes": 162770
+        },
+        "m-us": {
+          "file": "task.date.correct.034bab56.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "2ce3c44abaaaec5b03fd0cec4927de64427675dae5d3ae41a286e2342e2c1c70",
+          "bytes": 173916
+        },
+        "f-gb": {
+          "file": "task.date.correct.034bab56.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "e76e8fbc7120ef6a860001792359f222d50f0cef29f9dae3c2172ece06e4b2b2",
+          "bytes": 236330
+        }
+      }
+    },
+    {
+      "id": "task.date.july10",
+      "text": "July the tenth, please. Any time.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "task.date.july10.f2b429f3.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "2f0794490d5e87b795c67312b0ccbd467bb9f86211ae1f75aee83d0b3e6a8282",
+          "bytes": 84750
+        },
+        "m-us": {
+          "file": "task.date.july10.f2b429f3.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "ef9898c1414c840a3e3185d8c7186dc9e235145db285eddad8e097c72a7dac11",
+          "bytes": 109270
+        },
+        "f-gb": {
+          "file": "task.date.july10.f2b429f3.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "97574bae3d39a43bb6cac873b07166df66aa003fb83ba02295f1bca9d7e19828",
+          "bytes": 111500
+        }
+      }
+    },
+    {
+      "id": "task.date.july9",
+      "text": "How about July the ninth, in the morning if possible?",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "task.date.july9.b604b3cd.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "debeff183ab2dead801bd23aa7ad557b5fe1adddc35b9285a153a4df4d1603cd",
+          "bytes": 140478
+        },
+        "m-us": {
+          "file": "task.date.july9.b604b3cd.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "2d481737bdd3e7350df07db07eabde988f7dbd4f4d35b8c8d48843b52ba9b43a",
+          "bytes": 153852
+        },
+        "f-gb": {
+          "file": "task.date.july9.b604b3cd.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "7aad2d6b88f2fd5061d7bddae8a44a6df766475846c825119fbe117168755401",
+          "bytes": 138250
+        }
+      }
+    },
+    {
+      "id": "task.date.range",
+      "text": "Sometime the week of July sixth, whatever you have.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "task.date.range.e33b3baf.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "ddf9c04b9f4e94a67463a516fa564c48df04fe90dd3498ab43633acda2faf0f6",
+          "bytes": 131562
+        },
+        "m-us": {
+          "file": "task.date.range.e33b3baf.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "1d474fafb0d5fa25cfe4c13c627727cee7e3113fded8a7d2d792a5c655d8d60a",
+          "bytes": 229642
+        },
+        "f-gb": {
+          "file": "task.date.range.e33b3baf.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "f96e38938771f259f1cf63b5ddb99c64bcb3bf0b0c513c1acd606d36282fa582",
+          "bytes": 160540
+        }
+      }
+    },
+    {
+      "id": "task.distraction",
+      "text": "Before that, should I stop taking my blood pressure medication before the visit?",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "task.distraction.deb4248d.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "78ceeb7a6dc514be8b3d0a823cbcc524a81fc147a75fe0230cc41da67fb80bef",
+          "bytes": 207352
+        },
+        "m-us": {
+          "file": "task.distraction.deb4248d.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "76cfcc8dafd928b0c9cd498dd5a840ea7947a30f681018091f055ae8430cd172",
+          "bytes": 205122
+        },
+        "f-gb": {
+          "file": "task.distraction.deb4248d.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "6508cc4748d2bfdcd822154116935ecbcceb2711c85f74bbf86c6494533c7711",
+          "bytes": 231872
+        }
+      }
+    },
+    {
+      "id": "task.dob",
+      "text": "My date of birth is March second, nineteen ninety.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "task.dob.109a19eb.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "9b583c9505cb2be281b50b78431b1e4972933b829018ca131f503c7df14b2852",
+          "bytes": 136020
+        },
+        "m-us": {
+          "file": "task.dob.109a19eb.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "1879d164b43447e60fcfbb24d158e58eeb59561cdff25d7c8e08bdd4d2054b5d",
+          "bytes": 147166
+        },
+        "f-gb": {
+          "file": "task.dob.109a19eb.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "4c3158ca7df813b361002a1918c71d82fb40c619c566239f7d515838a7e34ba6",
+          "bytes": 164998
+        }
+      }
+    },
+    {
+      "id": "task.done",
+      "text": "No, that's everything. Thank you.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "task.done.1388b57f.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "d636c150dd414dc967fcd759978b6415b9d397b510a01d934ffdf89b1efdf2a0",
+          "bytes": 71376
+        },
+        "m-us": {
+          "file": "task.done.1388b57f.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "f3b548b8a6bb3a845575dffe07c8bea46f816068e9c17749e44c1b1d347fdcc0",
+          "bytes": 100354
+        },
+        "f-gb": {
+          "file": "task.done.1388b57f.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "76aeb05d778d742b3f7b0395acfa662ca3869ab781990d6d80a1269df7d585b7",
+          "bytes": 111500
+        }
+      }
+    },
+    {
       "id": "task.identify",
       "text": "This is James Carter, my number is two zero two, five five five, zero one eight eight.",
       "note": "",
@@ -327,6 +1391,90 @@
           "tts_model": "eleven_turbo_v2_5",
           "sha256": "5722acd04c6a2216667917f23fc1481b1f25f48076344c8780af0c4352d9a45f",
           "bytes": 93666
+        }
+      }
+    },
+    {
+      "id": "task.which",
+      "text": "The one on July sixth with Doctor Patel.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "task.which.61ddf380.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "01bd23c44830de16da2cee5f5dc618838b5627f0900ec8809d5f2dd18520d971",
+          "bytes": 107042
+        },
+        "m-us": {
+          "file": "task.which.61ddf380.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "312337888f44d9afb2c9e7252dfc8de7218357f4325d51fa267000151cb73b62",
+          "bytes": 129332
+        },
+        "f-gb": {
+          "file": "task.which.61ddf380.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "6de468ab32e880981e99ff0c2a71fd74ae83d670b7aef8777636486c1ede43af",
+          "bytes": 127104
+        }
+      }
+    },
+    {
+      "id": "task.which.consult",
+      "text": "The consultation on July seventh.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "task.which.consult.39311bd8.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "626e6a622e6827883c34cb84915bd04af32d8881fe1930b8016ab1bbae9b0d40",
+          "bytes": 100354
+        },
+        "m-us": {
+          "file": "task.which.consult.39311bd8.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "1d8ca20d290e97111be3ba95300e603140ab4743dffb08b94d79a22c1ea0347e",
+          "bytes": 107042
+        },
+        "f-gb": {
+          "file": "task.which.consult.39311bd8.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "af3539500580bdb2fa2702c5a2c4a74c87cd1ddfea4ff134b44b331890bbdf89",
+          "bytes": 120416
+        }
+      }
+    },
+    {
+      "id": "task.yes",
+      "text": "Yes, that's right.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "task.yes.b843a315.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "6f2b121d20a888a758e55081ebd3cc6750861d70d6be615dd8266d4c9a8f21e2",
+          "bytes": 53542
+        },
+        "m-us": {
+          "file": "task.yes.b843a315.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "297131a63be7f9f6ec1809f8858c18d84dd0c6d2ef6c3c5425021357f8d82277",
+          "bytes": 55772
+        },
+        "f-gb": {
+          "file": "task.yes.b843a315.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "d6bdb0355da32d4017c9dacf1d6f4669302923875f20ee98b96c19692603dd06",
+          "bytes": 60230
         }
       }
     },

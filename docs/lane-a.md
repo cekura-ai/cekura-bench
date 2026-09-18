@@ -28,10 +28,21 @@ manual-commit configuration below, which has no meaning without it.
 | Probe | Question | Output |
 |---|---|---|
 | `response_latency` | Authored speech-end to first audible agent sample | ms, per configuration |
-| `endpointing_ladder` | Does a mid-utterance pause of *n* ms get cut off? | a curve, one rung per run |
-| `barge_in` | Does the agent yield the floor when spoken over, and how fast? | pass/fail + ms |
+| `endpointing_ladder` | Does a mid-utterance pause of *n* ms get cut off? | a curve, one rung per run, two ladders |
+| `filled_pause` | Does "um, let me think" inside the pause buy the caller time? | pass/fail per gap |
+| `barge_in` | Does the agent yield the floor when spoken over, and how fast? | pass/fail + ms, at several offsets |
+| `simultaneous_start` | Both start talking at once — who yields? | pass/fail + ms |
+| `barge_in_correction` | The caller interrupts to correct themselves | pass/fail + ms |
 | `backchannel_tolerance` | Does "mm hmm" mid-reply derail the agent? | pass/fail |
 | `false_trigger` | Noise on the line, caller silent — does it speak anyway? | rate per minute |
+| `caller_transcription` | How accurately did it hear us? Digits scored apart from words | WER + digit match |
+| `task` | Twenty closed-loop scenarios against the published tool contracts | tool-trace pass/fail |
+
+Every probe also runs under seven published **degradation transforms** of the
+caller audio (pink noise at two SNRs, a narrowband mu-law phone leg, a far-field
+room, clipping, dropouts), reported as the **delta from clean** and never as an
+absolute. The transforms are seeded and regenerable from the clean master
+(`lane_a/transforms.py`), so the degraded audio can be reproduced by anyone.
 
 ### The two turn-detection configurations
 
@@ -59,29 +70,14 @@ An early run of the latency suite, three repeats on one voice, shows the shape:
 Three repeats is a shakedown, not a result. Publication needs the repeat count,
 confidence intervals and void rules described below.
 
-### What the other probes found on the same shakedown
+### Exclusions are cells
 
-The endpointing ladder is the clearest argument for publishing a curve rather
-than a number. Under native VAD configured with 500 ms of silence, the agent did
-not interrupt a mid-utterance pause of 400, 600, 800, 1000 or 1500 ms, and did
-interrupt at 2000 ms, on both repeats. **The configured silence duration is not
-the observed patience threshold**, and a single latency figure would never have
-shown that.
-
-Backchannel tolerance splits into two behaviours that a pass/fail alone would
-merge. The agent does *not* stop mid-reply when the caller says "mm hmm" — but it
-then answers the backchannel as though it were a turn, about 1.2 seconds later,
-on all three repeats. The provider took roughly 300 ms to register the
-backchannel as speech at all.
-
-Barge-in: the floor was yielded every time, 330–690 ms after the caller's first
-authored speech sample. False triggers: none in a 20 second window of pink noise
-at −30 dBFS with the caller silent.
-
-The booking task passed three of three in voice and three of three in text, with
-identical tool traces. That is the control arm behaving as designed: on this
-scenario the speech pathway costs nothing in task terms, so a future failure in
-voice but not text is attributable rather than ambiguous.
+A configuration a provider has no equivalent for — semantic turn detection on a
+provider that offers none, a numeric VAD threshold where only sensitivity
+levels exist — is declared by the adapter up front and recorded as a **voided
+cell with its reason**, without a connection being opened. The gap is then
+visible in the table as an exclusion, rather than as a row that quietly went
+missing.
 
 ## How the caller works
 
@@ -100,8 +96,39 @@ nothing the agent does should change what the caller says next.
 
 Two clocks are kept apart on purpose:
 
-- **Control** — when to speak next — runs off live event and audio arrival. Coarse.
+- **Control** — when to speak next — runs off live events and the playout model. Coarse.
 - **Measurement** — what gets published — runs offline over the recorded audio.
+
+## The reference client
+
+Providers deliver audio faster than realtime. One ships close to a second of
+speech in its first frame and the rest of a reply within the next second; its
+`turnComplete` arrives seconds later, paced to when playout would finish. So the
+harness models the listener explicitly, and every number that concerns the *end*
+of agent speech is measured on that model rather than on arrival times:
+
+- A chunk starts playing at its arrival, or when the previous chunk drains,
+  whichever is later (`AudioTimeline.playout_*`). Onset still uses arrival,
+  because nothing is queued ahead of a reply's first sample.
+- The client **clears its buffer** when the provider reports that the caller
+  started speaking, or that it interrupted its own reply. That is what these
+  protocols document a client should do on those events, and it is applied
+  identically to every provider. The cut is recorded on the timeline
+  (`cuts` in `timelines.json`) and in the event log (`cleared_playback`).
+
+Barge-in is therefore *caller onset → the listener stops hearing the agent*. A
+provider whose endpointer reacts promptly stops the listener promptly, however
+much reply it had already pushed down the wire; one that never signals is heard
+to the end of whatever it sent, because a client has no other way to know. The
+audio that signal threw away — delivered, paid for, never heard — is published
+as `discarded_ms`, and whether the provider also stopped generating as
+`provider_cancelled`.
+
+Without this model, arrival times would have credited a provider that dumped
+its whole reply in one burst with finishing before anyone heard the end of it,
+and could never have credited it with stopping at all. The caller uses the same
+model to decide when the agent has finished, so it no longer speaks into a reply
+the listener is still hearing.
 
 ## Timing anchors
 
@@ -132,12 +159,25 @@ Gaps smaller than detector error are reported as ties.
 
 ## Statistics and voids
 
-The sampling unit is the scenario-repeat, minimum five. Published: per-run success
-rate **and** observed all-repeats success, both with clustered bootstrap
-confidence intervals. Reliability over repeats is reported as what was observed,
-never as a success rate raised to the power of the repeat count: that transform
-produces a confident-looking number out of a handful of runs while describing
-nothing that actually happened. P50/P90 until a declared minimum n.
+The rules live in one place, `lane_a/report.py`, and run over `cells.jsonl`:
+
+- The sampling unit is the scenario-repeat, minimum five for publication.
+  Success is published two ways: the **per-run rate** over all repeats and the
+  **observed all-repeats rate**, the share of scenarios in which every repeat
+  passed. The second is what was seen, never a rate raised to the power of the
+  repeat count — that transform produces a confident-looking number out of a
+  handful of runs while describing nothing that happened.
+- Confidence intervals are **clustered bootstrap** intervals (2000 draws, fixed
+  seed), resampling scenarios for tasks and repeats for a single probe variant.
+- Latency is **P50 and P90** until n reaches 30; P95 and P99 are withheld below
+  that rather than reported from too few.
+- Gaps inside the detector's resolution (10 ms on clean audio) are **ties**.
+- Strata — configuration, caller voice, transform, modality — are never
+  averaged across. Degradation is a delta from the clean stratum.
+- A **sentinel** cell (response latency, `open.book`, native VAD at 500 ms, one
+  voice, three repeats) leads every campaign whatever its suite. Its spread
+  across campaigns is the run-to-run noise of instrument plus provider, and is
+  published beside the rankings; a gap smaller than it is not a ranking.
 
 Void rules, fixed before running:
 
@@ -209,7 +249,7 @@ underneath the result, which is not the same measurement.
 imports nothing from the runner and opens no socket:
 
 ```bash
-python -m lane_a.recompute data/lane-a/<run>/response_latency-open.book/manual/f-us/r1
+python -m lane_a.recompute data/lane-a/<run>/response_latency-open.book/manual/f-us/clean/r1
 ```
 
 Across the live cells checked so far it reproduces the published figure exactly.
@@ -242,6 +282,26 @@ moves a ranking, that is the finding.
 Results are **stratified by voice**, never averaged over it. Voice-sensitive
 endpointing is itself a finding and a single-voice corpus hides it completely.
 
+Corpus v1 is 54 clips in three voices. Task scenarios are **data**
+(`lane_a/scenarios.py`): an opening clip, an ordered routing table of literal
+patterns that picks the caller's next line from the agent's last sentence, the
+tool trace that counts as success, tools that must not be called, and what
+ends the conversation. Twenty scenarios cover the appointments contract
+(booking with a named provider, a full day, a date range, a mid-sentence
+correction, a new patient, a failed lookup, cancellations including one that
+fails, reschedules that must book before they cancel, a lookup, an emergency
+that must call no tool) and the intake contract (a qualified handoff, a refused
+consent, a member-services redirect). The routing table is published with the
+scenario, because a caller that improvises is a second model in the
+measurement.
+
+A **hidden holdout** is authored beside the public set in the same schema —
+every clip id re-phrased, the scenarios with `.h` ids, ladder gaps and barge-in
+offsets shifted — and runs through the identical probes with `--holdout <dir>`.
+Anything published becomes training data; the holdout is what a ranking is
+checked against that it cannot have been fitted to. Runs on it carry their own
+corpus version and label so the two are never mixed in a report.
+
 ## Running it
 
 ```bash
@@ -250,11 +310,22 @@ python -m venv .venv && .venv/bin/pip install -r requirements-lane-a.txt
 # render the caller corpus (needs ELEVENLABS_API_KEY)
 .venv/bin/python bin/render-corpus.py
 
-# measure
-.venv/bin/python bin/run-lane-a.py --provider openai-realtime --suite latency --repeats 5
+# measure one suite, stratified by voice
+.venv/bin/python bin/run-lane-a.py --provider openai-realtime --suite latency --repeats 5 \
+    --voice f-us --voice m-us --voice f-gb
+
+# or the whole campaign for one provider, every suite in sequence
+LANE_A_ENV=.env bin/run-campaign.sh gemini-live
+
+# aggregate, and compare runs across providers (ties declared inside detector resolution)
+.venv/bin/python -m lane_a.report data/lane-a/<run-a> data/lane-a/<run-b> --out comparison.md
 ```
 
-Suites: `smoke`, `latency`, `endpointing`, `interaction`, `noise`.
+Suites: `smoke`, `latency`, `endpointing`, `interaction`, `noise`,
+`transcription`, `robustness`, `task`, `task-text`, `task-medicare`,
+`task-medicare-text`. `--transform <name>` runs any suite under a degradation;
+`--scenario <id>` narrows a task suite; `--holdout <dir>` swaps in the hidden set.
+Every run writes `report.md` and `report.json` beside its cells.
 
 The harness is tested against a **scripted agent** with known reply timing before
 any provider is involved (`tests/test_caller.py`). That ordering matters: if the
@@ -299,9 +370,9 @@ than a number in a terminal.
 | Provider | Status |
 |---|---|
 | `fake` | a scripted agent with known reply timing — runs the whole harness with no API key |
-| OpenAI Realtime (`gpt-realtime-*`) | implemented |
-| Gemini Live | credential verified, adapter pending |
-| xAI Grok | credential verified, adapter pending |
+| OpenAI Realtime (`gpt-realtime-*`) | implemented; text arm is text in, text out |
+| Gemini Live (`gemini-*-live*`, `*-native-audio-*`) | implemented over the raw websocket; 16 kHz in, 24 kHz out; no turn-detection events; reasons before replying by default (thought tokens recorded); the native-audio models refuse text output, so the text arm is text in, audio out |
+| xAI Grok (`grok-voice-*`) | implemented; OpenAI-shaped protocol; reports no token usage (billed per minute); no text-only output, so the text arm is text in, audio out |
 | OpenAI `gpt-live-1` | separate product at `/v1/live/sessions`, delegated backend model; needs its own adapter and its row must disclose backend cost |
 | Qwen Omni Realtime | needs a DashScope key |
 | Nova Sonic | needs AWS credentials and Bedrock model access |

@@ -6,7 +6,7 @@ four files a cell ships: the agent audio, the caller and agent timelines, and th
 event log. If it disagrees with the published number, the published number is
 wrong.
 
-    python -m lane_a.recompute data/lane-a/<run>/response_latency-open.book/<config>/<voice>/r1
+    python -m lane_a.recompute data/lane-a/<run>/response_latency-open.book/<config>/<voice>/clean/r1
 """
 
 from __future__ import annotations

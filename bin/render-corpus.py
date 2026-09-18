@@ -2,6 +2,7 @@
 """Render the Lane A caller corpus. Idempotent: existing renders are left alone.
 
     python bin/render-corpus.py [--overwrite] [--voice f-us]
+    python bin/render-corpus.py --dir /path/to/holdout     # a corpus.json directory
 
 Needs ELEVENLABS_API_KEY in the environment or a .env beside this repo.
 """
@@ -14,6 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from lane_a import corpus_spec  # noqa: E402
 from lane_a.corpus_v1 import build  # noqa: E402
 
 
@@ -22,6 +24,7 @@ def main() -> int:
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--voice", action="append", help="voice label; repeatable, default all")
     parser.add_argument("--env", help="dotenv file to read ELEVENLABS_API_KEY from")
+    parser.add_argument("--dir", help="render a corpus described by <dir>/corpus.json instead of the public set")
     args = parser.parse_args()
 
     key = os.environ.get("ELEVENLABS_API_KEY")
@@ -33,7 +36,7 @@ def main() -> int:
         print("ELEVENLABS_API_KEY is not set", file=sys.stderr)
         return 2
 
-    corpus = build()
+    corpus = corpus_spec.load_corpus(args.dir) if args.dir else build()
     wanted = args.voice or list(corpus.voices)
     for label in wanted:
         written = corpus.render(key, corpus.voices[label], overwrite=args.overwrite)

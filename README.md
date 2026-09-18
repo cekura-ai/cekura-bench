@@ -19,7 +19,12 @@ against known boundaries, and a server for the mock-tool contract in
 python -m venv .venv && .venv/bin/pip install -r requirements-lane-a.txt
 .venv/bin/python bin/render-corpus.py                      # needs ELEVENLABS_API_KEY
 .venv/bin/python bin/run-lane-a.py --suite latency          # needs OPENAI_API_KEY
+.venv/bin/python bin/run-lane-a.py --provider gemini-live --suite task   # GEMINI_AUTHORIZATION
+.venv/bin/python bin/run-lane-a.py --provider grok-realtime --suite interaction   # XAI_API_KEY
 ```
+
+Three providers are measured today over their own wire protocols: OpenAI
+Realtime, Gemini Live and xAI Grok.
 
 Every run writes the caller audio, the agent audio, the normalized event log and
 every raw provider frame, so a published number can be recomputed from the

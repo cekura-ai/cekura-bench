@@ -162,3 +162,27 @@ class TestTheRecordIsComplete:
         report = audit_run(root)
         assert not report["ok"]
         assert any("agent.wav" in problem for problem in report["problems"])
+
+
+class TestTheRecordStaysARecord:
+    def test_a_probe_carrying_audio_does_not_inline_it(self):
+        """Describing a value must not become storing it.
+
+        A probe may hold a whole clip. Writing its bytes into the record inflated
+        provenance, the plan and every cell by megabytes each -- while telling a
+        reader nothing the checksum does not.
+        """
+        import json
+        from dataclasses import dataclass
+
+        from lane_a.provenance import describe
+
+        @dataclass
+        class Holder:
+            pcm: bytes
+            label: str = "x"
+
+        record = describe(Holder(pcm=b"\x00\x01" * 500_000))
+        assert len(json.dumps(record)) < 500
+        assert record["pcm"]["bytes"] == 1_000_000
+        assert record["pcm"]["sha256"], "the audio must still be identified"

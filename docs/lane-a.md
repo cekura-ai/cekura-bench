@@ -264,6 +264,36 @@ It has already earned its keep — it caught a barge-in metric that counted the
 provider's *next* reply as the tail of the interrupted one, which would have
 reported instant yielding as nearly a second of talking over the caller.
 
+## Grounding the instrument
+
+Everything above is measured with audio we wrote. That is what makes the
+caller-side boundary exact — and it also means a fault in our own audio path
+would be invisible, because the only thing checking it is us. Audio sent at the
+wrong rate, truncated, or badly resampled does not fail a test here: it looks
+like a provider that reasons less well than it does.
+
+So the harness is checked against **Big Bench Audio** (MIT, 1,000 spoken
+reasoning questions adapted from BIG-bench Hard, audio included,
+`ArtificialAnalysis/big_bench_audio` on HuggingFace). Answers are closed-form —
+`valid`/`invalid`, `Yes`/`No`, or a count — so grading is exact match on an
+extracted token rather than a model's judgement. Checking one instrument with
+another instrument is not a check.
+
+```bash
+python bin/validate-harness.py --provider openai-realtime --per-category 10
+```
+
+Two things this is not. It is not one of our rankings: it is a single-turn quiz
+with no interaction in it, and as the most widely circulated audio set in the
+field it is also the most likely to have been trained on. And it is not a test of
+the model — a published score already exists for models we can run, so the point
+is the gap. Land near the published figure and the audio path, the adapter and
+the scoring are sound. Land far below it and the fault is ours, which is much
+cheaper to discover here than in a published ranking.
+
+The run writes ordinary cells, so the validation is itself recomputable rather
+than a number in a terminal.
+
 ## Providers
 
 | Provider | Status |

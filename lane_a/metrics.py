@@ -172,13 +172,31 @@ def false_triggers(adapter: RealtimeAdapter, start_t: float, end_t: float) -> in
     return sum(1 for e in adapter.log.events if e.kind == ev.AGENT_AUDIO_START and start_t < e.t <= end_t)
 
 
+def _flatten_usage(payload: dict[str, Any], prefix: str = "") -> dict[str, int]:
+    """Every count the provider reports, including the nested breakdowns.
+
+    Audio and text tokens are priced differently, and the provider reports the
+    split one level down. Summing only the top level gives a total that cannot be
+    turned into a cost -- and cost per hour is a column this benchmark publishes.
+    """
+    flat: dict[str, int] = {}
+    for key, value in payload.items():
+        name = f"{prefix}{key}"
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, int):
+            flat[name] = value
+        elif isinstance(value, dict):
+            flat.update(_flatten_usage(value, f"{name}."))
+    return flat
+
+
 def usage(adapter: RealtimeAdapter) -> dict[str, Any]:
     """Token counts as the provider reports them. Cost is derived at publication."""
     totals: dict[str, int] = {}
     for event in adapter.log.of_kind(ev.RESPONSE_DONE):
-        for key, value in (event.data.get("usage") or {}).items():
-            if isinstance(value, int):
-                totals[key] = totals.get(key, 0) + value
+        for key, value in _flatten_usage(event.data.get("usage") or {}).items():
+            totals[key] = totals.get(key, 0) + value
     return totals
 
 

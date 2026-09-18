@@ -124,7 +124,30 @@ def file_inventory(directory: Path) -> dict[str, dict[str, Any]]:
     return inventory
 
 
-def describe(obj: Any) -> dict[str, Any]:
+MAX_REPR = 200
+
+
+def _summarize(value: Any, depth: int = 0) -> Any:
+    """A record of a value that stays a record rather than becoming the value.
+
+    Audio is the case that matters: a probe may hold a whole clip, and writing
+    its bytes into the record inflates every artifact by megabytes -- provenance,
+    the plan and each cell -- while describing nothing a reader wanted. Bytes are
+    recorded as a length and a digest, which is what identifies them; nested
+    dataclasses recurse once so a clip still reports its name, rate and checksum.
+    """
+    if isinstance(value, (str, int, float, bool, type(None))):
+        return value
+    if isinstance(value, (bytes, bytearray)):
+        return {"bytes": len(value), "sha256": hashlib.sha256(bytes(value)).hexdigest()[:16]}
+    if is_dataclass(value) and not isinstance(value, type) and depth < 2:
+        return describe(value, depth + 1)
+    if isinstance(value, (list, tuple)) and depth < 2:
+        return [_summarize(item, depth + 1) for item in value[:20]]
+    return repr(value)[:MAX_REPR]
+
+
+def describe(obj: Any, depth: int = 0) -> dict[str, Any]:
     """A probe's own parameters, whatever they are.
 
     Read off the dataclass rather than listed by hand, so a new knob on a probe
@@ -134,11 +157,7 @@ def describe(obj: Any) -> dict[str, Any]:
     """
     if not is_dataclass(obj):
         return {}
-    out: dict[str, Any] = {}
-    for spec in fields(obj):
-        value = getattr(obj, spec.name, None)
-        out[spec.name] = value if isinstance(value, (str, int, float, bool, type(None))) else repr(value)
-    return out
+    return {spec.name: _summarize(getattr(obj, spec.name, None), depth) for spec in fields(obj)}
 
 
 def text_digest(text: str, length: int = 16) -> str:

@@ -34,7 +34,7 @@ from lane_a.recompute import recompute_latency
 # passes ships no agent audio because silence was the correct outcome -- so the
 # check is that the files and the record agree, which is the failure that would
 # actually mislead a reader.
-ALWAYS = ("events.jsonl", "timelines.json", "cell.json")
+ALWAYS = ("events.jsonl", "timelines.json")
 
 
 def audit_cell(directory: Path) -> list[str]:
@@ -90,20 +90,19 @@ def audit_run(run_dir: str | Path) -> dict[str, Any]:
     if (root / "plan.json").exists():
         planned = [cell["cell_id"] for cell in json.loads((root / "plan.json").read_text())["cells"]]
 
-    found = sorted(str(p.parent.relative_to(root)) for p in root.rglob("cell.json"))
-    missing = [cell for cell in planned if cell not in found]
-    unplanned = [cell for cell in found if planned and cell not in planned]
-    problems += [f"planned but not run: {cell}" for cell in missing]
-    problems += [f"present but not planned: {cell}" for cell in unplanned]
+    directories = sorted(path.parent for path in root.rglob("cell.json"))
+    found = {str(directory.relative_to(root)) for directory in directories}
+    problems += [f"planned but not run: {cell}" for cell in planned if cell not in found]
+    if planned:
+        problems += [f"present but not planned: {cell}" for cell in sorted(found - set(planned))]
 
-    for directory in sorted(p.parent for p in root.rglob("cell.json")):
+    for directory in directories:
         problems += audit_cell(directory)
 
     return {
         "run": str(root),
         "planned": len(planned),
         "found": len(found),
-        "missing": missing,
         "problems": problems,
         "ok": not problems,
     }

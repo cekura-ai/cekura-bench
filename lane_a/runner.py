@@ -32,7 +32,7 @@ from lane_a import events as ev
 from lane_a import provenance as prov
 from lane_a.adapters.base import AdapterError, SessionConfig, ToolSpec, TurnDetection
 from lane_a.audio import write_wav
-from lane_a.caller import BranchingCaller
+from lane_a.caller import VOID_SLIP_MS, BranchingCaller
 from lane_a.clips import Corpus
 from lane_a.metrics import usage
 from lane_a.probes import Probe, ProbeContext, ProbeResult
@@ -86,8 +86,14 @@ class Cell:
         return asdict(self)
 
 
-def harness_commit() -> str:
-    return prov.harness_state()["commit"]
+def cell_id(probe: Probe, config: TurnDetection, voice: str, repeat: int) -> str:
+    """One spelling of a cell's identity, used as its id *and* as its path.
+
+    The plan, the directory layout and the audit all compare these strings. Three
+    hand-written copies of the convention would agree only by coincidence, and a
+    single divergence would report an intact run as entirely missing.
+    """
+    return f"{probe.slug}/{config.label}/{voice}/r{repeat}"
 
 
 class Runner:
@@ -106,6 +112,7 @@ class Runner:
         self.harness = prov.harness_state()
         self.environment = prov.environment()
         self.cells: list[Cell] = []
+        self.planned = self.plan()
         self._cells_file = None
 
     # -- the record, before anything is measured --------------------------
@@ -120,7 +127,7 @@ class Runner:
         """
         return [
             {
-                "cell_id": f"{probe.slug}/{config.label}/{voice}/r{repeat}",
+                "cell_id": cell_id(probe, config, voice, repeat),
                 "probe": probe.name,
                 "variant": probe.slug,
                 "probe_params": prov.describe(probe),
@@ -137,16 +144,9 @@ class Runner:
     def open_run(self) -> None:
         """Lay down provenance, plan and corpus manifest before the first call."""
         self.root.mkdir(parents=True, exist_ok=True)
-        planned = self.plan()
-        (self.root / "provenance.json").write_text(
-            json.dumps(self._provenance(len(planned)), indent=2) + "\n", encoding="utf-8"
-        )
-        (self.root / "plan.json").write_text(
-            json.dumps({"run_id": self.root.name, "cells": planned}, indent=2) + "\n", encoding="utf-8"
-        )
-        (self.root / "manifest.json").write_text(
-            json.dumps(self.corpus.manifest(), indent=2) + "\n", encoding="utf-8"
-        )
+        prov.write_json(self.root / "provenance.json", self._provenance())
+        prov.write_json(self.root / "plan.json", {"run_id": self.root.name, "cells": self.planned})
+        prov.write_json(self.root / "manifest.json", self.corpus.manifest())
         # A commit identifies the code only when the tree is clean. When it is
         # not, the difference travels with the run instead of being lost.
         if self.harness["dirty"]:
@@ -156,13 +156,12 @@ class Runner:
         if self._cells_file is None:
             self._cells_file = open(self.root / "cells.jsonl", "a", encoding="utf-8")
 
-    def _provenance(self, planned: int) -> dict[str, Any]:
+    def _provenance(self) -> dict[str, Any]:
         return {
             "schema": prov.RUN_SCHEMA,
             "run_id": self.root.name,
             "methodology_version": METHODOLOGY_VERSION,
             "harness": self.harness,
-            "harness_commit": self.harness["commit"],   # kept flat for older readers
             "environment": self.environment,
             "corpus_version": self.corpus.version,
             "provider": self.spec.provider,
@@ -177,7 +176,7 @@ class Runner:
             "tool_contract": self.spec.suite,
             "suite_label": self.spec.label,
             "discloses": list(self.entry.discloses),
-            "planned_cells": planned,
+            "planned_cells": len(self.planned),
             "started_utc": self.started_utc,
             "generated_utc": datetime.now(timezone.utc).isoformat(),
         }
@@ -185,8 +184,8 @@ class Runner:
     # -- one cell ---------------------------------------------------------
 
     async def run_cell(self, probe: Probe, config: TurnDetection, voice: str, repeat: int) -> Cell:
-        slug = f"{probe.slug}/{config.label}/{voice}/r{repeat}"
-        directory = self.root / probe.slug / config.label / voice / f"r{repeat}"
+        slug = cell_id(probe, config, voice, repeat)
+        directory = self.root / slug
         directory.mkdir(parents=True, exist_ok=True)
         clock = ev.Clock()
         log = ev.EventLog(clock, directory / "events.jsonl", directory / "raw.jsonl")
@@ -222,7 +221,7 @@ class Runner:
                     )
                 finally:
                     await caller.stop()
-                if caller.max_slip_ms > 25.0:
+                if caller.max_slip_ms > VOID_SLIP_MS:
                     # Our own host, not the provider. Voiding is the honest call.
                     result.void = result.void or f"caller pacing slipped {caller.max_slip_ms:.0f} ms"
         except AdapterError as exc:
@@ -242,16 +241,14 @@ class Runner:
             # The timestamps that make the wavs measurable. Without them the
             # artifacts show what was said but not when it became audible, and a
             # published latency could not be recomputed by anyone but us.
-            (directory / "timelines.json").write_text(
-                json.dumps(
-                    {
-                        "caller": adapter.caller_timeline.as_json(),
-                        "agent": adapter.agent_timeline.as_json(),
-                        "wall_origin": clock.wall_origin,
-                    }
-                )
-                + "\n",
-                encoding="utf-8",
+            prov.write_json(
+                directory / "timelines.json",
+                {
+                    "caller": adapter.caller_timeline.as_json(),
+                    "agent": adapter.agent_timeline.as_json(),
+                    "wall_origin": clock.wall_origin,
+                },
+                indent=None,
             )
             log.close()
 
@@ -275,9 +272,8 @@ class Runner:
             error=None if failure is None else f"{failure['type']}: {failure['message']}",
         )
         self._write_cell_record(
-            directory, cell, probe=probe, config=config, voice=voice, repeat=repeat,
-            session=session, adapter=adapter, caller=caller, log=log, clock=clock,
-            tools=tools, result=result, failure=failure, started_utc=started_utc,
+            directory, cell, probe=probe, session=session, adapter=adapter, caller=caller,
+            log=log, clock=clock, tools=tools, result=result, failure=failure,
             ended_utc=ended.isoformat(),
         )
         self.cells.append(cell)
@@ -285,27 +281,20 @@ class Runner:
         return cell
 
     def _write_cell_record(
-        self, directory: Path, cell: Cell, *, probe: Probe, config: TurnDetection, voice: str,
-        repeat: int, session: SessionConfig, adapter: Any, caller: BranchingCaller | None,
-        log: ev.EventLog, clock: ev.Clock, tools: MockToolServer | None, result: ProbeResult,
-        failure: dict[str, Any] | None, started_utc: str, ended_utc: str,
+        self, directory: Path, cell: Cell, *, probe: Probe, session: SessionConfig, adapter: Any,
+        caller: BranchingCaller | None, log: ev.EventLog, clock: ev.Clock,
+        tools: MockToolServer | None, result: ProbeResult, failure: dict[str, Any] | None,
+        ended_utc: str,
     ) -> None:
-        """One self-contained record per cell, written last so it can inventory the rest."""
-        utterances = [] if caller is None else [
-            {
-                "clip": u.clip.name,
-                "sha256": u.clip.sha256,
-                "text": u.clip.text,
-                "rate": u.clip.rate,
-                "first_sample": u.first_sample,
-                "last_sample": u.last_sample,
-                "speech_start_sample": u.speech_start_sample,
-                "speech_end_sample": u.speech_end_sample,
-                "t_start": None if u.t_start is None else round(u.t_start, 6),
-                "t_end": None if u.t_end is None else round(u.t_end, 6),
-            }
-            for u in caller.utterances
-        ]
+        """One self-contained record per cell, written last so it can inventory the rest.
+
+        Each object describes itself -- the adapter its session, the caller its
+        utterances and pacing, the tool server its calls. Assembling those here
+        field by field would mean a new piece of state reaches the published cell
+        only if someone remembers to edit this function too, which is the exact
+        failure this record exists to prevent.
+        """
+        state = adapter.state()
         record = {
             "schema": prov.CELL_SCHEMA,
             "methodology_version": METHODOLOGY_VERSION,
@@ -314,55 +303,29 @@ class Runner:
             "identity": {
                 "provider": self.spec.provider,
                 "adapter": adapter.name,
-                "model": self.model,
-                "config": config.label,
-                "voice": voice,
-                "repeat": repeat,
-                "probe": probe.name,
-                "variant": probe.slug,
+                "model": cell.model,
+                "config": cell.config,
+                "voice": cell.voice,
+                "repeat": cell.repeat,
+                "probe": cell.probe,
+                "variant": cell.variant,
                 "suite": self.spec.label,
                 "tool_contract": self.spec.suite,
             },
             "probe_params": prov.describe(probe),
-            "session": {
-                "requested": prov.session_snapshot(session),
-                "provider_session_id": adapter.session_id,
-                "sent": adapter.session_sent,
-                "acknowledged": adapter.session_ack,
-            },
-            "audio": {
-                "input_rate": adapter.input_rate,
-                "output_rate": adapter.output_rate,
-                "caller_samples": adapter.caller_timeline.n_samples,
-                "agent_samples": adapter.agent_timeline.n_samples,
-                "caller_ms": round(1000 * adapter.caller_timeline.n_samples / adapter.input_rate, 1),
-                "agent_ms": round(1000 * adapter.agent_timeline.n_samples / adapter.output_rate, 1),
-                "caller_chunks": len(adapter.caller_timeline.chunks),
-                "agent_chunks": len(adapter.agent_timeline.chunks),
-            },
+            "session": {"requested": prov.session_snapshot(session), **state["session"]},
+            "audio": state["audio"],
+            "transcripts": state["transcripts"],
             "corpus": {
                 "version": self.corpus.version,
-                "voice": voice,
-                "utterances": utterances,
+                "voice": cell.voice,
+                "utterances": [] if caller is None else [u.as_json() for u in caller.utterances],
                 "text_sent": [e.data.get("text", "") for e in log.of_kind(ev.CALLER_TEXT)],
             },
-            "caller_pacing": {
-                "max_slip_ms": None if caller is None else round(caller.max_slip_ms, 2),
-                "slip_events": None if caller is None else caller.slip_events,
-                "chunks_sent": None if caller is None else caller.chunks_sent,
-                "void_threshold_ms": 25.0,
-            },
-            "transcripts": {
-                "agent": list(adapter.agent_text),
-                "caller_asr": list(adapter.caller_text),
-            },
+            "caller_pacing": None if caller is None else caller.pacing(),
             "tools": {
-                "calls": list(adapter.tool_calls),
-                "results": list(adapter.tool_results),
-                "served": [] if tools is None else [
-                    {"name": c.name, "arguments": c.arguments, "matched": c.matched, "output": c.output}
-                    for c in tools.calls
-                ],
+                **state["tools"],
+                "served": [] if tools is None else [c.as_json() for c in tools.calls],
             },
             "usage": cell.usage,
             "counts": {
@@ -375,7 +338,7 @@ class Runner:
             "result": {"verdict": result.verdict, "void": result.void, "values": result.values},
             "error": failure,
             "timing": {
-                "started_utc": started_utc,
+                "started_utc": cell.started_utc,
                 "ended_utc": ended_utc,
                 "duration_s": cell.duration_s,
                 "wall_origin": clock.wall_origin,
@@ -384,7 +347,7 @@ class Runner:
             "environment": self.environment,
             "artifacts": prov.file_inventory(directory),
         }
-        (directory / "cell.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+        prov.write_json(directory / "cell.json", record)
 
     def _append_cell(self, cell: Cell) -> None:
         if self._cells_file is None:
@@ -417,34 +380,30 @@ class Runner:
     def write_summary(self, status: str = "complete", note: str | None = None) -> Path:
         """Rewritten after every cell, so an abandoned run still says what it did."""
         self.root.mkdir(parents=True, exist_ok=True)
-        planned = len(self.plan())
         done = {c.artifacts["slug"] for c in self.cells}
         summary = {
             "schema": prov.RUN_SCHEMA,
             "run_id": self.root.name,
             "status": status,
             "note": note,
-            "planned_cells": planned,
+            "planned_cells": len(self.planned),
             "completed_cells": len(self.cells),
-            "missing_cells": [p["cell_id"] for p in self.plan() if p["cell_id"] not in done],
+            "missing_cells": [p["cell_id"] for p in self.planned if p["cell_id"] not in done],
             "verdicts": self._tally("verdict"),
-            "voids": self._tally("void", truthy=True),
+            "voids": sum(1 for c in self.cells if c.void),
             "errors": sum(1 for c in self.cells if c.error),
             "usage_totals": self._usage_totals(),
             "started_utc": self.started_utc,
             "updated_utc": datetime.now(timezone.utc).isoformat(),
         }
-        (self.root / "run.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+        prov.write_json(self.root / "run.json", summary)
         return self.root
 
-    def _tally(self, attribute: str, truthy: bool = False) -> dict[str, int]:
+    def _tally(self, attribute: str) -> dict[str, int]:
         counts: dict[str, int] = {}
         for cell in self.cells:
             value = getattr(cell, attribute)
-            if truthy:
-                if value:
-                    counts["void"] = counts.get("void", 0) + 1
-            elif value:
+            if value:
                 counts[value] = counts.get(value, 0) + 1
         return counts
 
@@ -460,10 +419,3 @@ class Runner:
         if self._cells_file is not None:
             self._cells_file.close()
             self._cells_file = None
-
-    def write_results(self) -> Path:
-        """Kept for callers that ran cells by hand rather than through ``run``."""
-        self.open_run()
-        self.write_summary(status="complete")
-        self.close()
-        return self.root

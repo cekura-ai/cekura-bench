@@ -25,6 +25,9 @@ from typing import Any, ClassVar
 
 from lane_a import events as ev
 from lane_a.audio import AudioTimeline, SAMPLE_WIDTH
+from mock_tools.spec import ToolSpec
+
+__all__ = ["AdapterError", "RealtimeAdapter", "SessionConfig", "ToolSpec", "TurnDetection", "parse_arguments"]
 
 
 @dataclass(frozen=True)
@@ -55,13 +58,6 @@ class TurnDetection:
         if self.silence_duration_ms is not None:
             parts.append(f"{self.silence_duration_ms}ms")
         return "-".join(parts)
-
-
-@dataclass(frozen=True)
-class ToolSpec:
-    name: str
-    description: str
-    parameters: dict[str, Any]
 
 
 @dataclass
@@ -162,23 +158,27 @@ class RealtimeAdapter(ABC):
     async def _commit(self) -> None: ...
 
     async def send_text(self, text: str) -> None:
-        """The text control arm's turn. Recorded, then delivered.
+        """The text control arm's turn. Timestamped, delivered, then recorded.
 
-        The event is emitted here rather than in each adapter so the caller side
-        of a text run is visible in the normalized log: without it the arm that
-        exists to attribute a failure to the speech pathway would ship artifacts
-        showing only one half of the conversation.
+        Normalized here rather than in each adapter so the caller side of a text
+        run is visible in the log: without it the arm that exists to attribute a
+        failure to the speech pathway would ship artifacts showing only one half
+        of the conversation.
         """
-        self.log.emit(ev.CALLER_TEXT, text=text)
+        if not self.supports_text_modality:
+            raise AdapterError(f"{self.name} has no text modality")
+        at = self.log.clock.now()
         await self._send_text(text)
+        self.log.emit(ev.CALLER_TEXT, at=at, text=text)
 
     async def _send_text(self, text: str) -> None:
-        raise AdapterError(f"{self.name} has no text modality")
+        raise AdapterError(f"{self.name} declares text support but does not implement it")
 
     async def send_tool_result(self, call_id: str, output: Any) -> None:
+        at = self.log.clock.now()
         self.tool_results.append({"call_id": call_id, "output": output})
-        self.log.emit(ev.TOOL_RESULT, call_id=call_id, output=output)
         await self._send_tool_result(call_id, output)
+        self.log.emit(ev.TOOL_RESULT, at=at, call_id=call_id, output=output)
 
     @abstractmethod
     async def _send_tool_result(self, call_id: str, output: Any) -> None: ...
@@ -208,17 +208,35 @@ class RealtimeAdapter(ABC):
         return self._speaking
 
     def state(self) -> dict[str, Any]:
+        """Everything the adapter knows about its own session, for the record.
+
+        The adapter describes itself rather than letting the runner reach in one
+        field at a time: new adapter state then reaches the published cell on its
+        own, instead of only when someone remembers to edit the runner too --
+        which is the failure the whole record exists to prevent.
+        """
         return {
             "adapter": self.name,
             "model": self.model,
             "turn_detection": self.config.turn_detection.label,
             "modality": self.config.modality,
-            "input_rate": self.input_rate,
-            "output_rate": self.output_rate,
-            "session_id": self.session_id,
-            "caller_samples": self.caller_timeline.n_samples,
-            "agent_samples": self.agent_timeline.n_samples,
-            "tool_calls": len(self.tool_calls),
+            "session": {
+                "provider_session_id": self.session_id,
+                "sent": self.session_sent,
+                "acknowledged": self.session_ack,
+            },
+            "audio": {
+                "input_rate": self.input_rate,
+                "output_rate": self.output_rate,
+                "caller_samples": self.caller_timeline.n_samples,
+                "agent_samples": self.agent_timeline.n_samples,
+                "caller_ms": round(self.caller_timeline.duration_s * 1000.0, 1),
+                "agent_ms": round(self.agent_timeline.duration_s * 1000.0, 1),
+                "caller_chunks": len(self.caller_timeline.chunks),
+                "agent_chunks": len(self.agent_timeline.chunks),
+            },
+            "transcripts": {"agent": list(self.agent_text), "caller_asr": list(self.caller_text)},
+            "tools": {"calls": list(self.tool_calls), "results": list(self.tool_results)},
         }
 
 

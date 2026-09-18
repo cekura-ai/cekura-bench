@@ -68,8 +68,9 @@ class TestArtifacts:
     async def test_provenance_names_what_was_measured(self, tmp_path):
         _runner, root = await run_one(tmp_path)
         provenance = json.loads((root / "provenance.json").read_text())
-        for key in ("methodology_version", "harness_commit", "corpus_version", "model", "configs", "repeats"):
+        for key in ("methodology_version", "corpus_version", "model", "configs", "repeats"):
             assert provenance.get(key), f"provenance is missing {key}"
+        assert provenance["harness"]["commit"]
 
     async def test_the_corpus_manifest_travels_with_the_run(self, tmp_path):
         _runner, root = await run_one(tmp_path)

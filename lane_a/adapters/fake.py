@@ -29,6 +29,7 @@ class FakeAdapter(RealtimeAdapter):
     name = "fake"
     input_rate = 24000
     output_rate = 24000
+    supports_text_modality = False   # it has no language in it at all, only tone
 
     def __init__(
         self,
@@ -82,7 +83,6 @@ class FakeAdapter(RealtimeAdapter):
         self._start_reply()
 
     async def _send_tool_result(self, call_id: str, output: Any) -> None:
-        self.log.emit(ev.TOOL_RESULT, call_id=call_id)
         self._start_reply()
 
     def _start_reply(self) -> None:

@@ -37,6 +37,7 @@ from lane_a.detector import speech_bounds
 CHUNK_MS = 20.0          # pacing granularity, kept well inside detector error
 POLL_S = 0.005
 SLIP_WARN_MS = 15.0      # a send this late means the host, not the provider, is the story
+VOID_SLIP_MS = 25.0      # past this the run describes our host; it is voided, not scored
 
 
 @dataclass(frozen=True)
@@ -82,6 +83,20 @@ class Utterance:
     speech_end_sample: int
     t_start: float
     t_end: float
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            "clip": self.clip.name,
+            "sha256": self.clip.sha256,
+            "text": self.clip.text,
+            "rate": self.clip.rate,
+            "first_sample": self.first_sample,
+            "last_sample": self.last_sample,
+            "speech_start_sample": self.speech_start_sample,
+            "speech_end_sample": self.speech_end_sample,
+            "t_start": None if self.t_start is None else round(self.t_start, 6),
+            "t_end": None if self.t_end is None else round(self.t_end, 6),
+        }
 
 
 @dataclass(frozen=True)
@@ -318,6 +333,20 @@ class BranchingCaller:
             index += 1
 
     # -- speaking ---------------------------------------------------------
+
+    def pacing(self) -> dict[str, Any]:
+        """How well this host kept realtime. Published with every cell.
+
+        The threshold that voids a run is reported next to the slip it is
+        compared against: a record that quoted one and voided on the other would
+        be wrong about its own rule.
+        """
+        return {
+            "max_slip_ms": round(self.max_slip_ms, 2),
+            "slip_events": self.slip_events,
+            "chunks_sent": self.chunks_sent,
+            "void_threshold_ms": VOID_SLIP_MS,
+        }
 
     async def play(self, clip: Clip, trim_tail: bool = False) -> Utterance:
         """Queue a clip onto the carrier and wait until its last sample is out."""

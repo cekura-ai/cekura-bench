@@ -30,6 +30,7 @@ import os
 import subprocess
 import sys
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Callable
 
@@ -186,11 +187,13 @@ def opening_messages(first_message: str) -> list[dict[str, Any]]:
 
 # ── what answered the call ───────────────────────────────────────────────────
 
+@lru_cache(maxsize=1)
 def _commit() -> str:
-    """This agent's commit. Deliberately not imported from the Lane A harness.
+    """This agent's commit, resolved once for the process.
 
-    A deployed agent must not depend on the thing measuring it, so the few lines
-    are repeated rather than shared.
+    Cached because ``run_bot`` is per call, not per process: a fork+exec between
+    the transport connecting and the greeting going out would land inside the
+    window Lane A is measuring.
     """
     try:
         return subprocess.run(
@@ -200,7 +203,9 @@ def _commit() -> str:
         return "unknown"
 
 
+@lru_cache(maxsize=None)
 def _version(package: str) -> str:
+    """Cached for the same reason as ``_commit``: it scans installed metadata."""
     try:
         from importlib.metadata import version
 
@@ -223,6 +228,9 @@ def build_record(provider_key: str, provider: "Provider", model: str, voice: str
     that was actually used is on the record.
     """
     prompt = server.system_prompt or ""
+    # 16 characters, matching Lane A's digest of the same strings: the two lanes
+    # are compared on whether they were given the same prompt, and that check
+    # fails silently if one side truncates differently.
     return {
         "lane": "B",
         "agent_commit": _commit(),

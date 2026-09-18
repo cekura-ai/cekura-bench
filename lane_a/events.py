@@ -90,8 +90,15 @@ class EventLog:
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         return open(path, "w", encoding="utf-8")
 
-    def emit(self, kind: str, **data: Any) -> Event:
-        event = Event(self.clock.now(), kind, data)
+    def emit(self, kind: str, at: float | None = None, **data: Any) -> Event:
+        """``at`` timestamps the event before the work it describes.
+
+        Writing a line to disk is cheap but not free, and it must not land inside
+        an interval the benchmark is measuring. Taking the instant first and
+        writing afterwards keeps the record honest without putting I/O in the
+        path.
+        """
+        event = Event(self.clock.now() if at is None else at, kind, data)
         self.events.append(event)
         if self._file:
             self._file.write(json.dumps(event.as_json()) + "\n")

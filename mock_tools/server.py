@@ -32,7 +32,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from lane_a.adapters.base import ToolSpec
+from mock_tools.spec import ToolSpec
 
 DEFINITIONS_ROOT = Path(__file__).resolve().parent.parent / "agent-definitions"
 
@@ -67,6 +67,9 @@ class ToolCallRecord:
     arguments: dict[str, Any]
     matched: bool
     output: Any
+
+    def as_json(self) -> dict[str, Any]:
+        return {"name": self.name, "arguments": self.arguments, "matched": self.matched, "output": self.output}
 
 
 @dataclass

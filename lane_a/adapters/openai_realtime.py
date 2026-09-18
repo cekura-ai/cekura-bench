@@ -172,7 +172,6 @@ class OpenAIRealtimeAdapter(RealtimeAdapter):
             }
         )
         await self._send_json({"type": "response.create"})
-        self.log.emit(ev.TOOL_RESULT, call_id=call_id)
 
     # ── receiving ────────────────────────────────────────────────────────────
 

@@ -16,7 +16,6 @@ gating v1 on studio time would not have been.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import urllib.error
@@ -25,6 +24,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from lane_a.audio import read_wav, write_wav
+from lane_a.provenance import sha256_file, text_digest
 from lane_a.caller import Clip
 
 MASTER_RATE = 24000  # one canonical master per clip; providers get a published resample
@@ -78,7 +78,8 @@ class Corpus:
 
     @staticmethod
     def text_stamp(text: str) -> str:
-        return hashlib.sha256(text.encode("utf-8")).hexdigest()[:8]
+        """Short form of the shared digest: eight characters is plenty in a filename."""
+        return text_digest(text, 8)
 
     def path_for(self, clip_id: str, voice: str) -> Path:
         """Render path carries a stamp of the text it was rendered from.
@@ -127,13 +128,12 @@ class Corpus:
             for label, voice in self.voices.items():
                 path = self.path_for(spec.id, label)
                 if path.exists():
-                    raw = path.read_bytes()
                     entry["renders"][label] = {
                         "file": path.name,
                         "provenance": voice.provenance,
                         "tts_model": voice.model,
-                        "sha256": hashlib.sha256(raw).hexdigest(),
-                        "bytes": len(raw),
+                        "sha256": sha256_file(path),
+                        "bytes": path.stat().st_size,
                     }
             clips.append(entry)
         return {

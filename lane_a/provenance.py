@@ -18,6 +18,7 @@ commit still attached.
 from __future__ import annotations
 
 import hashlib
+import json
 import platform
 import subprocess
 import sys
@@ -140,8 +141,18 @@ def describe(obj: Any) -> dict[str, Any]:
     return out
 
 
-def text_digest(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+def text_digest(text: str, length: int = 16) -> str:
+    """The one way this benchmark digests text.
+
+    Corpus render paths and cell records both carry digests of the same strings,
+    and a reader has to be able to line one up against the other -- which fails
+    silently if two call sites truncate differently.
+    """
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:length]
+
+
+def write_json(path: Path, payload: Any, indent: int | None = 2) -> None:
+    path.write_text(json.dumps(payload, indent=indent) + "\n", encoding="utf-8")
 
 
 def session_snapshot(config: Any) -> dict[str, Any]:

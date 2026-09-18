@@ -11,6 +11,7 @@ Runs against the scripted agent, so it needs no API key and no network.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
 
@@ -241,3 +242,31 @@ class TestDeclaredExclusions:
         assert cell.error is None
         record = json.loads((Path(cell.artifacts["dir"]) / "cell.json").read_text())
         assert record["error"] is None
+
+
+class TestASessionTheProviderCloses:
+    async def test_a_dead_stream_voids_the_cell_instead_of_hanging(self, tmp_path, monkeypatch):
+        """The carrier dies mid-utterance; the probe must not wait on a segment that will never finish."""
+        from lane_a.adapters import fake
+
+        sent = {"n": 0}
+        original = fake.FakeAdapter.send_audio
+
+        async def dying(self, pcm, t_send=None):
+            sent["n"] += 1
+            if sent["n"] > 10:
+                self.closed.set()
+                raise ConnectionError("socket closed by peer")
+            return await original(self, pcm, t_send=t_send)
+
+        monkeypatch.setattr(fake.FakeAdapter, "send_audio", dying)
+        spec = RunSpec(
+            provider="fake", probes=[ResponseLatency()], configs=[TurnDetection("server_vad", silence_duration_ms=300)],
+            voices=["f-us"], repeats=1, sentinel=False, out_root=str(tmp_path),
+        )
+        runner = Runner(spec, corpus_or_skip(), api_key="unused")
+        await asyncio.wait_for(runner.run(), timeout=20)
+        cell = runner.cells[0]
+        assert cell.void and cell.void.startswith("provider closed the session"), cell.void
+        assert cell.error and "SessionClosed" in cell.error
+        assert (Path(cell.artifacts["dir"]) / "cell.json").exists()

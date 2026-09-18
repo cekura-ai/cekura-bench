@@ -81,6 +81,14 @@ class AdapterError(RuntimeError):
     """The provider refused the session. Distinct from a scored failure."""
 
 
+class SessionClosed(AdapterError):
+    """The provider closed the session while a probe still needed it.
+
+    Distinct from a refusal at connect: the cell has partial evidence on disk and
+    is voided as "provider closed the session", never scored as a slow reply.
+    """
+
+
 class RealtimeAdapter(ABC):
     name: ClassVar[str] = "adapter"
     input_rate: ClassVar[int] = 24000

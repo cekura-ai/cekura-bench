@@ -20,7 +20,7 @@ from typing import Any, Protocol, Sequence
 import asyncio
 
 from lane_a import events as ev
-from lane_a.adapters.base import RealtimeAdapter
+from lane_a.adapters.base import SessionClosed, RealtimeAdapter
 from lane_a.audio import pink_noise
 from lane_a.caller import BranchingCaller, Clip
 from lane_a.clips import Corpus
@@ -91,8 +91,10 @@ class ProbeContext:
 
         if not self.is_text:
             if not await self.caller.wait_agent_onset(timeout_s=timeout_s):
+                self._raise_if_closed()
                 return False
             if not await self.caller.wait_agent_quiet(settle_ms, timeout_s=timeout_s):
+                self._raise_if_closed()
                 return False
             # Audio can go quiet while a tool call is still in flight.
             return await self._settle(deadline, settle_ms)
@@ -107,8 +109,14 @@ class ProbeContext:
             calls = [e.t for e in self.log.of_kind(ev.TOOL_CALL) if e.t > sent_at]
             if replies and (not calls or max(replies) > max(calls)):
                 break
+            self._raise_if_closed()
             await asyncio.sleep(0.01)
         return await self._settle(deadline, settle_ms)
+
+    def _raise_if_closed(self) -> None:
+        """A session the provider closed is a void, not a slow reply, and not a 45 s wait."""
+        if self.adapter.closed.is_set() or (self.caller is not None and self.caller.failed):
+            raise SessionClosed(self.caller.failed if self.caller is not None and self.caller.failed else "provider closed the session")
 
     async def _settle(self, deadline: float, settle_ms: float) -> bool:
         loop = asyncio.get_running_loop()

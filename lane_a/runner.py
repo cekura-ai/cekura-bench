@@ -30,7 +30,7 @@ from typing import Any, Sequence
 
 from lane_a import events as ev
 from lane_a import provenance as prov
-from lane_a.adapters.base import AdapterError, SessionConfig, ToolSpec, TurnDetection
+from lane_a.adapters.base import AdapterError, SessionClosed, SessionConfig, ToolSpec, TurnDetection
 from lane_a.audio import write_wav
 from lane_a.caller import VOID_SLIP_MS, BranchingCaller
 from lane_a.clips import Corpus
@@ -284,6 +284,9 @@ class Runner:
                 if caller.max_slip_ms > VOID_SLIP_MS:
                     # Our own host, not the provider. Voiding is the honest call.
                     result.void = result.void or f"caller pacing slipped {caller.max_slip_ms:.0f} ms"
+        except SessionClosed as exc:
+            failure = {"type": type(exc).__name__, "message": str(exc), "traceback": traceback.format_exc()}
+            result = ProbeResult(probe.name, void=f"provider closed the session: {exc}")
         except AdapterError as exc:
             if excluded:
                 # Declared, not failed: no traceback and no error count. An

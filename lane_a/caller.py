@@ -30,7 +30,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Sequence
 
 from lane_a import events as ev
-from lane_a.adapters.base import RealtimeAdapter
+from lane_a.adapters.base import SessionClosed, RealtimeAdapter
 from lane_a.audio import SAMPLE_WIDTH, iter_chunks, resample, silence
 from lane_a.detector import speech_bounds
 
@@ -192,6 +192,7 @@ class BranchingCaller:
         self.adapter = adapter
         self.log = log
         self.max_slip_ms = 0.0
+        self.failed: str | None = None       # why the stream died, if it did
         self.slip_events = 0
         self.chunks_sent = 0
         self.utterances: list[Utterance] = []
@@ -329,6 +330,12 @@ class BranchingCaller:
                 await self.adapter.send_audio(self._next_chunk(), t_send=max(target, actual))
             except Exception as exc:  # noqa: BLE001 -- a dead socket ends the run, not the process
                 self.log.emit(ev.SESSION_ERROR, error=repr(exc), where="carrier")
+                self.failed = repr(exc)
+                # Whoever is waiting for a segment to finish playing must be
+                # released -- the one on the wire and the ones queued behind
+                # it -- or the probe waits on a stream that has ended.
+                for segment in ([self._current] if self._current else []) + self._queue:
+                    segment.done.set()
                 return
             self.chunks_sent += 1
             index += 1
@@ -366,9 +373,13 @@ class BranchingCaller:
             trim_tail=trim_tail,
             done=asyncio.Event(),
         )
+        if self.failed:
+            raise SessionClosed(f"stream already dead: {self.failed}")
         self._queue.append(segment)
         self.start()
         await segment.done.wait()
+        if self.failed:
+            raise SessionClosed(f"while the caller was speaking: {self.failed}")
         return self.utterances[-1]
 
     async def wait(self, duration_ms: float) -> None:
@@ -395,6 +406,8 @@ class BranchingCaller:
         while time.monotonic() < deadline:
             if self.adapter.agent_timeline.n_samples > mark:
                 return True
+            if self.failed or self.adapter.closed.is_set():
+                return False                 # nothing more is coming; the probe decides what that means
             await asyncio.sleep(POLL_S)
         return False
 
@@ -410,6 +423,8 @@ class BranchingCaller:
             end = self._agent_playout_end()
             if end is not None and (self.log.clock.now() - end) * 1000.0 >= gap_ms:
                 return True
+            if self.failed or self.adapter.closed.is_set():
+                return False
             await asyncio.sleep(POLL_S)
         return False
 

@@ -200,6 +200,8 @@ def _void_class(reason: str) -> str:
         return "excluded: " + reason.split(": ", 1)[1]
     if reason.startswith("provider refused"):
         return "provider refused the session"
+    if reason.startswith("provider closed"):
+        return "provider closed the session mid-call"
     if reason.startswith("harness error"):
         return "harness error"
     if "slipped" in reason:

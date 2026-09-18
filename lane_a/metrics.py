@@ -176,21 +176,31 @@ class BargeIn:
 
 
 def barge_in(adapter: RealtimeAdapter, utterance: Utterance, settle_ms: float = 2000.0) -> BargeIn:
-    """Measured from the caller's first authored speech sample, not the clip start."""
+    """Measured from the caller's first authored speech sample, not the clip start.
+
+    Stop time is when the listener last heard the interrupted speech: the end of
+    the latest stretch of agent audio that overlapped the caller's utterance,
+    including one that resumed after a pause. Stretches that begin after the
+    caller finished speaking are the agent's *reply* to the interruption, not the
+    speech that was interrupted, and are excluded.
+    """
     caller_start_t = adapter.caller_timeline.time_of_sample(utterance.speech_start_sample)
+    caller_end_t = adapter.caller_timeline.time_of_sample(utterance.speech_end_sample) or caller_start_t
     if caller_start_t is None:
         return BargeIn(False, None, None, False)
     cancelled = any(e.kind == ev.AGENT_INTERRUPTED and e.t >= caller_start_t for e in adapter.log.events)
-    runs = [run for run in speech_runs(adapter) if run[0] <= caller_start_t]
-    if not runs:
-        # The agent was not speaking when we started. The probe guards against
-        # this, so reaching here means it stopped on its own; not a barge-in.
+    overlapping = [run for run in speech_runs(adapter) if run[1] > caller_start_t and run[0] < caller_end_t]
+    if not overlapping:
+        # Nothing was audible from the caller's first word to their last: the
+        # agent was already quiet, or stopped inside detector resolution.
         return BargeIn(True, 0.0, 0.0, cancelled)
-    run = runs[-1]
-    stop_ms = max((run[1] - caller_start_t) * 1000.0, 0.0)
+    stop_ms = max((overlapping[-1][1] - caller_start_t) * 1000.0, 0.0)
     timeline = adapter.agent_timeline
-    in_run = [c.seq for c in timeline.chunks if run[0] <= timeline.playout_span(c.seq)[0] <= run[1]]
-    discarded_ms = 1000.0 * timeline.discarded_s(min(in_run), max(in_run)) if in_run else 0.0
+    in_runs = [
+        c.seq for c in timeline.chunks
+        if any(run[0] <= timeline.playout_span(c.seq)[0] <= run[1] for run in overlapping)
+    ]
+    discarded_ms = 1000.0 * timeline.discarded_s(min(in_runs), max(in_runs)) if in_runs else 0.0
     return BargeIn(
         stopped=stop_ms < settle_ms,
         stop_ms=stop_ms,

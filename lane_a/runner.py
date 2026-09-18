@@ -51,6 +51,15 @@ SENTINEL_PROBE = ResponseLatency(clip_id="open.book", name="sentinel_latency")
 SENTINEL_CONFIG = TurnDetection("server_vad", silence_duration_ms=500)
 SENTINEL_REPEATS = 3
 
+# The prompt every open-loop probe runs under, and the one the sentinel always
+# runs under: the sentinel is pinned to audio, this prompt and no tools whatever
+# the campaign around it is measuring, or its spread would not be comparable
+# across campaigns.
+DEFAULT_INSTRUCTIONS = (
+    "You are Riley, the receptionist at Cedar Valley Family Practice. "
+    "Answer in one or two short sentences. Never mention that you are an AI."
+)
+
 
 @dataclass
 class RunSpec:
@@ -173,7 +182,7 @@ class Runner:
             if name not in TRANSFORMS:
                 raise KeyError(f"unknown transform {name!r}")
         planned: list[PlannedCell] = []
-        if self.spec.sentinel and self.spec.modality == "audio":
+        if self.spec.sentinel:
             voice = "f-us" if "f-us" in self.corpus.voices else next(iter(self.spec.voices))
             planned += [
                 PlannedCell(SENTINEL_PROBE, SENTINEL_CONFIG, voice, "clean", repeat, sentinel=True)
@@ -244,16 +253,26 @@ class Runner:
         log = ev.EventLog(clock, directory / "events.jsonl", directory / "raw.jsonl")
         started_utc = datetime.now(timezone.utc).isoformat()
 
-        tools = MockToolServer(self.spec.suite) if self.spec.suite else None
-        session = SessionConfig(
-            instructions=self.spec.instructions or (tools.system_prompt if tools else ""),
-            first_message=tools.first_message if tools else None,
-            voice=self.spec.voice_name or self.entry.default_voice,
-            tools=self.spec.tools or (tools.tool_specs() if tools else ()),
-            turn_detection=config,
-            modality=self.spec.modality,
-            transcribe_input=self.spec.modality == "audio",
-        )
+        if planned.sentinel:
+            tools = None
+            modality = "audio"
+            session = SessionConfig(
+                instructions=DEFAULT_INSTRUCTIONS, first_message=None,
+                voice=self.spec.voice_name or self.entry.default_voice, tools=(),
+                turn_detection=config, modality=modality, transcribe_input=True,
+            )
+        else:
+            tools = MockToolServer(self.spec.suite) if self.spec.suite else None
+            modality = self.spec.modality
+            session = SessionConfig(
+                instructions=self.spec.instructions or (tools.system_prompt if tools else ""),
+                first_message=tools.first_message if tools else None,
+                voice=self.spec.voice_name or self.entry.default_voice,
+                tools=self.spec.tools or (tools.tool_specs() if tools else ()),
+                turn_detection=config,
+                modality=modality,
+                transcribe_input=modality == "audio",
+            )
         adapter = self.entry.adapter(model=self.model, api_key=self.api_key, log=log, config=session)
         result = ProbeResult(probe.name)
         caller: BranchingCaller | None = None
@@ -270,7 +289,7 @@ class Runner:
                 # The text arm sends no audio at all, so the carrier stays parked:
                 # streaming silence into a text-modality session would measure
                 # nothing and could be refused outright.
-                if self.spec.modality == "audio":
+                if modality == "audio":
                     caller.start()
                 try:
                     result = await probe.run(

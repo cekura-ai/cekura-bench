@@ -270,3 +270,21 @@ class TestASessionTheProviderCloses:
         assert cell.void and cell.void.startswith("provider closed the session"), cell.void
         assert cell.error and "SessionClosed" in cell.error
         assert (Path(cell.artifacts["dir"]) / "cell.json").exists()
+
+
+class TestTheSentinelIsPinned:
+    async def test_the_sentinel_runs_in_audio_with_the_default_prompt_even_in_a_text_campaign(self, tmp_path):
+        from lane_a.runner import DEFAULT_INSTRUCTIONS
+
+        spec = RunSpec(
+            provider="fake", probes=[], configs=[TurnDetection("server_vad", silence_duration_ms=300)],
+            voices=["f-us"], repeats=1, modality="text", instructions="", suite=None, out_root=str(tmp_path),
+        )
+        runner = Runner(spec, corpus_or_skip(), api_key="unused")
+        assert [c.sentinel for c in runner.planned] == [True, True, True]
+        await runner.run()
+        record = json.loads((Path(runner.cells[0].artifacts["dir"]) / "cell.json").read_text())
+        session = record["session"]["requested"]
+        assert session["modality"] == "audio"
+        assert session["instructions"] == DEFAULT_INSTRUCTIONS
+        assert runner.cells[0].values.get("latency_ms") is not None

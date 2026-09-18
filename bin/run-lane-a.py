@@ -39,14 +39,11 @@ from lane_a.probes import (  # noqa: E402
 )
 from lane_a.registry import PROVIDERS  # noqa: E402
 from lane_a.report import load_run, render_markdown, summarize_run  # noqa: E402
-from lane_a.runner import RunSpec, Runner  # noqa: E402
+from lane_a.runner import DEFAULT_INSTRUCTIONS, RunSpec, Runner  # noqa: E402
 from lane_a.scenarios import SCENARIOS  # noqa: E402
 from lane_a.transforms import TRANSFORMS  # noqa: E402
 
-INSTRUCTIONS = (
-    "You are Riley, the receptionist at Cedar Valley Family Practice. "
-    "Answer in one or two short sentences. Never mention that you are an AI."
-)
+INSTRUCTIONS = DEFAULT_INSTRUCTIONS
 
 MANUAL = TurnDetection("manual")
 VAD500 = TurnDetection("server_vad", silence_duration_ms=500)

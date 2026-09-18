@@ -98,6 +98,15 @@ class RealtimeAdapter(ABC):
         self.agent_text: list[str] = []
         self.caller_text: list[str] = []
         self.tool_calls: list[dict[str, Any]] = []
+        self.tool_results: list[dict[str, Any]] = []
+        # What the session actually is, as opposed to what we asked for. The
+        # request is ours and the acknowledgement is the provider's, and where
+        # they differ the difference is the finding -- a provider that silently
+        # clamps a silence duration would otherwise be published under the
+        # configuration we believed we set.
+        self.session_id: str | None = None
+        self.session_sent: dict[str, Any] | None = None
+        self.session_ack: dict[str, Any] | None = None
         self.closed = asyncio.Event()
         self._speaking = False
         self._receiver: asyncio.Task | None = None
@@ -152,8 +161,27 @@ class RealtimeAdapter(ABC):
     @abstractmethod
     async def _commit(self) -> None: ...
 
+    async def send_text(self, text: str) -> None:
+        """The text control arm's turn. Recorded, then delivered.
+
+        The event is emitted here rather than in each adapter so the caller side
+        of a text run is visible in the normalized log: without it the arm that
+        exists to attribute a failure to the speech pathway would ship artifacts
+        showing only one half of the conversation.
+        """
+        self.log.emit(ev.CALLER_TEXT, text=text)
+        await self._send_text(text)
+
+    async def _send_text(self, text: str) -> None:
+        raise AdapterError(f"{self.name} has no text modality")
+
+    async def send_tool_result(self, call_id: str, output: Any) -> None:
+        self.tool_results.append({"call_id": call_id, "output": output})
+        self.log.emit(ev.TOOL_RESULT, call_id=call_id, output=output)
+        await self._send_tool_result(call_id, output)
+
     @abstractmethod
-    async def send_tool_result(self, call_id: str, output: Any) -> None: ...
+    async def _send_tool_result(self, call_id: str, output: Any) -> None: ...
 
     # ── receiving ────────────────────────────────────────────────────────────
 
@@ -187,6 +215,7 @@ class RealtimeAdapter(ABC):
             "modality": self.config.modality,
             "input_rate": self.input_rate,
             "output_rate": self.output_rate,
+            "session_id": self.session_id,
             "caller_samples": self.caller_timeline.n_samples,
             "agent_samples": self.agent_timeline.n_samples,
             "tool_calls": len(self.tool_calls),

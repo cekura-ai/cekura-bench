@@ -155,11 +155,55 @@ A run produces a directory, not a number. Per cell:
 | `timelines.json` | per-chunk timestamps: when each sample became audible |
 | `events.jsonl` | the normalized event stream |
 | `raw.jsonl` | every provider frame verbatim |
-| `provenance.json` | provider, model, configuration, corpus version, caller voice, harness commit, methodology version |
+| `cell.json` | the whole cell, self-contained: see below |
 
 The timeline file is the one that is easy to forget and fatal to omit. Audio and
 a transcript show *what* was said; only per-chunk timestamps show *when it could
 be heard*, and every latency here is a difference between two of those instants.
+
+`cell.json` is written so that a **single cell directory answers every question
+about itself** with no run root, no repository and no access to us. It carries
+the probe's own parameters, the session as requested *and* as the provider
+acknowledged it, the caller clips with checksums and sample boundaries, both
+transcripts, the tool calls with their arguments and the contract's replies,
+token usage, pacing slip, the harness commit with a dirty flag, the detector
+constants, and a checksum for every other file beside it.
+
+Three of those are there because the alternative is a rerun:
+
+- **The acknowledged session, not only the requested one.** We asked for server
+  VAD at 500 ms; the provider came back with `threshold 0.5`, `prefix_padding_ms
+  300`, `idle_timeout_ms null`, `create_response true`, `interrupt_response
+  true`. Those are part of the configuration under test and none of them were
+  ours. A cell recording only our request would publish a configuration nobody
+  actually ran.
+- **The detector constants.** They decide where the agent-side boundary lands.
+  Change `margin_db` and every published latency moves while the commit stays the
+  same, so a result is only meaningful next to the values that produced it.
+- **The uncommitted patch.** A commit hash identifies the code only when the tree
+  is clean. When it is not, `harness.patch` travels with the run and the record
+  says so rather than implying a clean checkout.
+
+## Nothing waits until the end
+
+A campaign against a live provider costs money, takes real time, and cannot be
+reproduced later because the model behind the endpoint changes. So the plan is
+written before the first connection, each cell's record lands as that cell
+finishes, and the run summary is rewritten after every cell. An interrupted run
+is a partial result, not a lost one, and `run.json` names the cells that never
+ran instead of leaving a short directory looking complete.
+
+Then the run audits itself, and the CLI exits non-zero if it does not pass:
+
+```bash
+python -m lane_a.audit data/lane-a/<run>
+```
+
+It checks that every planned cell exists, that the files present match what the
+record says happened, that every checksum still holds, and that each published
+latency still recomputes from the files. Finding a gap now costs one rerun;
+finding it in a month costs a rerun against a provider that has changed
+underneath the result, which is not the same measurement.
 
 `lane_a/recompute.py` derives the published latency from those files alone. It
 imports nothing from the runner and opens no socket:

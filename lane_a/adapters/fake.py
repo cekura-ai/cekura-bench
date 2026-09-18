@@ -81,7 +81,7 @@ class FakeAdapter(RealtimeAdapter):
     async def _commit(self) -> None:
         self._start_reply()
 
-    async def send_tool_result(self, call_id: str, output: Any) -> None:
+    async def _send_tool_result(self, call_id: str, output: Any) -> None:
         self.log.emit(ev.TOOL_RESULT, call_id=call_id)
         self._start_reply()
 

@@ -86,3 +86,78 @@ class TestArtifacts:
         assert agent.rate == payload["agent"]["rate"]
         assert agent.n_samples == sum(row[2] for row in payload["agent"]["chunks"])
         assert agent.time_of_sample(0) == pytest.approx(payload["agent"]["chunks"][0][3])
+
+
+class TestTheRecordIsComplete:
+    """What a cell must carry so the campaign never has to be repeated.
+
+    A provider run cannot be reproduced later -- the model behind the endpoint
+    changes -- so anything missing from the record is not merely inconvenient,
+    it is unrecoverable. These tests pin down the fields that were learned the
+    hard way rather than the whole schema.
+    """
+
+    async def test_the_cell_says_what_was_measured_without_the_run_root(self, tmp_path):
+        runner, _root = await run_one(tmp_path)
+        record = json.loads((Path(runner.cells[0].artifacts["dir"]) / "cell.json").read_text())
+        assert record["identity"]["model"] and record["identity"]["probe"]
+        # The label alone loses the parameters: two ladders configured differently
+        # would publish under the same name.
+        assert record["session"]["requested"]["turn_detection"]["silence_duration_ms"] == 300
+        assert record["probe_params"]["clip_id"] == "open.book"
+        # Change a detector constant and every latency moves; the commit would not.
+        assert record["environment"]["detector"]["margin_db"]
+        assert record["harness"]["commit"]
+        assert record["corpus"]["utterances"][0]["speech_end_sample"] > 0
+        assert record["artifacts"]["agent.wav"]["sha256"]
+
+    async def test_a_dirty_tree_is_disclosed_rather_than_implied_clean(self, tmp_path):
+        runner, root = await run_one(tmp_path)
+        harness = json.loads((root / "provenance.json").read_text())["harness"]
+        assert harness["commit"] and harness["branch"]
+        if harness["dirty"]:
+            assert harness["dirty_files"], "a dirty tree must name what differs"
+            # The status flags occupy the first two columns, so a path that lost
+            # its first character means the record is naming files that do not
+            # exist -- which reads as clean-ish when it is not.
+            assert all(Path(name).name for name in harness["dirty_files"])
+            assert not any(name.startswith(("ane_", "ests/", "in/")) for name in harness["dirty_files"])
+        if (root / "harness.patch").exists():
+            assert (root / "harness.patch").read_text().strip(), "an empty patch discloses nothing"
+
+    async def test_results_survive_an_interrupted_campaign(self, tmp_path):
+        """The first cells must be on disk before the last one runs."""
+        spec = RunSpec(
+            provider="fake",
+            probes=[ResponseLatency()],
+            configs=[TurnDetection("server_vad", silence_duration_ms=300)],
+            voices=["f-us"],
+            repeats=3,
+            out_root=str(tmp_path),
+        )
+        runner = Runner(spec, corpus_or_skip(), api_key="unused")
+
+        def stop_after_first(_cell):
+            raise KeyboardInterrupt
+
+        with pytest.raises(KeyboardInterrupt):
+            await runner.run(on_cell=stop_after_first)
+
+        rows = [json.loads(line) for line in (runner.root / "cells.jsonl").read_text().splitlines() if line.strip()]
+        assert len(rows) == 1 and rows[0]["verdict"]
+        summary = json.loads((runner.root / "run.json").read_text())
+        assert summary["status"] == "interrupted"
+        assert summary["completed_cells"] == 1
+        assert len(summary["missing_cells"]) == 2, "an abandoned run must say what it never ran"
+
+    async def test_the_audit_catches_a_cell_that_changed_after_the_run(self, tmp_path):
+        from lane_a.audit import audit_run
+
+        runner, root = await run_one(tmp_path)
+        assert audit_run(root)["ok"], audit_run(root)["problems"]
+
+        agent = Path(runner.cells[0].artifacts["dir"]) / "agent.wav"
+        agent.write_bytes(agent.read_bytes()[: agent.stat().st_size // 2])
+        report = audit_run(root)
+        assert not report["ok"]
+        assert any("agent.wav" in problem for problem in report["problems"])

@@ -177,6 +177,8 @@ class BranchingCaller:
         self.adapter = adapter
         self.log = log
         self.max_slip_ms = 0.0
+        self.slip_events = 0
+        self.chunks_sent = 0
         self.utterances: list[Utterance] = []
         self.bed: bytes | None = None          # room tone / noise, looped under everything
         self._queue: list[_Segment] = []
@@ -305,12 +307,14 @@ class BranchingCaller:
             slip_ms = (actual - target) * 1000.0
             self.max_slip_ms = max(self.max_slip_ms, slip_ms)
             if slip_ms > SLIP_WARN_MS:
+                self.slip_events += 1
                 self.log.emit(ev.CALLER_SLIP, chunk=index, slip_ms=round(slip_ms, 2))
             try:
                 await self.adapter.send_audio(self._next_chunk(), t_send=max(target, actual))
             except Exception as exc:  # noqa: BLE001 -- a dead socket ends the run, not the process
                 self.log.emit(ev.SESSION_ERROR, error=repr(exc), where="carrier")
                 return
+            self.chunks_sent += 1
             index += 1
 
     # -- speaking ---------------------------------------------------------

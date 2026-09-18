@@ -18,6 +18,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from lane_a.adapters.base import TurnDetection  # noqa: E402
+from lane_a.audit import audit_run  # noqa: E402
 from lane_a.corpus_v1 import build  # noqa: E402
 from lane_a.probes import (  # noqa: E402
     BackchannelTolerance,
@@ -129,7 +130,18 @@ def main() -> int:
     print(f"lane A: {args.provider} {runner.model} suite={args.suite} repeats={args.repeats}")
     out = asyncio.run(runner.run(on_cell=show))
     print(f"\nrun -> {out}")
-    return 0
+
+    # Audited here rather than on demand. A record gap found now costs one rerun;
+    # found later it costs a rerun against a provider that has changed underneath
+    # the result, which is not the same measurement.
+    report = audit_run(out)
+    if report["ok"]:
+        print(f"record complete: {report['found']}/{report['planned']} cells, recomputable")
+        return 0
+    print(f"record INCOMPLETE: {report['found']}/{report['planned']} cells", file=sys.stderr)
+    for problem in report["problems"]:
+        print(f"  ! {problem}", file=sys.stderr)
+    return 1
 
 
 if __name__ == "__main__":

@@ -30,6 +30,7 @@ CALLER_AUDIO_START = "caller.audio.start"      # first sample of an utterance le
 CALLER_AUDIO_END = "caller.audio.end"          # last sample of an utterance left us
 CALLER_COMMIT = "caller.commit"                # manual turn boundary declared
 CALLER_TRANSCRIPT = "caller.transcript"        # provider's ASR of what we sent
+CALLER_TEXT = "caller.text"                    # the text arm's turn, sent as words not audio
 CALLER_SLIP = "caller.pacing.slip"             # we fell behind realtime; the run is suspect
 
 AGENT_AUDIO_START = "agent.audio.start"        # first audio chunk of a response arrived
@@ -75,6 +76,7 @@ class EventLog:
     def __init__(self, clock: Clock, path: str | Path | None = None, raw_path: str | Path | None = None) -> None:
         self.clock = clock
         self.events: list[Event] = []
+        self.raw_frames = 0
         self._file = self._open(path)
         self._raw = self._open(raw_path)
         if self._file:
@@ -97,9 +99,16 @@ class EventLog:
         return event
 
     def raw(self, payload: Any, direction: str = "in") -> None:
-        """Every provider frame verbatim, for the audit trail."""
+        """Every provider frame verbatim, for the audit trail.
+
+        Flushed per frame like the normalized log. A run killed part-way must
+        leave the frames it had already seen on disk: the alternative is
+        rerunning a provider call to recover evidence that was already gathered.
+        """
+        self.raw_frames += 1
         if self._raw:
             self._raw.write(json.dumps({"t": round(self.clock.now(), 6), "dir": direction, "payload": payload}) + "\n")
+            self._raw.flush()
 
     def of_kind(self, *kinds: str) -> Iterator[Event]:
         return (event for event in self.events if event.kind in kinds)

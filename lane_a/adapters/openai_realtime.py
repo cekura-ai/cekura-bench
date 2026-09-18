@@ -68,10 +68,12 @@ class OpenAIRealtimeAdapter(RealtimeAdapter):
         self.log.raw(first)
         if first.get("type") != "session.created":
             raise AdapterError(f"openai-realtime refused the session: {first}")
-        self.log.emit(ev.SESSION_OPEN, session_id=first["session"].get("id"), model=self.model)
+        self.session_id = first["session"].get("id")
+        self.log.emit(ev.SESSION_OPEN, session_id=self.session_id, model=self.model)
 
         self._receiver = asyncio.create_task(self._receive_loop(), name="openai-realtime-recv")
-        await self._send_json({"type": "session.update", "session": self._session_payload()})
+        self.session_sent = self._session_payload()
+        await self._send_json({"type": "session.update", "session": self.session_sent})
         try:
             await asyncio.wait_for(self._configured.wait(), CONNECT_TIMEOUT_S)
         except asyncio.TimeoutError as exc:
@@ -148,7 +150,7 @@ class OpenAIRealtimeAdapter(RealtimeAdapter):
         await self._send_json({"type": "input_audio_buffer.commit"})
         await self._send_json({"type": "response.create"})
 
-    async def send_text(self, text: str) -> None:
+    async def _send_text(self, text: str) -> None:
         """The text control arm: identical scenario, no audio anywhere."""
         await self._send_json(
             {
@@ -158,7 +160,7 @@ class OpenAIRealtimeAdapter(RealtimeAdapter):
         )
         await self._send_json({"type": "response.create"})
 
-    async def send_tool_result(self, call_id: str, output: Any) -> None:
+    async def _send_tool_result(self, call_id: str, output: Any) -> None:
         await self._send_json(
             {
                 "type": "conversation.item.create",
@@ -203,6 +205,7 @@ class OpenAIRealtimeAdapter(RealtimeAdapter):
             self.log.emit(ev.AGENT_TRANSCRIPT, text=text)
         elif kind == "session.updated":
             self._configured.set()
+            self.session_ack = payload.get("session")
             self.log.emit(ev.SESSION_CONFIGURED, turn_detection=self.config.turn_detection.label)
         elif kind == "input_audio_buffer.speech_started":
             self.log.emit(ev.VAD_SPEECH_START, audio_ms=payload.get("audio_start_ms"))

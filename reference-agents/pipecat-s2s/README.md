@@ -71,9 +71,21 @@ and that is a change to the contract rather than something to fake in the agent.
 
 With `CEKURA_API_KEY` and `CEKURA_AGENT_ID` set, the run is traced through the
 Cekura Pipecat SDK: transcripts, tool calls, logs and spans land against the run
-instead of in a container's stdout, tagged with the provider, model, voice and
-agent definition. `track` correlates a scenario run; `observe` additionally
-uploads the call audio and starts evaluation.
+instead of in a container's stdout. `track` correlates a scenario run; `observe`
+additionally uploads the call audio and starts evaluation.
+
+Every call carries a **build record** as trace metadata, and it is also logged
+once at startup so the answer survives when only container logs do:
+
+| Field | Why a call is not evidence without it |
+|---|---|
+| `agent_commit`, `pipecat_version`, `cekura_version` | the agent under test is this file *plus* the framework it runs on |
+| `s2s_provider`, `s2s_model`, `s2s_voice` | what was measured |
+| `pipeline_sample_rate` | these services do not resample; a wrong rate makes the model hear the caller at the wrong speed, which reads as a bad model rather than bad wiring |
+| `agent_definition`, `system_prompt_sha256`, `first_message_sha256`, `tools` | the task, the prompt and the contract the model was given |
+
+A phone call cannot be replayed and the provider endpoint moves underneath us, so
+a recording whose configuration is unknown is not evidence of anything.
 
 Without credentials the agent still runs and still answers the phone. A missing
 key must never be the reason a benchmark call fails.

@@ -122,3 +122,27 @@ class TestAgentDefinition:
         server = bot.load_agent()
         assert server.system_prompt and server.first_message
         assert server.suite == "appointments"
+
+
+class TestBuildRecord:
+    """A phone call cannot be replayed, so the build that answered it must be recorded."""
+
+    def test_it_names_the_configuration_a_call_cannot_be_re_run_without(self):
+        server = bot.load_agent()
+        record = bot.build_record(
+            "openai-realtime", bot.PROVIDERS["openai-realtime"], "gpt-realtime-2.1", "marin", server
+        )
+        # The rate is the one that silently ruins a call: these services do not
+        # resample, so a wrong rate reads as a bad model rather than bad wiring.
+        assert record["pipeline_sample_rate"] == bot.PROVIDERS["openai-realtime"].input_rate
+        assert record["pipecat_version"] != "unknown", "the framework version is part of the agent"
+        assert record["system_prompt_sha256"] and record["first_message_sha256"]
+        assert "lookup_patient" in record["tools"]
+
+    def test_a_changed_prompt_changes_the_record(self):
+        server = bot.load_agent()
+        provider = bot.PROVIDERS["openai-realtime"]
+        before = bot.build_record("openai-realtime", provider, "m", "v", server)
+        server.system_prompt = server.system_prompt + " Answer briefly."
+        after = bot.build_record("openai-realtime", provider, "m", "v", server)
+        assert before["system_prompt_sha256"] != after["system_prompt_sha256"]

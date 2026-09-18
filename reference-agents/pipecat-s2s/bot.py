@@ -25,7 +25,9 @@ Run it::
 
 from __future__ import annotations
 
+import hashlib
 import os
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -182,6 +184,62 @@ def opening_messages(first_message: str) -> list[dict[str, Any]]:
     ]
 
 
+# ── what answered the call ───────────────────────────────────────────────────
+
+def _commit() -> str:
+    """This agent's commit. Deliberately not imported from the Lane A harness.
+
+    A deployed agent must not depend on the thing measuring it, so the few lines
+    are repeated rather than shared.
+    """
+    try:
+        return subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True, cwd=REPO_ROOT
+        ).stdout.strip()
+    except Exception:  # noqa: BLE001 -- a container without git is a caveat, not a crash
+        return "unknown"
+
+
+def _version(package: str) -> str:
+    try:
+        from importlib.metadata import version
+
+        return version(package)
+    except Exception:  # noqa: BLE001
+        return "unknown"
+
+
+def build_record(provider_key: str, provider: "Provider", model: str, voice: str, server: Any) -> dict[str, Any]:
+    """Everything needed to say which build answered a given call.
+
+    A phone call cannot be replayed and a provider endpoint moves underneath us,
+    so a recording whose configuration is unknown is not evidence of anything.
+    This travels with the run as trace metadata and is logged once at startup, so
+    the answer survives even when only the container logs do.
+
+    The pipeline sample rate is in here for a specific reason: these realtime
+    services do not resample, and a wrong rate makes the model hear the caller at
+    the wrong speed. That failure looks exactly like a bad model unless the rate
+    that was actually used is on the record.
+    """
+    prompt = server.system_prompt or ""
+    return {
+        "lane": "B",
+        "agent_commit": _commit(),
+        "s2s_provider": provider_key,
+        "s2s_model": model,
+        "s2s_voice": voice,
+        "pipeline_sample_rate": provider.input_rate,
+        "agent_definition": server.suite,
+        "system_prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:16],
+        "first_message_sha256": hashlib.sha256((server.first_message or "").encode("utf-8")).hexdigest()[:16],
+        "tools": ",".join(server.tool_names),
+        "pipecat_version": _version("pipecat-ai"),
+        "cekura_version": _version("cekura"),
+        "cekura_mode": os.getenv("CEKURA_MODE", "track"),
+    }
+
+
 # ── the bot ──────────────────────────────────────────────────────────────────
 
 async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> None:
@@ -197,7 +255,8 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
 
     model = os.getenv("S2S_MODEL", provider.default_model)
     voice = os.getenv("S2S_VOICE", provider.default_voice)
-    logger.info("lane B reference agent: {} {} voice={} agent={}", name, model, voice, server.suite)
+    record = build_record(name, provider, model, voice, server)
+    logger.info("lane B reference agent: {}", record)
 
     llm = provider.build(api_key, model, voice, server.system_prompt)
     register_tools(llm, server)
@@ -223,7 +282,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         audio_in_sample_rate=provider.input_rate,
         audio_out_sample_rate=provider.input_rate,
     )
-    task = create_task(pipeline, context, params, runner_args, transport, name, model, voice, server.suite)
+    task = create_task(pipeline, context, params, runner_args, transport, record)
 
     @transport.event_handler("on_client_connected")
     async def _on_connected(_transport, _client):
@@ -240,7 +299,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
     await PipelineRunner(handle_sigint=False).run(task)
 
 
-def create_task(pipeline, context, params, runner_args, transport, provider, model, voice, suite) -> PipelineTask:
+def create_task(pipeline, context, params, runner_args, transport, record) -> PipelineTask:
     """Wrap the pipeline in Cekura tracing when credentials are present.
 
     Tracing is what makes a Lane B run inspectable afterwards: transcripts, tool
@@ -262,13 +321,7 @@ def create_task(pipeline, context, params, runner_args, transport, provider, mod
             agent_id=int(agent_id),
             host=os.getenv("CEKURA_HOST", "https://api.cekura.ai"),
         )
-        metadata = {
-            "lane": "B",
-            "s2s_provider": provider,
-            "s2s_model": model,
-            "s2s_voice": voice,
-            "agent_definition": suite,
-        }
+        metadata = dict(record)
         # "track" correlates a scenario run and captures transcripts and metadata;
         # "observe" additionally uploads the call audio and starts evaluation.
         # A benchmark run is dispatched with its own run id, so track is the

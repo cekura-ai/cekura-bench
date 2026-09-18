@@ -6,6 +6,13 @@ Published results drift from the code that produced them as soon as either can
 change without the other, and a number whose method cannot be pinned down is not
 a measurement. Stamping every cell is what keeps the two attached.
 
+Everything is written as it happens rather than at the end. A campaign against a
+live provider costs money, takes real time and cannot be reproduced later -- the
+model behind the endpoint changes -- so a crash in the last cell must not take
+the first twenty with it. The plan lands before the first connection, each cell's
+record lands as that cell finishes, and the run summary is rewritten as it goes.
+An interrupted run is therefore a partial result, not a lost one.
+
 One session per cell, deliberately. Sharing a session across probes would let one
 probe's conversation history change the next probe's behaviour, and the resulting
 row would describe an ordering as much as a provider.
@@ -15,17 +22,19 @@ from __future__ import annotations
 
 import asyncio
 import json
-import subprocess
+import traceback
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
 
 from lane_a import events as ev
+from lane_a import provenance as prov
 from lane_a.adapters.base import AdapterError, SessionConfig, ToolSpec, TurnDetection
 from lane_a.audio import write_wav
 from lane_a.caller import BranchingCaller
 from lane_a.clips import Corpus
+from lane_a.metrics import usage
 from lane_a.probes import Probe, ProbeContext, ProbeResult
 from lane_a.registry import PROVIDERS
 from mock_tools.server import MockToolServer
@@ -68,19 +77,17 @@ class Cell:
     void: str | None
     values: dict[str, Any] = field(default_factory=dict)
     artifacts: dict[str, str] = field(default_factory=dict)
+    started_utc: str = ""
+    duration_s: float = 0.0
+    usage: dict[str, Any] = field(default_factory=dict)
+    error: str | None = None
 
     def as_json(self) -> dict[str, Any]:
-        return {**asdict(self), **{}}
+        return asdict(self)
 
 
 def harness_commit() -> str:
-    try:
-        return subprocess.run(
-            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True,
-            cwd=Path(__file__).resolve().parent.parent,
-        ).stdout.strip()
-    except Exception:  # noqa: BLE001 -- an unversioned checkout is a caveat, not a crash
-        return "unknown"
+    return prov.harness_state()["commit"]
 
 
 class Runner:
@@ -91,17 +98,99 @@ class Runner:
         self.entry = PROVIDERS[spec.provider]
         self.tools = MockToolServer(spec.suite) if spec.suite else None
         self.model = spec.model or self.entry.default_model
-        started = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        self.root = Path(spec.out_root) / f"{started}-{spec.provider}{'-' + spec.label if spec.label else ''}"
+        started = datetime.now(timezone.utc)
+        self.started_utc = started.isoformat()
+        self.root = Path(spec.out_root) / (
+            f"{started.strftime('%Y%m%dT%H%M%SZ')}-{spec.provider}{'-' + spec.label if spec.label else ''}"
+        )
+        self.harness = prov.harness_state()
+        self.environment = prov.environment()
         self.cells: list[Cell] = []
+        self._cells_file = None
+
+    # -- the record, before anything is measured --------------------------
+
+    def plan(self) -> list[dict[str, Any]]:
+        """Every cell this run intends to produce, named before it runs.
+
+        Written up front so an interrupted campaign shows what is missing rather
+        than only what survived. Without it, a directory of twelve cells and a
+        directory of twelve cells from a run that meant to do twenty are
+        indistinguishable.
+        """
+        return [
+            {
+                "cell_id": f"{probe.slug}/{config.label}/{voice}/r{repeat}",
+                "probe": probe.name,
+                "variant": probe.slug,
+                "probe_params": prov.describe(probe),
+                "config": config.label,
+                "voice": voice,
+                "repeat": repeat,
+            }
+            for probe in self.spec.probes
+            for config in self.spec.configs
+            for voice in self.spec.voices
+            for repeat in range(1, self.spec.repeats + 1)
+        ]
+
+    def open_run(self) -> None:
+        """Lay down provenance, plan and corpus manifest before the first call."""
+        self.root.mkdir(parents=True, exist_ok=True)
+        planned = self.plan()
+        (self.root / "provenance.json").write_text(
+            json.dumps(self._provenance(len(planned)), indent=2) + "\n", encoding="utf-8"
+        )
+        (self.root / "plan.json").write_text(
+            json.dumps({"run_id": self.root.name, "cells": planned}, indent=2) + "\n", encoding="utf-8"
+        )
+        (self.root / "manifest.json").write_text(
+            json.dumps(self.corpus.manifest(), indent=2) + "\n", encoding="utf-8"
+        )
+        # A commit identifies the code only when the tree is clean. When it is
+        # not, the difference travels with the run instead of being lost.
+        if self.harness["dirty"]:
+            patch = prov.harness_patch()
+            if patch:
+                (self.root / "harness.patch").write_text(patch + "\n", encoding="utf-8")
+        if self._cells_file is None:
+            self._cells_file = open(self.root / "cells.jsonl", "a", encoding="utf-8")
+
+    def _provenance(self, planned: int) -> dict[str, Any]:
+        return {
+            "schema": prov.RUN_SCHEMA,
+            "run_id": self.root.name,
+            "methodology_version": METHODOLOGY_VERSION,
+            "harness": self.harness,
+            "harness_commit": self.harness["commit"],   # kept flat for older readers
+            "environment": self.environment,
+            "corpus_version": self.corpus.version,
+            "provider": self.spec.provider,
+            "adapter": self.entry.adapter.name,
+            "model": self.model,
+            "output_voice": self.spec.voice_name or self.entry.default_voice,
+            "configs": [c.label for c in self.spec.configs],
+            "caller_voices": list(self.spec.voices),
+            "repeats": self.spec.repeats,
+            "modality": self.spec.modality,
+            "probes": [{"name": p.name, "variant": p.slug, "params": prov.describe(p)} for p in self.spec.probes],
+            "tool_contract": self.spec.suite,
+            "suite_label": self.spec.label,
+            "discloses": list(self.entry.discloses),
+            "planned_cells": planned,
+            "started_utc": self.started_utc,
+            "generated_utc": datetime.now(timezone.utc).isoformat(),
+        }
 
     # -- one cell ---------------------------------------------------------
 
     async def run_cell(self, probe: Probe, config: TurnDetection, voice: str, repeat: int) -> Cell:
         slug = f"{probe.slug}/{config.label}/{voice}/r{repeat}"
         directory = self.root / probe.slug / config.label / voice / f"r{repeat}"
+        directory.mkdir(parents=True, exist_ok=True)
         clock = ev.Clock()
         log = ev.EventLog(clock, directory / "events.jsonl", directory / "raw.jsonl")
+        started_utc = datetime.now(timezone.utc).isoformat()
 
         tools = MockToolServer(self.spec.suite) if self.spec.suite else None
         session = SessionConfig(
@@ -114,6 +203,8 @@ class Runner:
         )
         adapter = self.entry.adapter(model=self.model, api_key=self.api_key, log=log, config=session)
         result = ProbeResult(probe.name)
+        caller: BranchingCaller | None = None
+        failure: dict[str, Any] | None = None
         try:
             async with adapter:
                 caller = BranchingCaller(adapter, log)
@@ -135,8 +226,13 @@ class Runner:
                     # Our own host, not the provider. Voiding is the honest call.
                     result.void = result.void or f"caller pacing slipped {caller.max_slip_ms:.0f} ms"
         except AdapterError as exc:
+            failure = {"type": type(exc).__name__, "message": str(exc), "traceback": traceback.format_exc()}
             result = ProbeResult(probe.name, void=f"provider refused the session: {exc}")
         except Exception as exc:  # noqa: BLE001
+            # The repr alone loses where it happened, and a harness bug found in
+            # a run that cost an hour of provider time should not need the run
+            # repeated to be diagnosed.
+            failure = {"type": type(exc).__name__, "message": str(exc), "traceback": traceback.format_exc()}
             result = ProbeResult(probe.name, void=f"harness error: {exc!r}")
         finally:
             if adapter.agent_pcm:
@@ -159,6 +255,8 @@ class Runner:
             )
             log.close()
 
+        ended = datetime.now(timezone.utc)
+        totals = usage(adapter)
         cell = Cell(
             provider=self.spec.provider,
             model=self.model,
@@ -171,45 +269,201 @@ class Runner:
             void=result.void,
             values=result.values,
             artifacts={"dir": str(directory), "slug": slug},
+            started_utc=started_utc,
+            duration_s=round(clock.now(), 3),
+            usage=totals,
+            error=None if failure is None else f"{failure['type']}: {failure['message']}",
+        )
+        self._write_cell_record(
+            directory, cell, probe=probe, config=config, voice=voice, repeat=repeat,
+            session=session, adapter=adapter, caller=caller, log=log, clock=clock,
+            tools=tools, result=result, failure=failure, started_utc=started_utc,
+            ended_utc=ended.isoformat(),
         )
         self.cells.append(cell)
+        self._append_cell(cell)
         return cell
+
+    def _write_cell_record(
+        self, directory: Path, cell: Cell, *, probe: Probe, config: TurnDetection, voice: str,
+        repeat: int, session: SessionConfig, adapter: Any, caller: BranchingCaller | None,
+        log: ev.EventLog, clock: ev.Clock, tools: MockToolServer | None, result: ProbeResult,
+        failure: dict[str, Any] | None, started_utc: str, ended_utc: str,
+    ) -> None:
+        """One self-contained record per cell, written last so it can inventory the rest."""
+        utterances = [] if caller is None else [
+            {
+                "clip": u.clip.name,
+                "sha256": u.clip.sha256,
+                "text": u.clip.text,
+                "rate": u.clip.rate,
+                "first_sample": u.first_sample,
+                "last_sample": u.last_sample,
+                "speech_start_sample": u.speech_start_sample,
+                "speech_end_sample": u.speech_end_sample,
+                "t_start": None if u.t_start is None else round(u.t_start, 6),
+                "t_end": None if u.t_end is None else round(u.t_end, 6),
+            }
+            for u in caller.utterances
+        ]
+        record = {
+            "schema": prov.CELL_SCHEMA,
+            "methodology_version": METHODOLOGY_VERSION,
+            "run_id": self.root.name,
+            "cell_id": cell.artifacts["slug"],
+            "identity": {
+                "provider": self.spec.provider,
+                "adapter": adapter.name,
+                "model": self.model,
+                "config": config.label,
+                "voice": voice,
+                "repeat": repeat,
+                "probe": probe.name,
+                "variant": probe.slug,
+                "suite": self.spec.label,
+                "tool_contract": self.spec.suite,
+            },
+            "probe_params": prov.describe(probe),
+            "session": {
+                "requested": prov.session_snapshot(session),
+                "provider_session_id": adapter.session_id,
+                "sent": adapter.session_sent,
+                "acknowledged": adapter.session_ack,
+            },
+            "audio": {
+                "input_rate": adapter.input_rate,
+                "output_rate": adapter.output_rate,
+                "caller_samples": adapter.caller_timeline.n_samples,
+                "agent_samples": adapter.agent_timeline.n_samples,
+                "caller_ms": round(1000 * adapter.caller_timeline.n_samples / adapter.input_rate, 1),
+                "agent_ms": round(1000 * adapter.agent_timeline.n_samples / adapter.output_rate, 1),
+                "caller_chunks": len(adapter.caller_timeline.chunks),
+                "agent_chunks": len(adapter.agent_timeline.chunks),
+            },
+            "corpus": {
+                "version": self.corpus.version,
+                "voice": voice,
+                "utterances": utterances,
+                "text_sent": [e.data.get("text", "") for e in log.of_kind(ev.CALLER_TEXT)],
+            },
+            "caller_pacing": {
+                "max_slip_ms": None if caller is None else round(caller.max_slip_ms, 2),
+                "slip_events": None if caller is None else caller.slip_events,
+                "chunks_sent": None if caller is None else caller.chunks_sent,
+                "void_threshold_ms": 25.0,
+            },
+            "transcripts": {
+                "agent": list(adapter.agent_text),
+                "caller_asr": list(adapter.caller_text),
+            },
+            "tools": {
+                "calls": list(adapter.tool_calls),
+                "results": list(adapter.tool_results),
+                "served": [] if tools is None else [
+                    {"name": c.name, "arguments": c.arguments, "matched": c.matched, "output": c.output}
+                    for c in tools.calls
+                ],
+            },
+            "usage": cell.usage,
+            "counts": {
+                "events": len(log.events),
+                "raw_frames": log.raw_frames,
+                "tool_calls": len(adapter.tool_calls),
+                "responses": sum(1 for _ in log.of_kind(ev.RESPONSE_DONE)),
+                "provider_errors": sum(1 for _ in log.of_kind(ev.SESSION_ERROR)),
+            },
+            "result": {"verdict": result.verdict, "void": result.void, "values": result.values},
+            "error": failure,
+            "timing": {
+                "started_utc": started_utc,
+                "ended_utc": ended_utc,
+                "duration_s": cell.duration_s,
+                "wall_origin": clock.wall_origin,
+            },
+            "harness": self.harness,
+            "environment": self.environment,
+            "artifacts": prov.file_inventory(directory),
+        }
+        (directory / "cell.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+
+    def _append_cell(self, cell: Cell) -> None:
+        if self._cells_file is None:
+            self.open_run()
+        self._cells_file.write(json.dumps(cell.as_json()) + "\n")
+        self._cells_file.flush()
 
     # -- the campaign -----------------------------------------------------
 
     async def run(self, on_cell=None) -> Path:
-        for probe in self.spec.probes:
-            for config in self.spec.configs:
-                for voice in self.spec.voices:
-                    for repeat in range(1, self.spec.repeats + 1):
-                        cell = await self.run_cell(probe, config, voice, repeat)
-                        if on_cell:
-                            on_cell(cell)
-                        await asyncio.sleep(0.5)  # be a polite client, not a load test
-        return self.write_results()
+        self.open_run()
+        try:
+            for probe in self.spec.probes:
+                for config in self.spec.configs:
+                    for voice in self.spec.voices:
+                        for repeat in range(1, self.spec.repeats + 1):
+                            cell = await self.run_cell(probe, config, voice, repeat)
+                            if on_cell:
+                                on_cell(cell)
+                            self.write_summary(status="running")
+                            await asyncio.sleep(0.5)  # be a polite client, not a load test
+        except BaseException as exc:  # noqa: BLE001 -- including Ctrl-C: the record still closes
+            self.write_summary(status="interrupted", note=f"{type(exc).__name__}: {exc}")
+            self.close()
+            raise
+        self.write_summary(status="complete")
+        self.close()
+        return self.root
+
+    def write_summary(self, status: str = "complete", note: str | None = None) -> Path:
+        """Rewritten after every cell, so an abandoned run still says what it did."""
+        self.root.mkdir(parents=True, exist_ok=True)
+        planned = len(self.plan())
+        done = {c.artifacts["slug"] for c in self.cells}
+        summary = {
+            "schema": prov.RUN_SCHEMA,
+            "run_id": self.root.name,
+            "status": status,
+            "note": note,
+            "planned_cells": planned,
+            "completed_cells": len(self.cells),
+            "missing_cells": [p["cell_id"] for p in self.plan() if p["cell_id"] not in done],
+            "verdicts": self._tally("verdict"),
+            "voids": self._tally("void", truthy=True),
+            "errors": sum(1 for c in self.cells if c.error),
+            "usage_totals": self._usage_totals(),
+            "started_utc": self.started_utc,
+            "updated_utc": datetime.now(timezone.utc).isoformat(),
+        }
+        (self.root / "run.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+        return self.root
+
+    def _tally(self, attribute: str, truthy: bool = False) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for cell in self.cells:
+            value = getattr(cell, attribute)
+            if truthy:
+                if value:
+                    counts["void"] = counts.get("void", 0) + 1
+            elif value:
+                counts[value] = counts.get(value, 0) + 1
+        return counts
+
+    def _usage_totals(self) -> dict[str, int]:
+        totals: dict[str, int] = {}
+        for cell in self.cells:
+            for key, value in cell.usage.items():
+                if isinstance(value, int):
+                    totals[key] = totals.get(key, 0) + value
+        return totals
+
+    def close(self) -> None:
+        if self._cells_file is not None:
+            self._cells_file.close()
+            self._cells_file = None
 
     def write_results(self) -> Path:
-        self.root.mkdir(parents=True, exist_ok=True)
-        provenance = {
-            "methodology_version": METHODOLOGY_VERSION,
-            "harness_commit": harness_commit(),
-            "corpus_version": self.corpus.version,
-            "provider": self.spec.provider,
-            "model": self.model,
-            "output_voice": self.spec.voice_name or self.entry.default_voice,
-            "configs": [c.label for c in self.spec.configs],
-            "caller_voices": list(self.spec.voices),
-            "repeats": self.spec.repeats,
-            "modality": self.spec.modality,
-            "tool_contract": self.spec.suite,
-            "discloses": list(self.entry.discloses),
-            "generated_utc": datetime.now(timezone.utc).isoformat(),
-        }
-        (self.root / "provenance.json").write_text(json.dumps(provenance, indent=2) + "\n", encoding="utf-8")
-        with open(self.root / "cells.jsonl", "w", encoding="utf-8") as handle:
-            for cell in self.cells:
-                handle.write(json.dumps(cell.as_json()) + "\n")
-        (self.root / "manifest.json").write_text(
-            json.dumps(self.corpus.manifest(), indent=2) + "\n", encoding="utf-8"
-        )
+        """Kept for callers that ran cells by hand rather than through ``run``."""
+        self.open_run()
+        self.write_summary(status="complete")
+        self.close()
         return self.root

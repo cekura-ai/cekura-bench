@@ -1,0 +1,390 @@
+{
+  "corpus_version": "0.1.0",
+  "master_rate": 24000,
+  "voices": {
+    "f-us": {
+      "label": "f-us",
+      "vendor": "elevenlabs",
+      "voice_id": "EXAVITQu4vr4xnSDxMaL",
+      "model": "eleven_turbo_v2_5"
+    },
+    "m-us": {
+      "label": "m-us",
+      "vendor": "elevenlabs",
+      "voice_id": "CwhRBWXzGAHq8TQ4Fs17",
+      "model": "eleven_turbo_v2_5"
+    },
+    "f-gb": {
+      "label": "f-gb",
+      "vendor": "elevenlabs",
+      "voice_id": "Xb7hH8MSUJpSbSDYk0k2",
+      "model": "eleven_turbo_v2_5"
+    }
+  },
+  "clips": [
+    {
+      "id": "bargein.stop",
+      "text": "Actually, hold on a second.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "bargein.stop.ba4b6d25.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "8f5f576eda9ab80dde40e00974078748f329da341a5d84caf4a4524635ee50a8",
+          "bytes": 71376
+        },
+        "m-us": {
+          "file": "bargein.stop.ba4b6d25.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "89d46747543c39778a6655997117d80bf79c85af02456ee1c3f60b63567dce4e",
+          "bytes": 80292
+        },
+        "f-gb": {
+          "file": "bargein.stop.ba4b6d25.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "198f352c3eba563eda5357b136f2535060cfc72db63654f79a424bc91a98a578",
+          "bytes": 78064
+        }
+      }
+    },
+    {
+      "id": "correct.midanswer",
+      "text": "Sorry, I meant Tuesday, not Thursday.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "correct.midanswer.4187751d.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "9c504222f6c99946d1a1e5cca3dc4f542bc1684b97ec5d7ac9fb54242f229528",
+          "bytes": 95896
+        },
+        "m-us": {
+          "file": "correct.midanswer.4187751d.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "0c7be365ac77f0ee26f1b650c93e75ab5df39cb2b6d65d6fec4b2e4211f0fa8f",
+          "bytes": 129332
+        },
+        "f-gb": {
+          "file": "correct.midanswer.4187751d.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "7803bbe8f99bd4b4266a8dae6ca7f030fdfc426d4b44a8bfbc0129fc5044587e",
+          "bytes": 100354
+        }
+      }
+    },
+    {
+      "id": "open.book",
+      "text": "Hi, I'd like to book an appointment with Doctor Lee, please.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "open.book.084522c4.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "4ca624c293dd92c2141ad1988ec6b71a1eb422b015003dced0d5b991b869bfdb",
+          "bytes": 151624
+        },
+        "m-us": {
+          "file": "open.book.084522c4.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "4f061dbbf5d14a820f93a8a2f899f2f773b12462e2404e1a4edcfe93535be1bf",
+          "bytes": 153852
+        },
+        "f-gb": {
+          "file": "open.book.084522c4.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "cb16444d117efb16737e7c29a46cda690f6f6cb0d40abbd4d91123aa89ef30bb",
+          "bytes": 156082
+        }
+      }
+    },
+    {
+      "id": "open.reschedule",
+      "text": "Hello, I need to move my appointment to a different day.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "open.reschedule.ec2f6f46.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "85598d6c1d0cdcb81b3b689e8e95825a377d9ccf84a4d5490a0327bd7e65df30",
+          "bytes": 138250
+        },
+        "m-us": {
+          "file": "open.reschedule.ec2f6f46.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "6deb18329110d0fbf55740f9a3ba8d33a211ea01a7ff4b497b210c20a0a552eb",
+          "bytes": 147166
+        },
+        "f-gb": {
+          "file": "open.reschedule.ec2f6f46.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "f4015172279c8e824ea7ef96e440ad895463ec8fdc0f1eca44b53ff1d4a2f3f0",
+          "bytes": 153852
+        }
+      }
+    },
+    {
+      "id": "phone.part1",
+      "text": "My phone number is four one five,",
+      "note": "ladder first half",
+      "renders": {
+        "f-us": {
+          "file": "phone.part1.1051a1f8.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "14e1de6f9db38c1c29bda7181abc6410ad4c5d90bddf0536854d5565f6c40154",
+          "bytes": 89208
+        },
+        "m-us": {
+          "file": "phone.part1.1051a1f8.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "a2ac4e1e25f83c3ba52a738371af7932c014b76bb51bdfc0eba0ccf503f5f3e9",
+          "bytes": 115958
+        },
+        "f-gb": {
+          "file": "phone.part1.1051a1f8.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "04c61460cc48488f4eb07785294a28a43ee20ddb65241c192010b57dbadce10e",
+          "bytes": 100354
+        }
+      }
+    },
+    {
+      "id": "phone.part2",
+      "text": "five five five, zero one two three.",
+      "note": "ladder second half",
+      "renders": {
+        "f-us": {
+          "file": "phone.part2.7f96e67b.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "16b6f6581d5124ad4a8cee755198a3ef2a9fb14aec9c71ca156ca472d7b6ea2e",
+          "bytes": 111500
+        },
+        "m-us": {
+          "file": "phone.part2.7f96e67b.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "c31757ec35ae4f91f055520c372ae39dba1a08bd0db53d3010f65d82843bbd1e",
+          "bytes": 111500
+        },
+        "f-gb": {
+          "file": "phone.part2.7f96e67b.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "5a54f392ee565cd27f4f463c22f9fae45825d8ba3608937f53cd6f8a2a5715e2",
+          "bytes": 122646
+        }
+      }
+    },
+    {
+      "id": "task.cancel",
+      "text": "I'd like to cancel my appointment. The confirmation number is C W five zero zero one.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "task.cancel.2fda5438.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "22942206cb4a67018831054d6ca9117a39dfc396e378fb6da15ff0ee1c58859b",
+          "bytes": 243018
+        },
+        "m-us": {
+          "file": "task.cancel.2fda5438.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "cdfe424dac5934a1f83f8d5ef1d2cd832b47738a2a4c7d471880f0eb8915b99d",
+          "bytes": 251934
+        },
+        "f-gb": {
+          "file": "task.cancel.2fda5438.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "145b1a438fa7d86b1f3e05eb090dcc609201e1054c37c18805ca07c14d9f793b",
+          "bytes": 278684
+        }
+      }
+    },
+    {
+      "id": "task.confirm",
+      "text": "Yes, that works. Please go ahead and book it.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "task.confirm.cbe91df4.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "bc9df9cf66b13de09a7191a827d7bad7caedb1534dee8e75337242d495ad80f2",
+          "bytes": 102584
+        },
+        "m-us": {
+          "file": "task.confirm.cbe91df4.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "3dcd5170d7b3d4ec51f0e719c70e4cdf5d328316ad9c27a4193a614196dcc405",
+          "bytes": 118188
+        },
+        "f-gb": {
+          "file": "task.confirm.cbe91df4.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "a3c6b387b192b5d071bb28f4a63a9ecb7a7a4f35e7af91f6150d77cf752af704",
+          "bytes": 131562
+        }
+      }
+    },
+    {
+      "id": "task.date",
+      "text": "July the eighth would work. A morning slot, if you have one.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "task.date.55599be4.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "24b0fccb59dcb2df175fb106288116360bbea3182f12229d897a623cfd4e4a22",
+          "bytes": 149394
+        },
+        "m-us": {
+          "file": "task.date.55599be4.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "d97a9d8777b893695fa37a4d6be4dab3bcd566bf30fe921bc1661d1d5bb6c494",
+          "bytes": 164998
+        },
+        "f-gb": {
+          "file": "task.date.55599be4.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "b703981192ae6d1f881d6f699d872c1bb416efca9f41216602b9df4bba5e6165",
+          "bytes": 193978
+        }
+      }
+    },
+    {
+      "id": "task.identify",
+      "text": "This is James Carter, my number is two zero two, five five five, zero one eight eight.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "task.identify.17247faa.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "b17049162c6662d35155e32ee96195b10576b06d1850a3452b22286624ec673a",
+          "bytes": 229642
+        },
+        "m-us": {
+          "file": "task.identify.17247faa.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "6c717ceba12bb3cddcbee4ddc2939726b8e4f982d1106c58770f049a9bd9ff26",
+          "bytes": 245246
+        },
+        "f-gb": {
+          "file": "task.identify.17247faa.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "9f4d37462656d6830c3c69c09ea2ef5bc8d8830ae854beb2dc3638c7a7a1b509",
+          "bytes": 300974
+        }
+      }
+    },
+    {
+      "id": "task.reason",
+      "text": "It's for an annual checkup.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "task.reason.d049ce54.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "370606ab8bc8360295ce63b290310023a800b7bd494b07ce9ca72439c49b8c01",
+          "bytes": 78064
+        },
+        "m-us": {
+          "file": "task.reason.d049ce54.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "321c388360bb1346d8f015456cd5d6052d61e2715fa9eadcacdd6a8efbb599b8",
+          "bytes": 78064
+        },
+        "f-gb": {
+          "file": "task.reason.d049ce54.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "5722acd04c6a2216667917f23fc1481b1f25f48076344c8780af0c4352d9a45f",
+          "bytes": 93666
+        }
+      }
+    },
+    {
+      "id": "token.backchannel",
+      "text": "Mm hmm.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "token.backchannel.46808c43.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "4cbc220dd1088da3709404776dc165ad38e5a42dc1d01b8e1d8e88e03b0121c2",
+          "bytes": 33480
+        },
+        "m-us": {
+          "file": "token.backchannel.46808c43.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "44885e80adf73e34d2f513516a4a55ab3b5767f00e68e37944e680866f211559",
+          "bytes": 31252
+        },
+        "f-gb": {
+          "file": "token.backchannel.46808c43.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "41aa3c22b871d65dd734fb3f4c042684fb0a61150f453e0b5d269a52a724176c",
+          "bytes": 40168
+        }
+      }
+    },
+    {
+      "id": "token.hesitation",
+      "text": "Um, let me think.",
+      "note": "",
+      "renders": {
+        "f-us": {
+          "file": "token.hesitation.494c8f42.wav",
+          "provenance": "tts:elevenlabs/f-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "baa71ecdc0fca59c26a7a378a001663ba10c9818bd4b2ebe34322ec58d1f07b2",
+          "bytes": 51314
+        },
+        "m-us": {
+          "file": "token.hesitation.494c8f42.wav",
+          "provenance": "tts:elevenlabs/m-us",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "801eb8f1ebc4120f00a4c9bb84f4ced9fe3258bd5496fa20665a6f6938b8d8cf",
+          "bytes": 58002
+        },
+        "f-gb": {
+          "file": "token.hesitation.494c8f42.wav",
+          "provenance": "tts:elevenlabs/f-gb",
+          "tts_model": "eleven_turbo_v2_5",
+          "sha256": "a1b485defac7d239f307d4a75187e0f2c1d63da2991d3e0b72551063c4680a07",
+          "bytes": 60230
+        }
+      }
+    }
+  ]
+}

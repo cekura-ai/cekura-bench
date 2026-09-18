@@ -4,3 +4,10 @@ benchmark.config.json
 data/
 *.log
 
+
+# Lane A run artifacts (audio + raw provider frames); releases are published separately.
+data/lane-a/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/

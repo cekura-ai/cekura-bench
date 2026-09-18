@@ -3,6 +3,28 @@
 Run Cekura's Appointment and Medicare voice-agent benchmark suites against your
 own Cekura-connected agent.
 
+## Two things live here
+
+**The scenario runner** (below) launches Cekura's Appointment and Medicare suites
+against your own Cekura-connected agent.
+
+**Lane A** (`lane_a/`, [docs/lane-a.md](docs/lane-a.md)) is a self-contained
+harness that measures a speech-to-speech provider directly over its own
+websocket, with no platform account and no orchestration framework in the
+measured path. It ships its own caller corpus, its own onset detector calibrated
+against known boundaries, and a server for the mock-tool contract in
+`agent-definitions/`. It needs only a provider API key:
+
+```bash
+python -m venv .venv && .venv/bin/pip install -r requirements-lane-a.txt
+.venv/bin/python bin/render-corpus.py                      # needs ELEVENLABS_API_KEY
+.venv/bin/python bin/run-lane-a.py --suite latency          # needs OPENAI_API_KEY
+```
+
+Every run writes the caller audio, the agent audio, the normalized event log and
+every raw provider frame, so a published number can be recomputed from the
+artifacts by someone who does not trust the people who published it.
+
 ## What this runner does
 
 Given a Cekura API key and a local configuration, the runner:

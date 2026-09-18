@@ -1,5 +1,11 @@
 """Serves the public mock-tool contract to whatever is being measured.
 
+Shared on purpose. Lane A talks to a provider websocket directly, the text arm
+talks to the same model with no audio, and the Lane B reference agent talks over
+a phone line -- and all three must be answered by the *same* tool implementation,
+or a difference between lanes could be our two servers disagreeing rather than
+anything about the agents.
+
 The contract in ``agent-definitions/`` is tool schemas plus input-to-output
 lookup tables. It is published, so a third party can run the same scenarios
 against their own agent and be scored the same way -- but the repository ships no
@@ -28,7 +34,7 @@ from typing import Any
 
 from lane_a.adapters.base import ToolSpec
 
-DEFINITIONS_ROOT = Path(__file__).resolve().parent.parent.parent / "agent-definitions"
+DEFINITIONS_ROOT = Path(__file__).resolve().parent.parent / "agent-definitions"
 
 
 def _normalize(value: Any) -> Any:

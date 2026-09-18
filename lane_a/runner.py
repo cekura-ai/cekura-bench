@@ -28,7 +28,7 @@ from lane_a.caller import BranchingCaller
 from lane_a.clips import Corpus
 from lane_a.probes import Probe, ProbeContext, ProbeResult
 from lane_a.registry import PROVIDERS
-from lane_a.tools.server import MockToolServer
+from mock_tools.server import MockToolServer
 
 METHODOLOGY_VERSION = "lane-a/0.1"
 

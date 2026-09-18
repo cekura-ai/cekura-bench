@@ -25,8 +25,8 @@ from lane_a.audio import pink_noise
 from lane_a.caller import BranchingCaller, Clip
 from lane_a.clips import Corpus
 from lane_a.metrics import barge_in, response_latency, speech_runs, spoke_between, usage
-from lane_a.tools.server import MockToolServer
-from lane_a.tools.verifier import ExpectedCall, verify_trace
+from mock_tools.server import MockToolServer
+from mock_tools.verifier import ExpectedCall, verify_trace
 
 
 @dataclass

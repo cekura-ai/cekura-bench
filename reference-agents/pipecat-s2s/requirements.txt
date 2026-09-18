@@ -1,0 +1,6 @@
+# Pinned exactly. A benchmark result names a configuration, and "latest" is not
+# one: an agent that silently changes version between runs makes two results
+# incomparable without either of them looking wrong.
+pipecat-ai[daily,google,openai,silero,webrtc,websocket]==1.11.0
+cekura[pipecat]==1.6.7
+python-dotenv>=1.0

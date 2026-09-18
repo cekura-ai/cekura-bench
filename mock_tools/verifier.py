@@ -18,7 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Sequence
 
-from lane_a.tools.server import _normalize
+from mock_tools.server import _normalize
 
 
 @dataclass(frozen=True)

@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import pytest
 
-from lane_a.tools.server import MockToolServer
-from lane_a.tools.verifier import ExpectedCall, verify_trace
+from mock_tools.server import MockToolServer
+from mock_tools.verifier import ExpectedCall, verify_trace
 
 
 @pytest.fixture

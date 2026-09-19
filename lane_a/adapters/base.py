@@ -25,6 +25,7 @@ from typing import Any, ClassVar
 
 from lane_a import events as ev
 from lane_a.audio import AudioTimeline, SAMPLE_WIDTH
+from lane_a.detector import speech_bounds as _clean_channel_bounds
 from mock_tools.spec import ToolSpec
 
 __all__ = ["AdapterError", "RealtimeAdapter", "SessionConfig", "ToolSpec", "TurnDetection", "parse_arguments"]
@@ -100,6 +101,11 @@ class RealtimeAdapter(ABC):
     # read a provider that stays silent about its endpointer as one that never
     # heard the caller.
     emits_vad_events: ClassVar[bool] = True
+    # Which detector reads this adapter's audio. A direct socket is clean in both
+    # directions and energy against a noise floor is exact there. A channel that
+    # carries line noise needs periodicity instead, and that is a property of the
+    # channel rather than of the metric -- so the metric asks the adapter.
+    speech_bounds: ClassVar[Any] = staticmethod(_clean_channel_bounds)
 
     @classmethod
     def unsupported_reason(cls, config: "SessionConfig") -> str | None:

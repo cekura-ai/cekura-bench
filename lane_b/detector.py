@@ -36,7 +36,14 @@ from __future__ import annotations
 
 import numpy as np
 
-from lane_a.detector import Decision, _run_start, frame_energy_db, noise_floor_db
+from lane_a.detector import (
+    BOUNDS_PAD_MS,
+    Bounds,
+    Decision,
+    _run_start,
+    frame_energy_db,
+    noise_floor_db,
+)
 
 FRAME_MS = 30.0          # >= 2 periods at the lowest pitch we accept
 HOP_MS = 10.0            # decision resolution, matched to Lane A's
@@ -175,4 +182,43 @@ def detect_offset(
         noise_floor_db=floor,
         threshold_db=level,
         sharpness_db=float(before - deciding.mean()) if deciding.size else 0.0,
+    )
+
+
+def speech_bounds(
+    pcm: bytes | np.ndarray,
+    rate: int,
+    frame_ms: float = FRAME_MS,
+    hop_ms: float = HOP_MS,
+    frames: int = ONSET_FRAMES,
+    margin_db: float = MARGIN_DB,
+    threshold: float = HARMONIC_THRESHOLD,
+) -> Bounds:
+    """First and last voiced frame in a buffer, as the Lane A function reports them.
+
+    Same contract as ``lane_a.detector.speech_bounds`` so the metrics can take
+    either: which one they take is a property of the channel, not of the metric.
+    The padding serves the same purpose here -- the noise floor is a low
+    percentile of frame energy, and in a buffer that is nearly all speech that
+    percentile lands inside speech and drags the threshold up.
+    """
+    samples = (
+        np.frombuffer(pcm, dtype=np.int16) if isinstance(pcm, (bytes, bytearray)) else pcm
+    ).astype(np.float64)
+    pad = np.zeros(int(rate * BOUNDS_PAD_MS / 1000.0))
+    padded = np.concatenate([pad, samples, pad])
+
+    mask, _energy, floor, level = _speech_mask(padded, rate, frame_ms, hop_ms, margin_db, threshold)
+    start = _run_start(mask, frames)
+    end = _run_start(mask[::-1], frames)
+    if start is None or end is None:
+        return Bounds(None, None, floor, level)
+
+    offset_frames = BOUNDS_PAD_MS / hop_ms
+    last_frame = mask.size - 1 - end
+    return Bounds(
+        start_ms=(start - offset_frames) * hop_ms,
+        end_ms=(last_frame + 1 - offset_frames) * hop_ms,
+        noise_floor_db=floor,
+        threshold_db=level,
     )

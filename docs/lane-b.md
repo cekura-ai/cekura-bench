@@ -101,13 +101,85 @@ carrier and transport in use** — a tone of known start time played into the ca
 and recovered from the returned audio, which is the only thing that establishes
 what the carrier itself adds and whether the two directions are aligned.
 
+## Putting the caller on a phone
+
+The caller side of Lane B is the same authored audio Lane A sends. Twilio places
+an outbound call to the agent's number, the TwiML it fetches hands the call's
+media to a socket we run, and from there the phone leg is implemented as an
+ordinary `RealtimeAdapter` (`lane_b/adapters/twilio_stream.py`). The caller, the
+probes, the scenarios and the record format then work over a phone call
+unchanged — so a difference between the lanes is a difference in the channel,
+not a difference between two harnesses that were written twice.
+
+`<Connect><Stream>` rather than `<Start><Stream>`: `<Start>` forks a copy of the
+audio for listening and cannot speak back into the call, and a deterministic
+caller has to be heard.
+
+What a phone does not have is declared rather than worked around, and the
+declaration is what produces an exclusion instead of a wrong number:
+
+| | |
+|---|---|
+| no manual commit | there is no turn-boundary message on a call; the agent's endpointer decides. Probes needing an exact commit are excluded, not silently run under a label they did not get. |
+| no text modality | there is no text channel to a phone number, so the text control arm stays in Lane A. |
+| no VAD events | the carrier does not report what the agent's endpointer decided. Probes reading those events void. |
+
+Every inbound frame carries the carrier's own millisecond timestamp as well as
+our arrival time, and both are recorded. The carrier clock removes our receive
+jitter from the inbound direction; it does not remove carrier latency, and it
+shares no origin with our outbound clock.
+
+## Transport calibration
+
+`lane_b/tone.py`. A linear chirp sweeping 400–3000 Hz is played into the call at
+a known instant and located in the audio that comes back, by normalized
+cross-correlation. The far end is a loopback endpoint we run
+(`lane_b/telephony.py`, `/loopback`) which returns each inbound frame and does
+nothing else, so what the measurement contains is the carrier, the codec, and no
+reasoning.
+
+A sweep rather than a steady tone: every cycle of a tone looks like every other,
+so its correlation peak is a plateau several milliseconds wide, and a sweep
+correlates sharply against exactly one alignment while still surviving the
+telephone band.
+
+Measured against constructed signals through μ-law with line noise, 60 trials
+per row:
+
+| chirp vs line noise | found | error bias | P95 |
+|---|---|---|---|
+| +20 dB | 60/60 | −0.06 ms | 0.12 ms |
+| +10 dB | 60/60 | −0.07 ms | 0.12 ms |
+| 0 dB | 60/60 | −0.06 ms | 0.11 ms |
+| −5 dB | 59/60 | −0.06 ms | 0.12 ms |
+| −10 dB | 0/60 | refuses | — |
+
+And on 60 recordings of speech with no chirp in them at all, it reported a
+location **0** times. Both halves matter: an instrument that finds a calibration
+signal inside the agent's own voice would manufacture a transport correction out
+of nothing, and one that guesses when the signal is lost would do it quietly.
+
+One-way delay is reported as half the round trip. The two directions are separate
+paths and need not be symmetric, so that halving is published as an assumption
+beside the number rather than folded into it.
+
+The full chain below the carrier — framing, μ-law, the loopback, the instrument —
+is exercised locally in `tests/test_telephony_loopback.py`. The carrier is the
+one part that cannot be tested from a laptop, which is precisely why it is the
+part that has to be measured.
+
 ## Status
 
 | Piece | State |
 |---|---|
 | reference agent, pinned Pipecat, tools, tracing | built; verified end to end against OpenAI Realtime |
-| phone-leg detector | built and calibrated offline |
-| deterministic caller over telephony | in progress |
-| injected-tone transport calibration | not started — gates all Lane B latency |
+| phone-leg detector | built, calibrated offline |
+| phone leg as a Lane A adapter | built, tested against the carrier's message shapes |
+| media socket + loopback endpoint | built, tested locally end to end |
+| injected-tone instrument | built, calibrated offline |
+| tone measured on a real carrier | **blocked** — gates every Lane B latency |
 | caller conditions | not started |
-| deployment + a phone number | blocked on credentials |
+| deployment + a phone number | **blocked** on credentials |
+
+Nothing in Lane B may publish a latency until the tone has been measured on the
+carrier and transport actually in use.

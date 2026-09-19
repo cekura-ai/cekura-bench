@@ -42,6 +42,8 @@ AGENT_INTERRUPTED = "agent.interrupted"
 VAD_SPEECH_START = "vad.speech.start"          # the provider's own endpointer fired
 VAD_SPEECH_END = "vad.speech.end"
 
+CARRIER_MARK = "carrier.mark"                   # a phone leg reached a point we marked in our own audio
+
 STEP_START = "step.start"
 STEP_END = "step.end"
 

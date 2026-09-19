@@ -19,7 +19,6 @@ from lane_a import events as ev
 from lane_a.adapters.base import RealtimeAdapter
 from lane_a.audio import SAMPLE_WIDTH, AudioTimeline
 from lane_a.caller import Utterance
-from lane_a.detector import speech_bounds
 
 
 @dataclass(frozen=True)
@@ -51,7 +50,7 @@ def agent_onset_after(adapter: RealtimeAdapter, after_t: float) -> AgentOnset | 
     if chunk is None:
         return None
     tail = bytes(adapter.agent_pcm[chunk.first_sample * SAMPLE_WIDTH :])
-    bounds = speech_bounds(tail, timeline.rate)
+    bounds = adapter.speech_bounds(tail, timeline.rate)
     if not bounds.found:
         return None
     sample = chunk.first_sample + int(round(max(bounds.start_ms, 0.0) * timeline.rate / 1000.0))

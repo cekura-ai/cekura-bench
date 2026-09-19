@@ -7,11 +7,12 @@ publishes. A gap between two providers smaller than this number is not a result.
 """
 
 import sys
+from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, "/tmp/claude-1000/-home-ubuntu-cekura-repo/6469164e-5836-492b-a740-271b3f7d9633/scratchpad/lane-a")
-from detector import detect_offset, detect_onset  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from lane_a.detector import detect_offset, detect_onset  # noqa: E402
 
 RATE = 16000
 TRIALS = 60

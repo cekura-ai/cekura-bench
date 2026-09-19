@@ -1,0 +1,594 @@
+{
+  "benchmark": {
+    "clips": 206,
+    "conversations": 4,
+    "failed": 63,
+    "firstAttempts": 3502,
+    "models": 18,
+    "privateRecordings": 8,
+    "publicClips": 1000,
+    "recovered": 11,
+    "results": [
+      {
+        "attempted": 206,
+        "failed": 1,
+        "id": "assemblyai-universal-3-5-pro-min-latency",
+        "model": "AssemblyAI Universal 3.5 Pro, min latency",
+        "overallIncluded": 1008,
+        "overallPlanned": 1008,
+        "overallWer": 2.721630231791717,
+        "privateUsable": 8,
+        "privateWer": 4.227370432290423,
+        "publicUsable": 1000,
+        "publicWer": 1.9286403085824495,
+        "referenceWords": 6278,
+        "ttfsN": 205,
+        "ttfsP50": 180,
+        "ttftN": 205,
+        "ttftP50": 489,
+        "turnWer": 4.587448231920994,
+        "valid": 205
+      },
+      {
+        "id": "assemblyai-universal-3-6-pro-min-latency",
+        "model": "AssemblyAI Universal 3.6 Pro, min latency",
+        "overallIncluded": 1008,
+        "overallPlanned": 1008,
+        "overallWer": 2.76,
+        "privateUsable": 8,
+        "privateWer": 4.56,
+        "publicUsable": 1000,
+        "publicWer": 1.81,
+        "timingScope": "public-clips",
+        "ttfsN": 1000,
+        "ttfsP50": 424,
+        "ttftN": 1000,
+        "ttftP50": 1266,
+        "turnWer": 4.82
+      },
+      {
+        "attempted": 206,
+        "failed": 0,
+        "id": "cartesia-ink-2",
+        "model": "Cartesia Ink 2",
+        "overallIncluded": 1008,
+        "overallPlanned": 1008,
+        "overallWer": 2.6282544216192463,
+        "privateUsable": 8,
+        "privateWer": 3.0889260409203088,
+        "publicUsable": 1000,
+        "publicWer": 2.3856442077900297,
+        "referenceWords": 6383,
+        "ttfsN": 198,
+        "ttfsP50": 123,
+        "ttftN": 198,
+        "ttftP50": 1511,
+        "turnWer": 3.603321322262259,
+        "valid": 206
+      },
+      {
+        "attempted": 206,
+        "failed": 7,
+        "id": "deepgram-flux-en",
+        "model": "Deepgram Flux English",
+        "overallIncluded": 1007,
+        "overallPlanned": 1008,
+        "overallWer": 3.9987915739748976,
+        "privateUsable": 8,
+        "privateWer": 4.179603534750418,
+        "publicUsable": 999,
+        "publicWer": 3.9035639412997902,
+        "referenceWords": 6380,
+        "ttfsN": 199,
+        "ttfsP50": 108,
+        "ttftN": 199,
+        "ttftP50": 791,
+        "turnWer": 4.5141065830721,
+        "valid": 199
+      },
+      {
+        "attempted": 206,
+        "failed": 31,
+        "id": "deepgram-flux-multilingual",
+        "model": "Deepgram Flux Multilingual",
+        "overallIncluded": 1007,
+        "overallPlanned": 1008,
+        "overallWer": 4.81160057124025,
+        "privateUsable": 8,
+        "privateWer": 4.5298941167104525,
+        "publicUsable": 999,
+        "publicWer": 4.959959750115299,
+        "referenceWords": 6311,
+        "ttfsN": 175,
+        "ttfsP50": 114,
+        "ttftN": 175,
+        "ttftP50": 793,
+        "turnWer": 4.626842021866582,
+        "valid": 175
+      },
+      {
+        "attempted": 206,
+        "failed": 0,
+        "id": "deepgram-nova-3",
+        "model": "Deepgram Nova-3",
+        "overallIncluded": 1008,
+        "overallPlanned": 1008,
+        "overallWer": 3.7844666593430736,
+        "privateUsable": 8,
+        "privateWer": 4.3945545736804394,
+        "publicUsable": 1000,
+        "publicWer": 3.463167162802398,
+        "referenceWords": 6383,
+        "ttfsN": 202,
+        "ttfsP50": 103,
+        "ttftN": 203,
+        "ttftP50": 1064,
+        "turnWer": 4.511984960050134,
+        "valid": 206
+      },
+      {
+        "attempted": 206,
+        "failed": 1,
+        "id": "elevenlabs-scribe-v2-realtime",
+        "model": "ElevenLabs Scribe v2",
+        "overallIncluded": 951,
+        "overallPlanned": 1008,
+        "overallWer": 2.82939426261719,
+        "privateUsable": 8,
+        "privateWer": 2.2370830347902237,
+        "publicUsable": 943,
+        "publicWer": 3.1519618469542596,
+        "referenceWords": 6248,
+        "ttfsN": 205,
+        "ttfsP50": 121,
+        "ttftN": 205,
+        "ttftP50": 2091,
+        "turnWer": 2.0486555697823303,
+        "valid": 205
+      },
+      {
+        "attempted": 206,
+        "failed": 10,
+        "id": "gemini-3.5-transcribe-live",
+        "model": "Gemini 3.5",
+        "overallIncluded": 1007,
+        "overallPlanned": 1008,
+        "overallWer": 3.1144434374227568,
+        "privateUsable": 8,
+        "privateWer": 6.0027067908606,
+        "publicUsable": 999,
+        "publicWer": 1.5932914046121591,
+        "referenceWords": 5776,
+        "ttfsN": 196,
+        "ttfsP50": 437,
+        "ttftN": 196,
+        "ttftP50": 1381,
+        "turnWer": 3.8088642659279777,
+        "valid": 196
+      },
+      {
+        "attempted": 206,
+        "failed": 1,
+        "id": "google-chirp-2",
+        "model": "Google Chirp 2",
+        "overallIncluded": 1008,
+        "overallPlanned": 1008,
+        "overallWer": 3.0072503570251565,
+        "privateUsable": 8,
+        "privateWer": 3.79746835443038,
+        "publicUsable": 1000,
+        "publicWer": 2.591086327617291,
+        "referenceWords": 6376,
+        "ttfsN": 205,
+        "ttfsObserved": true,
+        "ttfsP50": 568,
+        "ttftN": 205,
+        "ttftP50": 4497,
+        "turnWer": 4.0150564617314926,
+        "valid": 205
+      },
+      {
+        "attempted": 206,
+        "failed": 0,
+        "id": "google-chirp-3",
+        "model": "Google Chirp 3",
+        "overallIncluded": 1008,
+        "overallPlanned": 1008,
+        "overallWer": 2.757332747445897,
+        "privateUsable": 8,
+        "privateWer": 4.187564684340419,
+        "publicUsable": 1000,
+        "publicWer": 2.004108842396545,
+        "referenceWords": 6383,
+        "ttfsN": 206,
+        "ttfsObserved": true,
+        "ttfsP50": 475,
+        "ttftN": 206,
+        "ttftP50": 4480,
+        "turnWer": 4.276985743380855,
+        "valid": 206
+      },
+      {
+        "attempted": 206,
+        "failed": 0,
+        "id": "gradium-default",
+        "model": "Gradium",
+        "overallIncluded": 1008,
+        "overallPlanned": 1008,
+        "overallWer": 5.778314841261123,
+        "privateUsable": 8,
+        "privateWer": 4.450282620810445,
+        "publicUsable": 1000,
+        "publicWer": 6.477715819043227,
+        "referenceWords": 6383,
+        "ttfsN": 198,
+        "ttfsP50": 212,
+        "ttftN": 198,
+        "ttftP50": 1705,
+        "turnWer": 4.840983863387122,
+        "valid": 206
+      },
+      {
+        "attempted": 206,
+        "failed": 0,
+        "id": "inworld-stt-1",
+        "model": "Inworld STT-1",
+        "overallIncluded": 1008,
+        "overallPlanned": 1008,
+        "overallWer": 5.437767768867406,
+        "privateUsable": 8,
+        "privateWer": 10.60425125388106,
+        "publicUsable": 1000,
+        "publicWer": 2.7168672173074504,
+        "referenceWords": 6383,
+        "ttfsN": 206,
+        "ttfsP50": 41,
+        "ttftN": 206,
+        "ttftP50": 1063,
+        "turnWer": 3.5563214789284037,
+        "valid": 206
+      },
+      {
+        "attempted": 206,
+        "failed": 0,
+        "id": "openai-gpt-4o-mini-transcribe",
+        "model": "GPT-4o Mini Transcribe",
+        "overallIncluded": 1008,
+        "overallPlanned": 1008,
+        "overallWer": 3.7322860595408103,
+        "privateUsable": 8,
+        "privateWer": 4.450282620810445,
+        "publicUsable": 1000,
+        "publicWer": 3.35415705840426,
+        "referenceWords": 6383,
+        "ttfsN": 206,
+        "ttfsP50": 630,
+        "ttftN": 206,
+        "ttftP50": 10075,
+        "turnWer": 4.292652357825474,
+        "valid": 206
+      },
+      {
+        "attempted": 206,
+        "failed": 0,
+        "id": "openai-gpt-4o-transcribe",
+        "model": "GPT-4o Transcribe",
+        "overallIncluded": 1008,
+        "overallPlanned": 1008,
+        "overallWer": 6.852136658244534,
+        "privateUsable": 8,
+        "privateWer": 12.451237958761245,
+        "publicUsable": 1000,
+        "publicWer": 3.9034002767179574,
+        "referenceWords": 6383,
+        "ttfsN": 206,
+        "ttfsP50": 652,
+        "ttftN": 206,
+        "ttftP50": 10005,
+        "turnWer": 12.219959266802444,
+        "valid": 206
+      },
+      {
+        "attempted": 206,
+        "failed": 0,
+        "id": "openai-gpt-realtime-whisper",
+        "model": "GPT Realtime Whisper",
+        "overallIncluded": 1008,
+        "overallPlanned": 1008,
+        "overallWer": 2.6282544216192463,
+        "privateUsable": 8,
+        "privateWer": 3.5267892683703526,
+        "publicUsable": 1000,
+        "publicWer": 2.155045910024737,
+        "referenceWords": 6383,
+        "ttfsN": 206,
+        "ttfsP50": 543,
+        "ttftN": 206,
+        "ttftP50": 1379,
+        "turnWer": 3.9636534544884854,
+        "valid": 206
+      },
+      {
+        "attempted": 206,
+        "failed": 0,
+        "id": "reson8-realtime",
+        "model": "Reson8",
+        "overallIncluded": 1008,
+        "overallPlanned": 1008,
+        "overallWer": 2.3838295067560145,
+        "privateUsable": 8,
+        "privateWer": 2.929703049120293,
+        "publicUsable": 1000,
+        "publicWer": 2.0963481615026622,
+        "referenceWords": 6383,
+        "ttfsN": 201,
+        "ttfsP50": 235,
+        "ttftN": 201,
+        "ttftP50": 2400,
+        "turnWer": 3.148989503368322,
+        "valid": 206
+      },
+      {
+        "attempted": 206,
+        "failed": 0,
+        "id": "smallest-pulse",
+        "model": "Smallest Pulse",
+        "overallIncluded": 1008,
+        "overallPlanned": 1008,
+        "overallWer": 3.586729649566077,
+        "privateUsable": 8,
+        "privateWer": 3.4551389220603452,
+        "publicUsable": 1000,
+        "publicWer": 3.656031193660643,
+        "referenceWords": 6383,
+        "ttfsN": 206,
+        "ttfsP50": 201,
+        "ttftN": 206,
+        "ttftP50": 1057,
+        "turnWer": 4.12031959893467,
+        "valid": 206
+      },
+      {
+        "attempted": 206,
+        "failed": 12,
+        "id": "speechmatics-linden-1",
+        "model": "Speechmatics Linden",
+        "overallIncluded": 1006,
+        "overallPlanned": 1008,
+        "overallWer": 2.9652632736066833,
+        "privateUsable": 8,
+        "privateWer": 3.9328078974603935,
+        "publicUsable": 998,
+        "publicWer": 2.4551978847525917,
+        "referenceWords": 6291,
+        "ttfsN": 194,
+        "ttfsP50": 147,
+        "ttftN": 194,
+        "ttftP50": 1190,
+        "turnWer": 4.101096804959465,
+        "valid": 194
+      }
+    ]
+  },
+  "generatedAt": "2026-09-16T21:10:20.454474+00:00",
+  "percentiles": {
+    "assemblyai-universal-3-5-pro-min-latency": {
+      "ttfs": {
+        "50": 180,
+        "90": 532,
+        "95": 692
+      },
+      "ttft": {
+        "50": 489,
+        "90": 966,
+        "95": 1085
+      }
+    },
+    "assemblyai-universal-3-6-pro-min-latency": {
+      "ttfs": {
+        "50": 424,
+        "90": 844,
+        "95": 874
+      },
+      "ttft": {
+        "50": 1266,
+        "90": 1985,
+        "95": 2586
+      }
+    },
+    "cartesia-ink-2": {
+      "ttfs": {
+        "50": 123,
+        "90": 139,
+        "95": 145
+      },
+      "ttft": {
+        "50": 1511,
+        "90": 2043,
+        "95": 3226
+      }
+    },
+    "deepgram-flux-en": {
+      "ttfs": {
+        "50": 108,
+        "90": 132,
+        "95": 141
+      },
+      "ttft": {
+        "50": 791,
+        "90": 1231,
+        "95": 1511
+      }
+    },
+    "deepgram-flux-multilingual": {
+      "ttfs": {
+        "50": 114,
+        "90": 135,
+        "95": 141
+      },
+      "ttft": {
+        "50": 793,
+        "90": 1996,
+        "95": 3409
+      }
+    },
+    "deepgram-nova-3": {
+      "ttfs": {
+        "50": 103,
+        "90": 143,
+        "95": 155
+      },
+      "ttft": {
+        "50": 1064,
+        "90": 1104,
+        "95": 2071
+      }
+    },
+    "elevenlabs-scribe-v2-realtime": {
+      "ttfs": {
+        "50": 121,
+        "90": 182,
+        "95": 207
+      },
+      "ttft": {
+        "50": 2091,
+        "90": 2135,
+        "95": 2240
+      }
+    },
+    "gemini-3.5-transcribe-live": {
+      "ttfs": {
+        "50": 437,
+        "90": 666,
+        "95": 740
+      },
+      "ttft": {
+        "50": 1381,
+        "90": 1883,
+        "95": 2769
+      }
+    },
+    "google-chirp-2": {
+      "ttfs": {
+        "50": 568,
+        "90": 1042,
+        "95": 1223
+      },
+      "ttft": {
+        "50": 4497,
+        "90": 6400,
+        "95": 8149
+      }
+    },
+    "google-chirp-3": {
+      "ttfs": {
+        "50": 475,
+        "90": 941,
+        "95": 1406
+      },
+      "ttft": {
+        "50": 4480,
+        "90": 6206,
+        "95": 7971
+      }
+    },
+    "gradium-default": {
+      "ttfs": {
+        "50": 212,
+        "90": 266,
+        "95": 280
+      },
+      "ttft": {
+        "50": 1705,
+        "90": 4053,
+        "95": 7318
+      }
+    },
+    "inworld-stt-1": {
+      "ttfs": {
+        "50": 41,
+        "90": 60,
+        "95": 65
+      },
+      "ttft": {
+        "50": 1063,
+        "90": 1069,
+        "95": 1071
+      }
+    },
+    "openai-gpt-4o-mini-transcribe": {
+      "ttfs": {
+        "50": 630,
+        "90": 1342,
+        "95": 1528
+      },
+      "ttft": {
+        "50": 10075,
+        "90": 30856,
+        "95": 40835
+      }
+    },
+    "openai-gpt-4o-transcribe": {
+      "ttfs": {
+        "50": 652,
+        "90": 1731,
+        "95": 1968
+      },
+      "ttft": {
+        "50": 10005,
+        "90": 30946,
+        "95": 40627
+      }
+    },
+    "openai-gpt-realtime-whisper": {
+      "ttfs": {
+        "50": 543,
+        "90": 647,
+        "95": 669
+      },
+      "ttft": {
+        "50": 1379,
+        "90": 1843,
+        "95": 2857
+      }
+    },
+    "reson8-realtime": {
+      "ttfs": {
+        "50": 235,
+        "90": 357,
+        "95": 398
+      },
+      "ttft": {
+        "50": 2400,
+        "90": 7966,
+        "95": 10197
+      }
+    },
+    "smallest-pulse": {
+      "ttfs": {
+        "50": 201,
+        "90": 356,
+        "95": 773
+      },
+      "ttft": {
+        "50": 1057,
+        "90": 2248,
+        "95": 3033
+      }
+    },
+    "speechmatics-linden-1": {
+      "ttfs": {
+        "50": 147,
+        "90": 192,
+        "95": 213
+      },
+      "ttft": {
+        "50": 1190,
+        "90": 1565,
+        "95": 2525
+      }
+    }
+  },
+  "schemaVersion": 1,
+  "turnGeneratedAt": "2026-09-16T15:40:07.139476+00:00"
+}

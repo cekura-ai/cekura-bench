@@ -4,7 +4,7 @@
     "conversations": 4,
     "failed": 63,
     "firstAttempts": 3502,
-    "models": 18,
+    "models": 16,
     "privateRecordings": 8,
     "publicClips": 1000,
     "recovered": 11,
@@ -28,26 +28,6 @@
         "ttftP50": 489,
         "turnWer": 4.587448231920994,
         "valid": 205
-      },
-      {
-        "attempted": 206,
-        "failed": 2,
-        "id": "assemblyai-universal-3-6-pro-min-latency",
-        "model": "AssemblyAI Universal 3.6 Pro, min latency",
-        "overallIncluded": 1008,
-        "overallPlanned": 1008,
-        "overallWer": 2.76,
-        "privateUsable": 8,
-        "privateWer": 4.56,
-        "publicUsable": 1000,
-        "publicWer": 1.81,
-        "referenceWords": 6361,
-        "ttfsN": 204,
-        "ttfsP50": 244,
-        "ttftN": 204,
-        "ttftP50": 627,
-        "turnWer": 4.5433108001886495,
-        "valid": 204
       },
       {
         "attempted": 206,
@@ -148,26 +128,6 @@
         "ttftP50": 2091,
         "turnWer": 2.0486555697823303,
         "valid": 205
-      },
-      {
-        "attempted": 206,
-        "failed": 10,
-        "id": "gemini-3.5-transcribe-live",
-        "model": "Gemini 3.5",
-        "overallIncluded": 1007,
-        "overallPlanned": 1008,
-        "overallWer": 3.1144434374227568,
-        "privateUsable": 8,
-        "privateWer": 6.0027067908606,
-        "publicUsable": 999,
-        "publicWer": 1.5932914046121591,
-        "referenceWords": 5776,
-        "ttfsN": 196,
-        "ttfsP50": 437,
-        "ttftN": 196,
-        "ttftP50": 1381,
-        "turnWer": 3.8088642659279777,
-        "valid": 196
       },
       {
         "attempted": 206,
@@ -387,18 +347,6 @@
         "95": 1085
       }
     },
-    "assemblyai-universal-3-6-pro-min-latency": {
-      "ttfs": {
-        "50": 244,
-        "90": 369,
-        "95": 393
-      },
-      "ttft": {
-        "50": 627,
-        "90": 1113,
-        "95": 1116
-      }
-    },
     "cartesia-ink-2": {
       "ttfs": {
         "50": 123,
@@ -457,18 +405,6 @@
         "50": 2091,
         "90": 2135,
         "95": 2240
-      }
-    },
-    "gemini-3.5-transcribe-live": {
-      "ttfs": {
-        "50": 437,
-        "90": 666,
-        "95": 740
-      },
-      "ttft": {
-        "50": 1381,
-        "90": 1883,
-        "95": 2769
       }
     },
     "google-chirp-2": {

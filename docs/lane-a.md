@@ -365,6 +365,42 @@ cheaper to discover here than in a published ranking.
 The run writes ordinary cells, so the validation is itself recomputable rather
 than a number in a terminal.
 
+### Result, 2026-09-19
+
+100 questions per provider, 25 from each of the four categories, seed 11,
+native VAD at 500 ms.
+
+| provider | model | scored | void | accuracy | published, same dataset |
+|---|---|---|---|---|---|
+| OpenAI Realtime | `gpt-realtime-2.1` | 99 | 1 | 91.9% | 96.6% (`GPT-Realtime-2 high`) |
+| Gemini Live | `gemini-2.5-flash-native-audio-preview-12-2025` | 98 | 2 | 94.9% | 92% (`2.5 Native Audio Thinking`) |
+| xAI Grok | `grok-voice-think-fast-2.0` | 0 | 103 | — | 92.3% (`Grok Voice Agent`) |
+
+| provider | formal fallacies | navigate | object counting | web of lies |
+|---|---|---|---|---|
+| OpenAI Realtime | 91.7% | 100% | 96.0% | 80.0% |
+| Gemini Live | 95.8% | 100% | 91.7% | 92.0% |
+
+**What this does and does not establish.** The fault it exists to catch — audio
+sent at the wrong rate, truncated, or badly resampled — costs tens of points, not
+a handful. Both providers that ran land within a few points of the figure
+published for a near neighbour of the model we ran, with one void in a hundred.
+The audio path, the adapter and the grading are sound. It is not a like-for-like
+match and must not be read as one: neither published row is the exact model
+under test, and at n≈99 sampling error alone is about ±5 points, the same size as
+the OpenAI gap. The published figures are cited so the check can be repeated, not
+as a comparison of results.
+
+OpenAI's 80% on web-of-lies against 100% on navigate is a real spread across
+categories. The same audio path carries all four, so it is the model's.
+
+Grok did not run: every session was refused with HTTP 403 at the websocket
+handshake, on two attempts and on a plain smoke run. Full campaigns against the
+same credential the previous day had no connect failures at all, so this is the
+credential, not the harness. Its row stays empty until the account is usable
+again — an empty row being the point of recording a void with its reason rather
+than a score.
+
 ## Providers
 
 | Provider | Status |

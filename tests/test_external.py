@@ -79,3 +79,30 @@ class TestUsageDetail:
         assert flat["input_token_details.audio_tokens"] == 48
         assert flat["output_token_details.audio_tokens"] == 30
         assert flat["total_tokens"] == 102
+
+
+class TestOnlyQuestionsAreScored:
+    def test_the_sentinel_does_not_raise_the_validation_score(self):
+        """A campaign carries cells that are not questions, and they always pass.
+
+        The sentinel latency cell leads every run whatever its suite. It has no
+        answer to be right or wrong about, so counting it as a correct answer
+        would lift the score by however many of them the run happened to carry,
+        and lift it most on the short runs where the check matters most.
+        """
+        from lane_a.external import summarize
+
+        class Cell:
+            def __init__(self, verdict, values, void=None):
+                self.verdict, self.values, self.void = verdict, values, void
+
+        cells = [
+            Cell("pass", {}),                                                   # sentinel
+            Cell("pass", {"category": "navigate", "official_answer": "Yes"}),
+            Cell("fail", {"category": "navigate", "official_answer": "No"}),
+        ]
+        report = summarize(cells)
+
+        assert report["scored"] == 2
+        assert report["accuracy"] == 0.5
+        assert "?" not in report["by_category"]

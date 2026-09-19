@@ -206,8 +206,15 @@ class SpokenQuestion:
 
 
 def summarize(cells: list[Any]) -> dict[str, Any]:
-    """Accuracy overall and per category, with the voids kept separate."""
-    scored = [c for c in cells if not c.void]
+    """Accuracy overall and per category, with the voids kept separate.
+
+    Only graded questions count. A campaign carries cells that are not questions
+    -- the sentinel latency cell leads every run -- and those always pass, so
+    folding them in would raise the score by however many of them there were.
+    A question is identified by carrying the answer it is graded against.
+    """
+    questions = [c for c in cells if "official_answer" in c.values or c.void]
+    scored = [c for c in questions if not c.void]
     by_category: dict[str, list[bool]] = {}
     for cell in scored:
         by_category.setdefault(cell.values.get("category", "?"), []).append(cell.verdict == "pass")
@@ -215,7 +222,7 @@ def summarize(cells: list[Any]) -> dict[str, Any]:
         "dataset": DATASET,
         "license": LICENSE,
         "scored": len(scored),
-        "void": len(cells) - len(scored),
+        "void": len(questions) - len(scored),
         "accuracy": round(sum(c.verdict == "pass" for c in scored) / len(scored), 4) if scored else None,
         "by_category": {
             name: {"n": len(hits), "accuracy": round(sum(hits) / len(hits), 4)}

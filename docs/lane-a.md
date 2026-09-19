@@ -382,3 +382,199 @@ adapter serves every `gpt-realtime-*`. That ratio is the cost argument for direc
 adapters over a framework — and the correctness argument is stronger. A
 framework's per-provider integration maturity varies, so a framework-mediated
 comparison measures its polish as much as the provider's quality.
+
+## Dry run, 2026-09-18
+
+One full campaign (`bin/run-campaign.sh`) per provider, run in parallel from one
+host over about four hours: 609 cells each for OpenAI Realtime (`gpt-realtime-2.1`)
+and Gemini Live (`gemini-2.5-flash-native-audio-preview-12-2025`), 606 for Grok
+(`grok-voice-think-fast-2.0`). Latency cells have five repeats per voice, every
+other cell three. **This is a shakedown of the instrument, not a ranking**: three
+repeats resolve nothing finer than a provider's own sentinel spread, and two
+metrics were corrected during the run (below), so the interaction suite was
+repeated on the corrected rule for all three providers and those runs are the
+ones tabulated. Every number here is recomputable from the run directories.
+
+#### Sentinel (same cell in every run: open.book, VAD 500 ms, f-us, n=3 per run)
+
+| provider | runs | sentinel P50 per run (ms) |
+|---|---|---|
+| OpenAI | 9 | 1394 · 1286 · 1264 · 1302 · 1420 · 1441 · 2039 · 1362 · 1358 |
+| Gemini | 9 | 3483 · 3926 · 3160 · 3446 · 2991 · 3422 · 3954 · 3399 · 3331 |
+| Grok | 8 | 2067 · 2093 · 2027 · 2039 · 2023 · 2211 · 2589 · 2108 |
+
+#### Response latency P50 [95% CI] ms, clean, per turn-detection configuration (n=5 per voice; three voices pooled by median of medians)
+
+| config | clip | OpenAI | Gemini | Grok |
+|---|---|---|---|---|
+| manual | open.book | 962 (932–1001) | 3774 (3053–3975) | 1320 (994–1357) |
+| manual | open.digits | 1256 (1144–1301) | 2892 (2872–2988) | 1223 (1211–1262) |
+| manual | open.question | 938 (921–1014) | 3196 (2886–3547) | 1283 (1257–1332) |
+| server_vad-200ms | open.book | 1177 (1102–1182) | 3320 (2968–4202) | 2052 (1831–2171) |
+| server_vad-200ms | open.digits | 1403 (1278–1526) | 3707 (3416–3852) | 2163 (2122–2247) |
+| server_vad-200ms | open.question | 1154 (1055–1159) | 3487 (3100–3924) | 2169 (2018–2223) |
+| server_vad-500ms | open.book | 1505 (1292–1603) | 3505 (3322–4208) | 2388 (2130–2546) |
+| server_vad-500ms | open.digits | 1733 (1663–1738) | 4098 (3795–4437) | 2591 (2326–2829) |
+| server_vad-500ms | open.question | 1436 (1373–1526) | 3921 (3572–3940) | 2365 (2344–2754) |
+| semantic_vad | open.book | 5278 (5154–5327) | excluded | excluded |
+| semantic_vad | open.digits | 4365 (1937–4757) | excluded | excluded |
+| semantic_vad | open.question | 5191 (5098–5238) | excluded | excluded |
+
+#### Endpointing: turn ended inside the gap? (pass = agent waited; VAD 500 ms; 3 voices × 3 repeats)
+
+| probe | gap ms | OpenAI | Gemini | Grok |
+|---|---|---|---|---|
+| endpointing_ladder | 400 | 8/8 | 9/9 | 9/9 |
+| endpointing_ladder | 600 | 9/9 | 9/9 | 9/9 |
+| endpointing_ladder | 800 | 9/9 | 9/9 | 9/9 |
+| endpointing_ladder | 1000 | 9/9 | 9/9 | 9/9 |
+| endpointing_ladder | 1500 | 2/9 | 9/9 | 9/9 |
+| endpointing_ladder | 2000 | 0/9 | 9/9 | 9/9 |
+| endpointing_ladder_date | 400 | 9/9 | 9/9 | 9/9 |
+| endpointing_ladder_date | 600 | 9/9 | 9/9 | 8/8 |
+| endpointing_ladder_date | 800 | 9/9 | 9/9 | 9/9 |
+| endpointing_ladder_date | 1000 | 9/9 | 9/9 | 9/9 |
+| endpointing_ladder_date | 1500 | 1/9 | 9/9 | 9/9 |
+| endpointing_ladder_date | 2000 | 0/9 | 9/9 | 8/9 |
+| filled_pause | 1500 | 9/9 | 9/9 | 9/9 |
+| filled_pause | 2000 | 9/9 | 9/9 | 9/9 |
+
+#### Barge-in: caller onset → listener stops hearing the agent, P50 ms (VAD 500 ms; corrected rule; latest interaction run)
+
+| variant | voice | OpenAI | Gemini | Grok |
+|---|---|---|---|---|
+| barge_in-at400ms | f-us | 272 [267, 283] | 2201 [2124, 5057] | 1102 [1042, 1285] |
+| barge_in-at400ms | m-us | 289 [277, 303] | 2205 [1919, 2413] | 1287 [1285, 1293] |
+| barge_in-at400ms | f-gb | 318 [286, 460] | 2357 [2155, 2582] | 1537 [1262, 1596] |
+| barge_in-at900ms | f-us | 290 [290, 338] | 1962 [1895, 3268] | 1057 [996, 1328] |
+| barge_in-at900ms | m-us | 269 [266, 291] | 2377 [2175, 4805] | 1333 [1305, 1381] |
+| barge_in-at900ms | f-gb | 289 [288, 667] | 2303 [2175, 2699] | 1394 [1290, 1586] |
+| barge_in-at1500ms | f-us | 277 [271, 282] | 2231 [2229, 2450] | 1283 [1225, 1288] |
+| barge_in-at1500ms | m-us | 294 [288, 308] | 3035 [2538, 3401] | 1301 [1279, 1319] |
+| barge_in-at1500ms | f-gb | 284 [284, 285] | 2992 [2429, 4450] | 1343 [1320, 1590] |
+| simultaneous_start-at0ms | f-us | 395 [377, 428] | 2626 [2129, 3290] | 1080 [1077, 1297] |
+| simultaneous_start-at0ms | m-us | 396 [358, 423] | 2305 [2166, 2489] | 1282 [1184, 1297] |
+| simultaneous_start-at0ms | f-gb | 345 [291, 438] | 2540 [2445, 6552] | 1548 [1548, 1578] |
+| barge_in_correction-at900ms | f-us | 298 [285, 308] | 2503 [2311, 2522] | 1362 [1286, 1575] |
+| barge_in_correction-at900ms | m-us | 290 [288, 312] | 2288 [1826, 2424] | 1040 [983, 1089] |
+| barge_in_correction-at900ms | f-gb | 281 [275, 289] | 2337 [2306, 2830] | 1486 [1285, 1581] |
+
+#### Backchannel tolerance (pass = agent kept talking through 'mm hmm'; voids = reply too short to test)
+
+| variant | voice | OpenAI | Gemini | Grok |
+|---|---|---|---|---|
+| backchannel_tolerance-at400ms | f-us | 0/1 (void 2) | 3/3 | 2/3 |
+| backchannel_tolerance-at400ms | m-us | 0/0 (void 3) | 3/3 | 3/3 |
+| backchannel_tolerance-at400ms | f-gb | 0/0 (void 3) | 3/3 | 2/3 |
+| backchannel_tolerance-at900ms | f-us | 0/0 (void 3) | 3/3 | 3/3 |
+| backchannel_tolerance-at900ms | m-us | 0/0 (void 3) | 3/3 | 2/3 |
+| backchannel_tolerance-at900ms | f-gb | 0/0 (void 3) | 3/3 | 1/3 |
+
+#### Caller transcription (pass = digits exact when present, else WER ≤ 0.25; 3 voices × 3 repeats, clean)
+
+| clip | OpenAI | Gemini | Grok |
+|---|---|---|---|
+| open.book | 9/9 | 8/8 | 9/9 |
+| open.digits | 9/9 | 8/8 | 9/9 |
+| task.identify | 9/9 | 0/9 | 9/9 |
+| identify.alt | 9/9 | 0/9 | 0/9 |
+| task.cancel | 9/9 | 6/9 | 9/9 |
+
+#### Robustness: task.identify transcription pass under each transform (f-us, 3 repeats) and response latency delta from clean
+
+| transform | OpenAI pass · ΔP50 | Gemini pass · ΔP50 | Grok pass · ΔP50 |
+|---|---|---|---|
+| clean | 3/3 ·  | 0/3 ·  | 3/3 ·  |
+| noise-20db | 3/3 · 28.8 | 0/3 · 232.6 | 3/3 · 154.3 |
+| noise-10db | 3/3 · -33.9 | 0/3 · 283.8 | 3/3 · -358.6 |
+| telephone | 3/3 · 69.3 | 0/3 · 828.4 | 3/3 · -313.6 |
+| reverb | 2/2 · -0.8 | 0/3 · -8.2 | 3/3 · -360.8 |
+| clipping | 3/3 · -13.9 | 0/3 · -601.3 | 3/3 · -371.4 |
+| dropouts | 3/3 · 266.3 | 0/3 · -208.0 | 3/3 · -277.0 |
+
+#### Tasks (clusters = scenarios; VAD 500 ms, f-us, 3 repeats)
+
+| suite | OpenAI per-run · all-repeats · not all-pass | Gemini per-run · all-repeats · not all-pass | Grok per-run · all-repeats · not all-pass |
+|---|---|---|---|
+| task | 0.92 · 0.82 · book.distraction, book.fullday, book.newpatient | 0.38 · 0.29 · book.correction, book.digits.spoken, book.distraction, book.fullday, book.morning, book.provider, book.range, cancel.fails, cancel.pick, cancel.single, reschedule.july8, reschedule.july9 · 1 void | 1.00 · 1.00 · none |
+| task-text | 0.94 · 0.88 · book.distraction, book.fullday | 0.82 · 0.59 · book.distraction, book.fullday, book.range, cancel.fails, cancel.pick, reschedule.july8, reschedule.july9 · 1 void | 0.96 · 0.88 · book.distraction, book.fullday |
+| task-medicare | 0.67 · 0.67 · intake.qualified | 0.25 · 0.50 · intake.qualified · 5 void | 0.78 · 0.67 · intake.qualified |
+| task-medicare-text | 0.67 · 0.67 · intake.qualified | 0.57 · 0.67 · intake.qualified · 2 void | 0.67 · 0.67 · intake.qualified |
+
+#### Voids by class, whole campaign
+
+cells per provider: OpenAI 609, Gemini 609, Grok 606
+
+| class | OpenAI | Gemini | Grok |
+|---|---|---|---|
+| caller pacing slipped | 3 | 0 | 3 |
+| excluded: gemini-live has no semantic turn detection | 0 | 45 | 0 |
+| excluded: grok-realtime has no semantic turn detection | 0 | 0 | 45 |
+| provider closed the session mid-call | 0 | 9 | 0 |
+| provider returned no transcript of the caller | 1 | 2 | 0 |
+| reply too short to test the backchannel | 17 | 0 | 0 |
+
+
+#### Reading the tables
+
+- **The sentinel spread is the noise floor.** OpenAI 1264–2039 ms, Grok 2023–2589,
+  Gemini 2991–3954 across nine runs of the identical cell. No gap between two
+  configurations of one provider smaller than that spread is a finding.
+- **Manual commit is the generation floor; native VAD adds its endpointing cost on
+  top.** OpenAI: 962 → 1177 (200 ms VAD) → 1505 (500 ms VAD) on the same clip. Grok:
+  1320 → 2052 → 2388, an endpointing cost roughly twice the configured silence.
+  Gemini: 3774 with no clear VAD dependence; its floor is its own thinking, which
+  is on by default and disclosed in the provider table. OpenAI's semantic VAD
+  waited 5.2 s on a statement it judged unfinished.
+- **Endpointing.** All three hold a turn through a 1 s mid-sentence gap. OpenAI's
+  500 ms VAD ends the turn inside a 1.5 s gap in 7 of 9 cells and inside 2 s in all
+  9; Gemini and Grok wait through 2 s, and Grok's own VAD ignores the configured
+  silence. A filled pause ("um, let me think") holds the turn everywhere.
+- **Barge-in, on the listener's clock.** OpenAI stops within 270–320 ms of the
+  caller's first word at every offset and voice. Grok 1.0–1.5 s. Gemini 2.0–3.0 s,
+  and 2.3–2.6 s when the caller starts at the same instant as the agent. The rule
+  was corrected mid-run: stop time is the end of the last stretch of agent audio
+  that overlapped the caller's utterance, so a provider that fell silent between
+  chunks and resumed is no longer credited with 0 ms.
+- **Backchannel.** Gemini talks through "mm hmm" in 18 of 18; Grok in 13 of 18.
+  OpenAI's replies to this clip end before the backchannel is fully spoken in 17
+  of 18 cells, so the cell is void rather than scored: nothing was tested.
+- **Caller transcription.** OpenAI 45/45. Grok fails one identifier clip on every
+  voice and repeat. Gemini fails both identifier clips everywhere, on every
+  transform including clean, because its input transcription collapses repeated
+  digits ("two zero two, five five five, zero one eight eight" comes back as nine
+  digits). This is the side-channel transcript, not necessarily what the model
+  acted on; the task suites are where that is tested.
+- **Degradation.** No provider's identifier transcription changed under any
+  transform relative to clean; the latency deltas sit inside the sentinel spread.
+  The transforms are recorded as strata; nothing here separates the providers yet.
+- **Tasks.** Grok completes all 17 appointment scenarios on all three repeats in
+  voice. OpenAI 0.92 per run / 0.82 all repeats: it loops on a caller who asks a
+  medication question mid-booking, refuses to book when the requested provider has
+  no morning slot, and once gave no reply to the opener. Gemini 0.38 / 0.29 in
+  voice against 0.82 / 0.59 in text: in voice its long bookings end in a reply of
+  leaked control tokens with no audio at about 5 000 tokens of context, and nine
+  medicare and booking sessions were closed by its server mid-reply (codes 1007 and
+  1011) with nothing but paced caller audio on the wire from our side. The
+  `intake.qualified` medicare scenario fails for all three providers the same way:
+  each saves the qualification record without asking age band and current coverage,
+  which the contract's prompt lists and the mock's record requires, so the mock
+  answers that no record matched. That is a fair fail of the same instruction by
+  three models, and the scenario stays.
+- **Voids are the record, not the residue.** 90 declared exclusions (semantic VAD
+  on Gemini and Grok), 9 provider closes, 17 untestable backchannels, 6 host pacing
+  slips, 3 missing caller transcripts. Each is in its own class and none is scored.
+
+#### What the run changed in the harness
+
+Found by the run and fixed before the affected suites were repeated:
+
+- A session the provider closed mid-call left the probe waiting on a caller segment
+  that would never finish; one cell held its campaign for 40 minutes. The caller
+  now releases every waiting segment, the waits stop when the session is gone, and
+  the cell is voided as "provider closed the session" in its own class.
+- The sentinel was planned only for audio campaigns and inherited the campaign's
+  prompt and tools. It is now the identical cell (audio, default prompt, no tools)
+  at the head of every run, which is the only way its spread means anything.
+- Barge-in stop time, as above.
+- A declared exclusion was recorded with a traceback and counted as an error.

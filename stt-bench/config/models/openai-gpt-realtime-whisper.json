@@ -1,0 +1,27 @@
+{
+  "model_id": "openai-gpt-realtime-whisper",
+  "provider": "openai",
+  "model": "gpt-realtime-whisper",
+  "version": "unversioned-alias",
+  "identity_policy": "requested_alias_session_accepted",
+  "endpoint": "wss://api.openai.com/v1/realtime",
+  "language": "en-US",
+  "sample_rate": 24000,
+  "encoding": "pcm_s16le",
+  "channels": 1,
+  "frame_ms": 20,
+  "ready_timeout_seconds": 15,
+  "finalize_timeout_seconds": 5,
+  "close_timeout_seconds": 5,
+  "finalization": "manual_at_speech_end",
+  "completion_basis": "single_committed_item_completed_then_observation_window",
+  "model_source": "https://github.com/coval-ai/benchmarks/blob/d62a5d22c9be3c84d41c1995d6492595bfe9a928/runner/src/coval_bench/providers/stt/openai.py",
+  "checked_on": "2026-09-12",
+  "pricing": {
+    "usd_per_minute": 0.017,
+    "source": "https://developers.openai.com/api/docs/pricing",
+    "status": "published_list_rate",
+    "billing_basis": "submitted audio including silence and retries; rate-dependent estimate, not an invoice",
+    "checked_on": "2026-09-12"
+  }
+}

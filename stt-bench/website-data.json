@@ -2,9 +2,9 @@
   "benchmark": {
     "clips": 206,
     "conversations": 4,
-    "failed": 63,
-    "firstAttempts": 3502,
-    "models": 16,
+    "failed": 62,
+    "firstAttempts": 3296,
+    "models": 15,
     "privateRecordings": 8,
     "publicClips": 1000,
     "recovered": 11,
@@ -108,26 +108,6 @@
         "ttftP50": 1064,
         "turnWer": 4.511984960050134,
         "valid": 206
-      },
-      {
-        "attempted": 206,
-        "failed": 1,
-        "id": "elevenlabs-scribe-v2-realtime",
-        "model": "ElevenLabs Scribe v2",
-        "overallIncluded": 951,
-        "overallPlanned": 1008,
-        "overallWer": 2.82939426261719,
-        "privateUsable": 8,
-        "privateWer": 2.2370830347902237,
-        "publicUsable": 943,
-        "publicWer": 3.1519618469542596,
-        "referenceWords": 6248,
-        "ttfsN": 205,
-        "ttfsP50": 121,
-        "ttftN": 205,
-        "ttftP50": 2091,
-        "turnWer": 2.0486555697823303,
-        "valid": 205
       },
       {
         "attempted": 206,
@@ -395,18 +375,6 @@
         "50": 1064,
         "90": 1104,
         "95": 2071
-      }
-    },
-    "elevenlabs-scribe-v2-realtime": {
-      "ttfs": {
-        "50": 121,
-        "90": 182,
-        "95": 207
-      },
-      "ttft": {
-        "50": 2091,
-        "90": 2135,
-        "95": 2240
       }
     },
     "google-chirp-2": {

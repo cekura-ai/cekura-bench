@@ -80,6 +80,11 @@ many calls it had already answered. The first call on a worker is the one that
 pays whatever start-up cost is left, and without that field it cannot be told
 apart from a slow model.
 
+The deployment therefore keeps one warm replica rather than scaling to zero. An
+idle replica costs money and measures nothing, which is the argument for zero;
+the argument against it is that the cold start lands inside the window a first
+response is timed in, and a latency column that includes it is not defensible.
+
 ## The cascade, for comparison
 
 "Is a native speech model better than the pipeline it replaces?" is the one

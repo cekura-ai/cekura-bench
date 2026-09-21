@@ -242,6 +242,24 @@ For a phone call, deploy it and point a Twilio or Telnyx number at the runner;
 `create_transport` selects the transport from the runner arguments, so the same
 file serves local WebRTC, Daily and both telephony providers unchanged.
 
+## Deploying it
+
+```bash
+pipecat cloud auth login                 # once per machine
+reference-agents/pipecat-s2s/deploy.sh   # cloud build; agent and secret set from pcc-deploy.toml
+```
+
+The build runs on Pipecat Cloud from the repository as a context, so no
+registry is needed. `.dockerignore` decides what leaves the machine: the run
+artifacts and the credentials file do not. The script refuses a dirty tree and
+writes the commit into the context, because the cloud build takes no build
+arguments and a record that cannot name the code it ran is not a record.
+
+Credentials live in the secret set named in `pcc-deploy.toml`, never in the
+image or the session. Create it once with `pipecat cloud secrets set
+cekura-s2s-secrets --file <env file>` holding the variables in the table above;
+add `CEKURA_API_KEY` and `CEKURA_AGENT_ID` when the platform agent exists.
+
 ## Verified
 
 Driven end to end against OpenAI Realtime with caller audio from the service bench

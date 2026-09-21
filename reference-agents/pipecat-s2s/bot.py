@@ -655,11 +655,18 @@ def _commit() -> str:
 
     A deployed image carries no git history, so the build stamps the commit in
     instead. That value wins: it is what was actually built, whereas a checkout
-    that happens to sit beside the image could be anything.
+    that happens to sit beside the image could be anything. The stamp arrives
+    either as a build argument or, where the builder takes none, as an
+    ``agent-commit`` file written into the build context by ``deploy.sh``.
     """
     stamped = os.getenv("AGENT_COMMIT", "").strip()
     if stamped and stamped != "unknown":
         return stamped
+    written = Path(__file__).with_name("agent-commit")
+    if written.exists():
+        stamped = written.read_text().strip()
+        if stamped:
+            return stamped
     try:
         return subprocess.run(
             ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True, cwd=REPO_ROOT

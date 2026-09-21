@@ -19,7 +19,11 @@ FROM dailyco/pipecat-base:0.1.29-py3.12@sha256:c34a7c605b0f42d790a7593c9870417a0
 # No pip upgrade: this file's whole purpose is that a result names a
 # configuration, and upgrading to whatever pip is newest at build time puts an
 # unpinned component into that configuration.
-COPY reference-agents/pipecat-s2s/requirements.txt requirements.txt
+# ``agent-commit*`` is a glob on purpose: a glob that matches nothing is fine
+# when another source in the same COPY does, so the file is optional. It exists
+# only in a context that ``deploy.sh`` prepared, for builders that take no
+# ``--build-arg`` (the cloud build does not).
+COPY reference-agents/pipecat-s2s/requirements.txt reference-agents/pipecat-s2s/agent-commit* ./
 RUN pip install --no-cache-dir --retries 3 --timeout 300 -r requirements.txt
 
 # The contract the agent answers from, and the server that serves it. Copied
@@ -34,10 +38,11 @@ COPY reference-agents/pipecat-s2s/qwen_realtime.py ./qwen_realtime.py
 COPY reference-agents/pipecat-s2s/bot.py ./bot.py
 
 # The agent resolves its own commit to put on every call's build record, and
-# there is no git history in the image. Supplied at build time instead:
+# there is no git history in the image. Supplied at build time instead, either
+# as this argument or as the ``agent-commit`` file copied above:
 #
 #     docker build --build-arg AGENT_COMMIT="$(git rev-parse HEAD)" ...
 #
-# A build that forgets it records "unknown", which is visible rather than wrong.
+# A build that has neither records "unknown", which is visible rather than wrong.
 ARG AGENT_COMMIT=unknown
 ENV AGENT_COMMIT=${AGENT_COMMIT}

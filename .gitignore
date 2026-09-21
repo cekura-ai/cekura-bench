@@ -17,3 +17,6 @@ __pycache__/
 *-service-account.json
 google-*.json
 credentials.json
+
+# Written by reference-agents/pipecat-s2s/deploy.sh for builders that take no build args.
+reference-agents/pipecat-s2s/agent-commit

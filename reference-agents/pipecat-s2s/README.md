@@ -22,17 +22,48 @@ sensible wiring around it.
 
 ## Configuration
 
-| Variable | Default | Notes |
+**One deployment answers for every row.** What is being measured — the provider,
+the model, the voice, the agent definition — is decided per call by the session
+that starts it, not baked into the image. A cohort is therefore a set of run
+configurations against one deployed agent, and a new model is a new row rather
+than a new deployment.
+
+These keys arrive in the session body (lowercase). The environment is the
+fallback, under the uppercase name, which is what makes `python bot.py` on a
+laptop work unchanged and lets a deployment carry a default:
+
+| Key | Default | Notes |
 |---|---|---|
-| `S2S_PROVIDER` | `openai-realtime` | native: also `gemini-live`, `grok-realtime`, `gpt-live`, `nova-sonic`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
-| `S2S_MODEL` | provider default | pin it for a reproducible run |
-| `S2S_VOICE` | provider default | |
-| `S2S_BACKEND_MODEL` | `gpt-5.4-mini` | `gpt-live` only, see below |
-| `AWS_REGION` | `us-east-1` | `nova-sonic` only |
-| `AGENT_DIR` | **required** | a directory under `agent-definitions/`; no default on purpose |
-| `CEKURA_API_KEY`, `CEKURA_AGENT_ID` | unset | tracing is off without both |
-| `CEKURA_MODE` | `track` | `observe` also uploads audio and starts evaluation |
-| provider key | — | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, or for Bedrock either `AWS_BEARER_TOKEN_BEDROCK` or `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`) |
+| `s2s_provider` | `openai-realtime` | native: also `gemini-live`, `grok-realtime`, `gpt-live`, `nova-sonic`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
+| `s2s_model` | provider default | pin it for a reproducible run |
+| `s2s_voice` | provider default | |
+| `s2s_backend_model` | `gpt-5.4-mini` | `gpt-live` only, see below |
+| `aws_region` | `us-east-1` | `nova-sonic` only |
+| `cascade_tts_voice` | fixed voice id | cascade rows only |
+| `agent_dir` | **required** | a directory under `agent-definitions/`; no default on purpose |
+| `cekura_mode` | `track` | `observe` also uploads audio and starts evaluation |
+
+Only those keys are read from a session. The platform flattens a scenario's own
+variables into the same body, so an unfiltered read would let a fixture field
+decide the provider or the agent definition — a scored run against the wrong
+contract, with nothing in the record saying so.
+
+**Credentials are environment-only** and are never read from a session. A key
+sent with a request is copied into every log, trace and session record that
+quotes the body.
+
+| Variable | Notes |
+|---|---|
+| provider key | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, `DASHSCOPE_API_KEY`, or for Bedrock either `AWS_BEARER_TOKEN_BEDROCK` or `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`) |
+| `DEEPGRAM_API_KEY`, `ELEVENLABS_API_KEY` | cascade rows only |
+| `CEKURA_API_KEY`, `CEKURA_AGENT_ID` | tracing is off without both |
+| `AGENT_COMMIT` | stamped by the build; names what was actually deployed |
+
+Because the provider is unknown until a call arrives, every provider SDK is
+imported at start-up rather than the one a process will use. That is a slower
+container start and a larger resident process, both paid before any call — in
+exchange for keeping an import out of the window a first response is timed in,
+where a container start would read as a slow model.
 
 ## The cascade, for comparison
 
@@ -110,7 +141,7 @@ is also what installs the tools on the session.
 
 ## Tools
 
-Answered from the published contract in `agent-definitions/<AGENT_DIR>/`, served
+Answered from the published contract in `agent-definitions/<agent_dir>/`, served
 by `mock_tools/`, which is shared with the service bench rather than reimplemented here. Two
 implementations of one contract would drift, and a difference between lanes could
 then be our two servers disagreeing rather than anything about the agents.
@@ -127,9 +158,9 @@ agent with no way to hang up fails that for a reason having nothing to do with
 the model. The transfer is a mock: a benchmark deployment has no second leg, so
 the call completes after the announced handover.
 
-`AGENT_DIR` has no default. A deployment that ran the wrong agent definition
-would produce a full set of plausible, scored, wrong results, with nothing in
-the transcript saying which contract it was answering.
+`agent_dir` has no default. A call that ran the wrong agent definition would
+produce a plausible, scored, wrong result, with nothing in the transcript
+saying which contract it was answering.
 
 State is not modelled: the published tables are stateless, so a run is scored on
 the trace of tool calls. Booking, then cancelling, then verifying needs a store,
@@ -151,6 +182,7 @@ once at startup so the answer survives when only container logs do:
 | `s2s_provider`, `s2s_model`, `s2s_voice` | what was measured |
 | `pipeline_sample_rate` | these services do not resample; a wrong rate makes the model hear the caller at the wrong speed, which reads as a bad model rather than bad wiring |
 | `agent_definition`, `system_prompt_sha256`, `first_message_sha256`, `tools` | the task, the prompt and the contract the model was given |
+| `config_source` | whether the session or the image decided the configuration — one deployment answers for every row, so a row that does not say which is a row nobody can place |
 
 A phone call cannot be replayed and the provider endpoint moves underneath us, so
 a recording whose configuration is unknown is not evidence of anything.

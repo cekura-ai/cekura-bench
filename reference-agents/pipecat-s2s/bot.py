@@ -23,10 +23,16 @@ tuning, no custom turn strategies, no retries. Every one of those would improve
 the agent and make the result harder to attribute. What is measured should be
 the provider plus the plainest sensible wiring around it.
 
+One deployment serves every configuration. Which provider, which model, which
+voice and which agent definition are decided *per call*, by the session that
+starts it, so a cohort is a set of run configurations rather than a set of
+images. Credentials are the deliberate exception and stay in the environment:
+a key that travels with a request is a key that ends up in a log.
+
 Run it::
 
     export S2S_PROVIDER=openai-realtime AGENT_DIR=appointments
-    python bot.py                       # local dev runner
+    python bot.py                       # local dev runner: the environment stands in
 """
 
 from __future__ import annotations
@@ -67,9 +73,64 @@ from mock_tools.server import MockToolServer  # noqa: E402
 load_dotenv(override=True)
 
 
+# ── what this call asked for ─────────────────────────────────────────────────
+
+class Settings:
+    """The configuration for one call: the session first, the environment second.
+
+    One image answers for every provider, so what is being measured cannot be
+    baked into it. The platform starts each session with a body, and these keys
+    arrive in it; the environment is the fallback, which is what makes ``python
+    bot.py`` on a laptop work unchanged and lets a deployment carry a default.
+
+    Two rules, both load-bearing:
+
+    *Credentials are never read from here.* They come from the environment only
+    (see ``_credential``). A key sent per call would be copied into every log,
+    trace and session record that quotes the request body.
+
+    *Only the keys below are accepted from the session.* The platform flattens a
+    scenario's own variables into the same body, so an unfiltered read would let
+    a fixture field named like one of these silently change what was measured --
+    a scored run against the wrong agent definition, with nothing saying so.
+    """
+
+    KEYS = (
+        "s2s_provider",
+        "s2s_model",
+        "s2s_voice",
+        "agent_dir",
+        "s2s_backend_model",
+        "aws_region",
+        "cascade_tts_voice",
+        "cekura_mode",
+    )
+
+    def __init__(self, body: Any = None) -> None:
+        raw = body if isinstance(body, dict) else {}
+        self._session = {
+            key.lower(): str(value).strip()
+            for key, value in raw.items()
+            if isinstance(key, str)
+            and key.lower() in self.KEYS
+            and isinstance(value, (str, int, float))
+            and str(value).strip()
+        }
+
+    def get(self, key: str, default: str | None = None) -> str | None:
+        """What this call asked for, or what the environment says, or the default."""
+        if key in self._session:
+            return self._session[key]
+        return (os.getenv(key.upper()) or "").strip() or default
+
+    def source(self, key: str) -> str:
+        """Which of the two decided a key -- recorded, so a row says how it was configured."""
+        return "session" if key in self._session else "environment"
+
+
 # ── providers ────────────────────────────────────────────────────────────────
 
-def _openai(api_key: str, model: str, voice: str, instructions: str) -> LLMService:
+def _openai(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
     from pipecat.services.openai.realtime.events import AudioConfiguration, AudioOutput, SessionProperties
     from pipecat.services.openai.realtime.llm import OpenAIRealtimeLLMService, OpenAIRealtimeLLMSettings
 
@@ -85,7 +146,7 @@ def _openai(api_key: str, model: str, voice: str, instructions: str) -> LLMServi
     )
 
 
-def _gemini(api_key: str, model: str, voice: str, instructions: str) -> LLMService:
+def _gemini(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
     from pipecat.services.google.gemini_live.llm import GeminiLiveLLMService, GeminiLiveLLMSettings
 
     return GeminiLiveLLMService(
@@ -94,7 +155,7 @@ def _gemini(api_key: str, model: str, voice: str, instructions: str) -> LLMServi
     )
 
 
-def _grok(api_key: str, model: str, voice: str, instructions: str) -> LLMService:
+def _grok(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
     from pipecat.services.xai.realtime.events import SessionProperties
     from pipecat.services.xai.realtime.llm import GrokRealtimeLLMService, GrokRealtimeLLMSettings
 
@@ -108,7 +169,7 @@ def _grok(api_key: str, model: str, voice: str, instructions: str) -> LLMService
     )
 
 
-def _gpt_live(api_key: str, model: str, voice: str, instructions: str) -> LLMService:
+def _gpt_live(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
     """The live model plus the backend it hands reasoning to.
 
     This one is not a single model. ``gpt-live-1`` converses, and delegates
@@ -126,12 +187,12 @@ def _gpt_live(api_key: str, model: str, voice: str, instructions: str) -> LLMSer
         api_key=api_key,
         settings=OpenAILiveLLMSettings(model=model, system_instruction=instructions, voice=voice),
         delegation=OpenAILiveLLMService.ResponsesDelegation(
-            settings=OpenAIResponsesLLMSettings(model=backend_model()),
+            settings=OpenAIResponsesLLMSettings(model=backend_model(settings)),
         ),
     )
 
 
-def _nova_sonic(credential: str, model: str, voice: str, instructions: str) -> LLMService:
+def _nova_sonic(credential: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
     """Nova Sonic over Bedrock, with either credential AWS issues.
 
     An API key is what a team is issued first, and it is presented as a bearer
@@ -147,7 +208,7 @@ def _nova_sonic(credential: str, model: str, voice: str, instructions: str) -> L
     """
     from pipecat.services.aws.nova_sonic.llm import AWSNovaSonicLLMService, AWSNovaSonicLLMSettings
 
-    settings = AWSNovaSonicLLMSettings(model=model, system_instruction=instructions, voice=voice)
+    nova_settings = AWSNovaSonicLLMSettings(model=model, system_instruction=instructions, voice=voice)
     access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
     secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
     if access_key_id and secret_access_key:
@@ -155,38 +216,38 @@ def _nova_sonic(credential: str, model: str, voice: str, instructions: str) -> L
             access_key_id=access_key_id,
             secret_access_key=secret_access_key,
             session_token=os.getenv("AWS_SESSION_TOKEN"),
-            region=aws_region(),
-            settings=settings,
+            region=aws_region(settings),
+            settings=nova_settings,
         )
 
     from nova_bearer import BearerTokenNovaSonic
 
-    return BearerTokenNovaSonic(token=credential, region=aws_region(), settings=settings)
+    return BearerTokenNovaSonic(token=credential, region=aws_region(settings), settings=nova_settings)
 
 
-def backend_model() -> str:
+def backend_model(settings: Settings) -> str:
     """The text model ``gpt-live-1`` delegates to.
 
     Pinned rather than left to the API's own default, for the same reason every
     other version here is pinned: a backend that changes underneath a run makes
     two results incomparable without either of them looking wrong.
     """
-    return os.getenv("S2S_BACKEND_MODEL", "gpt-5.4-mini")
+    return settings.get("s2s_backend_model", "gpt-5.4-mini")
 
 
-def aws_region() -> str:
+def aws_region(settings: Settings) -> str:
     """The region Bedrock is called in, and the region the record names.
 
     One accessor because those two must be the same string. A Bedrock API key is
     scoped by region and a model is served in some regions only, so a record
     naming a different region than the call used would describe a run nobody made.
     """
-    return os.getenv("AWS_REGION") or "us-east-1"
+    return settings.get("aws_region", "us-east-1")
 
 
 @dataclass(frozen=True)
 class Provider:
-    build: Callable[[str, str, str, str], LLMService]
+    build: Callable[[str, str, str, str, "Settings"], LLMService]
     input_rate: int
     default_model: str
     default_voice: str
@@ -203,7 +264,7 @@ class Provider:
     # provider that delegates part of the work, or that can run in more than one
     # place, is not comparable with one that does not unless it says so -- and
     # declaring it here is what stops a sixth provider being added without it.
-    discloses: Callable[[], dict[str, str]] = dict
+    discloses: Callable[["Settings"], dict[str, str]] = lambda _settings: {}
 
 
 # ``input_rate`` is load-bearing, not a tuning knob. These services do not
@@ -230,14 +291,14 @@ PROVIDERS: dict[str, Provider] = {
     "gpt-live": Provider(
         _gpt_live, 24000, "gpt-live-1", "marin", ("OPENAI_API_KEY",),
         "pipecat.services.openai.live.llm",
-        discloses=lambda: {"s2s_backend_model": backend_model()},
+        discloses=lambda settings: {"s2s_backend_model": backend_model(settings)},
     ),
     # Nova Sonic listens at 16 kHz and speaks at 24 kHz. The pipeline runs at the
     # input rate and the service resamples its own output.
     "nova-sonic": Provider(
         _nova_sonic, 16000, "amazon.nova-2-sonic-v1:0", "matthew", ("AWS_BEARER_TOKEN_BEDROCK", "AWS_ACCESS_KEY_ID"),
         "pipecat.services.aws.nova_sonic.llm",
-        discloses=lambda: {"aws_region": aws_region()},
+        discloses=lambda settings: {"aws_region": aws_region(settings)},
     ),
 }
 
@@ -331,7 +392,7 @@ TEXT_MODELS: dict[str, TextModel] = {
 }
 
 
-def build_cascade(text: TextModel, credential: str, model: str, instructions: str):
+def build_cascade(text: TextModel, credential: str, model: str, instructions: str, settings: Settings):
     """Speech-to-text, a text model, text-to-speech -- the three the native model replaces."""
     from pipecat.services.deepgram.flux.stt import DeepgramFluxSTTService
     from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
@@ -340,7 +401,7 @@ def build_cascade(text: TextModel, credential: str, model: str, instructions: st
     llm = text.build(credential, model)
     tts = ElevenLabsTTSService(
         api_key=os.environ["ELEVENLABS_API_KEY"],
-        voice_id=os.getenv("CASCADE_TTS_VOICE", CASCADE_TTS_VOICE),
+        voice_id=settings.get("cascade_tts_voice", CASCADE_TTS_VOICE),
         model=CASCADE_TTS_MODEL,
     )
     return stt, llm, tts
@@ -348,14 +409,15 @@ def build_cascade(text: TextModel, credential: str, model: str, instructions: st
 
 # ── the agent definition ─────────────────────────────────────────────────────
 
-def load_agent() -> MockToolServer:
+def load_agent(settings: Settings) -> MockToolServer:
     """Prompt, greeting, tool schemas and mock data, from the published contract."""
-    suite = os.getenv("AGENT_DIR")
+    suite = settings.get("agent_dir")
     if not suite:
         # No default. A deployment that runs the wrong agent definition produces
         # a full set of plausible, scored, wrong results, and nothing in the
         # transcript says which contract it was answering.
-        raise ValueError("AGENT_DIR is not set; it must name a directory under agent-definitions/")
+        raise ValueError("agent_dir was not set by the session and AGENT_DIR is unset; "
+                         "it must name a directory under agent-definitions/")
     return MockToolServer(suite, root=REPO_ROOT / "agent-definitions")
 
 
@@ -486,7 +548,8 @@ def _version(package: str) -> str:
         return "unknown"
 
 
-def build_record(provider_key: str, provider: "Provider", model: str, voice: str, server: Any) -> dict[str, Any]:
+def build_record(provider_key: str, provider: "Provider", model: str, voice: str, server: Any,
+                 settings: Settings) -> dict[str, Any]:
     """Everything needed to say which build answered a given call.
 
     A phone call cannot be replayed and a provider endpoint moves underneath us,
@@ -500,7 +563,7 @@ def build_record(provider_key: str, provider: "Provider", model: str, voice: str
     that was actually used is on the record.
     """
     return {
-        **_common_record(server),
+        **_common_record(server, settings),
         "stack": "native",
         "s2s_provider": provider_key,
         "s2s_model": model,
@@ -508,13 +571,13 @@ def build_record(provider_key: str, provider: "Provider", model: str, voice: str
         # Whatever this provider says it must disclose. Absent rather than empty
         # for a provider with nothing to add: an empty value would read as a
         # field that went unrecorded.
-        **provider.discloses(),
+        **provider.discloses(settings),
         "pipeline_sample_rate": provider.input_rate,
         "config": provider_key,
     }
 
 
-def _common_record(server: MockToolServer) -> dict[str, Any]:
+def _common_record(server: MockToolServer, settings: Settings) -> dict[str, Any]:
     """The fields that describe the task rather than the stack.
 
     Identical for a native row and a cascade row by construction, which is what
@@ -531,11 +594,16 @@ def _common_record(server: MockToolServer) -> dict[str, Any]:
         "tools": ",".join(server.tool_names),
         "pipecat_version": _version("pipecat-ai"),
         "cekura_version": _version("cekura"),
-        "cekura_mode": os.getenv("CEKURA_MODE", "track"),
+        "cekura_mode": settings.get("cekura_mode", "track"),
+        # Whether this call was configured by the session that started it or by
+        # the image it started in. One deployment answers for every provider, so
+        # a row that does not say which is a row nobody can place.
+        "config_source": settings.source("s2s_provider"),
     }
 
 
-def cascade_record(key: str, text: TextModel, model: str, server: MockToolServer) -> dict[str, Any]:
+def cascade_record(key: str, text: TextModel, model: str, server: MockToolServer,
+                   settings: Settings) -> dict[str, Any]:
     """What answered the call when three services answered it instead of one.
 
     All three are named. A cascade row that recorded only its text model would
@@ -543,11 +611,12 @@ def cascade_record(key: str, text: TextModel, model: str, server: MockToolServer
     fast its voice begins -- which is most of what a latency column measures.
     """
     return {
-        **_common_record(server),
+        **_common_record(server, settings),
         "stack": "cascade",
         "llm_model": model,
         "stt_model": CASCADE_STT_MODEL,
         "tts_model": CASCADE_TTS_MODEL,
+        "tts_voice": settings.get("cascade_tts_voice", CASCADE_TTS_VOICE),
         "counterpart_to": text.counterpart_to,
         "pipeline_sample_rate": CASCADE_RATE,
         "config": key,
@@ -557,6 +626,7 @@ def cascade_record(key: str, text: TextModel, model: str, server: MockToolServer
 # ── the bot ──────────────────────────────────────────────────────────────────
 
 def _credential(variables: tuple[str, ...], label: str) -> str:
+    """From the environment only. A credential is the one thing a session never sends."""
     found = next((v for v in map(os.getenv, variables) if v), None)
     if not found:
         raise ValueError(f"none of {', '.join(variables)} is set; {label} cannot start")
@@ -564,17 +634,20 @@ def _credential(variables: tuple[str, ...], label: str) -> str:
 
 
 async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> None:
-    server = load_agent()
-    name = os.getenv("S2S_PROVIDER", "openai-realtime")
+    # What is being measured is decided here, by the session that started this
+    # call, and not by the image -- one deployment answers for every row.
+    settings = Settings(getattr(runner_args, "body", None))
+    server = load_agent(settings)
+    name = settings.get("s2s_provider", "openai-realtime")
     cascade = TEXT_MODELS.get(name)
 
     if cascade is not None:
-        model = os.getenv("S2S_MODEL", cascade.default_model)
+        model = settings.get("s2s_model", cascade.default_model)
         credential = _credential(cascade.credential_env, name)
-        record = cascade_record(name, cascade, model, server)
+        record = cascade_record(name, cascade, model, server, settings)
         logger.info("agent bench reference agent: {}", record)
 
-        stt, llm, tts = build_cascade(cascade, credential, model, server.system_prompt)
+        stt, llm, tts = build_cascade(cascade, credential, model, server.system_prompt, settings)
         register_tools(llm, server)
         context = LLMContext(
             [{"role": "system", "content": server.system_prompt}, *opening_messages(server.first_message)],
@@ -591,12 +664,12 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
             raise ValueError(f"unknown S2S_PROVIDER {name!r}; expected one of {known}")
         provider = PROVIDERS[name]
         credential = _credential(provider.credential_env, name)
-        model = os.getenv("S2S_MODEL", provider.default_model)
-        voice = os.getenv("S2S_VOICE", provider.default_voice)
-        record = build_record(name, provider, model, voice, server)
+        model = settings.get("s2s_model", provider.default_model)
+        voice = settings.get("s2s_voice", provider.default_voice)
+        record = build_record(name, provider, model, voice, server, settings)
         logger.info("agent bench reference agent: {}", record)
 
-        llm = provider.build(credential, model, voice, server.system_prompt)
+        llm = provider.build(credential, model, voice, server.system_prompt, settings)
         register_tools(llm, server)
         context = LLMContext(opening_messages(server.first_message), tools=build_tools(server))
         aggregators = LLMContextAggregatorPair(context, realtime_service_mode=True)
@@ -656,7 +729,7 @@ def create_task(pipeline, context, params, runner_args, transport, record) -> Pi
         # "observe" additionally uploads the call audio and starts evaluation.
         # A benchmark run is dispatched with its own run id, so track is the
         # default and runner_args is passed through untouched to carry it.
-        if os.getenv("CEKURA_MODE", "track") == "observe":
+        if record.get("cekura_mode") == "observe":
             return tracer.observe_and_create_task(
                 pipeline, context, runner_args=runner_args, transport=transport,
                 custom_metadata=metadata, params=params,
@@ -691,15 +764,19 @@ def warm() -> None:
     _commit()
     _version("pipecat-ai")
     _version("cekura")
-    name = os.getenv("S2S_PROVIDER", "openai-realtime")
-    selected = PROVIDERS.get(name) or TEXT_MODELS.get(name)
-    if selected is None:
-        return  # run_bot raises with the list of valid names
-    modules = [selected.module]
-    if name in TEXT_MODELS:
-        # A cascade loads three services, and the two it does not name are the
-        # ones that decide when it starts speaking and how fast its voice begins.
-        modules += ["pipecat.services.deepgram.flux.stt", "pipecat.services.elevenlabs.tts"]
+    # Every SDK, not the one this process will use: the provider is chosen by
+    # the session, so by the time the process knows which one it needs, the
+    # caller is already on the line. The cost is a slower container start and a
+    # larger resident process, both paid before any call, in exchange for
+    # keeping an import out of the window a first response is timed in.
+    #
+    # A cascade loads three services, and the two it does not name are the ones
+    # that decide when it starts speaking and how fast its voice begins.
+    modules = sorted(
+        {entry.module for entry in PROVIDERS.values()}
+        | {entry.module for entry in TEXT_MODELS.values()}
+        | {"pipecat.services.deepgram.flux.stt", "pipecat.services.elevenlabs.tts"}
+    )
     for module in modules:
         try:
             importlib.import_module(module)

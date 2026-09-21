@@ -23,10 +23,18 @@ pytest.importorskip("pipecat", reason="reference agent needs pipecat-ai")
 AGENT_DIR = Path(__file__).resolve().parent.parent / "reference-agents" / "pipecat-s2s"
 sys.path.insert(0, str(AGENT_DIR))
 
-os.environ.setdefault("AGENT_DIR", "appointments")
-
 import bot  # noqa: E402
 from nova_bearer import BearerTokenNovaSonic  # noqa: E402
+
+
+def asked(**overrides) -> bot.Settings:
+    """The session body a call arrives with.
+
+    Configuration reaches this agent from the session that starts it, so the
+    tests configure it the way the platform does rather than by setting the
+    environment the deployment happens to have.
+    """
+    return bot.Settings({"agent_dir": "appointments", **overrides})
 
 
 class TestProviderTable:
@@ -95,7 +103,7 @@ class TestOpeningTurn:
 
 class TestTools:
     def test_the_model_is_shown_every_published_tool(self):
-        server = bot.load_agent()
+        server = bot.load_agent(asked())
         schema = bot.build_tools(server)
         shown = {t.name for t in schema.standard_tools}
         assert set(server.tool_names) <= shown
@@ -109,16 +117,16 @@ class TestTools:
         agent with no way to hang up fails that for a reason having nothing to
         do with the model.
         """
-        shown = {t.name for t in bot.build_tools(bot.load_agent()).standard_tools}
+        shown = {t.name for t in bot.build_tools(bot.load_agent(asked())).standard_tools}
         assert {"end_call", "transfer_call"} <= shown
 
     def test_call_control_is_not_confused_with_the_contract(self):
         """The published tables answer lookups; these two are not lookups."""
-        server = bot.load_agent()
+        server = bot.load_agent(asked())
         assert not (set(bot.CALL_CONTROL) & set(server.tool_names))
 
     async def test_a_registered_handler_answers_from_the_contract(self):
-        server = bot.load_agent()
+        server = bot.load_agent(asked())
         registered = {}
 
         class StubLLM:
@@ -141,7 +149,7 @@ class TestTools:
         assert answers and answers[0]["patient_id"] == "p_1002"
 
     async def test_an_unknown_record_is_reported_as_a_miss(self):
-        server = bot.load_agent()
+        server = bot.load_agent(asked())
         registered = {}
 
         class StubLLM:
@@ -165,7 +173,7 @@ class TestTools:
 
 class TestAgentDefinition:
     def test_the_contracts_own_prompt_and_greeting_are_used(self):
-        server = bot.load_agent()
+        server = bot.load_agent(asked())
         assert server.system_prompt and server.first_message
         assert server.suite == "appointments"
 
@@ -174,9 +182,9 @@ class TestBuildRecord:
     """A phone call cannot be replayed, so the build that answered it must be recorded."""
 
     def test_it_names_the_configuration_a_call_cannot_be_re_run_without(self):
-        server = bot.load_agent()
+        server = bot.load_agent(asked())
         record = bot.build_record(
-            "openai-realtime", bot.PROVIDERS["openai-realtime"], "gpt-realtime-2.1", "marin", server
+            "openai-realtime", bot.PROVIDERS["openai-realtime"], "gpt-realtime-2.1", "marin", server, asked()
         )
         # The rate is the one that silently ruins a call: these services do not
         # resample, so a wrong rate reads as a bad model rather than bad wiring.
@@ -186,11 +194,11 @@ class TestBuildRecord:
         assert "lookup_patient" in record["tools"]
 
     def test_a_changed_prompt_changes_the_record(self):
-        server = bot.load_agent()
+        server = bot.load_agent(asked())
         provider = bot.PROVIDERS["openai-realtime"]
-        before = bot.build_record("openai-realtime", provider, "m", "v", server)
+        before = bot.build_record("openai-realtime", provider, "m", "v", server, asked())
         server.system_prompt = server.system_prompt + " Answer briefly."
-        after = bot.build_record("openai-realtime", provider, "m", "v", server)
+        after = bot.build_record("openai-realtime", provider, "m", "v", server, asked())
         assert before["system_prompt_sha256"] != after["system_prompt_sha256"]
 
     def test_every_declared_disclosure_reaches_the_record(self):
@@ -200,12 +208,12 @@ class TestBuildRecord:
         is a sixth provider added with a disclosure that never lands, and a test
         naming the five that exist could not catch it.
         """
-        server = bot.load_agent()
+        server = bot.load_agent(asked())
         for name, provider in bot.PROVIDERS.items():
             record = bot.build_record(
-                name, provider, provider.default_model, provider.default_voice, server
+                name, provider, provider.default_model, provider.default_voice, server, asked()
             )
-            for field in provider.discloses():
+            for field in provider.discloses(asked()):
                 assert record.get(field), f"{name} declares {field} but the record has no value"
 
     def test_a_provider_with_nothing_to_disclose_carries_no_empty_field(self):
@@ -214,12 +222,80 @@ class TestBuildRecord:
         A provider that reasons for itself has no backend model. An empty string
         would read as a field that went unrecorded, which is a different claim.
         """
-        server = bot.load_agent()
+        server = bot.load_agent(asked())
         plain = bot.build_record(
-            "openai-realtime", bot.PROVIDERS["openai-realtime"], "gpt-realtime-2.1", "marin", server
+            "openai-realtime", bot.PROVIDERS["openai-realtime"], "gpt-realtime-2.1", "marin", server, asked()
         )
         assert "s2s_backend_model" not in plain
         assert "aws_region" not in plain
+
+
+class TestConfiguredByTheSession:
+    """One image answers for every row, so the session decides what is measured."""
+
+    def test_the_session_decides_the_provider_and_the_model(self):
+        settings = bot.Settings({"s2s_provider": "gemini-live", "s2s_model": "models/x"})
+        assert settings.get("s2s_provider") == "gemini-live"
+        assert settings.get("s2s_model") == "models/x"
+
+    def test_the_environment_is_the_fallback(self, monkeypatch):
+        """A deployment may carry a default, and a laptop has nothing else."""
+        monkeypatch.setenv("S2S_PROVIDER", "grok-realtime")
+        assert bot.Settings({}).get("s2s_provider") == "grok-realtime"
+        assert bot.Settings({"s2s_provider": "gemini-live"}).get("s2s_provider") == "gemini-live"
+
+    def test_a_credential_is_never_taken_from_the_session(self, monkeypatch):
+        """Credentials stay in the environment.
+
+        A key sent with the request is copied into every log, trace and session
+        record that quotes the body, so this agent reads keys from one place
+        only -- and a session that supplies one must not be able to change that.
+        """
+        monkeypatch.setenv("OPENAI_API_KEY", "from-the-environment")
+        settings = bot.Settings({"openai_api_key": "from-the-session"})
+        assert settings.get("openai_api_key") != "from-the-session"
+        assert bot._credential(("OPENAI_API_KEY",), "openai-realtime") == "from-the-environment"
+
+    def test_a_scenario_variable_cannot_change_what_was_measured(self):
+        """The platform flattens a scenario's own variables into the same body.
+
+        An unfiltered read would let a fixture field decide the provider or the
+        agent definition -- a scored run against the wrong contract, with
+        nothing in the record saying so.
+        """
+        settings = bot.Settings({"agent_dir": "medicare", "s2s_voice": "ash", "caller_name": "x"})
+        assert settings.get("caller_name") is None
+        assert settings.get("agent_dir") == "medicare" and settings.get("s2s_voice") == "ash"
+
+    def test_an_unset_agent_definition_is_refused(self, monkeypatch):
+        monkeypatch.delenv("AGENT_DIR", raising=False)
+        with pytest.raises(ValueError, match="agent_dir"):
+            bot.load_agent(bot.Settings({}))
+
+    def test_the_record_says_which_side_configured_the_call(self, monkeypatch):
+        """Two rows configured differently are not obviously two rows otherwise."""
+        monkeypatch.setenv("S2S_PROVIDER", "openai-realtime")
+        provider = bot.PROVIDERS["openai-realtime"]
+        from_session = bot.build_record(
+            "openai-realtime", provider, "m", "v", bot.load_agent(asked()),
+            asked(s2s_provider="openai-realtime"),
+        )
+        from_image = bot.build_record(
+            "openai-realtime", provider, "m", "v", bot.load_agent(asked()), asked()
+        )
+        assert from_session["config_source"] == "session"
+        assert from_image["config_source"] == "environment"
+
+    def test_every_provider_sdk_is_loaded_before_a_call_arrives(self):
+        """The provider is unknown until the session names it.
+
+        So every SDK is imported at start-up, not the one this process will
+        use -- otherwise the import lands inside the window a first response is
+        timed in, and a container start reads as a slow model.
+        """
+        needed = {e.module for e in bot.PROVIDERS.values()} | {e.module for e in bot.TEXT_MODELS.values()}
+        missing = needed - set(sys.modules)
+        assert not missing, f"not pre-imported: {sorted(missing)}"
 
 
 class TestCredentialForms:
@@ -228,20 +304,20 @@ class TestCredentialForms:
     def test_an_access_key_pair_signs_with_sigv4(self, monkeypatch):
         monkeypatch.setenv("AWS_ACCESS_KEY_ID", "AKIAEXAMPLE")
         monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "secretpart")
-        built = bot._nova_sonic("ignored", "amazon.nova-2-sonic-v1:0", "matthew", "hi")
+        built = bot._nova_sonic("ignored", "amazon.nova-2-sonic-v1:0", "matthew", "hi", asked())
         assert not isinstance(built, BearerTokenNovaSonic), "a pair must sign with SigV4"
 
     def test_an_api_key_alone_takes_the_bearer_path(self, monkeypatch):
         monkeypatch.delenv("AWS_ACCESS_KEY_ID", raising=False)
         monkeypatch.delenv("AWS_SECRET_ACCESS_KEY", raising=False)
-        built = bot._nova_sonic("abcdefghij", "amazon.nova-2-sonic-v1:0", "matthew", "hi")
+        built = bot._nova_sonic("abcdefghij", "amazon.nova-2-sonic-v1:0", "matthew", "hi", asked())
         assert isinstance(built, BearerTokenNovaSonic)
 
     def test_a_half_set_pair_does_not_sign_with_sigv4(self, monkeypatch):
         """An id with no secret is not a credential, and must not look like one."""
         monkeypatch.setenv("AWS_ACCESS_KEY_ID", "AKIAEXAMPLE")
         monkeypatch.delenv("AWS_SECRET_ACCESS_KEY", raising=False)
-        built = bot._nova_sonic("abcdefghij", "amazon.nova-2-sonic-v1:0", "matthew", "hi")
+        built = bot._nova_sonic("abcdefghij", "amazon.nova-2-sonic-v1:0", "matthew", "hi", asked())
         assert isinstance(built, BearerTokenNovaSonic)
 
 
@@ -272,12 +348,12 @@ class TestCascadeCounterparts:
         drifted between the two paths would produce a difference that looks like
         architecture and is not.
         """
-        server = bot.load_agent()
+        server = bot.load_agent(asked())
         native = bot.build_record(
-            "openai-realtime", bot.PROVIDERS["openai-realtime"], "gpt-realtime-2.1", "marin", server
+            "openai-realtime", bot.PROVIDERS["openai-realtime"], "gpt-realtime-2.1", "marin", server, asked()
         )
         cascade = bot.cascade_record(
-            "cascade-openai", bot.TEXT_MODELS["cascade-openai"], "gpt-4.1", server
+            "cascade-openai", bot.TEXT_MODELS["cascade-openai"], "gpt-4.1", server, asked()
         )
         for field in ("agent_definition", "system_prompt_sha256", "first_message_sha256", "tools"):
             assert native[field] == cascade[field], field
@@ -289,9 +365,9 @@ class TestCascadeCounterparts:
         A row naming only its text model would hide the two components doing
         most of what is being measured.
         """
-        server = bot.load_agent()
+        server = bot.load_agent(asked())
         record = bot.cascade_record(
-            "cascade-baseline", bot.TEXT_MODELS["cascade-baseline"], "gpt-4.1", server
+            "cascade-baseline", bot.TEXT_MODELS["cascade-baseline"], "gpt-4.1", server, asked()
         )
         assert record["stt_model"] and record["llm_model"] and record["tts_model"]
 

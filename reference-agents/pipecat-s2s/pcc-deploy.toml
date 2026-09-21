@@ -1,15 +1,15 @@
-# Deployment for one S2S configuration.
+# One deployment, every configuration.
 #
-# One deployment per model, not one deployment switched between models: a model
-# is chosen by an environment variable read at startup, so a single service
-# would mean the model that answered a given call depends on when it was
-# restarted. Separate services make the question unambiguous and let two models
-# run at once.
+# The provider, model, voice and agent definition are chosen per call by the
+# session that starts it, so one service answers for every row on the board. A
+# new model is a new run configuration, not a new deployment, and two models can
+# run against this service at the same time. What answered a given call is on
+# that call's build record rather than implied by which service it reached.
 #
-# `agent_name` and `image` are overridden per model on the command line, so this
-# file holds only what every S2S deployment shares. See README.md.
+# `image` is overridden on the command line, so this file holds only what the
+# deployment itself declares. See README.md.
 #
-#     pcc deploy --agent-name cekura-s2s-openai-realtime --image <registry>/cekura-s2s:<tag>
+#     pcc deploy --agent-name cekura-s2s --image <registry>/cekura-s2s:<tag>
 #
 # The image reference is deliberately not in this file. It names a private
 # registry, and this repository is public.
@@ -20,7 +20,8 @@ secret_set = "cekura-s2s-secrets"
 [scaling]
     # Zero when idle: a benchmark cohort runs in bursts, and a warm replica
     # between campaigns is paid for and measures nothing. The first call of a
-    # campaign therefore pays a cold start, which is why campaigns open with a
-    # discarded warm-up call rather than a scored one.
+    # campaign therefore pays a cold start -- now a larger one, since every
+    # provider SDK is imported before a call arrives -- which is why campaigns
+    # open with a discarded warm-up call rather than a scored one.
     min_agents = 0
     max_agents = 5

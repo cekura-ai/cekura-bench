@@ -717,7 +717,7 @@ def _common_record(server: MockToolServer, settings: Settings) -> dict[str, Any]
     """
     prompt = server.system_prompt or ""
     return {
-        "lane": "B",
+        "bench": "agent",
         "agent_commit": _commit(),
         "agent_definition": server.suite,
         "system_prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:16],

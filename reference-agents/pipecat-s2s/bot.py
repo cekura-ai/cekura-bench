@@ -266,7 +266,14 @@ def _commit() -> str:
     Cached because ``run_bot`` is per call, not per process: a fork+exec between
     the transport connecting and the greeting going out would land inside the
     window Lane A is measuring.
+
+    A deployed image carries no git history, so the build stamps the commit in
+    instead. That value wins: it is what was actually built, whereas a checkout
+    that happens to sit beside the image could be anything.
     """
+    stamped = os.getenv("AGENT_COMMIT", "").strip()
+    if stamped and stamped != "unknown":
+        return stamped
     try:
         return subprocess.run(
             ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True, cwd=REPO_ROOT

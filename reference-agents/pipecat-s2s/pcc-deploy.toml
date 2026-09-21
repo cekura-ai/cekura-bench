@@ -1,0 +1,26 @@
+# Deployment for one S2S configuration.
+#
+# One deployment per model, not one deployment switched between models: a model
+# is chosen by an environment variable read at startup, so a single service
+# would mean the model that answered a given call depends on when it was
+# restarted. Separate services make the question unambiguous and let two models
+# run at once.
+#
+# `agent_name` and `image` are overridden per model on the command line, so this
+# file holds only what every S2S deployment shares. See README.md.
+#
+#     pcc deploy --agent-name cekura-s2s-openai-realtime --image <registry>/cekura-s2s:<tag>
+#
+# The image reference is deliberately not in this file. It names a private
+# registry, and this repository is public.
+
+agent_name = "cekura-s2s"
+secret_set = "cekura-s2s-secrets"
+
+[scaling]
+    # Zero when idle: a benchmark cohort runs in bursts, and a warm replica
+    # between campaigns is paid for and measures nothing. The first call of a
+    # campaign therefore pays a cold start, which is why campaigns open with a
+    # discarded warm-up call rather than a scored one.
+    min_agents = 0
+    max_agents = 5

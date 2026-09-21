@@ -13,7 +13,7 @@
         "attempted": 206,
         "failed": 1,
         "id": "assemblyai-universal-3-5-pro-min-latency",
-        "model": "AssemblyAI Universal 3.5 Pro, min latency",
+        "model": "AssemblyAI Universal 3.5 Pro",
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 2.721630231791717,

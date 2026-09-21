@@ -118,7 +118,7 @@ def _gpt_live(api_key: str, model: str, voice: str, instructions: str) -> LLMSer
 
     return OpenAILiveLLMService(
         api_key=api_key,
-        settings=OpenAILiveLLMSettings(system_instruction=instructions, voice=voice),
+        settings=OpenAILiveLLMSettings(model=model, system_instruction=instructions, voice=voice),
         delegation=OpenAILiveLLMService.ResponsesDelegation(
             settings=OpenAIResponsesLLMSettings(model=backend_model()),
         ),
@@ -126,44 +126,56 @@ def _gpt_live(api_key: str, model: str, voice: str, instructions: str) -> LLMSer
 
 
 def _nova_sonic(credential: str, model: str, voice: str, instructions: str) -> LLMService:
-    """Nova Sonic over Bedrock, with either credential form.
+    """Nova Sonic over Bedrock, with either credential AWS issues.
 
-    Bedrock accepts an API-key bearer token as well as an access-key pair, and
-    the token is what a team is issued first. Pipecat's service signs with
-    SigV4 only, so a bearer token is applied by swapping the client's auth
-    scheme -- the wire protocol and the event stream are untouched, only who
-    signs the request changes.
+    An API key is what a team is issued first, and it is presented as a bearer
+    token. Pipecat's service signs with SigV4 only, so that form goes through
+    ``nova_bearer``, which swaps the client's auth scheme and leaves the wire
+    protocol and the event stream untouched.
 
-    A bearer token is recognised by the absence of a secret: the pair form is
-    given as ``access_key_id:secret_access_key`` in the same variable.
+    An access-key pair is read from the variables AWS itself documents, so a
+    reader who already has working AWS credentials in their environment runs
+    this agent without re-encoding them into a shape only this file understands.
+    The pair wins when both are present: it carries a session token, so it is
+    the form that works with temporary credentials.
     """
     from pipecat.services.aws.nova_sonic.llm import AWSNovaSonicLLMService, AWSNovaSonicLLMSettings
 
-    region = os.getenv("AWS_REGION") or "us-east-1"
     settings = AWSNovaSonicLLMSettings(model=model, system_instruction=instructions, voice=voice)
-    if ":" in credential:
-        access_key_id, secret_access_key = credential.split(":", 1)
+    access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+    secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+    if access_key_id and secret_access_key:
         return AWSNovaSonicLLMService(
             access_key_id=access_key_id,
             secret_access_key=secret_access_key,
-            region=region,
+            session_token=os.getenv("AWS_SESSION_TOKEN"),
+            region=aws_region(),
             settings=settings,
         )
 
     from nova_bearer import BearerTokenNovaSonic
 
-    return BearerTokenNovaSonic(token=credential, region=region, settings=settings)
+    return BearerTokenNovaSonic(token=credential, region=aws_region(), settings=settings)
 
 
 def backend_model() -> str:
-    """The text model ``gpt-live-1`` delegates to. Pinned, and disclosed."""
-    return os.getenv("S2S_BACKEND_MODEL", DEFAULT_BACKEND_MODEL)
+    """The text model ``gpt-live-1`` delegates to.
+
+    Pinned rather than left to the API's own default, for the same reason every
+    other version here is pinned: a backend that changes underneath a run makes
+    two results incomparable without either of them looking wrong.
+    """
+    return os.getenv("S2S_BACKEND_MODEL", "gpt-5.4-mini")
 
 
-# Pinned rather than left to the API's own default, for the same reason every
-# other version here is pinned: a backend that changes underneath a run makes two
-# results incomparable without either of them looking wrong.
-DEFAULT_BACKEND_MODEL = "gpt-5.4-mini"
+def aws_region() -> str:
+    """The region Bedrock is called in, and the region the record names.
+
+    One accessor because those two must be the same string. A Bedrock API key is
+    scoped by region and a model is served in some regions only, so a record
+    naming a different region than the call used would describe a run nobody made.
+    """
+    return os.getenv("AWS_REGION") or "us-east-1"
 
 
 @dataclass(frozen=True)
@@ -172,7 +184,20 @@ class Provider:
     input_rate: int
     default_model: str
     default_voice: str
-    credential_env: str
+    # Every variable that can carry this provider's credential; one of them must
+    # be set. A tuple rather than a string because a vendor may document more
+    # than one form, and inventing a house format to squeeze them into one
+    # variable makes working credentials unusable until they are re-encoded.
+    credential_env: tuple[str, ...]
+    # The module holding this provider's SDK. Named so it can be imported before
+    # a call arrives rather than inside the window being measured; the builders
+    # import lazily so that one provider's SDK is not a hard dependency of all.
+    module: str
+    # What this provider must put on the record beyond the common fields. A
+    # provider that delegates part of the work, or that can run in more than one
+    # place, is not comparable with one that does not unless it says so -- and
+    # declaring it here is what stops a sixth provider being added without it.
+    discloses: Callable[[], dict[str, str]] = dict
 
 
 # ``input_rate`` is load-bearing, not a tuning knob. These services do not
@@ -182,19 +207,31 @@ class Provider:
 # failure. The telephony serializer resamples the 8 kHz phone leg to whatever the
 # pipeline declares, so this is the only place the rate needs to be correct.
 PROVIDERS: dict[str, Provider] = {
-    "openai-realtime": Provider(_openai, 24000, "gpt-realtime-2.1", "marin", "OPENAI_API_KEY"),
+    "openai-realtime": Provider(
+        _openai, 24000, "gpt-realtime-2.1", "marin", ("OPENAI_API_KEY",),
+        "pipecat.services.openai.realtime.llm",
+    ),
     "gemini-live": Provider(
         _gemini, 16000, "models/gemini-2.5-flash-native-audio-preview-12-2025", "Charon",
-        "GEMINI_API_KEY",
+        ("GEMINI_API_KEY",), "pipecat.services.google.gemini_live.llm",
     ),
-    "grok-realtime": Provider(_grok, 16000, "grok-voice-latest", "eve", "XAI_API_KEY"),
+    "grok-realtime": Provider(
+        _grok, 16000, "grok-voice-latest", "eve", ("XAI_API_KEY",),
+        "pipecat.services.xai.realtime.llm",
+    ),
     # GPT-Live is the exception to the paragraph above: it resamples what it is
     # handed. The rate is still declared, so the record says what was sent.
-    "gpt-live": Provider(_gpt_live, 24000, "gpt-live-1", "marin", "OPENAI_API_KEY"),
+    "gpt-live": Provider(
+        _gpt_live, 24000, "gpt-live-1", "marin", ("OPENAI_API_KEY",),
+        "pipecat.services.openai.live.llm",
+        discloses=lambda: {"s2s_backend_model": backend_model()},
+    ),
     # Nova Sonic listens at 16 kHz and speaks at 24 kHz. The pipeline runs at the
     # input rate and the service resamples its own output.
     "nova-sonic": Provider(
-        _nova_sonic, 16000, "amazon.nova-2-sonic-v1:0", "matthew", "AWS_BEARER_TOKEN_BEDROCK",
+        _nova_sonic, 16000, "amazon.nova-2-sonic-v1:0", "matthew", ("AWS_BEARER_TOKEN_BEDROCK", "AWS_ACCESS_KEY_ID"),
+        "pipecat.services.aws.nova_sonic.llm",
+        discloses=lambda: {"aws_region": aws_region()},
     ),
 }
 
@@ -316,10 +353,10 @@ def build_record(provider_key: str, provider: "Provider", model: str, voice: str
         "s2s_provider": provider_key,
         "s2s_model": model,
         "s2s_voice": voice,
-        # Only one provider has a backend, and its row is not readable without
-        # knowing which one: the reasoning is not done by the model named above.
-        **({"s2s_backend_model": backend_model()} if provider_key == "gpt-live" else {}),
-        **({"aws_region": os.getenv("AWS_REGION") or "us-east-1"} if provider_key == "nova-sonic" else {}),
+        # Whatever this provider says it must disclose. Absent rather than empty
+        # for a provider with nothing to add: an empty value would read as a
+        # field that went unrecorded.
+        **provider.discloses(),
         "pipeline_sample_rate": provider.input_rate,
         "agent_definition": server.suite,
         "system_prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:16],
@@ -340,16 +377,16 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         raise ValueError(f"unknown S2S_PROVIDER {name!r}; expected one of {sorted(PROVIDERS)}")
     provider = PROVIDERS[name]
 
-    api_key = os.getenv(provider.credential_env)
-    if not api_key:
-        raise ValueError(f"{provider.credential_env} is not set; {name} cannot start")
+    credential = next((v for v in map(os.getenv, provider.credential_env) if v), None)
+    if not credential:
+        raise ValueError(f"none of {', '.join(provider.credential_env)} is set; {name} cannot start")
 
     model = os.getenv("S2S_MODEL", provider.default_model)
     voice = os.getenv("S2S_VOICE", provider.default_voice)
     record = build_record(name, provider, model, voice, server)
     logger.info("lane B reference agent: {}", record)
 
-    llm = provider.build(api_key, model, voice, server.system_prompt)
+    llm = provider.build(credential, model, voice, server.system_prompt)
     register_tools(llm, server)
 
     context = LLMContext(opening_messages(server.first_message), tools=build_tools(server))
@@ -431,6 +468,37 @@ def create_task(pipeline, context, params, runner_args, transport, record) -> Pi
         return PipelineTask(pipeline, params=params)
 
 
+def warm() -> None:
+    """Do the once-per-process work now, before a caller is on the line.
+
+    Everything here is paid exactly once, and left alone it would be paid on the
+    first call the process answers -- which is inside the window this benchmark
+    exists to measure. Importing a provider SDK is the expensive one, a few
+    hundred milliseconds for some of them, and resolving the commit forks the
+    interpreter. On a replica that scales up mid-campaign, that first call is a
+    *scored* call, and nothing in the result would distinguish the cost from a
+    slow model.
+
+    Failures are logged, not raised: every one of these is recoverable later, and
+    a warm-up that refuses to start the process would turn a slow first call into
+    no call at all. A genuinely unusable configuration is refused in ``run_bot``,
+    where the error can name what is missing.
+    """
+    import importlib
+
+    _commit()
+    _version("pipecat-ai")
+    _version("cekura")
+    name = os.getenv("S2S_PROVIDER", "openai-realtime")
+    provider = PROVIDERS.get(name)
+    if provider is None:
+        return  # run_bot raises with the list of valid names
+    try:
+        importlib.import_module(provider.module)
+    except Exception as exc:  # noqa: BLE001 -- the builder will raise this again, in context
+        logger.warning("could not pre-import {} for {}: {}", provider.module, name, exc)
+
+
 async def bot(runner_args: RunnerArguments) -> None:
     """Entry point used by the Pipecat runner and by Pipecat Cloud."""
     telephony = lambda: FastAPIWebsocketParams(audio_in_enabled=True, audio_out_enabled=True)  # noqa: E731
@@ -444,6 +512,9 @@ async def bot(runner_args: RunnerArguments) -> None:
         },
     )
     await run_bot(transport, runner_args)
+
+
+warm()
 
 
 if __name__ == "__main__":

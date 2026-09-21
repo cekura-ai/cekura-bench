@@ -1,9 +1,9 @@
 """Nova Sonic authenticated with a Bedrock API key instead of an access-key pair.
 
 Pipecat's Nova Sonic service signs its Bedrock requests with SigV4, which needs
-an access key id and a secret. Bedrock also accepts an API key as a bearer
-token, and that is the credential a team is issued first -- so the only thing
-standing between an issued key and a benchmark row would otherwise be a
+an access key id and a secret. Bedrock also accepts an API key presented as a
+bearer token, and that is the credential a team is issued first -- so the only
+thing standing between an issued key and a benchmark row would otherwise be a
 different credential form.
 
 The service builds its Bedrock client in one method, so that is the seam: the
@@ -15,6 +15,12 @@ Bedrock's own service model declares both schemes (``aws.auth#sigv4`` and
 ``smithy.api#httpBearerAuth``), so this is the documented second form rather
 than a way around the first.
 
+The signing itself is the library's. ``APIKeyAuthScheme`` already puts a token
+in a header behind a scheme word, which is all bearer auth is -- there is no
+canonicalisation, so nothing depends on the body or the header order. Only two
+methods need replacing, because the stock ones read the token off the client
+config and Bedrock's generated config has no field for one.
+
 One caveat worth knowing before a run: the IAM policy behind an API key is
 region-scoped and grants ``bedrock:CallWithBearerToken``. A key that works in
 one region can be refused in another while the model itself is only served in
@@ -23,81 +29,51 @@ the second, and the two failures look alike from the outside.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any
 
+from aws_sdk_bedrock_runtime.client import BedrockRuntimeClient
+from aws_sdk_bedrock_runtime.config import Config
 from pipecat.services.aws.nova_sonic.llm import AWSNovaSonicLLMService
+from smithy_core.auth import AuthOption
+from smithy_core.shapes import ShapeID
+from smithy_core.traits import APIKeyLocation
+from smithy_http.aio.auth.apikey import APIKeyAuthScheme
+from smithy_http.aio.identity.apikey import APIKeyIdentityResolver
 
-BEARER_SCHEME = "smithy.api#httpBearerAuth"
-
-
-@dataclass(frozen=True)
-class _Token:
-    """A bearer token in the shape the signer expects of an identity."""
-
-    token: str
-    expiration: Any = None
+BEARER_SCHEME_ID = ShapeID("smithy.api#httpBearerAuth")
 
 
-class _StaticTokenResolver:
-    """Resolves to one token. The key is supplied per process, not fetched."""
+class _BearerAuthScheme(APIKeyAuthScheme):
+    """The library's API-key scheme, carrying a token supplied per process.
 
-    def __init__(self, token: str) -> None:
-        self._token = token
-
-    async def get_identity(self, *, properties: Any) -> _Token:
-        return _Token(self._token)
-
-
-class _BearerSigner:
-    """Sets the Authorization header. There is no request canonicalisation here.
-
-    That is the whole difference from SigV4: a bearer token is presented, not
-    used to sign the request's contents, so nothing depends on the body or the
-    ordering of headers.
+    The stock class looks the token up on the client config. Bedrock's generated
+    config declares SigV4 credential fields and nothing else, so the lookup would
+    fail; the token is held here instead and the two lookup methods return it.
     """
 
-    async def sign(self, *, request: Any, identity: _Token, properties: Any) -> Any:
-        from smithy_http import Field
+    scheme_id = BEARER_SCHEME_ID
 
-        request.fields.set_field(Field(name="Authorization", values=[f"Bearer {identity.token}"]))
-        return request
-
-
-class _BearerAuthScheme:
     def __init__(self, token: str) -> None:
-        from smithy_core.shapes import ShapeID
+        super().__init__(name="Authorization", location=APIKeyLocation.HEADER, scheme="Bearer")
+        self._token = token
+        self._resolver = APIKeyIdentityResolver()
 
-        self.scheme_id = ShapeID(BEARER_SCHEME)
-        self._resolver = _StaticTokenResolver(token)
+    def identity_properties(self, *, context: Any) -> dict[str, str]:
+        return {"api_key": self._token}
 
-    def identity_properties(self, *, context: Any) -> dict[str, Any]:
-        return {}
-
-    def identity_resolver(self, *, context: Any) -> _StaticTokenResolver:
+    def identity_resolver(self, *, context: Any) -> APIKeyIdentityResolver:
         return self._resolver
-
-    def signer_properties(self, *, context: Any) -> dict[str, Any]:
-        return {}
-
-    def signer(self) -> _BearerSigner:
-        return _BearerSigner()
-
-    def event_signer(self, *, request: Any) -> None:
-        # SigV4 signs each event of the stream; a bearer token authenticates the
-        # connection and the events ride it unsigned. Returning None is what
-        # tells the client not to look for a per-event signer.
-        return None
 
 
 class _BearerResolver:
-    """Chooses bearer auth for every operation, in place of the generated resolver."""
+    """Chooses bearer auth for every operation.
 
-    def resolve_auth_scheme(self, auth_parameters: Any) -> list[Any]:
-        from smithy_core.auth import AuthOption
-        from smithy_core.shapes import ShapeID
+    Hand-written because the generated resolver only ever offers SigV4; there is
+    no configuration that makes it offer the second scheme Bedrock declares.
+    """
 
-        return [AuthOption(scheme_id=ShapeID(BEARER_SCHEME), identity_properties={}, signer_properties={})]
+    def resolve_auth_scheme(self, auth_parameters: Any) -> list[AuthOption]:
+        return [AuthOption(scheme_id=BEARER_SCHEME_ID, identity_properties={}, signer_properties={})]
 
 
 class BearerTokenNovaSonic(AWSNovaSonicLLMService):
@@ -105,7 +81,9 @@ class BearerTokenNovaSonic(AWSNovaSonicLLMService):
 
     The base class takes an access key id and a secret as required arguments.
     They are unused here, so placeholders are passed and the client that would
-    have consumed them is replaced.
+    have consumed them is replaced. ``create_client`` is the only place the
+    service builds one, including on the session-continuation path that keeps a
+    long call alive, so the override covers the whole call rather than its start.
     """
 
     def __init__(self, *, token: str, region: str, **kwargs: Any) -> None:
@@ -117,17 +95,13 @@ class BearerTokenNovaSonic(AWSNovaSonicLLMService):
         )
         self._bearer_token = token
 
-    def create_client(self) -> Any:
+    def create_client(self) -> BedrockRuntimeClient:
         """The same client the base class builds, with the auth scheme swapped."""
-        from aws_sdk_bedrock_runtime.client import BedrockRuntimeClient
-        from aws_sdk_bedrock_runtime.config import Config
-        from smithy_core.shapes import ShapeID
-
-        scheme = _BearerAuthScheme(self._bearer_token)
-        config = Config(
-            endpoint_uri=f"https://bedrock-runtime.{self._region}.amazonaws.com",
-            region=self._region,
-            auth_scheme_resolver=_BearerResolver(),
-            auth_schemes={ShapeID(BEARER_SCHEME): scheme},
+        return BedrockRuntimeClient(
+            config=Config(
+                endpoint_uri=f"https://bedrock-runtime.{self._region}.amazonaws.com",
+                region=self._region,
+                auth_scheme_resolver=_BearerResolver(),
+                auth_schemes={BEARER_SCHEME_ID: _BearerAuthScheme(self._bearer_token)},
+            )
         )
-        return BedrockRuntimeClient(config=config)

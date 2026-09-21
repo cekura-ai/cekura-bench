@@ -23,6 +23,7 @@ AGENT_DIR = Path(__file__).resolve().parent.parent / "reference-agents" / "pipec
 sys.path.insert(0, str(AGENT_DIR))
 
 import bot  # noqa: E402
+from nova_bearer import BearerTokenNovaSonic  # noqa: E402
 
 
 class TestProviderTable:
@@ -38,12 +39,32 @@ class TestProviderTable:
         for name, provider in bot.PROVIDERS.items():
             assert provider.input_rate in (8000, 16000, 24000), name
             assert provider.default_model and provider.default_voice, name
-            # The variable is whatever the vendor documents, not a house style:
-            # Bedrock's own name for its API key carries no _API_KEY suffix, and
-            # renaming it here would mean a key that works everywhere else is
-            # unset for this agent alone.
-            assert provider.credential_env.isupper(), name
-            assert " " not in provider.credential_env, name
+            assert provider.credential_env, name
+
+    def test_every_credential_variable_is_documented(self):
+        """An operator can only set a variable they can find.
+
+        The names are the vendors' own rather than a house style -- Bedrock's
+        API key carries no ``_API_KEY`` suffix -- so nothing about the spelling
+        can be asserted. What can be asserted is that each one is written down
+        where someone looking for it will look.
+        """
+        readme = (bot.REPO_ROOT / "reference-agents" / "pipecat-s2s" / "README.md").read_text()
+        for name, provider in bot.PROVIDERS.items():
+            for variable in provider.credential_env:
+                assert variable in readme, f"{name}: {variable} is not in the README"
+
+    def test_every_provider_names_an_importable_module(self):
+        """The pre-import is only worth having if the module names are right.
+
+        A typo here costs nothing visible: the warm-up logs and moves on, and the
+        SDK loads later instead -- inside the window being measured, which is the
+        one place the cost does not show up as itself.
+        """
+        import importlib.util
+
+        for name, provider in bot.PROVIDERS.items():
+            assert importlib.util.find_spec(provider.module), f"{name}: {provider.module}"
 
     def test_an_unknown_provider_is_refused_by_name(self):
         assert "openai-realtime" in bot.PROVIDERS
@@ -152,48 +173,53 @@ class TestBuildRecord:
         after = bot.build_record("openai-realtime", provider, "m", "v", server)
         assert before["system_prompt_sha256"] != after["system_prompt_sha256"]
 
-    def test_the_delegating_provider_discloses_its_backend(self):
-        """One provider does not do its own reasoning, and the row must say so.
+    def test_every_declared_disclosure_reaches_the_record(self):
+        """A provider that declares an extra must actually put it on the record.
 
-        Its conversational model is named in every record. The model that
-        actually answers a reasoned question is a second one, and a record
-        naming only the first would describe a configuration nobody ran.
+        One loop rather than a test per provider: the failure this guards against
+        is a sixth provider added with a disclosure that never lands, and a test
+        naming the five that exist could not catch it.
         """
         server = bot.load_agent()
-        record = bot.build_record("gpt-live", bot.PROVIDERS["gpt-live"], "gpt-live-1", "marin", server)
-        assert record["s2s_backend_model"], "a delegating provider must name its backend"
+        for name, provider in bot.PROVIDERS.items():
+            record = bot.build_record(
+                name, provider, provider.default_model, provider.default_voice, server
+            )
+            for field in provider.discloses():
+                assert record.get(field), f"{name} declares {field} but the record has no value"
 
+    def test_a_provider_with_nothing_to_disclose_carries_no_empty_field(self):
+        """Absent rather than empty.
+
+        A provider that reasons for itself has no backend model. An empty string
+        would read as a field that went unrecorded, which is a different claim.
+        """
+        server = bot.load_agent()
         plain = bot.build_record(
             "openai-realtime", bot.PROVIDERS["openai-realtime"], "gpt-realtime-2.1", "marin", server
         )
-        # Absent rather than empty: a provider that reasons for itself has no
-        # backend, and an empty string would read as one that went unrecorded.
         assert "s2s_backend_model" not in plain
-
-    def test_the_bedrock_provider_records_the_region_it_ran_in(self):
-        """A Bedrock key is scoped by region and a model is served in some regions only.
-
-        Two runs of one model id in two regions are two different calls, and a
-        refusal in one looks like a refusal in the other without this field.
-        """
-        server = bot.load_agent()
-        record = bot.build_record(
-            "nova-sonic", bot.PROVIDERS["nova-sonic"], "amazon.nova-2-sonic-v1:0", "matthew", server
-        )
-        assert record["aws_region"]
+        assert "aws_region" not in plain
 
 
 class TestCredentialForms:
     """Bedrock issues an API key or an access-key pair, and both must reach the model."""
 
-    def test_a_pair_is_recognised_by_its_separator(self):
-        from nova_bearer import BearerTokenNovaSonic
+    def test_an_access_key_pair_signs_with_sigv4(self, monkeypatch):
+        monkeypatch.setenv("AWS_ACCESS_KEY_ID", "AKIAEXAMPLE")
+        monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "secretpart")
+        built = bot._nova_sonic("ignored", "amazon.nova-2-sonic-v1:0", "matthew", "hi")
+        assert not isinstance(built, BearerTokenNovaSonic), "a pair must sign with SigV4"
 
-        pair = bot._nova_sonic("AKIAEXAMPLE:secretpart", "amazon.nova-2-sonic-v1:0", "matthew", "hi")
-        assert not isinstance(pair, BearerTokenNovaSonic), "a pair must sign with SigV4"
+    def test_an_api_key_alone_takes_the_bearer_path(self, monkeypatch):
+        monkeypatch.delenv("AWS_ACCESS_KEY_ID", raising=False)
+        monkeypatch.delenv("AWS_SECRET_ACCESS_KEY", raising=False)
+        built = bot._nova_sonic("abcdefghij", "amazon.nova-2-sonic-v1:0", "matthew", "hi")
+        assert isinstance(built, BearerTokenNovaSonic)
 
-    def test_a_bare_token_takes_the_bearer_path(self):
-        from nova_bearer import BearerTokenNovaSonic
-
-        token = bot._nova_sonic("abcdefghij", "amazon.nova-2-sonic-v1:0", "matthew", "hi")
-        assert isinstance(token, BearerTokenNovaSonic)
+    def test_a_half_set_pair_does_not_sign_with_sigv4(self, monkeypatch):
+        """An id with no secret is not a credential, and must not look like one."""
+        monkeypatch.setenv("AWS_ACCESS_KEY_ID", "AKIAEXAMPLE")
+        monkeypatch.delenv("AWS_SECRET_ACCESS_KEY", raising=False)
+        built = bot._nova_sonic("abcdefghij", "amazon.nova-2-sonic-v1:0", "matthew", "hi")
+        assert isinstance(built, BearerTokenNovaSonic)

@@ -32,7 +32,7 @@ sensible wiring around it.
 | `AGENT_DIR` | `appointments` | a directory under `agent-definitions/` |
 | `CEKURA_API_KEY`, `CEKURA_AGENT_ID` | unset | tracing is off without both |
 | `CEKURA_MODE` | `track` | `observe` also uploads audio and starts evaluation |
-| provider key | — | one of `OPENAI_API_KEY`, `GEMINI_API_KEY`, `XAI_API_KEY`, `AWS_BEARER_TOKEN_BEDROCK` |
+| provider key | — | `OPENAI_API_KEY`, `GEMINI_API_KEY`, `XAI_API_KEY`, or for Bedrock either `AWS_BEARER_TOKEN_BEDROCK` or `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`) |
 
 ## One provider does not do its own reasoning
 
@@ -47,11 +47,15 @@ two models' cost rather than one.
 
 ## Two credential forms for Bedrock
 
-Nova Sonic accepts an API-key bearer token or an access-key pair, both through
-`AWS_BEARER_TOKEN_BEDROCK`. A value containing a colon is read as
-`access_key_id:secret_access_key` and signed with SigV4; anything else is sent
-as a bearer token, which needs the auth-scheme swap in `nova_bearer.py` because
-the framework signs with SigV4 only.
+Nova Sonic takes either credential AWS issues, under the names AWS gives them.
+Set an access-key pair, `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, plus
+`AWS_SESSION_TOKEN` if the credentials are temporary. Or set an API key in
+`AWS_BEARER_TOKEN_BEDROCK`. The pair wins when both are present, because it is
+the form that carries a session token.
+
+An API key is presented as a bearer token, which needs the auth-scheme swap in
+`nova_bearer.py`: the framework signs with SigV4 only, though Bedrock's own
+service model declares both schemes.
 
 A bearer token's IAM policy is region-scoped and grants
 `bedrock:CallWithBearerToken`. A key can be allowed in one region while the

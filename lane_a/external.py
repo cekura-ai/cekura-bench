@@ -210,6 +210,13 @@ class SpokenQuestion:
         )
 
 
+# What a model scores on each category by guessing. Three are two-way choices, so
+# half. The fourth is an open count with no fixed number of options, so guessing
+# is not a rate worth naming -- which is what makes it the category that falls
+# furthest when the audio path is broken.
+CHANCE = {"formal_fallacies": 0.5, "navigate": 0.5, "web_of_lies": 0.5, "object_counting": None}
+
+
 def summarize(cells: list[Any]) -> dict[str, Any]:
     """Accuracy overall and per category, with the voids kept separate.
 
@@ -229,8 +236,16 @@ def summarize(cells: list[Any]) -> dict[str, Any]:
         "scored": len(scored),
         "void": len(questions) - len(scored),
         "accuracy": round(sum(c.verdict == "pass" for c in scored) / len(scored), 4) if scored else None,
+        # The chance rate travels with the accuracy so the verdict this check
+        # exists for can be read off the numbers rather than reconstructed from
+        # prose: a category at or near chance means the audio did not arrive
+        # intact, whatever the model is capable of.
         "by_category": {
-            name: {"n": len(hits), "accuracy": round(sum(hits) / len(hits), 4)}
+            name: {
+                "n": len(hits),
+                "accuracy": round(sum(hits) / len(hits), 4),
+                "chance": CHANCE.get(name),
+            }
             for name, hits in sorted(by_category.items())
         },
     }

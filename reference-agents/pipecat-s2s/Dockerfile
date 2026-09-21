@@ -16,9 +16,11 @@
 # anything in this repository. Digest is 0.1.29-py3.12.
 FROM dailyco/pipecat-base:0.1.29-py3.12@sha256:c34a7c605b0f42d790a7593c9870417a098b0d6258b87119ebd6142d27c11e82
 
+# No pip upgrade: this file's whole purpose is that a result names a
+# configuration, and upgrading to whatever pip is newest at build time puts an
+# unpinned component into that configuration.
 COPY reference-agents/pipecat-s2s/requirements.txt requirements.txt
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir --retries 3 --timeout 300 -r requirements.txt
+RUN pip install --no-cache-dir --retries 3 --timeout 300 -r requirements.txt
 
 # The contract the agent answers from, and the server that serves it. Copied
 # rather than baked into the agent so that the image and the published repository

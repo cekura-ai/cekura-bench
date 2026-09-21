@@ -38,7 +38,7 @@ laptop work unchanged and lets a deployment carry a default:
 | `s2s_model` | provider default | pin it for a reproducible run |
 | `s2s_voice` | provider default | |
 | `s2s_backend_model` | `gpt-5.4-mini` | `gpt-live` only, see below |
-| `aws_region` | `us-east-1` | `nova-sonic` only |
+| `aws_region` | `us-west-2` | `nova-sonic` only; must be a region serving the model *and* granted to the credentials |
 | `cascade_tts_voice` | fixed voice id | cascade rows only |
 | `agent_dir` | **required** | a directory under `agent-definitions/`; no default on purpose |
 | `cekura_mode` | `track` | `observe` also uploads audio and starts evaluation |
@@ -54,7 +54,7 @@ quotes the body.
 
 | Variable | Notes |
 |---|---|
-| provider key | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, `DASHSCOPE_API_KEY`, or for Bedrock either `AWS_BEARER_TOKEN_BEDROCK` or `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`) |
+| provider key | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, `DASHSCOPE_API_KEY`, or for Bedrock `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`); see below for why an API key cannot work |
 | `DEEPGRAM_API_KEY`, `ELEVENLABS_API_KEY` | cascade rows only |
 | `CEKURA_API_KEY`, `CEKURA_AGENT_ID` | tracing is off without both |
 | `AGENT_COMMIT` | stamped by the build; names what was actually deployed |
@@ -115,22 +115,24 @@ So the backend is named, pinned, and written into every build record. Its row
 is not comparable with a single model's row without that name, and its cost is
 two models' cost rather than one.
 
-## Two credential forms for Bedrock
+## Bedrock needs signed credentials, not an API key
 
-Nova Sonic takes either credential AWS issues, under the names AWS gives them.
-Set an access-key pair, `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, plus
-`AWS_SESSION_TOKEN` if the credentials are temporary. Or set an API key in
-`AWS_BEARER_TOKEN_BEDROCK`. The pair wins when both are present, because it is
-the form that carries a session token.
+Nova Sonic is reached only through `InvokeModelWithBidirectionalStream`, and AWS
+excludes that operation from Bedrock API-key (bearer) authentication. A bearer
+token therefore cannot open a Nova Sonic session in any region, however its
+policy is written. Set an access-key pair instead: `AWS_ACCESS_KEY_ID` and
+`AWS_SECRET_ACCESS_KEY`, plus `AWS_SESSION_TOKEN` if the credentials are
+temporary. The identity needs `bedrock:InvokeModel` and
+`bedrock:InvokeModelWithBidirectionalStream` on the model's foundation-model ARN.
 
-An API key is presented as a bearer token, which needs the auth-scheme swap in
-`nova_bearer.py`: the framework signs with SigV4 only, though Bedrock's own
-service model declares both schemes.
+Prefer a long-lived key pair. Temporary credentials expire within twelve hours
+and nothing here refreshes them, so a campaign running past the expiry would
+fail partway through a cohort.
 
-A bearer token's IAM policy is region-scoped and grants
-`bedrock:CallWithBearerToken`. A key can be allowed in one region while the
-model is served only in another, and from the outside those two failures look
-alike — so the region is recorded with every run.
+Region matters twice over: the model is served in four regions, and credentials
+are granted in some subset of those. Both failures are the same
+`AccessDeniedException` from the outside, which is why the region is recorded
+with every run.
 
 ## The sample rate is not a tuning knob
 

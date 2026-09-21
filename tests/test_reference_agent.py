@@ -24,7 +24,6 @@ AGENT_DIR = Path(__file__).resolve().parent.parent / "reference-agents" / "pipec
 sys.path.insert(0, str(AGENT_DIR))
 
 import bot  # noqa: E402
-from nova_bearer import BearerTokenNovaSonic  # noqa: E402
 
 
 def asked(**overrides) -> bot.Settings:
@@ -317,26 +316,30 @@ class TestConfiguredByTheSession:
 
 
 class TestCredentialForms:
-    """Bedrock issues an API key or an access-key pair, and both must reach the model."""
+    """Bedrock's two credential forms, only one of which can reach this model."""
 
     def test_an_access_key_pair_signs_with_sigv4(self, monkeypatch):
         monkeypatch.setenv("AWS_ACCESS_KEY_ID", "AKIAEXAMPLE")
         monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "secretpart")
-        built = bot._nova_sonic("ignored", "amazon.nova-2-sonic-v1:0", "matthew", "hi", asked())
-        assert not isinstance(built, BearerTokenNovaSonic), "a pair must sign with SigV4"
+        built = bot._nova_sonic("AKIAEXAMPLE", "amazon.nova-2-sonic-v1:0", "matthew", "hi", asked())
+        assert built.__class__.__name__ == "AWSNovaSonicLLMService"
 
-    def test_an_api_key_alone_takes_the_bearer_path(self, monkeypatch):
-        monkeypatch.delenv("AWS_ACCESS_KEY_ID", raising=False)
-        monkeypatch.delenv("AWS_SECRET_ACCESS_KEY", raising=False)
-        built = bot._nova_sonic("abcdefghij", "amazon.nova-2-sonic-v1:0", "matthew", "hi", asked())
-        assert isinstance(built, BearerTokenNovaSonic)
+    def test_an_api_key_is_not_a_credential_for_this_model(self):
+        """AWS excludes the bidirectional stream from bearer authentication.
 
-    def test_a_half_set_pair_does_not_sign_with_sigv4(self, monkeypatch):
-        """An id with no secret is not a credential, and must not look like one."""
-        monkeypatch.setenv("AWS_ACCESS_KEY_ID", "AKIAEXAMPLE")
-        monkeypatch.delenv("AWS_SECRET_ACCESS_KEY", raising=False)
-        built = bot._nova_sonic("abcdefghij", "amazon.nova-2-sonic-v1:0", "matthew", "hi", asked())
-        assert isinstance(built, BearerTokenNovaSonic)
+        A key that opens no session must not be listed as one that does: it
+        would satisfy every start-up check and fail on the first call.
+        """
+        assert "AWS_BEARER_TOKEN_BEDROCK" not in bot.PROVIDERS["nova-sonic"].credential_env
+
+    def test_the_default_region_is_one_the_model_is_served_in(self):
+        """Four regions serve it; a default outside them fails as a denial.
+
+        An unserved region and an ungranted one raise the same error, so a
+        default that is merely plausible costs a debugging session to rule out.
+        """
+        served = {"us-east-1", "us-west-2", "eu-north-1", "ap-northeast-1"}
+        assert bot.aws_region(asked()) in served
 
 
 class TestCascadeCounterparts:

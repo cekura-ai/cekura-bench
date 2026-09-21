@@ -202,36 +202,28 @@ def _gpt_live(api_key: str, model: str, voice: str, instructions: str, settings:
 
 
 def _nova_sonic(credential: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
-    """Nova Sonic over Bedrock, with either credential AWS issues.
+    """Nova Sonic over Bedrock, signed with SigV4.
 
-    An API key is what a team is issued first, and it is presented as a bearer
-    token. Pipecat's service signs with SigV4 only, so that form goes through
-    ``nova_bearer``, which swaps the client's auth scheme and leaves the wire
-    protocol and the event stream untouched.
+    Credentials are read from the variables AWS itself documents, so a reader
+    who already has working AWS credentials in their environment runs this agent
+    without re-encoding them into a shape only this file understands.
 
-    An access-key pair is read from the variables AWS itself documents, so a
-    reader who already has working AWS credentials in their environment runs
-    this agent without re-encoding them into a shape only this file understands.
-    The pair wins when both are present: it carries a session token, so it is
-    the form that works with temporary credentials.
+    There is deliberately no API-key path. An API key authenticates as a bearer
+    token, and AWS excludes ``InvokeModelWithBidirectionalStream`` -- Nova
+    Sonic's only invocation -- from bearer authentication, so such a key opens
+    no session in any region however its policy is written. Accepting one would
+    pass every start-up check and fail on the first call of a campaign.
     """
     from pipecat.services.aws.nova_sonic.llm import AWSNovaSonicLLMService, AWSNovaSonicLLMSettings
 
     nova_settings = AWSNovaSonicLLMSettings(model=model, system_instruction=instructions, voice=voice)
-    access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
-    secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-    if access_key_id and secret_access_key:
-        return AWSNovaSonicLLMService(
-            access_key_id=access_key_id,
-            secret_access_key=secret_access_key,
-            session_token=os.getenv("AWS_SESSION_TOKEN"),
-            region=aws_region(settings),
-            settings=nova_settings,
-        )
-
-    from nova_bearer import BearerTokenNovaSonic
-
-    return BearerTokenNovaSonic(token=credential, region=aws_region(settings), settings=nova_settings)
+    return AWSNovaSonicLLMService(
+        access_key_id=credential,
+        secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+        session_token=os.getenv("AWS_SESSION_TOKEN"),
+        region=aws_region(settings),
+        settings=nova_settings,
+    )
 
 
 def backend_model(settings: Settings) -> str:
@@ -247,11 +239,16 @@ def backend_model(settings: Settings) -> str:
 def aws_region(settings: Settings) -> str:
     """The region Bedrock is called in, and the region the record names.
 
-    One accessor because those two must be the same string. A Bedrock API key is
+    One accessor because those two must be the same string. Credentials are
     scoped by region and a model is served in some regions only, so a record
     naming a different region than the call used would describe a run nobody made.
+
+    The default is a region where the model is served *and* our credentials are
+    granted, verified by opening a real bidirectional stream: the two conditions
+    fail identically from the outside, so a plausible-looking default that
+    satisfies only one costs a debugging session per person who hits it.
     """
-    return settings.get("aws_region", "us-east-1")
+    return settings.get("aws_region", "us-west-2")
 
 
 @dataclass(frozen=True)
@@ -305,7 +302,7 @@ PROVIDERS: dict[str, Provider] = {
     # Nova Sonic listens at 16 kHz and speaks at 24 kHz. The pipeline runs at the
     # input rate and the service resamples its own output.
     "nova-sonic": Provider(
-        _nova_sonic, 16000, "amazon.nova-2-sonic-v1:0", "matthew", ("AWS_BEARER_TOKEN_BEDROCK", "AWS_ACCESS_KEY_ID"),
+        _nova_sonic, 16000, "amazon.nova-2-sonic-v1:0", "matthew", ("AWS_ACCESS_KEY_ID",),
         "pipecat.services.aws.nova_sonic.llm",
         discloses=lambda settings: {"aws_region": aws_region(settings)},
     ),
@@ -802,8 +799,7 @@ def warm() -> None:
     # warm-up that depends on a credential is a warm-up that silently stops
     # working the day a credential is missing.
     #
-    # ``nova_bearer`` is ours and is imported the same way, from inside a builder.
-    for module in [*modules, "cekura.pipecat", "nova_bearer"]:
+    for module in [*modules, "cekura.pipecat"]:
         try:
             importlib.import_module(module)
         except Exception as exc:  # noqa: BLE001 -- the builder will raise this again, in context

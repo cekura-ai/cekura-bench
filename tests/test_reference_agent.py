@@ -494,3 +494,30 @@ class TestCascadeCounterparts:
     def test_a_configuration_name_is_never_ambiguous(self):
         """One name selects one stack. An overlap would make a run unattributable."""
         assert not (set(bot.PROVIDERS) & set(bot.TEXT_MODELS))
+
+
+class TestContractRoot:
+    """Where the agent looks for the published contract.
+
+    The repository nests this file three directories below the contract; the
+    deployed image flattens both into one working directory. A root derived by
+    counting parent directories is therefore correct in exactly one of the two
+    places, and wrong in the one that runs the benchmark -- which is how a
+    deployment reached a session and then died looking for `/agent-definitions`.
+    """
+
+    def test_flattened_layout_resolves_beside_the_agent(self, tmp_path):
+        """What the deployed image looks like: agent and contract in one directory."""
+        (tmp_path / "agent-definitions" / "appointments").mkdir(parents=True)
+        assert bot._repo_root(tmp_path / "bot.py") == tmp_path
+
+    def test_repository_layout_resolves_three_directories_up(self):
+        assert bot._repo_root(AGENT_DIR / "bot.py") == AGENT_DIR.parent.parent
+
+    def test_resolved_root_holds_the_contract(self):
+        assert (bot.REPO_ROOT / "agent-definitions" / "appointments").is_dir()
+
+    def test_the_agent_loads_its_contract_from_that_root(self):
+        server = bot.load_agent(asked())
+        assert server.system_prompt
+        assert server.tool_specs

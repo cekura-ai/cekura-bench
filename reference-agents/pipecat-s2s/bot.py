@@ -62,12 +62,29 @@ from pipecat.runner.types import RunnerArguments
 from pipecat.runner.utils import create_transport
 from pipecat.services.llm_service import FunctionCallParams, LLMService
 from pipecat.transports.base_transport import BaseTransport, TransportParams
+from pipecat.transports.daily.transport import DailyParams
 from pipecat.transports.websocket.fastapi import FastAPIWebsocketParams
 
 # The mock-tool contract is shared with the service bench rather than reimplemented here.
 # Two implementations of one contract would drift, and a difference between lanes
 # could then be our two servers disagreeing rather than anything about the agents.
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+#
+# Two layouts have to work, and they disagree about where "beside the agent" is.
+# In the repository this file sits three directories below the root that holds
+# the contract; in the image everything is flattened into one working directory.
+# So the root is whichever candidate actually carries the contract, rather than a
+# count of parent directories that is correct in exactly one of the two places.
+def _repo_root(here: Path | None = None) -> Path:
+    here = (here or Path(__file__)).resolve()
+    for candidate in (here.parent, here.parent.parent.parent):
+        if (candidate / "agent-definitions").is_dir():
+            return candidate
+    # Nothing found: keep the repository layout, so the failure names the path it
+    # expected rather than a directory that happens to exist.
+    return here.parent.parent.parent
+
+
+REPO_ROOT = _repo_root()
 sys.path.insert(0, str(REPO_ROOT))
 
 from mock_tools.server import MockToolServer  # noqa: E402
@@ -956,7 +973,11 @@ async def bot(runner_args: RunnerArguments) -> None:
         {
             "twilio": telephony,
             "telnyx": telephony,
-            "daily": lambda: TransportParams(audio_in_enabled=True, audio_out_enabled=True),
+            # Daily takes its own parameter class, not the generic one. The generic
+            # one constructs and connects, and then the transport reads a
+            # Daily-only field off it mid-call and stops working -- so the fault
+            # surfaces as a bot that joined nothing rather than as a bad argument.
+            "daily": lambda: DailyParams(audio_in_enabled=True, audio_out_enabled=True),
             "webrtc": lambda: TransportParams(audio_in_enabled=True, audio_out_enabled=True),
         },
     )

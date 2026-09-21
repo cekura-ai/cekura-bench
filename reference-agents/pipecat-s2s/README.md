@@ -29,7 +29,7 @@ sensible wiring around it.
 | `S2S_VOICE` | provider default | |
 | `S2S_BACKEND_MODEL` | `gpt-5.4-mini` | `gpt-live` only, see below |
 | `AWS_REGION` | `us-east-1` | `nova-sonic` only |
-| `AGENT_DIR` | `appointments` | a directory under `agent-definitions/` |
+| `AGENT_DIR` | **required** | a directory under `agent-definitions/`; no default on purpose |
 | `CEKURA_API_KEY`, `CEKURA_AGENT_ID` | unset | tracing is off without both |
 | `CEKURA_MODE` | `track` | `observe` also uploads audio and starts evaluation |
 | provider key | — | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, or for Bedrock either `AWS_BEARER_TOKEN_BEDROCK` or `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`) |
@@ -118,6 +118,18 @@ then be our two servers disagreeing rather than anything about the agents.
 An input the table does not recognise returns an explicit miss rather than an
 invented record. Inventing one would let an agent that asked for the wrong thing
 score like an agent that asked for the right thing.
+
+Two tools are code-defined rather than looked up: `end_call` and
+`transfer_call`. Neither returns a record, so neither belongs in the published
+tables — but the prompt instructs the agent to end a call and to announce a
+transfer, and a scored call is judged on whether it terminated appropriately. An
+agent with no way to hang up fails that for a reason having nothing to do with
+the model. The transfer is a mock: a benchmark deployment has no second leg, so
+the call completes after the announced handover.
+
+`AGENT_DIR` has no default. A deployment that ran the wrong agent definition
+would produce a full set of plausible, scored, wrong results, with nothing in
+the transcript saying which contract it was answering.
 
 State is not modelled: the published tables are stateless, so a run is scored on
 the trace of tool calls. Booking, then cancelling, then verifying needs a store,

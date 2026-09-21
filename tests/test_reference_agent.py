@@ -12,6 +12,7 @@ dependency-free.
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -21,6 +22,8 @@ pytest.importorskip("pipecat", reason="reference agent needs pipecat-ai")
 
 AGENT_DIR = Path(__file__).resolve().parent.parent / "reference-agents" / "pipecat-s2s"
 sys.path.insert(0, str(AGENT_DIR))
+
+os.environ.setdefault("AGENT_DIR", "appointments")
 
 import bot  # noqa: E402
 from nova_bearer import BearerTokenNovaSonic  # noqa: E402
@@ -94,8 +97,25 @@ class TestTools:
     def test_the_model_is_shown_every_published_tool(self):
         server = bot.load_agent()
         schema = bot.build_tools(server)
-        assert {t.name for t in schema.standard_tools} == set(server.tool_names)
+        shown = {t.name for t in schema.standard_tools}
+        assert set(server.tool_names) <= shown
         assert all(t.description for t in schema.standard_tools)
+
+    def test_the_model_can_also_end_and_hand_over_the_call(self):
+        """Two things the agent must do rather than look up.
+
+        Neither returns a record, so neither is in the published tables. But a
+        scored call is judged on whether it terminated appropriately, and an
+        agent with no way to hang up fails that for a reason having nothing to
+        do with the model.
+        """
+        shown = {t.name for t in bot.build_tools(bot.load_agent()).standard_tools}
+        assert {"end_call", "transfer_call"} <= shown
+
+    def test_call_control_is_not_confused_with_the_contract(self):
+        """The published tables answer lookups; these two are not lookups."""
+        server = bot.load_agent()
+        assert not (set(bot.CALL_CONTROL) & set(server.tool_names))
 
     async def test_a_registered_handler_answers_from_the_contract(self):
         server = bot.load_agent()
@@ -106,7 +126,7 @@ class TestTools:
                 registered[name] = handler
 
         bot.register_tools(StubLLM(), server)
-        assert set(registered) == set(server.tool_names)
+        assert set(registered) == set(server.tool_names) | set(bot.CALL_CONTROL)
 
         answers = []
 

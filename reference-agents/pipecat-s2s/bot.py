@@ -44,7 +44,7 @@ from dotenv import load_dotenv
 from loguru import logger
 from pipecat.adapters.schemas.function_schema import FunctionSchema
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
-from pipecat.frames.frames import LLMRunFrame
+from pipecat.frames.frames import EndTaskFrame, LLMRunFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
@@ -350,21 +350,55 @@ def build_cascade(text: TextModel, credential: str, model: str, instructions: st
 
 def load_agent() -> MockToolServer:
     """Prompt, greeting, tool schemas and mock data, from the published contract."""
-    return MockToolServer(os.getenv("AGENT_DIR", "appointments"), root=REPO_ROOT / "agent-definitions")
+    suite = os.getenv("AGENT_DIR")
+    if not suite:
+        # No default. A deployment that runs the wrong agent definition produces
+        # a full set of plausible, scored, wrong results, and nothing in the
+        # transcript says which contract it was answering.
+        raise ValueError("AGENT_DIR is not set; it must name a directory under agent-definitions/")
+    return MockToolServer(suite, root=REPO_ROOT / "agent-definitions")
+
+
+# Two things the agent must be able to *do* rather than look up: leave the call,
+# and hand it over. Neither is in the published lookup tables, because neither
+# returns a record -- but the prompt instructs the agent to end a call and to
+# announce a transfer, and a scored call is judged on whether it terminated
+# appropriately. An agent with no way to hang up fails that for a reason having
+# nothing to do with the model.
+#
+# The transfer is a mock: there is no second leg in a benchmark deployment, so
+# the call completes after the announced handover, which is what handing over
+# amounts to from the caller's side.
+
+CALL_CONTROL = {
+    "end_call": (
+        "End the phone call. Use only after a brief closing message, once the "
+        "caller has nothing else or asks to hang up."
+    ),
+    "transfer_call": (
+        "Connect the caller to the arranged transfer destination. Use only after "
+        "a routing tool returned a ready live transfer, any handoff record has "
+        "been created, and the transfer has been announced to the caller. Never "
+        "use it when only a callback or a redirect was arranged."
+    ),
+}
 
 
 def build_tools(server: MockToolServer) -> ToolsSchema:
-    return ToolsSchema(
-        standard_tools=[
-            FunctionSchema(
-                name=spec.name,
-                description=spec.description,
-                properties=spec.parameters.get("properties", {}),
-                required=spec.parameters.get("required", []),
-            )
-            for spec in server.tool_specs()
-        ]
-    )
+    published = [
+        FunctionSchema(
+            name=spec.name,
+            description=spec.description,
+            properties=spec.parameters.get("properties", {}),
+            required=spec.parameters.get("required", []),
+        )
+        for spec in server.tool_specs()
+    ]
+    control = [
+        FunctionSchema(name=name, description=description, properties={}, required=[])
+        for name, description in CALL_CONTROL.items()
+    ]
+    return ToolsSchema(standard_tools=published + control)
 
 
 def register_tools(llm: LLMService, server: MockToolServer) -> None:
@@ -381,8 +415,20 @@ def register_tools(llm: LLMService, server: MockToolServer) -> None:
         logger.info("tool {} -> {}", params.function_name, "hit" if server.calls[-1].matched else "miss")
         await params.result_callback(result)
 
+    async def end_call(params: FunctionCallParams) -> None:
+        logger.info("end_call -- closing the call")
+        await params.result_callback({"status": "ending_call"})
+        await params.llm.push_frame(EndTaskFrame())
+
+    async def transfer_call(params: FunctionCallParams) -> None:
+        logger.info("transfer_call -- mock handover, closing the call")
+        await params.result_callback({"status": "transferred"})
+        await params.llm.push_frame(EndTaskFrame())
+
     for name in server.tool_names:
         llm.register_function(name, handler)
+    llm.register_function("end_call", end_call)
+    llm.register_function("transfer_call", transfer_call)
 
 
 def opening_messages(first_message: str) -> list[dict[str, Any]]:

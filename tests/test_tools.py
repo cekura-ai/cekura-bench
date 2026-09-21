@@ -116,3 +116,37 @@ class TestVerifier:
     def test_an_optional_call_may_be_absent(self):
         verdict = verify_trace([], [ExpectedCall("lookup_patient", optional=True)])
         assert verdict.passed
+
+
+class TestTheMostSpecificRowWins:
+    """A table row whose inputs are a subset of another's must not shadow it."""
+
+    @staticmethod
+    def _shadowing_pair(server, tool):
+        """The general row and the more specific row it could hide.
+
+        Found from the table rather than hard-coded, so the test keeps testing
+        the real hazard if the contract is revised.
+        """
+        rows = server._mocks[tool]["mock_data"]
+        for general in rows:
+            gi = general["input"]
+            for specific in rows:
+                si = specific["input"]
+                if gi and set(gi) < set(si) and all(si.get(k) == v for k, v in gi.items()):
+                    return general, specific
+        return None, None
+
+    def test_a_call_naming_more_fields_gets_the_row_that_names_them(self):
+        server = MockToolServer("medicare")
+        general, specific = self._shadowing_pair(server, "route_medicare_call")
+        assert specific is not None, "the contract no longer contains a subset row"
+        # Asking with every field the specific row names must answer with it,
+        # whichever order the table happens to list the two rows in.
+        assert server.call("route_medicare_call", dict(specific["input"])) == specific["output"]
+        assert specific["output"] != general["output"], "the pair would not distinguish anything"
+
+    def test_a_call_naming_fewer_fields_still_gets_the_general_row(self):
+        server = MockToolServer("medicare")
+        general, _ = self._shadowing_pair(server, "route_medicare_call")
+        assert server.call("route_medicare_call", dict(general["input"])) == general["output"]

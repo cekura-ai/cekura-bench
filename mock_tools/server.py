@@ -116,12 +116,23 @@ class MockToolServer:
             return record.output
 
         wanted = _normalize(arguments)
+        best, best_keys = None, -1
         for row in mock.get("mock_data", []):
             expected = _normalize(row.get("input", {}))
-            if all(wanted.get(key) == value for key, value in expected.items()):
-                record = ToolCallRecord(name, arguments, True, row.get("output"))
-                self.calls.append(record)
-                return record.output
+            if not expected or not all(wanted.get(key) == value for key, value in expected.items()):
+                continue
+            # The most specific row wins, not the first one listed. One table
+            # here holds a row whose inputs are a strict subset of another's, so
+            # first-match returns the general answer to a question that named
+            # the particular one -- and the table's order, which nothing
+            # guarantees, would decide a scored result.
+            if len(expected) > best_keys:
+                best, best_keys = row, len(expected)
+
+        if best is not None:
+            record = ToolCallRecord(name, arguments, True, best.get("output"))
+            self.calls.append(record)
+            return record.output
 
         record = ToolCallRecord(name, arguments, False, {"result": "no_match"})
         self.calls.append(record)

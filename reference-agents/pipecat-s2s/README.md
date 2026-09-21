@@ -32,7 +32,7 @@ sensible wiring around it.
 | `AGENT_DIR` | `appointments` | a directory under `agent-definitions/` |
 | `CEKURA_API_KEY`, `CEKURA_AGENT_ID` | unset | tracing is off without both |
 | `CEKURA_MODE` | `track` | `observe` also uploads audio and starts evaluation |
-| provider key | — | `OPENAI_API_KEY`, `GEMINI_API_KEY`, `XAI_API_KEY`, or for Bedrock either `AWS_BEARER_TOKEN_BEDROCK` or `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`) |
+| provider key | — | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, or for Bedrock either `AWS_BEARER_TOKEN_BEDROCK` or `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`) |
 
 ## One provider does not do its own reasoning
 

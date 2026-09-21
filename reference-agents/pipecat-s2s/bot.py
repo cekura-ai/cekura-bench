@@ -213,7 +213,7 @@ PROVIDERS: dict[str, Provider] = {
     ),
     "gemini-live": Provider(
         _gemini, 16000, "models/gemini-2.5-flash-native-audio-preview-12-2025", "Charon",
-        ("GEMINI_API_KEY",), "pipecat.services.google.gemini_live.llm",
+        ("GEMINI_API_KEY", "GEMINI_AUTHORIZATION"), "pipecat.services.google.gemini_live.llm",
     ),
     "grok-realtime": Provider(
         _grok, 16000, "grok-voice-latest", "eve", ("XAI_API_KEY",),

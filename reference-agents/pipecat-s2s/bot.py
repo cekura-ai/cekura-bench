@@ -41,6 +41,7 @@ import hashlib
 import os
 import subprocess
 import sys
+import time
 import uuid
 from dataclasses import dataclass
 from functools import lru_cache
@@ -525,7 +526,63 @@ def build_tools(server: MockToolServer) -> ToolsSchema:
     return ToolsSchema(standard_tools=published + control)
 
 
-def register_tools(llm: LLMService, server: MockToolServer) -> None:
+class ToolTrace:
+    """What the agent asked of its tools, recorded by us rather than the provider.
+
+    The framework already traces tool calls, and it traces them unevenly: two of
+    the providers on this board emit arguments and results on their spans, the
+    other three emit no model-level spans at all, and the two that do truncate
+    the fields. A board that compares tool use across providers cannot rest on
+    a record whose completeness depends on which provider produced it.
+
+    This side of the call is ours. Every tool on the board is answered by the
+    same server in this same process, so recording the call here produces one
+    row of the same shape for every provider, and it costs a dictionary.
+
+    Times are offsets in milliseconds from the first tool call rather than
+    timestamps: what a reader needs is how long the agent waited and in what
+    order things happened, and a wall-clock time would additionally pin the run
+    to a date it does not need published.
+    """
+
+    def __init__(self) -> None:
+        self._calls: list[dict[str, Any]] = []
+        self._origin: float | None = None
+
+    def _offset(self) -> float:
+        now = time.monotonic()
+        if self._origin is None:
+            self._origin = now
+        return round((now - self._origin) * 1000, 1)
+
+    def record(self, name: str, arguments: dict, matched: bool, output: Any, requested_ms: float) -> None:
+        self._calls.append(
+            {
+                "name": name,
+                "arguments": arguments,
+                "matched": matched,
+                "output": output,
+                "requested_ms": requested_ms,
+                "answered_ms": self._offset(),
+            }
+        )
+
+    def as_metadata(self) -> dict[str, Any]:
+        """The summary a row is scored on, plus the calls it is derived from.
+
+        ``matched`` is the contract's own word: the arguments named a row in the
+        published table. A miss is a legitimate answer rather than an error, so
+        both counts are reported and neither is called a failure here -- what
+        counts as failing a scenario is decided by the scenario, not by us.
+        """
+        return {
+            "tool_calls": self._calls,
+            "tool_call_count": len(self._calls),
+            "tool_calls_matched": sum(1 for call in self._calls if call["matched"]),
+        }
+
+
+def register_tools(llm: LLMService, server: MockToolServer, trace: ToolTrace) -> None:
     """Answer every declared tool from the contract's lookup table.
 
     An input the table does not know returns an explicit miss rather than an
@@ -535,18 +592,30 @@ def register_tools(llm: LLMService, server: MockToolServer) -> None:
     """
 
     async def handler(params: FunctionCallParams) -> None:
-        result = server.call(params.function_name, params.arguments or {})
-        logger.info("tool {} -> {}", params.function_name, "hit" if server.calls[-1].matched else "miss")
+        requested = trace._offset()
+        arguments = params.arguments or {}
+        result = server.call(params.function_name, arguments)
+        matched = server.calls[-1].matched
+        trace.record(params.function_name, arguments, matched, result, requested)
+        logger.info("tool {} -> {}", params.function_name, "hit" if matched else "miss")
         await params.result_callback(result)
 
     async def end_call(params: FunctionCallParams) -> None:
+        requested = trace._offset()
         logger.info("end_call -- closing the call")
-        await params.result_callback({"status": "ending_call"})
+        result = {"status": "ending_call"}
+        # Recorded like any other call: whether the agent terminated the call
+        # appropriately is scored, so the row has to say whether it tried.
+        trace.record("end_call", params.arguments or {}, True, result, requested)
+        await params.result_callback(result)
         await params.llm.push_frame(EndTaskFrame())
 
     async def transfer_call(params: FunctionCallParams) -> None:
+        requested = trace._offset()
         logger.info("transfer_call -- mock handover, closing the call")
-        await params.result_callback({"status": "transferred"})
+        result = {"status": "transferred"}
+        trace.record("transfer_call", params.arguments or {}, True, result, requested)
+        await params.result_callback(result)
         await params.llm.push_frame(EndTaskFrame())
 
     for name in server.tool_names:
@@ -704,6 +773,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
     _calls_answered += 1
     settings = Settings(getattr(runner_args, "body", None))
     server = load_agent(settings)
+    trace = ToolTrace()
     name = settings.get("s2s_provider", "openai-realtime")
     cascade = TEXT_MODELS.get(name)
 
@@ -714,7 +784,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         logger.info("agent bench reference agent: {}", record)
 
         stt, llm, tts = build_cascade(cascade, credential, model, server.system_prompt, settings)
-        register_tools(llm, server)
+        register_tools(llm, server, trace)
         context = LLMContext(
             [{"role": "system", "content": server.system_prompt}, *opening_messages(server.first_message)],
             tools=build_tools(server),
@@ -736,7 +806,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         logger.info("agent bench reference agent: {}", record)
 
         llm = provider.build(credential, model, voice, server.system_prompt, settings)
-        register_tools(llm, server)
+        register_tools(llm, server, trace)
         context = LLMContext(opening_messages(server.first_message), tools=build_tools(server))
         aggregators = LLMContextAggregatorPair(context, realtime_service_mode=True)
         # No separate speech-to-text or text-to-speech: the realtime model is the
@@ -751,7 +821,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         audio_in_sample_rate=rate,
         audio_out_sample_rate=rate,
     )
-    task = create_task(pipeline, context, params, runner_args, transport, record)
+    task, tracer = create_task(pipeline, context, params, runner_args, transport, record)
 
     @transport.event_handler("on_client_connected")
     async def _on_connected(_transport, _client):
@@ -763,12 +833,21 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
     @transport.event_handler("on_client_disconnected")
     async def _on_disconnected(_transport, _client):
         logger.info("caller disconnected")
+        # The tool trace is complete only once the call is over, and the call
+        # record is immutable once posted, so it is attached here -- in the last
+        # moment where both are true.
+        if tracer is not None:
+            try:
+                tracer.set_custom_metadata({**record, **trace.as_metadata()})
+            except Exception as exc:  # noqa: BLE001 -- never fail a call over a record
+                logger.warning("could not attach the tool trace: {}", exc)
+        logger.info("tools called: {}", trace.as_metadata()["tool_call_count"])
         await task.cancel()
 
     await PipelineRunner(handle_sigint=False).run(task)
 
 
-def create_task(pipeline, context, params, runner_args, transport, record) -> PipelineTask:
+def create_task(pipeline, context, params, runner_args, transport, record) -> tuple[PipelineTask, Any]:
     """Wrap the pipeline in Cekura tracing when credentials are present.
 
     Tracing is what makes an agent-bench run inspectable afterwards: transcripts, tool
@@ -780,7 +859,7 @@ def create_task(pipeline, context, params, runner_args, transport, record) -> Pi
     api_key, agent_id = os.getenv("CEKURA_API_KEY"), os.getenv("CEKURA_AGENT_ID")
     if not (api_key and agent_id):
         logger.info("Cekura tracing off: CEKURA_API_KEY or CEKURA_AGENT_ID unset")
-        return PipelineTask(pipeline, params=params)
+        return PipelineTask(pipeline, params=params), None
 
     try:
         from cekura.pipecat import PipecatTracer
@@ -799,14 +878,14 @@ def create_task(pipeline, context, params, runner_args, transport, record) -> Pi
             return tracer.observe_and_create_task(
                 pipeline, context, runner_args=runner_args, transport=transport,
                 custom_metadata=metadata, params=params,
-            )
+            ), tracer
         return tracer.track_and_create_task(
             pipeline, context, runner_args=runner_args, transport=transport,
             custom_metadata=metadata, params=params,
-        )
+        ), tracer
     except Exception as exc:  # noqa: BLE001 -- observability must never fail a call
         logger.warning("Cekura tracing disabled: {}", exc)
-        return PipelineTask(pipeline, params=params)
+        return PipelineTask(pipeline, params=params), None
 
 
 def warm() -> None:

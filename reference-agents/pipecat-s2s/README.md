@@ -210,7 +210,9 @@ instead of in a container's stdout. `track` correlates a scenario run; `observe`
 additionally uploads the call audio and starts evaluation.
 
 Every call carries a **build record** as trace metadata, and it is also logged
-once at startup so the answer survives when only container logs do:
+once at startup so the answer survives when only container logs do. The record is
+completed when the caller disconnects, because the tool trace is only whole once
+the call is over and the record cannot be changed after it is posted:
 
 | Field | Why a call is not evidence without it |
 |---|---|
@@ -218,6 +220,7 @@ once at startup so the answer survives when only container logs do:
 | `s2s_provider`, `s2s_model`, `s2s_voice` | what was measured |
 | `pipeline_sample_rate` | these services do not resample; a wrong rate makes the model hear the caller at the wrong speed, which reads as a bad model rather than bad wiring |
 | `agent_definition`, `system_prompt_sha256`, `first_message_sha256`, `tools` | the task, the prompt and the contract the model was given |
+| `tool_calls`, `tool_call_count`, `tool_calls_matched` | what the agent asked of its tools, with arguments, answers and ordering; recorded here rather than read from the framework's spans, which two of the five providers emit and three do not |
 | `config_source` | whether the session or the image decided the configuration — one deployment answers for every row, so a row that does not say which is a row nobody can place |
 | `worker_instance`, `worker_call` | which worker answered and how many calls it had already answered; the first call on a worker carries any start-up cost the warm-up did not remove |
 

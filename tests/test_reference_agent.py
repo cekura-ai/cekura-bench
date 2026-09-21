@@ -132,7 +132,8 @@ class TestTools:
             def register_function(self, name, handler, **_kwargs):
                 registered[name] = handler
 
-        bot.register_tools(StubLLM(), server)
+        trace = bot.ToolTrace()
+        bot.register_tools(StubLLM(), server, trace)
         assert set(registered) == set(server.tool_names) | set(bot.CALL_CONTROL)
 
         answers = []
@@ -155,7 +156,8 @@ class TestTools:
             def register_function(self, name, handler, **_kwargs):
                 registered[name] = handler
 
-        bot.register_tools(StubLLM(), server)
+        trace = bot.ToolTrace()
+        bot.register_tools(StubLLM(), server, trace)
         answers = []
 
         class Params:
@@ -168,6 +170,44 @@ class TestTools:
         await registered["lookup_patient"](Params())
         assert answers[0] == {"result": "no_match"}
         assert server.calls[-1].matched is False
+        assert trace.as_metadata()["tool_calls_matched"] == 0, "a miss must not count as a hit"
+
+    @pytest.mark.asyncio
+    async def test_every_tool_call_is_recorded_for_the_run(self):
+        """Tool evidence has to be the same shape whoever answered the call.
+
+        The framework traces tool calls unevenly across providers -- two of the
+        five emit arguments and results, three emit no model-level spans at all
+        -- so a board comparing tool use cannot read it from there. This side
+        of the call is ours, so it is recorded here instead.
+        """
+        server = bot.MockToolServer(suite="appointments")
+        registered = {}
+
+        class StubLLM:
+            def register_function(self, name, handler, **_kwargs):
+                registered[name] = handler
+
+        trace = bot.ToolTrace()
+        bot.register_tools(StubLLM(), server, trace)
+
+        class Params:
+            function_name = "lookup_patient"
+            arguments = {"phone": "2025550188"}
+            llm = None
+
+            async def result_callback(self, result):
+                pass
+
+        await registered["lookup_patient"](Params())
+        metadata = trace.as_metadata()
+        assert metadata["tool_call_count"] == 1
+        assert metadata["tool_calls_matched"] == 1
+        call = metadata["tool_calls"][0]
+        assert call["name"] == "lookup_patient"
+        assert call["arguments"] == {"phone": "2025550188"}
+        assert call["output"], "the answer is the evidence; a name alone proves nothing"
+        assert call["answered_ms"] >= call["requested_ms"], "a call cannot be answered before it is made"
 
 
 class TestAgentDefinition:

@@ -15,6 +15,7 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -592,3 +593,126 @@ class TestSpeechClockRate:
         # A quarter second of silence at the pipeline's rate. Unconverted this
         # raises inside the detector rather than returning a state.
         assert await vad.analyze_audio(b"\x00\x00" * 6000) is not None
+
+
+class TestCallerWordsAreExported:
+    """The caller reaches the context, and has to reach the exported transcript too.
+
+    In realtime mode the framework reports the end of a caller's turn with no
+    text attached -- the service is often still transcribing when the boundary
+    is announced -- and delivers the finalized text later on a separate event.
+    The tracing SDK subscribes only to the boundary and drops it when it carries
+    no text, which is right for a cascade and lossy for every native speech
+    model. The call itself is unaffected, which is why a run scored a hundred
+    with no caller in it.
+
+    This drives the real aggregator through the frame order a realtime service
+    produces -- boundary first, transcript after -- and asks the SDK's own
+    recorder what it kept.
+    """
+
+    @staticmethod
+    async def _run(register_fix: bool):
+        import asyncio
+
+        from cekura.pipecat._speech_timing import SpeechTimingObserver
+        from cekura.pipecat.tracer import TranscriptCapture
+        from pipecat.frames.frames import (
+            Frame,
+            LLMFullResponseEndFrame,
+            LLMFullResponseStartFrame,
+            LLMTextFrame,
+            ProposedUserStartedSpeakingFrame,
+            ProposedUserStoppedSpeakingFrame,
+            StartFrame,
+            TranscriptionFrame,
+        )
+        from pipecat.pipeline.pipeline import Pipeline
+        from pipecat.pipeline.runner import PipelineRunner
+        from pipecat.pipeline.task import PipelineParams, PipelineTask
+        from pipecat.processors.aggregators.llm_context import LLMContext
+        from pipecat.processors.aggregators.llm_response_universal import LLMContextAggregatorPair
+        from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
+        from pipecat.utils.time import time_now_iso8601
+
+        class FakeRealtimeService(FrameProcessor):
+            def __init__(self):
+                super().__init__()
+                self.done = asyncio.Event()
+
+            async def process_frame(self, frame: Frame, direction: FrameDirection):
+                await super().process_frame(frame, direction)
+                if isinstance(frame, StartFrame):
+                    self.create_task(self._script())
+                await self.push_frame(frame, direction)
+
+            async def _script(self):
+                # The service endpoints on its own server and only proposes the
+                # boundary; the caller's words arrive afterwards, upstream.
+                await asyncio.sleep(0.05)
+                await self.broadcast_frame(ProposedUserStartedSpeakingFrame)
+                await asyncio.sleep(0.05)
+                await self.broadcast_frame(ProposedUserStoppedSpeakingFrame)
+                await asyncio.sleep(0.05)
+                await self.push_frame(
+                    TranscriptionFrame("i need to book an appointment", "", time_now_iso8601()),
+                    FrameDirection.UPSTREAM,
+                )
+                await asyncio.sleep(0.05)
+                await self.push_frame(LLMFullResponseStartFrame())
+                await self.push_frame(LLMTextFrame("sure, what day works"))
+                await self.push_frame(LLMFullResponseEndFrame())
+                await asyncio.sleep(1.0)
+                self.done.set()
+
+        context = LLMContext([{"role": "system", "content": "be brief"}])
+        pair = LLMContextAggregatorPair(
+            context,
+            realtime_service_mode=True,
+            user_params=bot.user_aggregator_params(realtime=True),
+        )
+        timing = SpeechTimingObserver()
+        capture = TranscriptCapture(context, timing)
+
+        # What the SDK itself subscribes to.
+        @pair.user().event_handler("on_user_turn_started")
+        async def _started(aggregator, strategy):
+            await capture.on_user_turn_started()
+
+        @pair.user().event_handler("on_user_turn_stopped")
+        async def _stopped(aggregator, strategy, message):
+            await capture.on_user_turn_stopped(message)
+
+        if register_fix:
+            bot.capture_caller_turns(SimpleNamespace(_transcript_capture=capture), pair.user())
+
+        service = FakeRealtimeService()
+        task = PipelineTask(
+            Pipeline([pair.user(), service, pair.assistant()]),
+            params=PipelineParams(),
+            observers=[timing],
+        )
+        runner = PipelineRunner(handle_sigint=False)
+        running = asyncio.create_task(runner.run(task))
+        await asyncio.wait_for(service.done.wait(), timeout=30)
+        await task.stop_when_done()
+        await asyncio.wait_for(running, timeout=30)
+
+        return context, [entry.get("role") for entry in capture.session_transcript]
+
+    @pytest.mark.asyncio
+    async def test_the_framework_does_put_the_caller_in_the_context(self):
+        # Establishes that nothing upstream is losing the caller: the words are
+        # there, so anything missing downstream is ours to fix.
+        context, _ = await self._run(register_fix=False)
+        assert "user" in [m.get("role") for m in context.messages if isinstance(m, dict)]
+
+    @pytest.mark.asyncio
+    async def test_without_the_late_event_the_caller_is_dropped(self):
+        _, roles = await self._run(register_fix=False)
+        assert "user" not in roles
+
+    @pytest.mark.asyncio
+    async def test_the_caller_is_exported(self):
+        _, roles = await self._run(register_fix=True)
+        assert "user" in roles

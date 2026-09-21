@@ -933,6 +933,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         # them -- transport, context, tools, greeting -- is the same code.
         stages = [transport.input(), stt, aggregators.user(), llm, tts, transport.output(), aggregators.assistant()]
         rate = CASCADE_RATE
+        realtime = False
     else:
         if name not in PROVIDERS:
             known = sorted([*PROVIDERS, *TEXT_MODELS])
@@ -956,6 +957,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         # whole agent, so the pipeline is the transport, the context and the model.
         stages = [transport.input(), aggregators.user(), llm, transport.output(), aggregators.assistant()]
         rate = provider.input_rate
+        realtime = True
 
     pipeline = Pipeline(stages)
     params = PipelineParams(
@@ -965,6 +967,8 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         audio_out_sample_rate=rate,
     )
     task, tracer = create_task(pipeline, context, params, runner_args, transport, record)
+    if realtime and tracer is not None:
+        capture_caller_turns(tracer, aggregators.user())
 
     @transport.event_handler("on_client_connected")
     async def _on_connected(_transport, _client):
@@ -988,6 +992,43 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         await task.cancel()
 
     await PipelineRunner(handle_sigint=False).run(task)
+
+
+def capture_caller_turns(tracer, user_aggregator) -> None:
+    """Put the caller's words back into the transcript on a realtime row.
+
+    In realtime mode the framework deliberately reports the end of a caller's
+    turn with no text attached: the service may still be transcribing when the
+    boundary is announced, so the finalized text is delivered later, on a
+    separate event, once it has been written to the context. The tracing SDK
+    subscribes only to the boundary and discards it when it carries no text --
+    correct for a cascade, where the two coincide, and silently lossy for every
+    native speech model. The caller is in the context and in the call; only the
+    exported transcript is missing them, which is why the run still scored.
+
+    So the later event is subscribed to as well, and its text handed to the same
+    recorder. Cascade rows must not do this: there the two events coincide and
+    every caller turn would be recorded twice.
+
+    Reaching past the SDK's public surface is deliberate and is the narrower of
+    the two options -- the alternative is assembling and posting our own
+    transcript, which would put the benchmark in the business of maintaining a
+    second exporter. Revisit when the SDK handles realtime services itself.
+    """
+    capture = getattr(tracer, "_transcript_capture", None)
+    if capture is None:
+        # No credentials, or a tracer that changed shape under us. Either way the
+        # call proceeds unobserved rather than not at all.
+        logger.warning("caller turns will not be exported: no transcript capture on the tracer")
+        return
+
+    from pipecat.processors.aggregators.llm_response_universal import UserTurnStoppedMessage
+
+    @user_aggregator.event_handler("on_user_turn_message_added")
+    async def _on_caller_turn(aggregator, message):
+        await capture.on_user_turn_stopped(
+            UserTurnStoppedMessage(content=message.content, timestamp=message.timestamp)
+        )
 
 
 def create_task(pipeline, context, params, runner_args, transport, record) -> tuple[PipelineTask, Any]:

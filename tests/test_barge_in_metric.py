@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from lane_a.adapters.base import SessionConfig
-from lane_a.adapters.fake import FakeAdapter
-from lane_a.caller import Clip, Utterance
-from lane_a.events import Clock, EventLog
-from lane_a.metrics import barge_in
+from service.adapters.base import SessionConfig
+from service.adapters.fake import FakeAdapter
+from service.caller import Clip, Utterance
+from service.events import Clock, EventLog
+from service.metrics import barge_in
 
 RATE = 24000
 

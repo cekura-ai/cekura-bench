@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Render the Lane A caller corpus. Idempotent: existing renders are left alone.
+"""Render the service bench caller corpus. Idempotent: existing renders are left alone.
 
     python bin/render-corpus.py [--overwrite] [--voice f-us]
     python bin/render-corpus.py --dir /path/to/holdout     # a corpus.json directory
@@ -15,8 +15,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from lane_a import corpus_spec  # noqa: E402
-from lane_a.corpus_v1 import build  # noqa: E402
+from service import corpus_spec  # noqa: E402
+from service.corpus_v1 import build  # noqa: E402
 
 
 def main() -> int:

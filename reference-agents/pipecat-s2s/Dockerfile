@@ -1,4 +1,4 @@
-# The Lane B agent as Pipecat Cloud runs it.
+# The agent bench agent as Pipecat Cloud runs it.
 #
 # Deliberately plain. Tracing, transcripts, tool calls and logs all go through
 # the Cekura SDK the agent already imports, so there is no log shipper, no

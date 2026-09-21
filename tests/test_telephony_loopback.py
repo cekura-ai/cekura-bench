@@ -18,9 +18,9 @@ import numpy as np
 import pytest
 from aiohttp import ClientSession
 
-from lane_a.audio import pcm_to_ulaw, to_array, ulaw_to_pcm
-from lane_b.telephony import StreamServer
-from lane_b.tone import RATE, chirp, round_trip
+from service.audio import pcm_to_ulaw, to_array, ulaw_to_pcm
+from agent.telephony import StreamServer
+from agent.tone import RATE, chirp, round_trip
 
 FRAME_MS = 20.0
 FRAME_BYTES = int(RATE * FRAME_MS / 1000.0)

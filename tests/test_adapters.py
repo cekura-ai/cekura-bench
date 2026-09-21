@@ -11,12 +11,12 @@ import base64
 
 import pytest
 
-from lane_a import events as ev
-from lane_a.adapters.base import SessionConfig, TurnDetection
-from lane_a.adapters.gemini_live import GeminiLiveAdapter, _flatten_usage_metadata
-from lane_a.adapters.grok_realtime import GrokRealtimeAdapter
-from lane_a.adapters.openai_realtime import OpenAIRealtimeAdapter
-from lane_a.audio import AudioTimeline
+from service import events as ev
+from service.adapters.base import SessionConfig, TurnDetection
+from service.adapters.gemini_live import GeminiLiveAdapter, _flatten_usage_metadata
+from service.adapters.grok_realtime import GrokRealtimeAdapter
+from service.adapters.openai_realtime import OpenAIRealtimeAdapter
+from service.audio import AudioTimeline
 
 
 def adapter(cls, **config):

@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from lane_a.report import (
+from service.report import (
     MIN_TAIL_N,
     TIE_MS,
     clustered_success,

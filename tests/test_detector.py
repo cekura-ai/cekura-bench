@@ -12,8 +12,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from lane_a.audio import to_pcm
-from lane_a.detector import detect_offset, detect_onset, speech_bounds
+from service.audio import to_pcm
+from service.detector import detect_offset, detect_onset, speech_bounds
 
 RATE = 24000
 
@@ -91,8 +91,8 @@ class TestNoiseIsTheKnownFailureMode:
     def test_the_detector_runs_late_under_noise_rather_than_early(self):
         """Documented limit: this detector may not be pointed at a noisy channel.
 
-        Lane A is safe because noise sits on the caller channel we author while
-        the provider's returned audio comes back clean. Lane B's phone leg is not,
+        The service bench is safe because noise sits on the caller channel we author while
+        the provider's returned audio comes back clean. The agent bench's phone leg is not,
         and needs harmonicity-based detection instead of broadband energy.
         """
         errors = []

@@ -1,4 +1,4 @@
-"""The injected-tone instrument that gates every Lane B latency.
+"""The injected-tone instrument that gates every agent-bench latency.
 
 If this is wrong, a transport measurement is wrong, and every phone-leg latency
 corrected against it is wrong by the same amount in the same direction -- which
@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import numpy as np
 
-from lane_a.audio import pcm_to_ulaw, to_array, to_pcm, ulaw_to_pcm
-from lane_b.calibrate import line_noise, voiced
-from lane_b.tone import RATE, chirp, find, round_trip
+from service.audio import pcm_to_ulaw, to_array, to_pcm, ulaw_to_pcm
+from agent.calibrate import line_noise, voiced
+from agent.tone import RATE, chirp, find, round_trip
 
 
 def through_a_line(signal: np.ndarray, noise_rms: float, rng: np.random.Generator) -> bytes:

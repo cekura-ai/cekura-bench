@@ -8,7 +8,7 @@ own Cekura-connected agent.
 **The scenario runner** (below) launches Cekura's Appointment and Medicare suites
 against your own Cekura-connected agent.
 
-**Lane A** (`lane_a/`, [docs/lane-a.md](docs/lane-a.md)) is a self-contained
+**The service bench** (`service/`, [docs/service.md](docs/service.md)) is a self-contained
 harness that measures a speech-to-speech provider directly over its own
 websocket, with no platform account and no orchestration framework in the
 measured path. It ships its own caller corpus, its own onset detector calibrated
@@ -16,11 +16,11 @@ against known boundaries, and a server for the mock-tool contract in
 `agent-definitions/`. It needs only a provider API key:
 
 ```bash
-python -m venv .venv && .venv/bin/pip install -r requirements-lane-a.txt
+python -m venv .venv && .venv/bin/pip install -r requirements-service.txt
 .venv/bin/python bin/render-corpus.py                      # needs ELEVENLABS_API_KEY
-.venv/bin/python bin/run-lane-a.py --suite latency          # needs OPENAI_API_KEY
-.venv/bin/python bin/run-lane-a.py --provider gemini-live --suite task   # GEMINI_AUTHORIZATION
-.venv/bin/python bin/run-lane-a.py --provider grok-realtime --suite interaction   # XAI_API_KEY
+.venv/bin/python bin/run-service.py --suite latency          # needs OPENAI_API_KEY
+.venv/bin/python bin/run-service.py --provider gemini-live --suite task   # GEMINI_AUTHORIZATION
+.venv/bin/python bin/run-service.py --provider grok-realtime --suite interaction   # XAI_API_KEY
 ```
 
 Three providers are measured today over their own wire protocols: OpenAI
@@ -29,6 +29,19 @@ Realtime, Gemini Live and xAI Grok.
 Every run writes the caller audio, the agent audio, the normalized event log and
 every raw provider frame, so a published number can be recomputed from the
 artifacts by someone who does not trust the people who published it.
+
+**The agent bench** (`agent/`, [docs/agent.md](docs/agent.md)) measures the
+other half: the same realtime models wired as a working agent — prompt, tools, a
+task to finish — on a real call, answering from the same mock-tool contract. The
+agent itself is one readable file in
+[reference-agents/pipecat-s2s](reference-agents/pipecat-s2s/README.md), so a
+provider who thinks their model was badly served has one file to argue with.
+
+The two are never ranked against each other. The service bench names a provider
+realtime service under a stated configuration; the agent bench names a whole
+configuration, framework and transport included. "The model is fast" and "the
+deployment is fast" are different claims, and one number that mixes them answers
+neither.
 
 ## What this runner does
 

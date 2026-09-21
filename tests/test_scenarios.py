@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from lane_a.corpus_v1 import build
-from lane_a.scenarios import SCENARIOS, ScenarioSpec, by_id
+from service.corpus_v1 import build
+from service.scenarios import SCENARIOS, ScenarioSpec, by_id
 
 
 class TestTheSet:

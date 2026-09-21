@@ -1,7 +1,7 @@
 """The shape of a tool, shared by both lanes.
 
 It lives here rather than in an adapter because the tool contract is the thing
-both lanes have in common: Lane A hands these to a realtime session, Lane B hands
+both lanes have in common: the service bench hands these to a realtime session, the agent bench hands
 them to a framework, and the mock server that serves the contract produces them.
 Keeping it in the harness would mean the deployed reference agent imported the
 thing measuring it, which is backwards.

@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from lane_a.detector import detect_offset, detect_onset  # noqa: E402
+from service.detector import detect_offset, detect_onset  # noqa: E402
 
 RATE = 16000
 TRIALS = 60

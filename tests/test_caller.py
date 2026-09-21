@@ -13,12 +13,12 @@ import asyncio
 import numpy as np
 import pytest
 
-from lane_a import events as ev
-from lane_a.adapters.base import SessionConfig, TurnDetection
-from lane_a.adapters.fake import FakeAdapter
-from lane_a.audio import to_pcm
-from lane_a.caller import BranchingCaller, Clip
-from lane_a.metrics import barge_in, response_latency, spoke_between
+from service import events as ev
+from service.adapters.base import SessionConfig, TurnDetection
+from service.adapters.fake import FakeAdapter
+from service.audio import to_pcm
+from service.caller import BranchingCaller, Clip
+from service.metrics import barge_in, response_latency, spoke_between
 
 pytestmark = pytest.mark.asyncio
 

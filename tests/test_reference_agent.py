@@ -1,4 +1,4 @@
-"""The Lane B reference agent's wiring, without a provider or a phone line.
+"""The agent bench reference agent's wiring, without a provider or a phone line.
 
 What is worth testing offline is everything that decides whether a call is
 scored fairly: the sample rate handed to each provider, the tools the model is
@@ -6,7 +6,7 @@ shown, the answers it gets back, and the greeting it is told to say. The parts
 that need a network -- that the model connects, speaks and calls tools -- are
 verified by running it, not by mocking it.
 
-Skipped automatically unless Pipecat is installed, so the Lane A test run stays
+Skipped automatically unless Pipecat is installed, so the service bench test run stays
 dependency-free.
 """
 

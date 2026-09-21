@@ -10,9 +10,9 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from lane_a.audio import to_array, to_pcm
-from lane_a.detector import frame_energy_db
-from lane_a.transforms import TRANSFORMS, get, noise, telephone
+from service.audio import to_array, to_pcm
+from service.detector import frame_energy_db
+from service.transforms import TRANSFORMS, get, noise, telephone
 
 RATE = 24000
 

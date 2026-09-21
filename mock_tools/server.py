@@ -1,7 +1,7 @@
 """Serves the public mock-tool contract to whatever is being measured.
 
-Shared on purpose. Lane A talks to a provider websocket directly, the text arm
-talks to the same model with no audio, and the Lane B reference agent talks over
+Shared on purpose. The service bench talks to a provider websocket directly, the text arm
+talks to the same model with no audio, and the agent bench reference agent talks over
 a phone line -- and all three must be answered by the *same* tool implementation,
 or a difference between lanes could be our two servers disagreeing rather than
 anything about the agents.
@@ -14,8 +14,8 @@ is that missing piece, and it deliberately serves every lane: the direct provide
 websocket, the text control arm, and the reference agent.
 
 That matters more than it sounds. A control needs a treatment that differs from
-it in exactly one thing. Text arm to Lane A voice is *the speech pathway* alone;
-Lane A to Lane B is *framework and telephony* alone. If tools only existed in the
+it in exactly one thing. Text arm to service-bench voice differs by *the speech pathway* alone;
+service bench to agent bench differs by *framework and telephony* alone. If tools only existed in the
 lane that also introduced a framework and a phone line, a pass-in-text /
 fail-in-voice result could be blamed on any of the three, which is precisely the
 ambiguity the control exists to remove.

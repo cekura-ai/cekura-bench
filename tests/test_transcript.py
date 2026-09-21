@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from lane_a.transcript import compare_transcripts, normalize
+from service.transcript import compare_transcripts, normalize
 
 
 class TestNormalisation:

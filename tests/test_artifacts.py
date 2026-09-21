@@ -17,16 +17,16 @@ from pathlib import Path
 
 import pytest
 
-from lane_a.adapters.base import TurnDetection
-from lane_a.clips import Corpus
-from lane_a.corpus_v1 import build
-from lane_a.probes import ResponseLatency
-from lane_a.recompute import recompute_latency
-from lane_a.runner import RunSpec, Runner
+from service.adapters.base import TurnDetection
+from service.clips import Corpus
+from service.corpus_v1 import build
+from service.probes import ResponseLatency
+from service.recompute import recompute_latency
+from service.runner import RunSpec, Runner
 
 pytestmark = pytest.mark.asyncio
 
-CORPUS_ROOT = Path(__file__).resolve().parent.parent / "corpus" / "lane-a"
+CORPUS_ROOT = Path(__file__).resolve().parent.parent / "corpus" / "service"
 
 
 def corpus_or_skip() -> Corpus:
@@ -83,7 +83,7 @@ class TestArtifacts:
     async def test_timelines_round_trip_through_disk(self, tmp_path):
         runner, _root = await run_one(tmp_path)
         payload = json.loads((Path(runner.cells[0].artifacts["dir"]) / "timelines.json").read_text())
-        from lane_a.audio import AudioTimeline
+        from service.audio import AudioTimeline
 
         agent = AudioTimeline.from_json(payload["agent"])
         assert agent.rate == payload["agent"]["rate"]
@@ -155,7 +155,7 @@ class TestTheRecordIsComplete:
         assert len(summary["missing_cells"]) == 2, "an abandoned run must say what it never ran"
 
     async def test_the_audit_catches_a_cell_that_changed_after_the_run(self, tmp_path):
-        from lane_a.audit import audit_run
+        from service.audit import audit_run
 
         runner, root = await run_one(tmp_path)
         assert audit_run(root)["ok"], audit_run(root)["problems"]
@@ -178,7 +178,7 @@ class TestTheRecordStaysARecord:
         import json
         from dataclasses import dataclass
 
-        from lane_a.provenance import describe
+        from service.provenance import describe
 
         @dataclass
         class Holder:
@@ -228,7 +228,7 @@ class TestSentinelAndTransforms:
 class TestDeclaredExclusions:
     async def test_an_unsupported_configuration_is_a_void_not_an_error(self, tmp_path, monkeypatch):
         """The gap is published with its reason; nothing is dialled and nothing is a failure."""
-        from lane_a.adapters import fake
+        from service.adapters import fake
 
         monkeypatch.setattr(fake.FakeAdapter, "supports_manual_commit", False)
         spec = RunSpec(
@@ -247,7 +247,7 @@ class TestDeclaredExclusions:
 class TestASessionTheProviderCloses:
     async def test_a_dead_stream_voids_the_cell_instead_of_hanging(self, tmp_path, monkeypatch):
         """The carrier dies mid-utterance; the probe must not wait on a segment that will never finish."""
-        from lane_a.adapters import fake
+        from service.adapters import fake
 
         sent = {"n": 0}
         original = fake.FakeAdapter.send_audio
@@ -274,7 +274,7 @@ class TestASessionTheProviderCloses:
 
 class TestTheSentinelIsPinned:
     async def test_the_sentinel_runs_in_audio_with_the_default_prompt_even_in_a_text_campaign(self, tmp_path):
-        from lane_a.runner import DEFAULT_INSTRUCTIONS
+        from service.runner import DEFAULT_INSTRUCTIONS
 
         spec = RunSpec(
             provider="fake", probes=[], configs=[TurnDetection("server_vad", silence_duration_ms=300)],

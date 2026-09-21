@@ -14,10 +14,10 @@ import base64
 import numpy as np
 import pytest
 
-from lane_a import events as ev
-from lane_a.adapters.base import AdapterError
-from lane_a.audio import pcm_to_ulaw
-from lane_b.adapters.twilio_stream import RATE, TwilioStreamAdapter
+from service import events as ev
+from service.adapters.base import AdapterError
+from service.audio import pcm_to_ulaw
+from agent.adapters.twilio_stream import RATE, TwilioStreamAdapter
 
 STREAM_SID = "MZ0000000000000000000000000000000f"
 CALL_SID = "CA0000000000000000000000000000000f"

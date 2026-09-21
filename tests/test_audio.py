@@ -11,7 +11,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from lane_a.audio import (
+from service.audio import (
     AudioTimeline,
     SAMPLE_WIDTH,
     iter_chunks,

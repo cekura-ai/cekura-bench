@@ -1,6 +1,6 @@
-"""Lane B reference agent: one realtime speech-to-speech model as the whole agent.
+"""The agent bench reference agent: one realtime speech-to-speech model as the whole agent.
 
-Lane A measures a provider's realtime service on its own, over a direct
+The service bench measures a provider's realtime service on its own, over a direct
 websocket. This agent is the other half of the picture: the same models doing
 real work -- tools, a system prompt, a task to finish -- on a real phone call,
 inside a real orchestration framework. The two are never ranked against each
@@ -50,7 +50,7 @@ from pipecat.services.llm_service import FunctionCallParams, LLMService
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.websocket.fastapi import FastAPIWebsocketParams
 
-# The mock-tool contract is shared with Lane A rather than reimplemented here.
+# The mock-tool contract is shared with the service bench rather than reimplemented here.
 # Two implementations of one contract would drift, and a difference between lanes
 # could then be our two servers disagreeing rather than anything about the agents.
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -302,7 +302,7 @@ def _commit() -> str:
 
     Cached because ``run_bot`` is per call, not per process: a fork+exec between
     the transport connecting and the greeting going out would land inside the
-    window Lane A is measuring.
+    window the service bench is measuring.
 
     A deployed image carries no git history, so the build stamps the commit in
     instead. That value wins: it is what was actually built, whereas a checkout
@@ -344,7 +344,7 @@ def build_record(provider_key: str, provider: "Provider", model: str, voice: str
     that was actually used is on the record.
     """
     prompt = server.system_prompt or ""
-    # 16 characters, matching Lane A's digest of the same strings: the two lanes
+    # 16 characters, matching the service bench's digest of the same strings: the two lanes
     # are compared on whether they were given the same prompt, and that check
     # fails silently if one side truncates differently.
     return {
@@ -384,7 +384,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
     model = os.getenv("S2S_MODEL", provider.default_model)
     voice = os.getenv("S2S_VOICE", provider.default_voice)
     record = build_record(name, provider, model, voice, server)
-    logger.info("lane B reference agent: {}", record)
+    logger.info("agent bench reference agent: {}", record)
 
     llm = provider.build(credential, model, voice, server.system_prompt)
     register_tools(llm, server)
@@ -430,7 +430,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
 def create_task(pipeline, context, params, runner_args, transport, record) -> PipelineTask:
     """Wrap the pipeline in Cekura tracing when credentials are present.
 
-    Tracing is what makes a Lane B run inspectable afterwards: transcripts, tool
+    Tracing is what makes an agent-bench run inspectable afterwards: transcripts, tool
     calls, logs and spans land against the run rather than in a container's
     stdout. Without credentials the agent still runs and still answers the phone,
     it is simply not observed -- a missing key must not be the reason a benchmark

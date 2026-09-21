@@ -1,9 +1,9 @@
 # Pipecat speech-to-speech reference agent
 
-The Lane B agent under test: one realtime speech-to-speech model doing real work
+The agent bench agent under test: one realtime speech-to-speech model doing real work
 on a real phone call, with tools, a system prompt and a task to finish.
 
-Lane A measures a provider's realtime service on its own, over a direct
+The service bench measures a provider's realtime service on its own, over a direct
 websocket. This is the other half. The two are never ranked against each other —
 "the model is fast" and "the deployment is fast" are different claims, and one
 number that mixes them answers neither.
@@ -85,7 +85,7 @@ is also what installs the tools on the session.
 ## Tools
 
 Answered from the published contract in `agent-definitions/<AGENT_DIR>/`, served
-by `mock_tools/`, which is shared with Lane A rather than reimplemented here. Two
+by `mock_tools/`, which is shared with the service bench rather than reimplemented here. Two
 implementations of one contract would drift, and a difference between lanes could
 then be our two servers disagreeing rather than anything about the agents.
 
@@ -134,7 +134,7 @@ file serves local WebRTC, Daily and both telephony providers unchanged.
 
 ## Verified
 
-Driven end to end against OpenAI Realtime with caller audio from the Lane A
+Driven end to end against OpenAI Realtime with caller audio from the service bench
 corpus: it spoke the contract's greeting verbatim, called `lookup_patient` with
 the caller's number and `check_availability` with the requested date, and both
 hit the published table. Offline tests cover the provider table, the opening

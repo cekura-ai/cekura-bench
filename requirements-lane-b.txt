@@ -1,5 +1,0 @@
-# Lane B harness: the deterministic caller on a phone leg. The agent under test
-# has its own pinned requirements in reference-agents/ -- these are the caller's,
-# and nothing here runs inside the measured path.
--r requirements-lane-a.txt
-aiohttp>=3.9

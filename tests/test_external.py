@@ -8,7 +8,7 @@ is the one thing this validation exists to catch.
 
 from __future__ import annotations
 
-from lane_a.external import Question, extract_answer, grade, sample
+from service.external import Question, extract_answer, grade, sample
 
 
 def question(category: str, answer: str, qid: int = 1) -> Question:
@@ -66,7 +66,7 @@ class TestUsageDetail:
         breakdown one level down, so summing only the top level loses the number
         the cost column is computed from.
         """
-        from lane_a.metrics import _flatten_usage
+        from service.metrics import _flatten_usage
 
         flat = _flatten_usage(
             {
@@ -90,7 +90,7 @@ class TestOnlyQuestionsAreScored:
         would lift the score by however many of them the run happened to carry,
         and lift it most on the short runs where the check matters most.
         """
-        from lane_a.external import summarize
+        from service.external import summarize
 
         class Cell:
             def __init__(self, verdict, values, void=None):

@@ -17,8 +17,8 @@ google-*.json
 credentials.json
 
 # The other lane, its tests and its docs. The image holds the agent only.
-lane_a/
-lane_b/
+service/
+agent/
 tests/
 docs/
 bin/

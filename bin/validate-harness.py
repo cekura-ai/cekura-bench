@@ -3,8 +3,8 @@
 
     python bin/validate-harness.py --provider openai-realtime --per-category 10
 
-Runs spoken reasoning questions through the ordinary Lane A runner and grades the
-answers by exact match. A score far below what the same model scores elsewhere
+Runs spoken reasoning questions through the ordinary service-bench runner and grades the
+answers by exact match. A score near the floor a guess would reach
 means the fault is ours -- a wrong sample rate, a truncated send, a bad resample
 -- and it is far cheaper to find that here than in a published ranking.
 
@@ -22,10 +22,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from lane_a.adapters.base import TurnDetection  # noqa: E402
-from lane_a.audit import audit_run  # noqa: E402
-from lane_a.corpus_v1 import build  # noqa: E402
-from lane_a.external import (  # noqa: E402
+from service.adapters.base import TurnDetection  # noqa: E402
+from service.audit import audit_run  # noqa: E402
+from service.corpus_v1 import build  # noqa: E402
+from service.external import (  # noqa: E402
     INSTRUCTIONS,
     SpokenQuestion,
     load_clip,
@@ -33,8 +33,8 @@ from lane_a.external import (  # noqa: E402
     sample,
     summarize,
 )
-from lane_a.registry import PROVIDERS  # noqa: E402
-from lane_a.runner import RunSpec, Runner  # noqa: E402
+from service.registry import PROVIDERS  # noqa: E402
+from service.runner import RunSpec, Runner  # noqa: E402
 
 
 def main() -> int:
@@ -45,7 +45,7 @@ def main() -> int:
     parser.add_argument("--seed", type=int, default=11)
     parser.add_argument("--env", help="dotenv file holding the provider credential")
     parser.add_argument("--cache", default="data/external/big-bench-audio")
-    parser.add_argument("--out", default="data/lane-a")
+    parser.add_argument("--out", default="data/service")
     args = parser.parse_args()
 
     entry = PROVIDERS[args.provider]

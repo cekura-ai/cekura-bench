@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from lane_a.probes import (
+from service.probes import (
     BackchannelTolerance,
     BargeIn,
     BookingTask,

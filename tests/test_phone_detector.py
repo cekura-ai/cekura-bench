@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import numpy as np
 
-from lane_a.audio import pcm_to_ulaw, ulaw_to_pcm
-from lane_b.calibrate import line_noise, through_the_phone, voiced
-from lane_b.detector import detect_offset, detect_onset, harmonicity
+from service.audio import pcm_to_ulaw, ulaw_to_pcm
+from agent.calibrate import line_noise, through_the_phone, voiced
+from agent.detector import detect_offset, detect_onset, harmonicity
 
 RATE = 8000
 

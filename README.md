@@ -306,3 +306,16 @@ scoring conditions, the affected scenario is rerun across every provider so
 the compared evidence uses the same evaluator version and context. This keeps
 the test harness fair while acknowledging that good voice-agent evaluation is
 an empirical test-design process, not a one-shot prompt.
+
+## License
+
+The code here is MIT licensed. See `LICENSE`.
+
+The scenarios and their fixtures are not covered by it and are not published in
+this repository. Withholding them is deliberate: the exact dialogue, branching
+and assertions are what a system would optimise against if it could read them,
+and a benchmark whose answers are public stops measuring what it claims to.
+If they are published later they will carry their own terms, as benchmark
+datasets usually do.
+
+One file keeps a separate license, noted in `LICENSE` and in its own header.

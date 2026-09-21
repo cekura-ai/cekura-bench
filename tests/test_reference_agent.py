@@ -546,3 +546,49 @@ class TestCallerTranscription:
         )
         audio = service._settings.session_properties.audio
         assert audio.input.transcription.model == bot.GROK_TRANSCRIBE_MODEL
+
+
+class TestCallerTurnsReachTheRecord:
+    """Transcription is necessary and not sufficient: a turn also has to end.
+
+    A realtime service endpoints on its own server and only *proposes* the
+    boundary; the proposal becomes a turn only if a strategy adopts it, and the
+    default strategies watch for local voice activity instead. Left at the
+    defaults the caller's text is aggregated and never handed over, so the
+    record shows an agent talking to nobody -- with tools resolved, turns
+    counted and a clean verdict, which is why none of those caught it.
+    """
+
+    def test_realtime_defers_to_the_service_for_turn_boundaries(self):
+        from pipecat.turns.user_turn_strategies import ExternalUserTurnStrategies
+
+        params = bot.user_aggregator_params(realtime=True)
+        assert isinstance(params.user_turn_strategies, ExternalUserTurnStrategies)
+
+    def test_cascade_leaves_room_for_its_speech_to_text_recommendation(self):
+        # Naming strategies here would override the ones the speech-to-text
+        # service recommends when it announces itself.
+        assert bot.user_aggregator_params(realtime=False).user_turn_strategies is None
+
+    def test_every_row_carries_the_speech_clock(self):
+        # Response time is measured from the instant the caller fell silent, and
+        # only a voice-activity detector marks it. No detector, no latency cell.
+        for realtime in (True, False):
+            assert bot.user_aggregator_params(realtime=realtime).vad_analyzer is not None
+
+
+class TestSpeechClockRate:
+    """The detector has to survive the rate the fastest providers open at."""
+
+    def test_detector_holds_its_own_rate_when_the_pipeline_differs(self):
+        vad = bot.BenchVAD()
+        vad.set_sample_rate(24000)  # what openai-realtime and gpt-live open at
+        assert vad.sample_rate == bot.VAD_RATE
+
+    @pytest.mark.asyncio
+    async def test_pipeline_audio_is_converted_before_analysis(self):
+        vad = bot.BenchVAD()
+        vad.set_sample_rate(24000)
+        # A quarter second of silence at the pipeline's rate. Unconverted this
+        # raises inside the detector rather than returning a state.
+        assert await vad.analyze_audio(b"\x00\x00" * 6000) is not None

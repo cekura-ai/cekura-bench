@@ -52,18 +52,24 @@ from dotenv import load_dotenv
 from loguru import logger
 from pipecat.adapters.schemas.function_schema import FunctionSchema
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
+from pipecat.audio.resamplers.soxr_stream_resampler import SOXRStreamAudioResampler
+from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.frames.frames import EndTaskFrame, LLMRunFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
 from pipecat.processors.aggregators.llm_context import LLMContext
-from pipecat.processors.aggregators.llm_response_universal import LLMContextAggregatorPair
+from pipecat.processors.aggregators.llm_response_universal import (
+    LLMContextAggregatorPair,
+    LLMUserAggregatorParams,
+)
 from pipecat.runner.types import RunnerArguments
 from pipecat.runner.utils import create_transport
 from pipecat.services.llm_service import FunctionCallParams, LLMService
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.daily.transport import DailyParams
 from pipecat.transports.websocket.fastapi import FastAPIWebsocketParams
+from pipecat.turns.user_turn_strategies import ExternalUserTurnStrategies
 
 # The mock-tool contract is shared with the service bench rather than reimplemented here.
 # Two implementations of one contract would drift, and a difference between lanes
@@ -833,6 +839,70 @@ def _credential(variables: tuple[str, ...], label: str) -> str:
     return found
 
 
+# The detector runs at one rate; the pipeline runs at the provider's. Silero
+# accepts 8 or 16 kHz and refuses everything else, and two of these services open
+# the pipeline at 24 kHz, so handing it the pipeline's audio unchanged does not
+# degrade the measurement -- it raises on the first call and takes the whole call
+# with it. Resampling in front of the detector keeps one instrument, at one rate,
+# behind every row, which is the point: a detector whose behaviour varied with
+# the provider's audio rate would put its own variance into the latency column.
+VAD_RATE = 16000
+
+
+class BenchVAD(SileroVADAnalyzer):
+    """Silero at a fixed rate, fed by a resampler when the pipeline differs."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._pipeline_rate = VAD_RATE
+        self._resampler = SOXRStreamAudioResampler()
+
+    def set_sample_rate(self, sample_rate: int) -> None:
+        # The pipeline announces its rate here. Remember it for the conversion
+        # and hold the detector at its own.
+        self._pipeline_rate = sample_rate
+        super().set_sample_rate(VAD_RATE)
+
+    async def analyze_audio(self, buffer: bytes):
+        if self._pipeline_rate != VAD_RATE:
+            buffer = await self._resampler.resample(buffer, self._pipeline_rate, VAD_RATE)
+        return await super().analyze_audio(buffer)
+
+
+def user_aggregator_params(realtime: bool) -> LLMUserAggregatorParams:
+    """Parameters for the half of the context that holds what the caller said.
+
+    Two separate things are being arranged here, and both were missing.
+
+    The first is who decides where a caller's turn ends. A realtime service
+    endpoints on its own server and announces the result as a *proposal*; a
+    proposal only becomes a turn if some strategy adopts it, and the default
+    strategies listen for local voice activity instead. With no local voice
+    activity to listen to, nothing ever adopted the proposals, so no turn ever
+    ended, so the caller's transcript was aggregated and never handed over --
+    which reads downstream as a caller who said nothing. Naming the external
+    strategies makes the service's own endpointing the authority, which is also
+    the only defensible arrangement for this bench: provider endpointing is part
+    of what a row is measuring, so it must not be replaced by ours.
+
+    The second is the speech clock. Turn frames say a turn happened; they do not
+    say when the caller fell silent, and the response-time figure is measured
+    from exactly that instant. Only a voice-activity detector marks it. So one
+    runs here purely as an instrument: no strategy consults it, it cannot end a
+    turn, and it changes nothing about the conversation -- it only timestamps
+    it. Without it every latency cell on the board is empty.
+    """
+    return LLMUserAggregatorParams(
+        # Same detector, same settings, every row: an instrument that varied by
+        # provider would put its own variance into the column it is measuring.
+        vad_analyzer=BenchVAD(),
+        # Cascade rows leave this unset on purpose. Their speech-to-text service
+        # recommends its own strategies when it announces itself, and naming
+        # strategies here would override that recommendation.
+        user_turn_strategies=ExternalUserTurnStrategies() if realtime else None,
+    )
+
+
 async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> None:
     # What is being measured is decided here, by the session that started this
     # call, and not by the image -- one deployment answers for every row.
@@ -856,7 +926,9 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
             [{"role": "system", "content": server.system_prompt}, *opening_messages(server.first_message)],
             tools=build_tools(server),
         )
-        aggregators = LLMContextAggregatorPair(context)
+        aggregators = LLMContextAggregatorPair(
+            context, user_params=user_aggregator_params(realtime=False)
+        )
         # Three services where the native path has one. Everything either side of
         # them -- transport, context, tools, greeting -- is the same code.
         stages = [transport.input(), stt, aggregators.user(), llm, tts, transport.output(), aggregators.assistant()]
@@ -875,7 +947,11 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         llm = provider.build(credential, model, voice, server.system_prompt, settings)
         register_tools(llm, server, trace)
         context = LLMContext(opening_messages(server.first_message), tools=build_tools(server))
-        aggregators = LLMContextAggregatorPair(context, realtime_service_mode=True)
+        aggregators = LLMContextAggregatorPair(
+            context,
+            realtime_service_mode=True,
+            user_params=user_aggregator_params(realtime=True),
+        )
         # No separate speech-to-text or text-to-speech: the realtime model is the
         # whole agent, so the pipeline is the transport, the context and the model.
         stages = [transport.input(), aggregators.user(), llm, transport.output(), aggregators.assistant()]
@@ -1006,6 +1082,15 @@ def warm() -> None:
             importlib.import_module(module)
         except Exception as exc:  # noqa: BLE001 -- the builder will raise this again, in context
             logger.warning("could not pre-import {} for {}: {}", module, name, exc)
+
+    # The speech detector loads a model into an inference session the first time
+    # one is constructed, and one is constructed per call. Building a throwaway
+    # here moves that load out of the first call and leaves the loaded model in
+    # the process for the ones after it.
+    try:
+        BenchVAD()
+    except Exception as exc:  # noqa: BLE001 -- run_bot builds the real one and will raise in context
+        logger.warning("could not warm the speech detector: {}", exc)
 
 
 async def bot(runner_args: RunnerArguments) -> None:

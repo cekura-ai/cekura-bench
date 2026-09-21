@@ -11,3 +11,9 @@ data/lane-a/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Credentials. A service-account JSON is a private key in a file that looks like
+# configuration, which is how one reaches a public repository by accident.
+*-service-account.json
+google-*.json
+credentials.json

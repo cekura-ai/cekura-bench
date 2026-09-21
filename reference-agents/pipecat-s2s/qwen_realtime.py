@@ -199,6 +199,13 @@ class QwenRealtimeLLMService(LLMService):
         return encoded
 
     async def _send_session_update(self):
+        # KNOWN GAP: this session never asks for input transcription, so the
+        # caller's words do not reach the record even though the completed-
+        # transcription event is handled below. The provider's ASR model id is
+        # not documented in anything we can test against without a key, and
+        # guessing one would fail the session rather than fail the field. The row
+        # is credential-blocked anyway; it must not be published until this is
+        # wired and verified on a real call.
         session: dict[str, Any] = {
             "modalities": ["text", "audio"],
             "voice": self._voice,

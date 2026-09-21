@@ -521,3 +521,28 @@ class TestContractRoot:
         server = bot.load_agent(asked())
         assert server.system_prompt
         assert server.tool_specs
+
+
+class TestCallerTranscription:
+    """Both halves of the conversation have to reach the record.
+
+    A realtime service that is not asked to transcribe the caller runs perfectly
+    well and produces a transcript containing only the agent, which reads as a
+    caller who never spoke. Tool calls travel separately, so a run can show
+    resolved tools and still carry no speech -- which is why this is checked
+    rather than assumed from a passing call.
+    """
+
+    def test_openai_realtime_asks_for_caller_transcription(self):
+        service = bot.PROVIDERS["openai-realtime"].build(
+            "test-key", "gpt-realtime-2.1", "marin", "instructions", asked()
+        )
+        audio = service._settings.session_properties.audio
+        assert audio.input is not None and audio.input.transcription is not None
+
+    def test_grok_names_its_own_transcription_model(self):
+        service = bot.PROVIDERS["grok-realtime"].build(
+            "test-key", "grok-voice-latest", "eve", "instructions", asked()
+        )
+        audio = service._settings.session_properties.audio
+        assert audio.input.transcription.model == bot.GROK_TRANSCRIBE_MODEL

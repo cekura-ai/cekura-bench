@@ -160,7 +160,13 @@ class Settings:
 # ── providers ────────────────────────────────────────────────────────────────
 
 def _openai(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
-    from pipecat.services.openai.realtime.events import AudioConfiguration, AudioOutput, SessionProperties
+    from pipecat.services.openai.realtime.events import (
+        AudioConfiguration,
+        AudioInput,
+        AudioOutput,
+        InputAudioTranscription,
+        SessionProperties,
+    )
     from pipecat.services.openai.realtime.llm import OpenAIRealtimeLLMService, OpenAIRealtimeLLMSettings
 
     return OpenAIRealtimeLLMService(
@@ -169,7 +175,12 @@ def _openai(api_key: str, model: str, voice: str, instructions: str, settings: S
             model=model,
             system_instruction=instructions,
             session_properties=SessionProperties(
-                audio=AudioConfiguration(output=AudioOutput(voice=voice)),
+                audio=AudioConfiguration(
+                    # Asked for, because this service transcribes the caller only
+                    # when told to. See ``CALLER_TRANSCRIPTION`` above the table.
+                    input=AudioInput(transcription=InputAudioTranscription()),
+                    output=AudioOutput(voice=voice),
+                ),
             ),
         ),
     )
@@ -185,7 +196,12 @@ def _gemini(api_key: str, model: str, voice: str, instructions: str, settings: S
 
 
 def _grok(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
-    from pipecat.services.xai.realtime.events import SessionProperties
+    from pipecat.services.xai.realtime.events import (
+        AudioConfiguration,
+        AudioInput,
+        InputAudioTranscription,
+        SessionProperties,
+    )
     from pipecat.services.xai.realtime.llm import GrokRealtimeLLMService, GrokRealtimeLLMSettings
 
     return GrokRealtimeLLMService(
@@ -193,7 +209,15 @@ def _grok(api_key: str, model: str, voice: str, instructions: str, settings: Set
         settings=GrokRealtimeLLMSettings(
             model=model,
             system_instruction=instructions,
-            session_properties=SessionProperties(voice=voice),
+            session_properties=SessionProperties(
+                voice=voice,
+                # Named rather than defaulted: this provider streams caller
+                # transcripts only under its own transcription model, and leaving
+                # the field unset yields a call with no caller text at all.
+                audio=AudioConfiguration(
+                    input=AudioInput(transcription=InputAudioTranscription(model=GROK_TRANSCRIBE_MODEL)),
+                ),
+            ),
         ),
     )
 
@@ -341,6 +365,25 @@ class Provider:
     # place, is not comparable with one that does not unless it says so -- and
     # declaring it here is what stops a sixth provider being added without it.
     discloses: Callable[["Settings"], dict[str, str]] = lambda _settings: {}
+
+
+# Whether the caller's own words reach the record is a per-provider decision,
+# and it is not a detail: a scored run needs both halves of the conversation, and
+# a transcript holding only the agent reads as a caller who never spoke. Three of
+# these services transcribe the caller only when asked, and each asks
+# differently; three do it themselves. Nothing warns about the difference,
+# because a session without transcription is a working session.
+#
+#   openai-realtime   asked for  -- an input transcription config, default model
+#   grok-realtime     asked for  -- same shape, but only under its own ASR model
+#   qwen-realtime     asked for  -- NOT YET WIRED, see ``qwen_realtime``
+#   gemini-live       automatic  -- the service configures both directions itself
+#   gpt-live          automatic  -- the protocol is transcript-driven throughout
+#   nova-sonic        automatic  -- the service emits caller transcripts natively
+#
+# The tool calls travel separately, through the context aggregator, which is why
+# a run can show resolved tools and still carry no speech.
+GROK_TRANSCRIBE_MODEL = "grok-transcribe"
 
 
 # ``input_rate`` is load-bearing, not a tuning knob. These services do not

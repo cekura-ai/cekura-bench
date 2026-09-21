@@ -18,15 +18,21 @@ agent_name = "cekura-s2s"
 secret_set = "cekura-s2s-secrets"
 
 [scaling]
-    # One warm replica, not zero. A cold start here is large -- every provider SDK
-    # is imported before a call arrives -- and it lands inside the window a first
-    # response is timed in, where it reads as a slow model rather than a cold
-    # container. Paying for one idle replica is cheaper than a latency column
-    # nobody can defend, and it removes the discarded warm-up call a cohort would
-    # otherwise have to open with.
+    # Warm replicas, not zero, and as many of them as a campaign runs calls at
+    # once. A cold start here is large -- every provider SDK is imported before a
+    # call arrives -- and it lands inside the window a first response is timed in,
+    # where it reads as a slow model rather than a cold container. With the
+    # minimum matching the campaign's concurrency, every call in a cohort is
+    # answered by an already-warm worker, so no result carries a start-up cost and
+    # no cohort has to open with a discarded warm-up call. Idle replicas between
+    # campaigns are the price, and they are cheaper than a latency column nobody
+    # can defend.
+    #
+    # The ceiling is not the concurrency knob -- the campaign sets that -- it is
+    # only headroom above it.
     #
     # These values are sent on every deploy, so they overwrite whatever the
     # deployment currently has. Change them here rather than in the dashboard, or
     # the next deploy silently undoes it.
-    min_agents = 1
+    min_agents = 5
     max_agents = 46

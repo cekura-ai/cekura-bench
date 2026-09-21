@@ -24,7 +24,7 @@ sensible wiring around it.
 
 | Variable | Default | Notes |
 |---|---|---|
-| `S2S_PROVIDER` | `openai-realtime` | also `gemini-live`, `grok-realtime`, `gpt-live`, `nova-sonic` |
+| `S2S_PROVIDER` | `openai-realtime` | native: also `gemini-live`, `grok-realtime`, `gpt-live`, `nova-sonic`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
 | `S2S_MODEL` | provider default | pin it for a reproducible run |
 | `S2S_VOICE` | provider default | |
 | `S2S_BACKEND_MODEL` | `gpt-5.4-mini` | `gpt-live` only, see below |
@@ -33,6 +33,32 @@ sensible wiring around it.
 | `CEKURA_API_KEY`, `CEKURA_AGENT_ID` | unset | tracing is off without both |
 | `CEKURA_MODE` | `track` | `observe` also uploads audio and starts evaluation |
 | provider key | — | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, or for Bedrock either `AWS_BEARER_TOKEN_BEDROCK` or `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`) |
+
+## The cascade, for comparison
+
+"Is a native speech model better than the pipeline it replaces?" is the one
+question a mixed board can answer and nothing else can. It is only answerable if
+the two sides differ in one thing, so the cascade is **this same file** — same
+prompt, same tools, same transport, same greeting — with the speech path
+swapped: speech-to-text, a text model, text-to-speech, in place of one model
+doing all three.
+
+Speech-to-text and text-to-speech are held fixed across every cascade row
+(`flux-general-en` and `eleven_flash_v2_5`) and only the text model changes.
+Each vendor's text model is the counterpart to its own speech model, and
+`cascade-baseline` belongs to no vendor.
+
+That fixed pipeline is also the limit of what a cascade row says. A cascade's
+latency is dominated by when its endpointer decides the caller stopped and how
+fast its voice starts, not by its text model. So a cascade row means "this
+vendor's intelligence, delivered through one named pipeline" — never "cascades
+are like this". All three services are named in every record, because a row
+naming only its text model would hide the two components doing most of what a
+latency column measures.
+
+Two native rows have no counterpart yet. Nova Sonic is credential-blocked, and
+`gpt-live-1` delegates its reasoning to a separate text model, so a fair pairing
+for it is a cascade on *that* model rather than a vendor default.
 
 ## One provider does not do its own reasoning
 

@@ -223,3 +223,64 @@ class TestCredentialForms:
         monkeypatch.delenv("AWS_SECRET_ACCESS_KEY", raising=False)
         built = bot._nova_sonic("abcdefghij", "amazon.nova-2-sonic-v1:0", "matthew", "hi")
         assert isinstance(built, BearerTokenNovaSonic)
+
+
+class TestCascadeCounterparts:
+    """The comparison the board exists to make: native against the pipeline it replaces."""
+
+    def test_every_native_provider_has_a_counterpart(self):
+        """A native row with nothing to compare against cannot answer the question.
+
+        Nova Sonic and GPT-Live are allowed to stand alone for now -- one is
+        credential-blocked and the other delegates to a backend, so its fair
+        pairing is a cascade on that same backend rather than a vendor default.
+        """
+        paired = {c.counterpart_to for c in bot.TEXT_MODELS.values() if c.counterpart_to}
+        unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live"}
+        assert not unpaired, f"native providers with no cascade counterpart: {sorted(unpaired)}"
+
+    def test_a_counterpart_names_a_provider_that_exists(self):
+        for key, text in bot.TEXT_MODELS.items():
+            if text.counterpart_to is not None:
+                assert text.counterpart_to in bot.PROVIDERS, key
+
+    def test_both_stacks_describe_the_same_job(self):
+        """If these differ, the two agents were not given the same work to do.
+
+        That is the assumption every native-versus-cascade comparison rests on,
+        and it is the one that can break silently: a prompt or tool list that
+        drifted between the two paths would produce a difference that looks like
+        architecture and is not.
+        """
+        server = bot.load_agent()
+        native = bot.build_record(
+            "openai-realtime", bot.PROVIDERS["openai-realtime"], "gpt-realtime-2.1", "marin", server
+        )
+        cascade = bot.cascade_record(
+            "cascade-openai", bot.TEXT_MODELS["cascade-openai"], "gpt-4.1", server
+        )
+        for field in ("agent_definition", "system_prompt_sha256", "first_message_sha256", "tools"):
+            assert native[field] == cascade[field], field
+        assert native["stack"] == "native" and cascade["stack"] == "cascade"
+
+    def test_a_cascade_row_names_all_three_services(self):
+        """A latency column is mostly the endpointer and the voice, not the text model.
+
+        A row naming only its text model would hide the two components doing
+        most of what is being measured.
+        """
+        server = bot.load_agent()
+        record = bot.cascade_record(
+            "cascade-baseline", bot.TEXT_MODELS["cascade-baseline"], "gpt-4.1", server
+        )
+        assert record["stt_model"] and record["llm_model"] and record["tts_model"]
+
+    def test_every_cascade_names_an_importable_module(self):
+        import importlib.util
+
+        for key, text in bot.TEXT_MODELS.items():
+            assert importlib.util.find_spec(text.module), f"{key}: {text.module}"
+
+    def test_a_configuration_name_is_never_ambiguous(self):
+        """One name selects one stack. An overlap would make a run unattributable."""
+        assert not (set(bot.PROVIDERS) & set(bot.TEXT_MODELS))

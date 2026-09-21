@@ -12,10 +12,16 @@ version pinned in requirements.txt, the transport, and the provider. Anyone can
 read it, run it, and disagree with a choice in it -- which is the point of a
 reference agent, and the reason it is a small single file rather than a framework.
 
-Deliberately not included: no cascade fallback, no barge-in tuning, no custom turn
-strategies, no retries. Every one of those would improve the agent and make the
-result harder to attribute. What is measured should be the provider plus the
-plainest sensible wiring around it.
+It runs two stacks. Native is one realtime model doing everything. Cascade is
+speech-to-text, a text model and text-to-speech, in the same file with the same
+prompt, tools and transport, so the only difference between a native row and its
+cascade counterpart is the speech path. That is what makes "native or cascaded?"
+answerable rather than a matter of opinion.
+
+Deliberately not included: no cascade *fallback* inside a run, no barge-in
+tuning, no custom turn strategies, no retries. Every one of those would improve
+the agent and make the result harder to attribute. What is measured should be
+the provider plus the plainest sensible wiring around it.
 
 Run it::
 
@@ -236,6 +242,110 @@ PROVIDERS: dict[str, Provider] = {
 }
 
 
+# ── the cascade, for comparison ──────────────────────────────────────────────
+#
+# "Is a native speech model better than the pipeline it replaces?" is the one
+# question a mixed board can answer and nothing else can. It is only answerable
+# if the two sides differ in one thing. So the cascade is this same file, this
+# same prompt, these same tools and this same transport, with the speech path
+# swapped: speech-to-text, a text model, text-to-speech, instead of one model
+# doing all three.
+#
+# The speech-to-text and text-to-speech services are held fixed across every
+# cascade row, and only the text model changes. That is deliberate and it is
+# also a limit worth stating: a cascade's latency is dominated by when its
+# endpointer decides the caller stopped and how fast its voice starts, not by
+# the text model. Holding both fixed makes the text model the only variable
+# between cascade rows, and makes the pipeline itself common to all of them --
+# so a cascade row says "this vendor's intelligence, delivered through one
+# named pipeline", never "cascades are like this".
+
+CASCADE_STT_MODEL = "flux-general-en"
+CASCADE_TTS_MODEL = "eleven_flash_v2_5"
+CASCADE_TTS_VOICE = "21m00Tcm4TlvDq8ikWAM"
+CASCADE_RATE = 16000
+
+
+@dataclass(frozen=True)
+class TextModel:
+    """A vendor's text model, as the counterpart to its speech model."""
+
+    build: Callable[[str, str], LLMService]
+    default_model: str
+    credential_env: tuple[str, ...]
+    module: str
+    # The speech model this one is the counterpart to, or None for the neutral
+    # baseline that belongs to no vendor.
+    counterpart_to: str | None = None
+
+
+def _openai_text(api_key: str, model: str) -> LLMService:
+    from pipecat.services.openai.llm import OpenAILLMService
+
+    return OpenAILLMService(api_key=api_key, model=model)
+
+
+def _google_text(api_key: str, model: str) -> LLMService:
+    from pipecat.services.google.llm import GoogleLLMService
+
+    return GoogleLLMService(api_key=api_key, model=model)
+
+
+def _grok_text(api_key: str, model: str) -> LLMService:
+    from pipecat.services.grok.llm import GrokLLMService
+
+    return GrokLLMService(api_key=api_key, model=model)
+
+
+def _qwen_text(api_key: str, model: str) -> LLMService:
+    from pipecat.services.qwen.llm import QwenLLMService
+
+    return QwenLLMService(api_key=api_key, model=model)
+
+
+TEXT_MODELS: dict[str, TextModel] = {
+    # The neutral baseline: the pipeline every cascade row shares, with a text
+    # model chosen for being widely understood rather than for matching anyone.
+    "cascade-baseline": TextModel(
+        _openai_text, "gpt-4.1", ("OPENAI_API_KEY",), "pipecat.services.openai.llm",
+    ),
+    "cascade-openai": TextModel(
+        _openai_text, "gpt-4.1", ("OPENAI_API_KEY",), "pipecat.services.openai.llm",
+        counterpart_to="openai-realtime",
+    ),
+    "cascade-google": TextModel(
+        _google_text, "gemini-2.5-flash", ("GEMINI_API_KEY", "GEMINI_AUTHORIZATION"),
+        "pipecat.services.google.llm", counterpart_to="gemini-live",
+    ),
+    "cascade-grok": TextModel(
+        _grok_text, "grok-4", ("XAI_API_KEY",), "pipecat.services.grok.llm",
+        counterpart_to="grok-realtime",
+    ),
+    # Qwen has no realtime service to be a counterpart to yet, so this row
+    # stands alone until one exists. Recorded as such rather than left out:
+    # a vendor present on one side of the comparison and absent on the other
+    # is a fact about the board, not a gap to hide.
+    "cascade-qwen": TextModel(
+        _qwen_text, "qwen-plus", ("DASHSCOPE_API_KEY",), "pipecat.services.qwen.llm",
+    ),
+}
+
+
+def build_cascade(text: TextModel, credential: str, model: str, instructions: str):
+    """Speech-to-text, a text model, text-to-speech -- the three the native model replaces."""
+    from pipecat.services.deepgram.flux.stt import DeepgramFluxSTTService
+    from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
+
+    stt = DeepgramFluxSTTService(api_key=os.environ["DEEPGRAM_API_KEY"], model=CASCADE_STT_MODEL)
+    llm = text.build(credential, model)
+    tts = ElevenLabsTTSService(
+        api_key=os.environ["ELEVENLABS_API_KEY"],
+        voice_id=os.getenv("CASCADE_TTS_VOICE", CASCADE_TTS_VOICE),
+        model=CASCADE_TTS_MODEL,
+    )
+    return stt, llm, tts
+
+
 # ── the agent definition ─────────────────────────────────────────────────────
 
 def load_agent() -> MockToolServer:
@@ -343,13 +453,9 @@ def build_record(provider_key: str, provider: "Provider", model: str, voice: str
     the wrong speed. That failure looks exactly like a bad model unless the rate
     that was actually used is on the record.
     """
-    prompt = server.system_prompt or ""
-    # 16 characters, matching the service bench's digest of the same strings: the two lanes
-    # are compared on whether they were given the same prompt, and that check
-    # fails silently if one side truncates differently.
     return {
-        "lane": "B",
-        "agent_commit": _commit(),
+        **_common_record(server),
+        "stack": "native",
         "s2s_provider": provider_key,
         "s2s_model": model,
         "s2s_voice": voice,
@@ -358,6 +464,21 @@ def build_record(provider_key: str, provider: "Provider", model: str, voice: str
         # field that went unrecorded.
         **provider.discloses(),
         "pipeline_sample_rate": provider.input_rate,
+        "config": provider_key,
+    }
+
+
+def _common_record(server: MockToolServer) -> dict[str, Any]:
+    """The fields that describe the task rather than the stack.
+
+    Identical for a native row and a cascade row by construction, which is what
+    lets the two be compared: if these digests differ, the two agents were not
+    given the same job and no difference between them means anything.
+    """
+    prompt = server.system_prompt or ""
+    return {
+        "lane": "B",
+        "agent_commit": _commit(),
         "agent_definition": server.suite,
         "system_prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:16],
         "first_message_sha256": hashlib.sha256((server.first_message or "").encode("utf-8")).hexdigest()[:16],
@@ -368,47 +489,82 @@ def build_record(provider_key: str, provider: "Provider", model: str, voice: str
     }
 
 
+def cascade_record(key: str, text: TextModel, model: str, server: MockToolServer) -> dict[str, Any]:
+    """What answered the call when three services answered it instead of one.
+
+    All three are named. A cascade row that recorded only its text model would
+    hide the two components that actually decide when it starts speaking and how
+    fast its voice begins -- which is most of what a latency column measures.
+    """
+    return {
+        **_common_record(server),
+        "stack": "cascade",
+        "llm_model": model,
+        "stt_model": CASCADE_STT_MODEL,
+        "tts_model": CASCADE_TTS_MODEL,
+        "counterpart_to": text.counterpart_to,
+        "pipeline_sample_rate": CASCADE_RATE,
+        "config": key,
+    }
+
+
 # ── the bot ──────────────────────────────────────────────────────────────────
+
+def _credential(variables: tuple[str, ...], label: str) -> str:
+    found = next((v for v in map(os.getenv, variables) if v), None)
+    if not found:
+        raise ValueError(f"none of {', '.join(variables)} is set; {label} cannot start")
+    return found
+
 
 async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> None:
     server = load_agent()
     name = os.getenv("S2S_PROVIDER", "openai-realtime")
-    if name not in PROVIDERS:
-        raise ValueError(f"unknown S2S_PROVIDER {name!r}; expected one of {sorted(PROVIDERS)}")
-    provider = PROVIDERS[name]
+    cascade = TEXT_MODELS.get(name)
 
-    credential = next((v for v in map(os.getenv, provider.credential_env) if v), None)
-    if not credential:
-        raise ValueError(f"none of {', '.join(provider.credential_env)} is set; {name} cannot start")
+    if cascade is not None:
+        model = os.getenv("S2S_MODEL", cascade.default_model)
+        credential = _credential(cascade.credential_env, name)
+        record = cascade_record(name, cascade, model, server)
+        logger.info("agent bench reference agent: {}", record)
 
-    model = os.getenv("S2S_MODEL", provider.default_model)
-    voice = os.getenv("S2S_VOICE", provider.default_voice)
-    record = build_record(name, provider, model, voice, server)
-    logger.info("agent bench reference agent: {}", record)
+        stt, llm, tts = build_cascade(cascade, credential, model, server.system_prompt)
+        register_tools(llm, server)
+        context = LLMContext(
+            [{"role": "system", "content": server.system_prompt}, *opening_messages(server.first_message)],
+            tools=build_tools(server),
+        )
+        aggregators = LLMContextAggregatorPair(context)
+        # Three services where the native path has one. Everything either side of
+        # them -- transport, context, tools, greeting -- is the same code.
+        stages = [transport.input(), stt, aggregators.user(), llm, tts, transport.output(), aggregators.assistant()]
+        rate = CASCADE_RATE
+    else:
+        if name not in PROVIDERS:
+            known = sorted([*PROVIDERS, *TEXT_MODELS])
+            raise ValueError(f"unknown S2S_PROVIDER {name!r}; expected one of {known}")
+        provider = PROVIDERS[name]
+        credential = _credential(provider.credential_env, name)
+        model = os.getenv("S2S_MODEL", provider.default_model)
+        voice = os.getenv("S2S_VOICE", provider.default_voice)
+        record = build_record(name, provider, model, voice, server)
+        logger.info("agent bench reference agent: {}", record)
 
-    llm = provider.build(credential, model, voice, server.system_prompt)
-    register_tools(llm, server)
+        llm = provider.build(credential, model, voice, server.system_prompt)
+        register_tools(llm, server)
+        context = LLMContext(opening_messages(server.first_message), tools=build_tools(server))
+        aggregators = LLMContextAggregatorPair(context, realtime_service_mode=True)
+        # No separate speech-to-text or text-to-speech: the realtime model is the
+        # whole agent, so the pipeline is the transport, the context and the model.
+        stages = [transport.input(), aggregators.user(), llm, transport.output(), aggregators.assistant()]
+        rate = provider.input_rate
 
-    context = LLMContext(opening_messages(server.first_message), tools=build_tools(server))
-    aggregators = LLMContextAggregatorPair(context, realtime_service_mode=True)
-
-    # No separate speech-to-text or text-to-speech: the realtime model is the
-    # whole agent, so the pipeline is the transport, the context and the model.
-    pipeline = Pipeline(
-        [
-            transport.input(),
-            aggregators.user(),
-            llm,
-            transport.output(),
-            aggregators.assistant(),
-        ]
-    )
-
+    pipeline = Pipeline(stages)
     params = PipelineParams(
         enable_metrics=True,
         enable_usage_metrics=True,
-        audio_in_sample_rate=provider.input_rate,
-        audio_out_sample_rate=provider.input_rate,
+        audio_in_sample_rate=rate,
+        audio_out_sample_rate=rate,
     )
     task = create_task(pipeline, context, params, runner_args, transport, record)
 
@@ -490,13 +646,19 @@ def warm() -> None:
     _version("pipecat-ai")
     _version("cekura")
     name = os.getenv("S2S_PROVIDER", "openai-realtime")
-    provider = PROVIDERS.get(name)
-    if provider is None:
+    selected = PROVIDERS.get(name) or TEXT_MODELS.get(name)
+    if selected is None:
         return  # run_bot raises with the list of valid names
-    try:
-        importlib.import_module(provider.module)
-    except Exception as exc:  # noqa: BLE001 -- the builder will raise this again, in context
-        logger.warning("could not pre-import {} for {}: {}", provider.module, name, exc)
+    modules = [selected.module]
+    if name in TEXT_MODELS:
+        # A cascade loads three services, and the two it does not name are the
+        # ones that decide when it starts speaking and how fast its voice begins.
+        modules += ["pipecat.services.deepgram.flux.stt", "pipecat.services.elevenlabs.tts"]
+    for module in modules:
+        try:
+            importlib.import_module(module)
+        except Exception as exc:  # noqa: BLE001 -- the builder will raise this again, in context
+            logger.warning("could not pre-import {} for {}: {}", module, name, exc)
 
 
 async def bot(runner_args: RunnerArguments) -> None:

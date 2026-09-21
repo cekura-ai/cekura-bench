@@ -28,8 +28,9 @@ RUN pip install --no-cache-dir --retries 3 --timeout 300 -r requirements.txt
 COPY mock_tools ./mock_tools
 COPY agent-definitions ./agent-definitions
 
-# The agent itself. ``bot.py`` last, because it is what changes between builds.
-COPY reference-agents/pipecat-s2s/nova_bearer.py ./nova_bearer.py
+# The one provider service Pipecat does not ship, then the agent itself --
+# ``bot.py`` last, because it is what changes between builds.
+COPY reference-agents/pipecat-s2s/qwen_realtime.py ./qwen_realtime.py
 COPY reference-agents/pipecat-s2s/bot.py ./bot.py
 
 # The agent resolves its own commit to put on every call's build record, and

@@ -41,6 +41,7 @@ import hashlib
 import os
 import subprocess
 import sys
+import uuid
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -71,6 +72,14 @@ sys.path.insert(0, str(REPO_ROOT))
 from mock_tools.server import MockToolServer  # noqa: E402
 
 load_dotenv(override=True)
+
+# One process answers more than one call: the platform reuses a warm worker
+# across sessions. The first call on a worker is the one that pays whatever
+# start-up cost is left after the warm-up below, and nothing else in a record
+# distinguishes it -- so the worker and its call count are on every record, and
+# a first-call outlier can be identified rather than guessed at.
+INSTANCE = uuid.uuid4().hex[:12]
+_calls_answered = 0
 
 
 # ── what this call asked for ─────────────────────────────────────────────────
@@ -599,6 +608,8 @@ def _common_record(server: MockToolServer, settings: Settings) -> dict[str, Any]
         # the image it started in. One deployment answers for every provider, so
         # a row that does not say which is a row nobody can place.
         "config_source": settings.source("s2s_provider"),
+        "worker_instance": INSTANCE,
+        "worker_call": _calls_answered,
     }
 
 
@@ -636,6 +647,8 @@ def _credential(variables: tuple[str, ...], label: str) -> str:
 async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> None:
     # What is being measured is decided here, by the session that started this
     # call, and not by the image -- one deployment answers for every row.
+    global _calls_answered
+    _calls_answered += 1
     settings = Settings(getattr(runner_args, "body", None))
     server = load_agent(settings)
     name = settings.get("s2s_provider", "openai-realtime")
@@ -758,6 +771,11 @@ def warm() -> None:
     a warm-up that refuses to start the process would turn a slow first call into
     no call at all. A genuinely unusable configuration is refused in ``run_bot``,
     where the error can name what is missing.
+
+    Nothing here touches the network. Opening a throwaway connection per provider
+    does not speed up the real first one -- a TLS session does not resume across a
+    separate context and no DNS result is cached in-process -- while every one of
+    those handshakes delays the moment this worker can answer a call at all.
     """
     import importlib
 
@@ -777,7 +795,15 @@ def warm() -> None:
         | {entry.module for entry in TEXT_MODELS.values()}
         | {"pipecat.services.deepgram.flux.stt", "pipecat.services.elevenlabs.tts"}
     )
-    for module in modules:
+    # ``cekura.pipecat`` is imported by ``create_task``, which runs per call --
+    # so left alone it is a third of a second of import inside the first call on
+    # every worker, and worse on a container whose page cache is cold. It is
+    # warmed unconditionally rather than only when tracing is configured: a
+    # warm-up that depends on a credential is a warm-up that silently stops
+    # working the day a credential is missing.
+    #
+    # ``nova_bearer`` is ours and is imported the same way, from inside a builder.
+    for module in [*modules, "cekura.pipecat", "nova_bearer"]:
         try:
             importlib.import_module(module)
         except Exception as exc:  # noqa: BLE001 -- the builder will raise this again, in context

@@ -59,11 +59,24 @@ quotes the body.
 | `CEKURA_API_KEY`, `CEKURA_AGENT_ID` | tracing is off without both |
 | `AGENT_COMMIT` | stamped by the build; names what was actually deployed |
 
-Because the provider is unknown until a call arrives, every provider SDK is
-imported at start-up rather than the one a process will use. That is a slower
-container start and a larger resident process, both paid before any call — in
-exchange for keeping an import out of the window a first response is timed in,
-where a container start would read as a slow model.
+## Start-up
+
+Because the provider is unknown until a call arrives, the worker imports every
+provider SDK at start-up rather than the one it will use, along with the Cekura
+tracer that `create_task` would otherwise load inside the first call. Measured
+here: 1.8 s and ~160 MB at boot, against 0.2–0.6 s per provider SDK and ~0.1 s
+for the tracer — all of it moved out of the window a first response is timed in,
+where it would read as a slow model rather than a cold container.
+
+Nothing in the warm-up touches the network. Opening a throwaway connection per
+provider does not speed up the real first one — a TLS session does not resume
+across a separate context, and no DNS result is cached in-process — while every
+handshake delays the moment a worker can answer at all.
+
+A worker answers more than one call, so every record names the worker and how
+many calls it had already answered. The first call on a worker is the one that
+pays whatever start-up cost is left, and without that field it cannot be told
+apart from a slow model.
 
 ## The cascade, for comparison
 
@@ -183,6 +196,7 @@ once at startup so the answer survives when only container logs do:
 | `pipeline_sample_rate` | these services do not resample; a wrong rate makes the model hear the caller at the wrong speed, which reads as a bad model rather than bad wiring |
 | `agent_definition`, `system_prompt_sha256`, `first_message_sha256`, `tools` | the task, the prompt and the contract the model was given |
 | `config_source` | whether the session or the image decided the configuration — one deployment answers for every row, so a row that does not say which is a row nobody can place |
+| `worker_instance`, `worker_call` | which worker answered and how many calls it had already answered; the first call on a worker carries any start-up cost the warm-up did not remove |
 
 A phone call cannot be replayed and the provider endpoint moves underneath us, so
 a recording whose configuration is unknown is not evidence of anything.

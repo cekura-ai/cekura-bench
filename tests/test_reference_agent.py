@@ -297,6 +297,24 @@ class TestConfiguredByTheSession:
         missing = needed - set(sys.modules)
         assert not missing, f"not pre-imported: {sorted(missing)}"
 
+    def test_the_tracer_is_loaded_before_a_call_arrives_too(self):
+        """It is imported by ``create_task``, which runs per call.
+
+        Left to load itself it is a tenth of a second of import inside the first
+        call on every worker, and several times that on a container whose page
+        cache is cold -- charged to the first response of a scored call.
+        """
+        assert "cekura.pipecat" in sys.modules
+
+    def test_a_record_says_which_worker_answered_and_how_many_it_had(self):
+        """A worker serves many calls, and the first one is not like the rest."""
+        record = bot.build_record(
+            "openai-realtime", bot.PROVIDERS["openai-realtime"], "m", "v",
+            bot.load_agent(asked()), asked(),
+        )
+        assert record["worker_instance"] == bot.INSTANCE
+        assert isinstance(record["worker_call"], int)
+
 
 class TestCredentialForms:
     """Bedrock issues an API key or an access-key pair, and both must reach the model."""

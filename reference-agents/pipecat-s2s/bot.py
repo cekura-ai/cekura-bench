@@ -111,6 +111,8 @@ class Settings:
         "agent_dir",
         "s2s_backend_model",
         "aws_region",
+        "qwen_region",
+        "qwen_workspace_id",
         "cascade_tts_voice",
         "cekura_mode",
     )
@@ -178,6 +180,28 @@ def _grok(api_key: str, model: str, voice: str, instructions: str, settings: Set
     )
 
 
+def _qwen_realtime(credential: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
+    """Qwen Omni Realtime, through the service in ``qwen_realtime``.
+
+    Pipecat has no service for this provider, so the protocol is spoken
+    directly. See that module for why it is not a subclass of the OpenAI one.
+
+    A workspace id is part of the endpoint, not a credential: the same key
+    reaches a different workspace's models, so it is a run configuration and it
+    is disclosed with the row.
+    """
+    from qwen_realtime import QwenRealtimeLLMService
+
+    return QwenRealtimeLLMService(
+        api_key=credential,
+        workspace_id=qwen_workspace(settings),
+        model=model,
+        voice=voice,
+        instructions=instructions,
+        region=qwen_region(settings),
+    )
+
+
 def _gpt_live(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
     """The live model plus the backend it hands reasoning to.
 
@@ -224,6 +248,34 @@ def _nova_sonic(credential: str, model: str, voice: str, instructions: str, sett
         region=aws_region(settings),
         settings=nova_settings,
     )
+
+
+def qwen_region(settings: Settings) -> str:
+    """Which Alibaba region the session runs in.
+
+    A workspace lives in one region and a key authenticates against one region,
+    so this picks the endpoint and the credential together. Singapore is the
+    default because it is the international endpoint.
+    """
+    return settings.get("qwen_region", "singapore")
+
+
+def qwen_workspace(settings: Settings) -> str:
+    """The workspace whose endpoint answers.
+
+    Part of the URL rather than a credential, and not disclosed with the row for
+    the same reason no other row discloses its base URL: it says where the
+    service was reached, not what was measured. It has no default, because a
+    guessed workspace resolves to a host that does not exist and fails as a
+    connection error rather than as a missing setting.
+    """
+    workspace = settings.get("qwen_workspace_id")
+    if not workspace:
+        raise ValueError(
+            "qwen_workspace_id was not set by the session and QWEN_WORKSPACE_ID is unset; "
+            "it names the Alibaba workspace whose endpoint serves the model"
+        )
+    return workspace
 
 
 def backend_model(settings: Settings) -> str:
@@ -305,6 +357,13 @@ PROVIDERS: dict[str, Provider] = {
         _nova_sonic, 16000, "amazon.nova-2-sonic-v1:0", "matthew", ("AWS_ACCESS_KEY_ID",),
         "pipecat.services.aws.nova_sonic.llm",
         discloses=lambda settings: {"aws_region": aws_region(settings)},
+    ),
+    # Qwen listens at 16 kHz and speaks at 24 kHz, and no framework service
+    # exists for it -- see ``qwen_realtime``.
+    "qwen-realtime": Provider(
+        _qwen_realtime, 16000, "qwen3-omni-flash-realtime", "Ethan", ("DASHSCOPE_API_KEY",),
+        "qwen_realtime",
+        discloses=lambda settings: {"qwen_region": qwen_region(settings)},
     ),
 }
 
@@ -388,12 +447,9 @@ TEXT_MODELS: dict[str, TextModel] = {
         _grok_text, "grok-4", ("XAI_API_KEY",), "pipecat.services.grok.llm",
         counterpart_to="grok-realtime",
     ),
-    # Qwen has no realtime service to be a counterpart to yet, so this row
-    # stands alone until one exists. Recorded as such rather than left out:
-    # a vendor present on one side of the comparison and absent on the other
-    # is a fact about the board, not a gap to hide.
     "cascade-qwen": TextModel(
         _qwen_text, "qwen-plus", ("DASHSCOPE_API_KEY",), "pipecat.services.qwen.llm",
+        counterpart_to="qwen-realtime",
     ),
 }
 

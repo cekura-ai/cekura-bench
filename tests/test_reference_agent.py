@@ -342,6 +342,59 @@ class TestCredentialForms:
         assert bot.aws_region(asked()) in served
 
 
+class TestQwenRealtime:
+    """The one provider whose protocol we speak ourselves."""
+
+    def _service(self, **overrides):
+        from qwen_realtime import QwenRealtimeLLMService
+
+        return QwenRealtimeLLMService(
+            api_key="k", workspace_id="ws-1", instructions="hi", **overrides
+        )
+
+    def test_the_endpoint_names_the_region_and_the_workspace(self):
+        """A key authenticates against one region, so the two must agree."""
+        assert "ap-southeast-1" in self._service()._url
+        assert "ws-1" in self._service()._url
+        assert "cn-beijing" in self._service(region="beijing")._url
+
+    def test_an_unknown_region_is_refused(self):
+        with pytest.raises(ValueError):
+            self._service(region="mars")
+
+    def test_tools_are_sent_in_the_nested_form(self):
+        """Qwen takes chat-completions' shape, not the realtime protocols' flat one.
+
+        A tool in the wrong shape is ignored rather than rejected, so the model
+        would fail a scenario for having no tools rather than for anything
+        about the model.
+        """
+        server = bot.MockToolServer(suite="appointments")
+        service = self._service(tools=bot.build_tools(server))
+        encoded = service._encoded_tools()
+        assert encoded, "the published contract produced no tools"
+        for tool in encoded:
+            assert tool["type"] == "function"
+            assert "name" in tool["function"], "name must sit under function"
+            assert "name" not in tool, "the flat realtime shape is not accepted here"
+
+    def test_the_two_sample_rates_differ(self):
+        """It listens at 16 kHz and speaks at 24 kHz.
+
+        One rate for both plays the model's voice at the wrong speed, which
+        reads as a bad model rather than as bad wiring.
+        """
+        import qwen_realtime
+
+        assert qwen_realtime.INPUT_SAMPLE_RATE == bot.PROVIDERS["qwen-realtime"].input_rate
+        assert qwen_realtime.OUTPUT_SAMPLE_RATE != qwen_realtime.INPUT_SAMPLE_RATE
+
+    def test_a_missing_workspace_is_refused(self):
+        """No default: a guessed workspace fails as a DNS error, not a setting."""
+        with pytest.raises(ValueError):
+            bot.qwen_workspace(asked())
+
+
 class TestCascadeCounterparts:
     """The comparison the board exists to make: native against the pipeline it replaces."""
 

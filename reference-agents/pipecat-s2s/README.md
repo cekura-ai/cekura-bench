@@ -34,11 +34,13 @@ laptop work unchanged and lets a deployment carry a default:
 
 | Key | Default | Notes |
 |---|---|---|
-| `s2s_provider` | `openai-realtime` | native: also `gemini-live`, `grok-realtime`, `gpt-live`, `nova-sonic`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
+| `s2s_provider` | `openai-realtime` | native: also `gemini-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
 | `s2s_model` | provider default | pin it for a reproducible run |
 | `s2s_voice` | provider default | |
 | `s2s_backend_model` | `gpt-5.4-mini` | `gpt-live` only, see below |
 | `aws_region` | `us-west-2` | `nova-sonic` only; must be a region serving the model *and* granted to the credentials |
+| `qwen_region` | `singapore` | `qwen-realtime` only; also `beijing` |
+| `qwen_workspace_id` | **required for `qwen-realtime`** | names the Alibaba workspace whose endpoint answers |
 | `cascade_tts_voice` | fixed voice id | cascade rows only |
 | `agent_dir` | **required** | a directory under `agent-definitions/`; no default on purpose |
 | `cekura_mode` | `track` | `observe` also uploads audio and starts evaluation |
@@ -133,6 +135,25 @@ Region matters twice over: the model is served in four regions, and credentials
 are granted in some subset of those. Both failures are the same
 `AccessDeniedException` from the outside, which is why the region is recorded
 with every run.
+
+## One provider has no framework service
+
+Pipecat ships a realtime service for every other model on this board and none
+for Qwen, so `qwen_realtime.py` speaks that protocol directly. It is not a
+subclass of the OpenAI Realtime service: Qwen follows the earlier shape of that
+protocol, where modalities, audio formats and turn detection sit at the top
+level of the session rather than inside a nested audio object, and Pipecat's
+service now speaks the later one. Subclassing would mean replacing the session
+encoding, the event models and the tool encoding, and would break whenever the
+framework revises a shape Qwen does not follow.
+
+Two details there are easy to get wrong and silent when wrong. Qwen takes tools
+in the nested form chat completions uses rather than the flat form the realtime
+protocols use, and a tool sent in the wrong form is ignored rather than
+rejected, so the model fails a scenario for having no tools. And it listens at
+16 kHz while speaking at 24 kHz, so outbound frames declare the higher rate and
+the transport resamples; declaring one rate for both plays the voice at the
+wrong speed, which reads as a bad model.
 
 ## The sample rate is not a tuning knob
 

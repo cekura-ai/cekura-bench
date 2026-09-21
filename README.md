@@ -192,6 +192,39 @@ These settings are sent directly when the runner creates the Cekura agent.
 }
 ```
 
+## Launching against a Pipecat Cloud deployment
+
+A Pipecat Cloud agent is not reached by dialling it. Cekura starts a session on
+the deployment and both sides join the Daily room it returns, so there is no
+phone number in the path and none is required. Add a top-level `pipecat` block
+and the runner launches through that route instead:
+
+```json
+{
+  "projectId": 1234,
+  "catalogAgentId": 5678,
+  "targetAgentId": 9012,
+  "suite": "appointments",
+  "frequency": 3,
+  "pipecat": {
+    "agentName": "your-pipecat-agent",
+    "config": { "example_key": "example_value" }
+  }
+}
+```
+
+`pipecat.config` is the session body. Whatever it holds arrives in the agent's
+session as top-level keys, so one deployment can answer for several
+configurations and each launch states which one it ran. Keep credentials out of
+it: it is quoted in logs, traces and session records, and an agent should read
+its keys from its own environment.
+
+Two behaviours worth knowing before relying on it. The config **replaces** the
+one stored on the agent rather than merging over it, so send the whole
+configuration or send none and let the stored one stand. And a scenario's test
+profile is applied afterwards, so a profile variable sharing a name with a
+session key wins — worth a prefix if the two could ever collide.
+
 ## Reference implementations
 
 Reference-agent examples for LiveKit, Pipecat, OpenAI Realtime, and Gemini

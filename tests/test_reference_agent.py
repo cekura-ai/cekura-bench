@@ -38,7 +38,12 @@ class TestProviderTable:
         for name, provider in bot.PROVIDERS.items():
             assert provider.input_rate in (8000, 16000, 24000), name
             assert provider.default_model and provider.default_voice, name
-            assert provider.credential_env.endswith("_API_KEY"), name
+            # The variable is whatever the vendor documents, not a house style:
+            # Bedrock's own name for its API key carries no _API_KEY suffix, and
+            # renaming it here would mean a key that works everywhere else is
+            # unset for this agent alone.
+            assert provider.credential_env.isupper(), name
+            assert " " not in provider.credential_env, name
 
     def test_an_unknown_provider_is_refused_by_name(self):
         assert "openai-realtime" in bot.PROVIDERS
@@ -146,3 +151,49 @@ class TestBuildRecord:
         server.system_prompt = server.system_prompt + " Answer briefly."
         after = bot.build_record("openai-realtime", provider, "m", "v", server)
         assert before["system_prompt_sha256"] != after["system_prompt_sha256"]
+
+    def test_the_delegating_provider_discloses_its_backend(self):
+        """One provider does not do its own reasoning, and the row must say so.
+
+        Its conversational model is named in every record. The model that
+        actually answers a reasoned question is a second one, and a record
+        naming only the first would describe a configuration nobody ran.
+        """
+        server = bot.load_agent()
+        record = bot.build_record("gpt-live", bot.PROVIDERS["gpt-live"], "gpt-live-1", "marin", server)
+        assert record["s2s_backend_model"], "a delegating provider must name its backend"
+
+        plain = bot.build_record(
+            "openai-realtime", bot.PROVIDERS["openai-realtime"], "gpt-realtime-2.1", "marin", server
+        )
+        # Absent rather than empty: a provider that reasons for itself has no
+        # backend, and an empty string would read as one that went unrecorded.
+        assert "s2s_backend_model" not in plain
+
+    def test_the_bedrock_provider_records_the_region_it_ran_in(self):
+        """A Bedrock key is scoped by region and a model is served in some regions only.
+
+        Two runs of one model id in two regions are two different calls, and a
+        refusal in one looks like a refusal in the other without this field.
+        """
+        server = bot.load_agent()
+        record = bot.build_record(
+            "nova-sonic", bot.PROVIDERS["nova-sonic"], "amazon.nova-2-sonic-v1:0", "matthew", server
+        )
+        assert record["aws_region"]
+
+
+class TestCredentialForms:
+    """Bedrock issues an API key or an access-key pair, and both must reach the model."""
+
+    def test_a_pair_is_recognised_by_its_separator(self):
+        from nova_bearer import BearerTokenNovaSonic
+
+        pair = bot._nova_sonic("AKIAEXAMPLE:secretpart", "amazon.nova-2-sonic-v1:0", "matthew", "hi")
+        assert not isinstance(pair, BearerTokenNovaSonic), "a pair must sign with SigV4"
+
+    def test_a_bare_token_takes_the_bearer_path(self):
+        from nova_bearer import BearerTokenNovaSonic
+
+        token = bot._nova_sonic("abcdefghij", "amazon.nova-2-sonic-v1:0", "matthew", "hi")
+        assert isinstance(token, BearerTokenNovaSonic)

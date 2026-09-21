@@ -102,6 +102,70 @@ def _grok(api_key: str, model: str, voice: str, instructions: str) -> LLMService
     )
 
 
+def _gpt_live(api_key: str, model: str, voice: str, instructions: str) -> LLMService:
+    """The live model plus the backend it hands reasoning to.
+
+    This one is not a single model. ``gpt-live-1`` converses, and delegates
+    search, reasoning and tool work to a *separate text model*. Leaving the
+    delegation unset is a supported mode, and the wrong one here: delegated work
+    is then dropped, so a scenario that needs a tool fails for want of a backend
+    rather than for anything about the model. The backend is therefore named
+    explicitly, pinned, and written into the build record, because a row that
+    does not disclose it is not comparable with one model's row.
+    """
+    from pipecat.services.openai.live.llm import OpenAILiveLLMService, OpenAILiveLLMSettings
+    from pipecat.services.openai.responses.llm import OpenAIResponsesLLMSettings
+
+    return OpenAILiveLLMService(
+        api_key=api_key,
+        settings=OpenAILiveLLMSettings(system_instruction=instructions, voice=voice),
+        delegation=OpenAILiveLLMService.ResponsesDelegation(
+            settings=OpenAIResponsesLLMSettings(model=backend_model()),
+        ),
+    )
+
+
+def _nova_sonic(credential: str, model: str, voice: str, instructions: str) -> LLMService:
+    """Nova Sonic over Bedrock, with either credential form.
+
+    Bedrock accepts an API-key bearer token as well as an access-key pair, and
+    the token is what a team is issued first. Pipecat's service signs with
+    SigV4 only, so a bearer token is applied by swapping the client's auth
+    scheme -- the wire protocol and the event stream are untouched, only who
+    signs the request changes.
+
+    A bearer token is recognised by the absence of a secret: the pair form is
+    given as ``access_key_id:secret_access_key`` in the same variable.
+    """
+    from pipecat.services.aws.nova_sonic.llm import AWSNovaSonicLLMService, AWSNovaSonicLLMSettings
+
+    region = os.getenv("AWS_REGION") or "us-east-1"
+    settings = AWSNovaSonicLLMSettings(model=model, system_instruction=instructions, voice=voice)
+    if ":" in credential:
+        access_key_id, secret_access_key = credential.split(":", 1)
+        return AWSNovaSonicLLMService(
+            access_key_id=access_key_id,
+            secret_access_key=secret_access_key,
+            region=region,
+            settings=settings,
+        )
+
+    from nova_bearer import BearerTokenNovaSonic
+
+    return BearerTokenNovaSonic(token=credential, region=region, settings=settings)
+
+
+def backend_model() -> str:
+    """The text model ``gpt-live-1`` delegates to. Pinned, and disclosed."""
+    return os.getenv("S2S_BACKEND_MODEL", DEFAULT_BACKEND_MODEL)
+
+
+# Pinned rather than left to the API's own default, for the same reason every
+# other version here is pinned: a backend that changes underneath a run makes two
+# results incomparable without either of them looking wrong.
+DEFAULT_BACKEND_MODEL = "gpt-5.4-mini"
+
+
 @dataclass(frozen=True)
 class Provider:
     build: Callable[[str, str, str, str], LLMService]
@@ -124,6 +188,14 @@ PROVIDERS: dict[str, Provider] = {
         "GEMINI_API_KEY",
     ),
     "grok-realtime": Provider(_grok, 16000, "grok-voice-latest", "eve", "XAI_API_KEY"),
+    # GPT-Live is the exception to the paragraph above: it resamples what it is
+    # handed. The rate is still declared, so the record says what was sent.
+    "gpt-live": Provider(_gpt_live, 24000, "gpt-live-1", "marin", "OPENAI_API_KEY"),
+    # Nova Sonic listens at 16 kHz and speaks at 24 kHz. The pipeline runs at the
+    # input rate and the service resamples its own output.
+    "nova-sonic": Provider(
+        _nova_sonic, 16000, "amazon.nova-2-sonic-v1:0", "matthew", "AWS_BEARER_TOKEN_BEDROCK",
+    ),
 }
 
 
@@ -237,6 +309,10 @@ def build_record(provider_key: str, provider: "Provider", model: str, voice: str
         "s2s_provider": provider_key,
         "s2s_model": model,
         "s2s_voice": voice,
+        # Only one provider has a backend, and its row is not readable without
+        # knowing which one: the reasoning is not done by the model named above.
+        **({"s2s_backend_model": backend_model()} if provider_key == "gpt-live" else {}),
+        **({"aws_region": os.getenv("AWS_REGION") or "us-east-1"} if provider_key == "nova-sonic" else {}),
         "pipeline_sample_rate": provider.input_rate,
         "agent_definition": server.suite,
         "system_prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:16],

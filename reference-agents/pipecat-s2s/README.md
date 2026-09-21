@@ -24,13 +24,39 @@ sensible wiring around it.
 
 | Variable | Default | Notes |
 |---|---|---|
-| `S2S_PROVIDER` | `openai-realtime` | also `gemini-live`, `grok-realtime` |
+| `S2S_PROVIDER` | `openai-realtime` | also `gemini-live`, `grok-realtime`, `gpt-live`, `nova-sonic` |
 | `S2S_MODEL` | provider default | pin it for a reproducible run |
 | `S2S_VOICE` | provider default | |
+| `S2S_BACKEND_MODEL` | `gpt-5.4-mini` | `gpt-live` only, see below |
+| `AWS_REGION` | `us-east-1` | `nova-sonic` only |
 | `AGENT_DIR` | `appointments` | a directory under `agent-definitions/` |
 | `CEKURA_API_KEY`, `CEKURA_AGENT_ID` | unset | tracing is off without both |
 | `CEKURA_MODE` | `track` | `observe` also uploads audio and starts evaluation |
-| provider key | — | `OPENAI_API_KEY`, `GEMINI_API_KEY` or `XAI_API_KEY` |
+| provider key | — | one of `OPENAI_API_KEY`, `GEMINI_API_KEY`, `XAI_API_KEY`, `AWS_BEARER_TOKEN_BEDROCK` |
+
+## One provider does not do its own reasoning
+
+`gpt-live-1` converses, and hands search, reasoning and tool work to a separate
+text model. Leaving that unconfigured is a supported mode and the wrong one
+here: delegated work is dropped, so a scenario needing a tool fails for want of
+a backend rather than for anything about the model.
+
+So the backend is named, pinned, and written into every build record. Its row
+is not comparable with a single model's row without that name, and its cost is
+two models' cost rather than one.
+
+## Two credential forms for Bedrock
+
+Nova Sonic accepts an API-key bearer token or an access-key pair, both through
+`AWS_BEARER_TOKEN_BEDROCK`. A value containing a colon is read as
+`access_key_id:secret_access_key` and signed with SigV4; anything else is sent
+as a bearer token, which needs the auth-scheme swap in `nova_bearer.py` because
+the framework signs with SigV4 only.
+
+A bearer token's IAM policy is region-scoped and grants
+`bedrock:CallWithBearerToken`. A key can be allowed in one region while the
+model is served only in another, and from the outside those two failures look
+alike — so the region is recorded with every run.
 
 ## The sample rate is not a tuning knob
 

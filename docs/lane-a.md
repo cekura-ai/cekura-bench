@@ -357,10 +357,14 @@ python bin/validate-harness.py --provider openai-realtime --per-category 10
 Two things this is not. It is not one of our rankings: it is a single-turn quiz
 with no interaction in it, and as the most widely circulated audio set in the
 field it is also the most likely to have been trained on. And it is not a test of
-the model — a published score already exists for models we can run, so the point
-is the gap. Land near the published figure and the audio path, the adapter and
-the scoring are sound. Land far below it and the fault is ours, which is much
-cheaper to discover here than in a published ranking.
+the model. It is a test of us, and what makes it one is that the answers are
+known and guessing is cheap to price.
+
+Three of the four categories are binary and the fourth is a count, so an
+instrument that has destroyed the audio scores near 50% on the first three and
+near zero on the last. A working path scores far above that. The gap between
+those two outcomes is tens of points, which is the whole reason this check can
+be trusted at a sample size a credential can afford.
 
 The run writes ordinary cells, so the validation is itself recomputable rather
 than a number in a terminal.
@@ -370,11 +374,11 @@ than a number in a terminal.
 100 questions per provider, 25 from each of the four categories, seed 11,
 native VAD at 500 ms.
 
-| provider | model | scored | void | accuracy | published, same dataset |
-|---|---|---|---|---|---|
-| OpenAI Realtime | `gpt-realtime-2.1` | 99 | 1 | 91.9% | 96.6% (`GPT-Realtime-2 high`) |
-| Gemini Live | `gemini-2.5-flash-native-audio-preview-12-2025` | 98 | 2 | 94.9% | 92% (`2.5 Native Audio Thinking`) |
-| xAI Grok | `grok-voice-think-fast-2.0` | 0 | 103 | — | 92.3% (`Grok Voice Agent`) |
+| provider | model | scored | void | accuracy |
+|---|---|---|---|---|
+| OpenAI Realtime | `gpt-realtime-2.1` | 99 | 1 | 91.9% |
+| Gemini Live | `gemini-2.5-flash-native-audio-preview-12-2025` | 98 | 2 | 94.9% |
+| xAI Grok | `grok-voice-think-fast-2.0` | 0 | 103 | — |
 
 | provider | formal fallacies | navigate | object counting | web of lies |
 |---|---|---|---|---|
@@ -383,13 +387,15 @@ native VAD at 500 ms.
 
 **What this does and does not establish.** The fault it exists to catch — audio
 sent at the wrong rate, truncated, or badly resampled — costs tens of points, not
-a handful. Both providers that ran land within a few points of the figure
-published for a near neighbour of the model we ran, with one void in a hundred.
-The audio path, the adapter and the grading are sound. It is not a like-for-like
-match and must not be read as one: neither published row is the exact model
-under test, and at n≈99 sampling error alone is about ±5 points, the same size as
-the OpenAI gap. The published figures are cited so the check can be repeated, not
-as a comparison of results.
+a handful. Both providers that ran score far above what a destroyed audio path
+could reach on a set where three categories in four are a coin flip, and they do
+it with about one void in a hundred. The audio path, the adapter and the grading
+are sound.
+
+What it does not establish is any ordering between the two. At n≈99 the sampling
+error alone is around ±5 points, wider than the distance between them, so these
+two numbers are one result and not two. Reading a ranking out of this table would
+be exactly the mistake the rest of this document is built to avoid.
 
 OpenAI's 80% on web-of-lies against 100% on navigate is a real spread across
 categories. The same audio path carries all four, so it is the model's.

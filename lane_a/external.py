@@ -15,10 +15,15 @@ So the instrument is checked against a public set with ground-truth answers:
 
 This is **never a published ranking of ours**. It is a single-turn reasoning
 quiz with no interaction in it, and it is the most widely circulated audio set in
-the field, so it is also the most likely to have been trained on. Its whole value
-here is that a score already exists for models we can run: land near it and the
-audio path, the adapter and the scoring are sound; land far below it and the
-fault is ours to find before any ranking is published.
+the field, so it is also the most likely to have been trained on.
+
+Its value here is that the answers are known and guessing is cheap to price.
+Three of the four categories are binary and the fourth is a count, so an
+instrument that has destroyed the audio scores near half on the first three and
+near nothing on the last. A working path scores far above that, and the distance
+between those outcomes is tens of points -- which is what makes the check
+trustworthy at a sample size a credential can afford, and why a result near the
+floor means the fault is ours to find before any ranking is published.
 
 Answers are closed-form -- ``valid``/``invalid``, ``Yes``/``No``, or a count --
 so grading is exact match on an extracted token rather than a model's opinion.

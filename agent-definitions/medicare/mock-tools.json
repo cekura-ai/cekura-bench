@@ -1051,7 +1051,8 @@
     "freetext_params": [
       "fields_collected",
       "open_items",
-      "compliance_notes"
+      "compliance_notes",
+      "destination"
     ],
     "mock_data": [
       {

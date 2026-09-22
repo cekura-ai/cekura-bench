@@ -425,3 +425,33 @@ class TestSayingUnknownIsTheSameAsSayingNothing:
         # product_interest also offers ``unknown``, but it is required: declining
         # to answer there is an answer, not a silence.
         assert self._qualify(product_interest="unknown").resolution != "exact"
+
+
+class TestAPhraseTheAgentComposesIsNotAnIdentifier:
+    """``destination`` is a sentence the agent writes describing where the call is
+    going, not a value the caller states. It separates no two records, so
+    comparing it could only ever penalise an agent for its choice of words."""
+
+    @staticmethod
+    def _handoff(destination):
+        server = MockToolServer(suite="medicare")
+        rows = server._mocks["create_handoff_summary"]["mock_data"]
+        stored = next(r["input"] for r in rows if r["input"].get("route_status") == "closed_no_consent")
+        server.call("create_handoff_summary", dict(stored, destination=destination))
+        return server.calls[-1]
+
+    def test_the_contracts_own_wording(self):
+        assert self._handoff("Medicare.gov, one eight hundred Medicare, or local SHIP").resolution == "exact"
+
+    def test_an_acronym_spelled_out(self):
+        spelled = "Medicare.gov, one eight hundred Medicare, or your local State Health Insurance Assistance Program"
+        assert self._handoff(spelled).resolution == "exact"
+
+    def test_every_record_is_still_reachable_without_it(self):
+        server = MockToolServer(suite="medicare")
+        rows = server._mocks["create_handoff_summary"]["mock_data"]
+        answered = []
+        for row in rows:
+            server.calls.clear()
+            answered.append(server.call("create_handoff_summary", dict(row["input"], destination="somewhere")))
+        assert answered == [row["output"] for row in rows]

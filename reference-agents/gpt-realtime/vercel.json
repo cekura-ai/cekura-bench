@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/**/*.mjs": {
+      "maxDuration": 300
+    }
+  }
+}

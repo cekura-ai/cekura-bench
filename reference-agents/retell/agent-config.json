@@ -1,0 +1,64 @@
+{
+  "agent_id": "",
+  "channel": "voice",
+  "last_modification_timestamp": 1785784014538,
+  "agent_name": "Single-Prompt Agent",
+  "response_engine": {
+    "type": "retell-llm",
+    "llm_id": "llm_a35f534a12ff91381bcdd76c5462",
+    "version": 0
+  },
+  "language": "en-US",
+  "data_storage_setting": "everything",
+  "opt_in_signed_url": false,
+  "version": 0,
+  "assigned_tags": [],
+  "is_published": false,
+  "post_call_analysis_model": "gpt-4.1",
+  "pii_config": {
+    "mode": "post_call",
+    "categories": []
+  },
+  "handbook_config": {
+    "conversational_personality": false,
+    "echo_verification": false,
+    "speech_normalization": false,
+    "default_personality": false,
+    "scope_boundaries": false,
+    "natural_filler_words": false,
+    "nato_phonetic_alphabet": false,
+    "high_empathy": false,
+    "ai_disclosure": false,
+    "smart_matching": false
+  },
+  "voice_id": "cartesia-Cimo",
+  "voice_temperature": 1,
+  "voice_speed": 1,
+  "volume": 1,
+  "max_call_duration_ms": 3600000,
+  "interruption_sensitivity": 0.9,
+  "boosted_keywords": [
+    "Cedarwood",
+    "Okafor",
+    "Patel"
+  ],
+  "stt_mode": "accurate",
+  "allow_user_dtmf": true,
+  "user_dtmf_options": {},
+  "retellLlmData": {
+    "llm_id": "llm_a35f534a12ff91381bcdd76c5462",
+    "version": 0,
+    "model": "gpt-5.5",
+    "model_high_priority": true,
+    "general_prompt": "",
+    "general_tools": [],
+    "start_speaker": "agent",
+    "knowledge_base_ids": [],
+    "kb_config": {
+      "top_k": 3,
+      "filter_score": 0.6
+    },
+    "last_modification_timestamp": 1785784020197,
+    "is_published": false
+  }
+}

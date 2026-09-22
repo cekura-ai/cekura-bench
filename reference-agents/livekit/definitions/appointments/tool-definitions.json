@@ -1,0 +1,76 @@
+[
+  {
+    "name": "lookup_patient",
+    "description": "Identify the caller by looking up their patient record by phone number. Call this ONCE, at the start of every call (Step 2 of the conversation flow), with the caller's phone number. Returns the patient record (including patient_id) and any upcoming appointments. A no-match means no record was found; it does not create or identify a patient. For a booking request, use the new-patient registration and callback path. For reschedule, cancellation, or appointment lookup, do not proceed with the requested action; offer desk follow-up. Do not call it again once the caller is identified.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "phone": {
+          "type": "string",
+          "description": "The caller's phone number as exactly 10 digits, with no separators, spaces, or country code. Normalize whatever format the caller provides into this form before calling."
+        }
+      },
+      "required": [
+        "phone"
+      ]
+    }
+  },
+  {
+    "name": "check_availability",
+    "description": "Return the open appointment slots for one specific date, each with its provider. Call this during the Book or Reschedule playbooks once you know a concrete date to check. An empty slot list means that date is fully booked. If the caller gives a date range, ask which date in that range to check first. If the caller wants a specific provider, choose that provider's slot only from the returned results. Never describe a slot on another date as available until this tool returns it.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string",
+          "description": "The requested date in YYYY-MM-DD format."
+        }
+      },
+      "required": [
+        "date"
+      ]
+    }
+  },
+  {
+    "name": "book_appointment",
+    "description": "Book an appointment for the identified caller. Call this ONLY after (1) the caller is identified via lookup_patient, (2) you have offered slots returned by check_availability, and (3) the caller has explicitly confirmed a specific slot you read back. This is the success action \u2014 never call it without confirmation, and never claim success unless it returns a confirmation_number. For a reschedule, book the confirmed replacement before cancelling the old appointment.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "patient_id": {
+          "type": "string",
+          "description": "The patient_id returned by lookup_patient for the identified caller."
+        },
+        "datetime": {
+          "type": "string",
+          "description": "The slot the caller explicitly confirmed, in ISO 8601 format (YYYY-MM-DDTHH:MM:SS). Use the exact date and time the caller agreed to — never a placeholder or example value."
+        },
+        "reason": {
+          "type": "string",
+          "description": "The caller's stated reason for the visit."
+        }
+      },
+      "required": [
+        "patient_id",
+        "datetime",
+        "reason"
+      ]
+    }
+  },
+  {
+    "name": "cancel_appointment",
+    "description": "Cancel an existing appointment by its appointment_id (taken from the caller's record returned by lookup_patient). Call this ONLY after the caller has confirmed they want to cancel the appointment you read back. For a reschedule, call it only after the confirmed replacement booking succeeds. Never claim success unless it returns successfully; if a replacement is booked but this cancellation fails, disclose that the old appointment remains active and offer retry or desk follow-up.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "appointment_id": {
+          "type": "string",
+          "description": "The appointment_id of the appointment to cancel, taken exactly as it appears in the caller's record returned by lookup_patient. Never invent or guess an appointment_id."
+        }
+      },
+      "required": [
+        "appointment_id"
+      ]
+    }
+  }
+]

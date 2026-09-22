@@ -384,11 +384,40 @@ def _openai(api_key: str, model: str, voice: str, instructions: str, settings: S
 
 
 def _gemini(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
-    from pipecat.services.google.gemini_live.llm import GeminiLiveLLMService, GeminiLiveLLMSettings
+    from pipecat.services.google.gemini_live.llm import (
+        GeminiLiveLLMService,
+        GeminiLiveLLMSettings,
+        GeminiVADParams,
+    )
 
+    # Turned off deliberately, and the reply times on this row depend on it.
+    #
+    # Left on, the service wants an uninterrupted stream to run its own detector
+    # over, so the whole call is sent -- every silence between turns included.
+    # This session falls behind that stream: it answers the first turn in about
+    # three seconds and each later turn several seconds further back, measured
+    # from the caller's speech ending, while the audio leaves here at exactly
+    # real time. The lag is cumulative and only an interruption clears it, so a
+    # late-call turn can be answered half a minute after it was spoken -- long
+    # enough that a scripted caller has moved on and the turn scores as silence.
+    #
+    # Turned off, the caller's turn is announced by the shared detector every
+    # row is measured against, and audio is sent only inside that turn -- with a
+    # short pre-roll the service keeps, so the onset is not clipped. What the
+    # session has to hold then is the speech alone, and the reply time stops
+    # growing: measured over eight turns, flat at one to three seconds.
+    #
+    # It is also what this row claims. ``turns="local"`` in the table below says
+    # the boundary belongs to the shared detector, which is only true with the
+    # service's own detector out of the way.
     return GeminiLiveLLMService(
         api_key=api_key,
-        settings=GeminiLiveLLMSettings(model=model, system_instruction=instructions, voice=voice),
+        settings=GeminiLiveLLMSettings(
+            model=model,
+            system_instruction=instructions,
+            voice=voice,
+            vad=GeminiVADParams(disabled=True),
+        ),
     )
 
 

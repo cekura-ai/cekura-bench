@@ -3,4 +3,5 @@ node_modules/
 benchmark.config.json
 data/
 *.log
-
+__pycache__/
+*.py[cod]

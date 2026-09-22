@@ -1,0 +1,21 @@
+[project]
+name = "livekit-demo"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "cekura[livekit]==1.5.2",
+    "livekit-agents>=1.6.6,<2",
+    "livekit-plugins-noise-cancellation>=0.3.0",
+    "livekit-plugins-openai~=1.6",
+    "python-dotenv>=1.2.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

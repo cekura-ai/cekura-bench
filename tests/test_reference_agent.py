@@ -1432,3 +1432,27 @@ class TestARewrittenWordIsStillTheSameTurn:
     def test_two_different_utterances_are_both_kept(self):
         said = self._run("I need to cancel.", "Actually, let me reschedule instead.")
         assert said == "I need to cancel. Actually, let me reschedule instead."
+
+
+class TestTheMiddleOutcomeSurvivesTheExport:
+    """A record found after speech bent an argument is neither a hit nor a miss,
+    and the payload has to say so: a bare matched flag hides it."""
+
+    @staticmethod
+    def _trace():
+        import bot
+
+        trace = bot.ToolTrace()
+        trace.record("lookup_patient", {"phone": "1"}, False, {}, 0.0, "fuzzy")
+        trace.record("book_appointment", {"id": "2"}, True, {}, 0.0, "exact")
+        return trace.as_metadata()["tool_calls"]
+
+    def test_a_nearest_record_is_reported_as_such(self):
+        assert self._trace()[0]["resolution"] == "fuzzy"
+
+    def test_it_is_not_flattened_into_the_matched_flag(self):
+        fuzzy = self._trace()[0]
+        assert fuzzy["matched"] is False and fuzzy["resolution"] != "none"
+
+    def test_an_outright_match_still_says_exact(self):
+        assert self._trace()[1]["resolution"] == "exact"

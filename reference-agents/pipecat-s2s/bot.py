@@ -1181,12 +1181,17 @@ class ToolTrace:
             self._origin = now
         return round((now - self._origin) * 1000, 1)
 
-    def record(self, name: str, arguments: dict, matched: bool, output: Any, requested_ms: float) -> None:
+    def record(self, name: str, arguments: dict, matched: bool, output: Any, requested_ms: float,
+               resolution: str = "none") -> None:
         self._calls.append(
             {
                 "name": name,
                 "arguments": arguments,
                 "matched": matched,
+                # Three outcomes, not two. A record found after speech bent an
+                # argument is the interesting middle case, and a bare matched
+                # flag hides it from anything reading the payload.
+                "resolution": resolution,
                 "output": output,
                 "requested_ms": requested_ms,
                 "answered_ms": self._offset(),
@@ -1224,7 +1229,7 @@ def register_tools(llm: LLMService, server: MockToolServer, trace: ToolTrace) ->
         arguments = params.arguments or {}
         result = server.call(params.function_name, arguments)
         record = server.calls[-1]
-        trace.record(params.function_name, arguments, record.matched, result, requested)
+        trace.record(params.function_name, arguments, record.matched, result, requested, record.resolution)
         # Three outcomes, not two: a row found outright, the nearest row found
         # after speech bent an argument, and nothing found. Reading a call log
         # afterwards, the middle one is the interesting case and a bare
@@ -1242,7 +1247,7 @@ def register_tools(llm: LLMService, server: MockToolServer, trace: ToolTrace) ->
         result = {"status": "ending_call"}
         # Recorded like any other call: whether the agent terminated the call
         # appropriately is scored, so the row has to say whether it tried.
-        trace.record("end_call", params.arguments or {}, True, result, requested)
+        trace.record("end_call", params.arguments or {}, True, result, requested, "exact")
         await params.result_callback(result)
         await params.llm.push_frame(EndTaskFrame())
 
@@ -1250,7 +1255,7 @@ def register_tools(llm: LLMService, server: MockToolServer, trace: ToolTrace) ->
         requested = trace._offset()
         logger.info("transfer_call -- mock handover, closing the call")
         result = {"status": "transferred"}
-        trace.record("transfer_call", params.arguments or {}, True, result, requested)
+        trace.record("transfer_call", params.arguments or {}, True, result, requested, "exact")
         await params.result_callback(result)
         await params.llm.push_frame(EndTaskFrame())
 

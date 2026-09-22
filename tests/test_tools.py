@@ -38,9 +38,13 @@ class TestAnswering:
         """The contract asks for ten digits; punctuation is the formatter's taste."""
         assert server.call("lookup_patient", {"phone": spoken})["patient_id"] == "p_1002"
 
-    def test_an_unknown_record_is_a_miss_not_an_invention(self, server):
-        assert server.call("lookup_patient", {"phone": "4045550000"}) == {"result": "no_match"}
-        assert server.calls[-1].matched is False
+    def test_an_unknown_record_is_answered_without_inventing_one(self, server):
+        answer = server.call("lookup_patient", {"phone": "4045550000"})
+        # The table carries its own "no patient found" row for exactly this, and
+        # a number nothing resembles lands on it rather than on a real patient.
+        assert "patient_id" not in answer
+        assert answer["match"] is False
+        assert server.calls[-1].matched is False, "only an exact call counts as a hit"
 
     def test_an_undeclared_tool_is_reported_as_unknown(self, server):
         assert "unknown tool" in server.call("transfer_to_human", {})["error"]
@@ -150,3 +154,98 @@ class TestTheMostSpecificRowWins:
         server = MockToolServer("medicare")
         general, _ = self._shadowing_pair(server, "route_medicare_call")
         assert server.call("route_medicare_call", dict(general["input"])) == general["output"]
+
+
+class TestResolvingACallToARecord:
+    """How a call finds its row, and what happens when it nearly does.
+
+    The tables are records, not assertions. A row lists the fields that were
+    present when it was captured, and many of those are optional in the tool's
+    own schema, so a rule that demanded every one of them would make the row
+    unreachable for any agent that followed the schema. These tests pin the two
+    stages that reach it instead -- and the fact that reaching it is what keeps
+    a multi-step task alive, because the identifiers a later call needs only
+    exist inside an earlier call's answer.
+    """
+
+    @pytest.fixture
+    def medicare(self):
+        return MockToolServer("medicare")
+
+    # The recorded call that failed a whole cohort of runs: every field the
+    # tool's schema requires, one optional field the caller never gave.
+    WITHOUT_THE_POSTCODE = {
+        "callback_phone": "6025550155",
+        "caller_name": "Linda Martinez",
+        "consent_id": "perm_1009",
+        "has_medicare_part_a": "yes",
+        "has_medicare_part_b": "yes",
+        "intake_intent": "plan_review",
+        "product_interest": "medicare_advantage",
+        "state": "AZ",
+    }
+
+    def test_an_optional_field_left_out_still_reaches_a_record(self, medicare):
+        answer = medicare.call("save_medicare_qualification", self.WITHOUT_THE_POSTCODE)
+        # Any answer at all is the point: the next tool in this suite needs an
+        # identifier, and an identifier only ever arrives inside an answer.
+        assert answer.get("lead_id")
+
+    def test_the_answer_says_what_was_missing(self, medicare):
+        answer = medicare.call("save_medicare_qualification", self.WITHOUT_THE_POSTCODE)
+        # The table seeds the ordinary ways a call goes wrong, and their outputs
+        # name the gap so the agent can go back and close it. An agent told
+        # nothing can only tell the caller the system failed -- and then the
+        # conversation being scored is a conversation about the harness.
+        assert answer["missing_fields"] == ["zip_code"]
+
+    def test_the_complete_call_reaches_the_row_it_names(self, medicare):
+        row = next(
+            m for m in medicare._mocks["save_medicare_qualification"]["mock_data"]
+            if m["input"].get("consent_id") == "perm_1009"
+        )
+        assert medicare.call("save_medicare_qualification", dict(row["input"])) == row["output"]
+        assert medicare.calls[-1].resolution == "exact"
+
+    def test_free_text_never_decides_a_match(self, medicare):
+        # No two agents write the same sentence, and the tables store none, so a
+        # field the contract declares as free text cannot be part of the lookup.
+        row = medicare._mocks["create_handoff_summary"]["mock_data"][0]
+        answer = medicare.call(
+            "create_handoff_summary",
+            {**row["input"], "compliance_notes": "whatever this particular agent chose to write"},
+        )
+        assert answer == row["output"]
+        assert medicare.calls[-1].resolution == "exact"
+
+    def test_a_field_sent_empty_is_a_field_not_sent(self, medicare):
+        row = medicare._mocks["record_medicare_permissions"]["mock_data"][0]
+        assert medicare.call(
+            "record_medicare_permissions", {**row["input"], "beneficiary_name": None}
+        ) == row["output"]
+
+
+class TestWhenSpeechBendsAnArgument:
+    """A transcription error is not a task failure, and must not be scored as one."""
+
+    @pytest.fixture
+    def server(self):
+        return MockToolServer("appointments")
+
+    def test_one_bent_digit_still_finds_the_record(self, server):
+        answer = server.call("lookup_patient", {"phone": "2025550189"})  # 2025550188 misheard
+        assert answer["patient_id"] == "p_1002"
+        assert server.calls[-1].resolution == "fuzzy"
+        assert server.calls[-1].matched is False, "near is not exact, and the record must say so"
+
+    def test_a_number_nothing_resembles_gets_no_patient(self, server):
+        answer = server.call("lookup_patient", {"phone": "0000000000"})
+        assert "patient_id" not in answer
+
+    def test_a_country_code_is_not_a_different_number(self, server):
+        assert server.call("lookup_patient", {"phone": "+1 (202) 555-0188"})["patient_id"] == "p_1002"
+        assert server.calls[-1].resolution == "exact"
+
+    def test_an_undeclared_tool_is_not_resolved_at_all(self, server):
+        server.call("transfer_to_human", {})
+        assert server.calls[-1].resolution == "unknown"

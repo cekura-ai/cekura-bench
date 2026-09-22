@@ -27,6 +27,7 @@ rather than something to fake here.
 
 from __future__ import annotations
 
+import difflib
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -50,6 +51,11 @@ def _normalize(value: Any) -> Any:
         stripped = value.strip()
         digits = "".join(ch for ch in stripped if ch.isdigit())
         if digits and len(digits) >= 7 and not any(ch.isalpha() for ch in stripped):
+            # A leading country code is a dialling detail, not a different
+            # number. The tables store ten digits, and a model that says the
+            # same number in full is saying the same number.
+            if len(digits) == 11 and digits.startswith("1"):
+                digits = digits[1:]
             return digits
         return stripped.lower()
     if isinstance(value, (int, float, bool)) or value is None:
@@ -61,15 +67,41 @@ def _normalize(value: Any) -> Any:
     return value
 
 
+# How close a call has to be, over the fields it and a row have between them,
+# before the nearest row answers it. Speech recognition bends names and the odd
+# digit, and a table lookup that treats a bent name as an unknown record turns a
+# transcription error into a task failure -- which is a different measurement.
+FUZZY_THRESHOLD = 30.0
+
+
 @dataclass
 class ToolCallRecord:
     name: str
     arguments: dict[str, Any]
     matched: bool
     output: Any
+    # How the row was found: "exact", "fuzzy", "none", or "unknown" for a tool
+    # the contract does not declare. ``matched`` stays exact-only on purpose, so
+    # the figures built from it keep meaning "asked for precisely this record".
+    resolution: str = "none"
 
     def as_json(self) -> dict[str, Any]:
-        return {"name": self.name, "arguments": self.arguments, "matched": self.matched, "output": self.output}
+        return {
+            "name": self.name,
+            "arguments": self.arguments,
+            "matched": self.matched,
+            "resolution": self.resolution,
+            "output": self.output,
+        }
+
+
+def _similarity(left: Any, right: Any) -> float:
+    """How alike two argument values are, 0 to 100."""
+    if _normalize(left) == _normalize(right):
+        return 100.0
+    return difflib.SequenceMatcher(
+        None, str(left).strip().lower(), str(right).strip().lower()
+    ).ratio() * 100.0
 
 
 @dataclass
@@ -102,39 +134,84 @@ class MockToolServer:
     # -- answering --------------------------------------------------------
 
     def call(self, name: str, arguments: dict[str, Any]) -> Any:
-        """Answer one tool call from the table. Unknown inputs get an explicit miss.
+        """Answer one tool call from the table, in two stages.
 
-        A miss is a legitimate answer, not an error: the contract's own
-        description says a no-match means no record was found. Inventing a record
-        for an unrecognised argument would let a model that asked for the wrong
-        thing look like one that asked for the right thing.
+        The tables are records, not assertions. A row lists the fields that were
+        present when that record was captured, and several of those fields are
+        optional in the tool's own schema -- so requiring a call to repeat every
+        one of them makes a row unreachable for any agent that follows the
+        schema. Stage one therefore compares only the fields the call and the
+        row have in common, and the row sharing the most of them wins, so a
+        specific record still beats a general one.
+
+        Stage two exists because speech is lossy. A misheard surname or a dropped
+        digit is a transcription error, and answering it with nothing turns it
+        into a task failure -- a different thing, measured in the same column. So
+        when no row matches outright, the nearest row above ``FUZZY_THRESHOLD``
+        answers instead. The tables are built for this: they carry seeded rows
+        for the ordinary ways a call goes wrong, a missing postcode or an unknown
+        number, whose outputs tell the agent what is missing and how to recover.
+        Reaching those rows is the point of this stage. Without it an agent has
+        nowhere to go but to tell the caller the system failed, and the
+        conversation being scored becomes a conversation about our harness.
+
+        Only when both stages come up empty is the answer a miss, which is a
+        legitimate answer and not an error: the contract's own wording says a
+        no-match means no record was found.
+
+        The two stages are the resolution the scoring side already performs
+        against the same tables. Serving more strictly than the score is read
+        would fail agents for answers the score accepts.
         """
         mock = self._mocks.get(name)
         if mock is None:
-            record = ToolCallRecord(name, arguments, False, {"error": f"unknown tool {name}"})
-            self.calls.append(record)
-            return record.output
+            return self._record(name, arguments, {"error": f"unknown tool {name}"}, "unknown")
 
-        wanted = _normalize(arguments)
-        best, best_keys = None, -1
-        for row in mock.get("mock_data", []):
-            expected = _normalize(row.get("input", {}))
-            if not expected or not all(wanted.get(key) == value for key, value in expected.items()):
+        freetext = set(mock.get("freetext_params") or ())
+        # Free text cannot be compared: no two agents write the same sentence,
+        # and a row never stores one. An argument the model left empty is an
+        # argument it did not send.
+        wanted = {
+            key: value
+            for key, value in (arguments or {}).items()
+            if value is not None and key not in freetext
+        }
+        rows = [
+            (row, {k: v for k, v in (row.get("input") or {}).items() if k not in freetext})
+            for row in mock.get("mock_data", [])
+        ]
+
+        best, best_shared = None, 0
+        for row, stored in rows:
+            shared = set(stored) & set(wanted)
+            if not shared or len(shared) <= best_shared:
                 continue
-            # The most specific row wins, not the first one listed. One table
-            # here holds a row whose inputs are a strict subset of another's, so
-            # first-match returns the general answer to a question that named
-            # the particular one -- and the table's order, which nothing
-            # guarantees, would decide a scored result.
-            if len(expected) > best_keys:
-                best, best_keys = row, len(expected)
-
+            if all(_normalize(wanted[key]) == _normalize(stored[key]) for key in shared):
+                best, best_shared = row, len(shared)
         if best is not None:
-            record = ToolCallRecord(name, arguments, True, best.get("output"))
-            self.calls.append(record)
-            return record.output
+            return self._record(name, arguments, best.get("output"), "exact")
 
-        record = ToolCallRecord(name, arguments, False, {"result": "no_match"})
+        nearest, best_score = None, -1.0
+        for row, stored in rows:
+            fields = set(stored) | set(wanted)
+            if not fields:
+                continue
+            # A field only one side names scores zero rather than being skipped,
+            # so a row that answers half the call cannot outrank one that
+            # answers all of it.
+            score = sum(
+                _similarity(wanted[key], stored[key]) if key in wanted and key in stored else 0.0
+                for key in fields
+            ) / len(fields)
+            if score > best_score:
+                nearest, best_score = row, score
+        if nearest is not None and best_score >= FUZZY_THRESHOLD:
+            return self._record(name, arguments, nearest.get("output"), "fuzzy")
+
+        return self._record(name, arguments, {"result": "no_match"}, "none")
+
+    def _record(self, name: str, arguments: dict[str, Any], output: Any, resolution: str) -> Any:
+        record = ToolCallRecord(name, arguments, resolution == "exact", output, resolution)
         self.calls.append(record)
         return record.output
 

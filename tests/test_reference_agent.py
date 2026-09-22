@@ -169,9 +169,12 @@ class TestTools:
                 answers.append(result)
 
         await registered["lookup_patient"](Params())
-        assert answers[0] == {"result": "no_match"}
+        # A number nothing in the table resembles is answered by the contract's
+        # own "no patient found" row, not by an invented patient.
+        assert "patient_id" not in answers[0]
+        assert answers[0]["match"] is False
         assert server.calls[-1].matched is False
-        assert trace.as_metadata()["tool_calls_matched"] == 0, "a miss must not count as a hit"
+        assert trace.as_metadata()["tool_calls_matched"] == 0, "only an exact call counts as a hit"
 
     @pytest.mark.asyncio
     async def test_every_tool_call_is_recorded_for_the_run(self):
@@ -716,3 +719,34 @@ class TestCallerWordsAreExported:
     async def test_the_caller_is_exported(self):
         _, roles = await self._run(register_fix=True)
         assert "user" in roles
+
+
+class TestTheRunCanBeIdentifiedFromItsOwnLogs:
+    """The configuration line has to land inside the window the run captures.
+
+    The tracing SDK starts capturing when the task is created and not before, so
+    a line logged earlier reaches the container's output and never the run
+    record. A log read months later against a single result has to say which
+    provider, model, contract and commit produced it.
+    """
+
+    @staticmethod
+    def _source() -> str:
+        return (AGENT_DIR / "bot.py").read_text()
+
+    def test_the_configuration_line_is_logged_after_capture_opens(self):
+        source = self._source()
+        assert source.index("create_task(pipeline") < source.index(
+            'logger.info("agent bench reference agent: {}", record)'
+        )
+
+    def test_it_is_logged_exactly_once(self):
+        # Twice would mean the pre-build line was left behind, doubling every
+        # configuration line in the container output.
+        assert self._source().count(
+            'logger.info("agent bench reference agent: {}", record)'
+        ) == 1
+
+    def test_a_build_that_fails_still_says_what_it_was_building(self):
+        # Both branches keep a small line ahead of the build, outside the window.
+        assert self._source().count('logger.info("building {} on {}", name, model)') == 2

@@ -661,9 +661,13 @@ def register_tools(llm: LLMService, server: MockToolServer, trace: ToolTrace) ->
         requested = trace._offset()
         arguments = params.arguments or {}
         result = server.call(params.function_name, arguments)
-        matched = server.calls[-1].matched
-        trace.record(params.function_name, arguments, matched, result, requested)
-        logger.info("tool {} -> {}", params.function_name, "hit" if matched else "miss")
+        record = server.calls[-1]
+        trace.record(params.function_name, arguments, record.matched, result, requested)
+        # Three outcomes, not two: a row found outright, the nearest row found
+        # after speech bent an argument, and nothing found. Reading a call log
+        # afterwards, the middle one is the interesting case and a bare
+        # hit-or-miss hides it.
+        logger.info("tool {} -> {}", params.function_name, record.resolution)
         await params.result_callback(result)
 
     async def end_call(params: FunctionCallParams) -> None:
@@ -918,7 +922,10 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         model = settings.get("s2s_model", cascade.default_model)
         credential = _credential(cascade.credential_env, name)
         record = cascade_record(name, cascade, model, server, settings)
-        logger.info("agent bench reference agent: {}", record)
+        # Small on purpose: this one only has to survive a build that fails, and
+        # it is outside the window the run's own log capture covers. The record
+        # itself is logged further down, once that window is open.
+        logger.info("building {} on {}", name, model)
 
         stt, llm, tts = build_cascade(cascade, credential, model, server.system_prompt, settings)
         register_tools(llm, server, trace)
@@ -943,7 +950,8 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         model = settings.get("s2s_model", provider.default_model)
         voice = settings.get("s2s_voice", provider.default_voice)
         record = build_record(name, provider, model, voice, server, settings)
-        logger.info("agent bench reference agent: {}", record)
+        # See the note in the cascade branch above.
+        logger.info("building {} on {}", name, model)
 
         llm = provider.build(credential, model, voice, server.system_prompt, settings)
         register_tools(llm, server, trace)
@@ -969,6 +977,13 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
     task, tracer = create_task(pipeline, context, params, runner_args, transport, record)
     if realtime and tracer is not None:
         capture_caller_turns(tracer, aggregators.user())
+
+    # The run's log capture opens inside ``create_task`` and not before, so a line
+    # logged earlier reaches the container's output and never the run. That is
+    # where the configuration line belongs: a log read months later against a
+    # single result has to say which provider, model, contract and commit
+    # produced it, without a second system to cross-reference.
+    logger.info("agent bench reference agent: {}", record)
 
     @transport.event_handler("on_client_connected")
     async def _on_connected(_transport, _client):

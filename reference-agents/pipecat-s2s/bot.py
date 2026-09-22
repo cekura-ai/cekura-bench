@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import subprocess
 import sys
 import time
@@ -54,7 +55,14 @@ from pipecat.adapters.schemas.function_schema import FunctionSchema
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.audio.resamplers.soxr_stream_resampler import SOXRStreamAudioResampler
 from pipecat.audio.vad.silero import SileroVADAnalyzer
-from pipecat.frames.frames import EndTaskFrame, LLMRunFrame, MetricsFrame
+from pipecat.frames.frames import (
+    EndTaskFrame,
+    Frame,
+    LLMRunFrame,
+    LLMTextFrame,
+    MetricsFrame,
+    TTSTextFrame,
+)
 from pipecat.metrics.metrics import (
     LLMUsageMetricsData,
     STTUsageMetricsData,
@@ -64,6 +72,7 @@ from pipecat.observers.base_observer import BaseObserver, FramePushed
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
+from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.aggregators.llm_response_universal import (
     LLMContextAggregatorPair,
@@ -598,6 +607,33 @@ def build_tools(server: MockToolServer) -> ToolsSchema:
     return ToolsSchema(standard_tools=published + control)
 
 
+# A control token is a tokenizer artifact, not speech. One of these services
+# streams them into the transcript of what it said -- a run of ``<ctrl46>`` and
+# the blank lines around them -- and they reach the record as though the agent
+# had uttered them. Left alone they are scored: a judge reads them as the agent
+# saying something incoherent, and any word-level comparison counts them as
+# words. Removing them takes nothing real away, because there is no audio behind
+# them; the model never said them.
+#
+# Narrow on purpose. Only the documented control-token shape goes, and nothing
+# else about the text is touched -- a filter on a benchmark's transcript is a
+# filter on its evidence, and the moment it starts tidying prose it is editing
+# what is being measured.
+CONTROL_TOKEN = re.compile(r"<ctrl\d+>")
+
+
+class DropControlTokens(FrameProcessor):
+    """Keep tokenizer artifacts out of the transcript of what the agent said."""
+
+    async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
+        await super().process_frame(frame, direction)
+        if isinstance(frame, (TTSTextFrame, LLMTextFrame)) and "<ctrl" in frame.text:
+            cleaned = CONTROL_TOKEN.sub("", frame.text)
+            # Whitespace that only ever separated the tokens is not speech either.
+            frame.text = "" if not cleaned.strip() else cleaned
+        await self.push_frame(frame, direction)
+
+
 class UsageMeter(BaseObserver):
     """Counts what a call consumed, so the row it produces can carry a price.
 
@@ -709,6 +745,10 @@ class ToolTrace:
     def __init__(self) -> None:
         self._calls: list[dict[str, Any]] = []
         self._origin: float | None = None
+        # Called after every recorded call. The run's record is assembled from
+        # several pieces and there is no reliable last moment to assemble it in,
+        # so it is rewritten whenever a piece changes. See ``run_bot``.
+        self.on_change: Any = None
 
     def _offset(self) -> float:
         now = time.monotonic()
@@ -727,6 +767,8 @@ class ToolTrace:
                 "answered_ms": self._offset(),
             }
         )
+        if self.on_change is not None:
+            self.on_change()
 
     def as_metadata(self) -> dict[str, Any]:
         """The summary a row is scored on, plus the calls it is derived from.
@@ -1033,7 +1075,8 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         )
         # Three services where the native path has one. Everything either side of
         # them -- transport, context, tools, greeting -- is the same code.
-        stages = [transport.input(), stt, aggregators.user(), llm, tts, transport.output(), aggregators.assistant()]
+        stages = [transport.input(), stt, aggregators.user(), llm, tts, transport.output(),
+                  DropControlTokens(), aggregators.assistant()]
         rate = CASCADE_RATE
         realtime = False
     else:
@@ -1058,7 +1101,8 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         )
         # No separate speech-to-text or text-to-speech: the realtime model is the
         # whole agent, so the pipeline is the transport, the context and the model.
-        stages = [transport.input(), aggregators.user(), llm, transport.output(), aggregators.assistant()]
+        stages = [transport.input(), aggregators.user(), llm, transport.output(),
+                  DropControlTokens(), aggregators.assistant()]
         rate = provider.input_rate
         realtime = True
 
@@ -1073,6 +1117,31 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
     task, tracer = create_task(pipeline, context, params, runner_args, transport, record, [meter])
     if realtime and tracer is not None:
         capture_caller_turns(tracer, aggregators.user())
+
+    def publish() -> None:
+        """Rewrite the run's record with everything known so far.
+
+        The record is assembled from three pieces -- the configuration, the tool
+        trace and what the call consumed -- and only the first is complete when
+        the run starts. The obvious place to finish it is the moment the caller
+        leaves, and that moment does not reliably arrive: when the agent ends the
+        call itself, which is how a scenario normally finishes, the transport
+        tears down before it reports a departed caller, so the handler never
+        runs and everything but the configuration is lost.
+
+        Writing the record repeatedly costs an assignment and removes the
+        dependency on a last moment. Whatever happens, the record holds what was
+        known at the most recent tool call -- and the last tool call of a
+        scenario is the one that ends it.
+        """
+        if tracer is None:
+            return
+        try:
+            tracer.set_custom_metadata({**record, **trace.as_metadata(), **meter.as_metadata()})
+        except Exception as exc:  # noqa: BLE001 -- never fail a call over a record
+            logger.warning("could not update the run record: {}", exc)
+
+    trace.on_change = publish
 
     # The run's log capture opens inside ``create_task`` and not before, so a line
     # logged earlier reaches the container's output and never the run. That is
@@ -1091,14 +1160,9 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
     @transport.event_handler("on_client_disconnected")
     async def _on_disconnected(_transport, _client):
         logger.info("caller disconnected")
-        # The tool trace is complete only once the call is over, and the call
-        # record is immutable once posted, so it is attached here -- in the last
-        # moment where both are true.
-        if tracer is not None:
-            try:
-                tracer.set_custom_metadata({**record, **trace.as_metadata(), **meter.as_metadata()})
-            except Exception as exc:  # noqa: BLE001 -- never fail a call over a record
-                logger.warning("could not attach the tool trace: {}", exc)
+        # A caller who hangs up leaves no tool call behind to trigger the
+        # rewrite, so the record is brought up to date here too.
+        publish()
         logger.info("tools called: {}", trace.as_metadata()["tool_call_count"])
         await task.cancel()
 

@@ -750,3 +750,88 @@ class TestTheRunCanBeIdentifiedFromItsOwnLogs:
     def test_a_build_that_fails_still_says_what_it_was_building(self):
         # Both branches keep a small line ahead of the build, outside the window.
         assert self._source().count('logger.info("building {} on {}", name, model)') == 2
+
+
+class TestControlTokensNeverReachTheRecord:
+    """A tokenizer artifact is not speech and must not be scored as speech.
+
+    One of these services streams control tokens into the transcript of what it
+    said. There is no audio behind them -- the model never uttered them -- but
+    on the record they read as the agent saying something incoherent, and any
+    word-level comparison counts them as words.
+    """
+
+    @staticmethod
+    async def _through(text: str) -> str:
+        from pipecat.frames.frames import TTSTextFrame
+        from pipecat.processors.frame_processor import FrameDirection
+
+        processor = bot.DropControlTokens()
+        seen = []
+
+        async def capture(frame, direction=None):
+            seen.append(frame)
+
+        processor.push_frame = capture
+        await processor.process_frame(
+            TTSTextFrame(text, aggregated_by="test"), FrameDirection.DOWNSTREAM
+        )
+        return seen[-1].text
+
+    @pytest.mark.asyncio
+    async def test_the_artifact_is_removed(self):
+        assert await self._through("<ctrl46><ctrl46>") == ""
+
+    @pytest.mark.asyncio
+    async def test_speech_around_it_survives(self):
+        assert await self._through("your appointment <ctrl46>is booked") == "your appointment is booked"
+
+    @pytest.mark.asyncio
+    async def test_ordinary_text_is_untouched(self):
+        # A filter on a benchmark's transcript is a filter on its evidence.
+        for text in ("Hello <there>", "1 < 2 and 3 > 2", "a\n\nb"):
+            assert await self._through(text) == text
+
+
+class TestTheRecordDoesNotDependOnAGoodbye:
+    """The record is finished as it goes, because the last moment may not come.
+
+    When the agent ends the call itself -- how a scenario normally finishes --
+    the transport tears down before it reports a departed caller, so a handler
+    hung on that event never runs. Everything but the configuration was lost
+    that way: the tool trace and everything the call consumed.
+    """
+
+    @pytest.mark.asyncio
+    async def test_recording_a_tool_call_rewrites_the_record(self):
+        server = bot.MockToolServer(suite="appointments")
+        registered = {}
+
+        class StubLLM:
+            def register_function(self, name, handler, **_kwargs):
+                registered[name] = handler
+
+        trace = bot.ToolTrace()
+        rewrites = []
+        trace.on_change = lambda: rewrites.append(len(trace.as_metadata()["tool_calls"]))
+        bot.register_tools(StubLLM(), server, trace)
+
+        class Params:
+            function_name = "lookup_patient"
+            arguments = {"phone": "2025550188"}
+
+            async def result_callback(self, result):
+                pass
+
+        await registered["lookup_patient"](Params())
+        assert rewrites == [1], "the record must be rewritten as each call lands"
+
+    def test_ending_the_call_is_itself_a_recorded_call(self):
+        # Which is what makes the rewrite reach the end of a normal scenario.
+        source = (AGENT_DIR / "bot.py").read_text()
+        assert 'trace.record("end_call"' in source
+
+    def test_the_rewrite_is_wired_to_the_trace(self):
+        source = (AGENT_DIR / "bot.py").read_text()
+        assert "trace.on_change = publish" in source
+        assert source.index("def publish") < source.index("trace.on_change = publish")

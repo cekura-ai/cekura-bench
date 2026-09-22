@@ -178,6 +178,31 @@ class MockToolServer:
 
     # -- answering --------------------------------------------------------
 
+    def _abstentions(self, name: str) -> frozenset[str]:
+        """The (field, value) pairs that mean "the caller did not say", not a claim.
+
+        Several optional fields offer ``unknown`` in their own enum while the tool's
+        prose tells the agent to omit an argument it has no value for. An agent that
+        resolves that toward the enum and one that resolves it toward the prose have
+        said the same thing -- nothing -- so both must score alike, and which way a
+        given service leans is a habit of that service rather than a fact about the
+        call. A required field is excluded: there the agent is asked to commit, and
+        declining to is an answer in itself.
+        """
+        cached = getattr(self, "_abstention_cache", None)
+        if cached is None:
+            cached = self._abstention_cache = {}
+        if name not in cached:
+            definition = next((d for d in self._definitions if d["name"] == name), {})
+            parameters = definition.get("parameters") or {}
+            required = set(parameters.get("required") or ())
+            cached[name] = frozenset(
+                field
+                for field, schema in (parameters.get("properties") or {}).items()
+                if field not in required and "unknown" in (schema.get("enum") or ())
+            )
+        return cached[name]
+
     def call(self, name: str, arguments: dict[str, Any]) -> Any:
         """Answer one tool call from the table, in two stages.
 
@@ -213,13 +238,14 @@ class MockToolServer:
             return self._record(name, arguments, {"error": f"unknown tool {name}"}, "unknown")
 
         freetext = set(mock.get("freetext_params") or ())
+        abstained = self._abstentions(name)
         # Free text cannot be compared: no two agents write the same sentence,
         # and a row never stores one. An argument the model left empty is an
         # argument it did not send.
         wanted = {
             key: value
             for key, value in (arguments or {}).items()
-            if value is not None and key not in freetext
+            if value is not None and key not in freetext and not (key in abstained and value == "unknown")
         }
         rows = [
             (row, {k: v for k, v in (row.get("input") or {}).items() if k not in freetext})

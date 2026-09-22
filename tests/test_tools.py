@@ -391,3 +391,37 @@ class TestOneSlotWrittenSeveralWays:
         # A shifted time is a different instant. It is left to miss rather than
         # canonicalised, because guessing a timezone here could move a booking.
         assert self._book(lambda slot: slot + "+05:30") != "exact"
+
+
+class TestSayingUnknownIsTheSameAsSayingNothing:
+    """Several optional fields offer ``unknown`` in their enum while the tool's own
+    prose says to omit an argument with no value. Both spellings say the same
+    thing, and which one a service reaches for is a habit of that service."""
+
+    @staticmethod
+    def _qualify(**overrides):
+        server = MockToolServer(suite="medicare")
+        stored = server._mocks["save_medicare_qualification"]["mock_data"][0]["input"]
+        server.call("save_medicare_qualification", dict(stored, **overrides))
+        return server.calls[-1]
+
+    def test_the_contracts_own_record(self):
+        assert self._qualify().resolution == "exact"
+
+    def test_an_unknown_age_band_reads_as_omitted(self):
+        assert self._qualify(age_band="unknown").resolution == "exact"
+
+    def test_an_unknown_coverage_reads_as_omitted(self):
+        assert self._qualify(current_coverage="unknown").resolution == "exact"
+
+    def test_the_record_answered_is_still_the_right_one(self):
+        call = self._qualify(age_band="unknown", current_coverage="unknown")
+        assert call.output["lead_id"] == self._qualify().output["lead_id"]
+
+    def test_a_wrong_value_is_not_an_abstention(self):
+        assert self._qualify(age_band="not_yet_on_medicare").resolution != "exact"
+
+    def test_a_required_field_must_still_be_committed_to(self):
+        # product_interest also offers ``unknown``, but it is required: declining
+        # to answer there is an answer, not a silence.
+        assert self._qualify(product_interest="unknown").resolution != "exact"

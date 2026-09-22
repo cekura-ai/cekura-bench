@@ -601,6 +601,18 @@ class Provider:
     # and the record says so, because a row whose turns were decided locally is
     # not measuring the same thing as one whose were not.
     turns: str = "provider"
+    # Whether this service runs its own voice-activity detection on the audio it
+    # is sent. Leaving it on means the whole call has to be streamed for it to
+    # listen to, silences included; turning it off means the shared detector
+    # announces the turn and only the speech inside it is sent. That is a real
+    # difference in what the service is asked to do, so it is declared here and
+    # published, not left implicit in a builder.
+    service_vad: bool = True
+    # Whether the caller's own words reach the record because this pipeline asked
+    # for them, or because the service sends them unprompted. It changes nothing
+    # about the conversation and everything about whether a row has a caller in
+    # it, which makes it worth a published cell rather than a comment.
+    caller_transcription: str = "asked"
     # Whether a caller talking over the agent is this pipeline's business.
     #
     # Usually it is: the agent is stopped here and the service is told the reply
@@ -646,7 +658,7 @@ PROVIDERS: dict[str, Provider] = {
     "gemini-live": Provider(
         _gemini, 16000, "models/gemini-2.5-flash-native-audio-preview-12-2025", "Charon",
         ("GEMINI_API_KEY", "GEMINI_AUTHORIZATION"), "pipecat.services.google.gemini_live.llm",
-        turns="local",
+        turns="local", service_vad=False, caller_transcription="automatic",
     ),
     "grok-realtime": Provider(
         _grok, 16000, "grok-voice-latest", "eve", ("XAI_API_KEY",),
@@ -658,7 +670,7 @@ PROVIDERS: dict[str, Provider] = {
         _gpt_live, 24000, "gpt-live-1", "marin", ("OPENAI_API_KEY",),
         "pipecat.services.openai.live.llm",
         discloses=lambda settings: {"s2s_backend_model": backend_model(settings)},
-        interruptions=False,
+        interruptions=False, caller_transcription="automatic",
     ),
     # Nova Sonic listens at 16 kHz and speaks at 24 kHz. The pipeline runs at the
     # input rate and the service resamples its own output.
@@ -666,7 +678,7 @@ PROVIDERS: dict[str, Provider] = {
         _nova_sonic, 16000, "amazon.nova-2-sonic-v1:0", "matthew", ("AWS_ACCESS_KEY_ID",),
         "pipecat.services.aws.nova_sonic.llm",
         discloses=lambda settings: {"aws_region": aws_region(settings)},
-        turns="local",
+        turns="local", caller_transcription="automatic",
     ),
     # Qwen listens at 16 kHz and speaks at 24 kHz, and no framework service
     # exists for it -- see ``qwen_realtime``.
@@ -1100,8 +1112,11 @@ class CallNarrator(BaseObserver):
     # holding every frame of a ten-minute call.
     MEMORY = 512
 
-    def __init__(self) -> None:
+    def __init__(self, clock: "AudioClock | None" = None) -> None:
         super().__init__()
+        # Handed in rather than reached for, so this narrator reports the call it
+        # was built for and nothing a previous one left behind.
+        self._clock = clock if clock is not None else AudioClock()
         self._seen: dict[int, None] = {}
         self.caller_turns = 0
         self.agent_turns = 0
@@ -1158,6 +1173,66 @@ class CallNarrator(BaseObserver):
         if endpointing:
             timing["endpointing"] = endpointing
         return timing
+
+    # What a healthy call looks like, as numbers rather than as judgement.
+    #
+    # These are deliberately loose. They are not a quality bar -- a slow model is
+    # not a broken row -- they are the shape of a pipeline that has stopped
+    # keeping up with the call, which is a different thing and one that no
+    # transcript reveals. A row that trips one of these is not scored badly; it
+    # is not scored at all until someone has looked.
+    DRIFTING_REPLIES_MS = 2000
+    STARVED_AUDIO_MS = 1000
+    ANSWERED_SHARE = 0.6
+
+    def integrity(self) -> dict[str, Any]:
+        """Whether this call was delivered and answered as a call, not just scored.
+
+        Every row is checked, every time, whatever the result looked like. That
+        order matters more than the thresholds: a fault is only ever found in the
+        row someone thought to examine, and the row nobody examines is the one
+        that looks fine. Checking on the way past removes the choice.
+
+        ``reply_drift_ms`` is the second half of a call's replies against the
+        first half. A model is slow evenly; a session falling behind the audio it
+        is being sent gets slower as the call goes on, and the gap between halves
+        is what separates the two. ``audio_in_drift_ms`` is the caller audio the
+        pipeline received against the time it ran, which should be zero on a live
+        call. ``answered`` is how many caller turns drew a reply: a call the agent
+        is too far behind to answer still produces turns, and they score as
+        silence.
+        """
+        report: dict[str, Any] = {}
+        failed: list[str] = []
+
+        if len(self.replies) >= 4:
+            half = len(self.replies) // 2
+            def middle(values: list[float]) -> float:
+                return sorted(values)[len(values) // 2]
+            drift = middle(self.replies[half:]) - middle(self.replies[:half])
+            report["reply_drift_ms"] = round(drift * 1000)
+            if drift * 1000 > self.DRIFTING_REPLIES_MS:
+                failed.append("replies_drifting")
+
+        drift = self._clock.drift()
+        if drift is not None:
+            report["audio_in_drift_ms"] = round(drift * 1000)
+            if abs(drift) * 1000 > self.STARVED_AUDIO_MS:
+                failed.append("audio_in_starved")
+
+        if self.caller_turns:
+            report["answered"] = f"{self.agent_turns}/{self.caller_turns}"
+            if self.agent_turns < self.caller_turns * self.ANSWERED_SHARE:
+                failed.append("turns_unanswered")
+        elif self.agent_turns == 0:
+            # Neither side said anything. The row exists and holds no call.
+            failed.append("silent_call")
+
+        # Named rather than counted, because the name is the whole finding: a
+        # reader who sees one of these needs to know which invariant broke, and a
+        # reader who sees none needs to know the checks ran.
+        report["checks"] = failed or ["ok"]
+        return report
 
     def _first_sighting(self, frame: Frame) -> bool:
         """False for a frame already narrated, or for the sibling of one."""
@@ -1467,6 +1542,30 @@ def build_record(provider_key: str, provider: "Provider", model: str, voice: str
         # instead -- a real configuration difference, and one a reader comparing
         # two rows has to be able to see.
         "turn_source": provider.turns,
+        # Every place this row is not arranged like the others, in one block.
+        #
+        # One pipeline answers every row, but the session opened at the top of it
+        # is not identical, because these services do not offer the same
+        # contract. Those differences are the part of a result that is ours
+        # rather than the model's, and a reader comparing two rows cannot weigh
+        # them without seeing them. Keeping them here, beside the score, is what
+        # makes the unit being compared "this service under this arrangement"
+        # rather than an unqualified provider name.
+        "divergences": {
+            # Whose detector decided the caller had finished, and so which
+            # service's endpointing the reply figure includes.
+            "endpointing": provider.turns,
+            # Whether the service ran its own detector over the audio as well.
+            "service_vad": "on" if provider.service_vad else "off",
+            # Who stops the agent when the caller talks over it.
+            "interruptions": "pipeline" if provider.interruptions else "model",
+            # Whether the caller's words had to be asked for.
+            "caller_transcription": provider.caller_transcription,
+            # The rate the session was opened at. These services do not resample,
+            # so this is a requirement rather than a setting, but a wrong one
+            # reads exactly like a bad model and belongs on the record.
+            "input_rate": provider.input_rate,
+        },
         "config": provider_key,
     }
 
@@ -1521,6 +1620,18 @@ def cascade_record(key: str, text: TextModel, model: str, server: MockToolServer
         # figure beside their reply time belongs to that service, named above,
         # and not to the text model the row is otherwise about.
         "turn_source": "stt",
+        # The same block a native row carries, answered for a cascade. These
+        # rows diverge in one direction only: the speech path is fixed and
+        # identical across all of them, so the row is the text model and nothing
+        # else. Saying that explicitly is what lets a cascade row sit on a board
+        # beside a native one without the two being read as the same measurement.
+        "divergences": {
+            "endpointing": "stt",
+            "service_vad": "off",
+            "interruptions": "pipeline",
+            "caller_transcription": "asked",
+            "input_rate": CASCADE_RATE,
+        },
         "config": key,
     }
 
@@ -1545,6 +1656,42 @@ def _credential(variables: tuple[str, ...], label: str) -> str:
 VAD_RATE = 16000
 
 
+class AudioClock:
+    """How much caller audio the pipeline received, against how long it ran.
+
+    A live call delivers audio at one second per second. When these two numbers
+    part company the pipeline is no longer being handed the call as it happens,
+    and every figure measured from the caller's speech is measured against a
+    clock that has slipped. That is a fault no transcript shows and no score
+    explains, so it is counted on every row rather than looked for after a row
+    disappoints.
+
+    One call at a time runs in a worker, so one accumulator is enough; it is
+    reset when a call starts.
+    """
+
+    def __init__(self) -> None:
+        self.reset()
+
+    def reset(self) -> None:
+        self._began: float | None = None
+        self._audio = 0.0
+
+    def add(self, seconds: float) -> None:
+        if self._began is None:
+            self._began = time.monotonic()
+        self._audio += seconds
+
+    def drift(self) -> float | None:
+        """Audio received minus wall time elapsed, in seconds. None before audio."""
+        if self._began is None:
+            return None
+        return self._audio - (time.monotonic() - self._began)
+
+
+AUDIO_CLOCK = AudioClock()
+
+
 class BenchVAD(SileroVADAnalyzer):
     """Silero at a fixed rate, fed by a resampler when the pipeline differs."""
 
@@ -1560,6 +1707,9 @@ class BenchVAD(SileroVADAnalyzer):
         super().set_sample_rate(VAD_RATE)
 
     async def analyze_audio(self, buffer: bytes):
+        # Counted here because this is the one place every row's caller audio
+        # passes exactly once, before any provider has touched it.
+        AUDIO_CLOCK.add(len(buffer) / 2 / self._pipeline_rate)
         if self._pipeline_rate != VAD_RATE:
             buffer = await self._resampler.resample(buffer, self._pipeline_rate, VAD_RATE)
         return await super().analyze_audio(buffer)
@@ -1633,6 +1783,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
     # for, and the session id is the key the platform files the run under.
     session_id = str(getattr(runner_args, "session_id", "") or uuid.uuid4().hex[:12])
     start_call_clock(session_id)
+    AUDIO_CLOCK.reset()
     call_log = CallLog(session_id)
     body = getattr(runner_args, "body", None)
     logger.info(
@@ -1716,7 +1867,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
     )
     meter = UsageMeter()
     capture_live_audio(llm, meter)
-    narrator = CallNarrator()
+    narrator = CallNarrator(AUDIO_CLOCK)
     task, tracer = create_task(pipeline, context, params, runner_args, transport, record, [meter, narrator])
     if tracer is not None:
         call_log.hand_to(tracer)
@@ -1753,6 +1904,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
             tracer.set_custom_metadata({
                 **record, **trace.as_metadata(), **meter.as_metadata(),
                 **({"timing": timing} if timing else {}),
+                "integrity": narrator.integrity(),
             })
         except Exception as exc:  # noqa: BLE001 -- never fail a call over a record
             logger.warning("could not update the run record: {}", exc)
@@ -1764,6 +1916,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         usage = meter.as_metadata()["usage"]
         tools = trace.as_metadata()
         reply = narrator.timing().get("reply")
+        checks = narrator.integrity()
         logger.info(
             "call summary: {:.0f}s, caller turns {}, agent responses {}, barge-ins {}, "
             "tools {} ({} exact), errors {}, usage reports {}, log lines {}{}{}",
@@ -1772,6 +1925,14 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
             len(call_log.lines), f" (+{call_log.dropped} dropped)" if call_log.dropped else "",
             f", reply p50 {reply['p50_ms']} ms / p90 {reply['p90_ms']} ms over {reply['count']}" if reply else "",
         )
+        # On its own line and at WARNING when something broke, because this is
+        # the line that says whether the one above can be believed.
+        failed = [name for name in checks["checks"] if name != "ok"]
+        report = ", ".join(f"{key} {value}" for key, value in checks.items() if key != "checks")
+        if failed:
+            logger.warning("call integrity: {} -- {}", ", ".join(failed), report or "no measurements")
+        else:
+            logger.info("call integrity: ok{}", f" -- {report}" if report else "")
 
     if tracer is not None:
         finish_record(tracer, context, publish, summarise)

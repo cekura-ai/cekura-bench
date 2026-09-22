@@ -1515,3 +1515,124 @@ class TestHowLongTheAgentTookToAnswer:
 
     def test_a_call_with_no_reply_exports_nothing_rather_than_zero(self):
         assert "reply" not in self._narrator().timing()
+
+
+class TestEveryRowIsCheckedWhetherOrNotItLooksWrong:
+    """The checks that run on every call, in the order that matters: before
+    anyone has decided the row is worth examining.
+
+    A fault is otherwise only ever found in a row someone thought to look at,
+    and the row nobody looks at is the one that looks fine. These say whether
+    the call was delivered and answered as a call -- not whether the model was
+    any good at it."""
+
+    @staticmethod
+    def _narrator():
+        import bot
+
+        return bot.CallNarrator()
+
+    def test_a_steady_call_reports_that_the_checks_ran(self):
+        narrator = self._narrator()
+        narrator.replies = [1.0, 1.2, 0.9, 1.1]
+        narrator.caller_turns, narrator.agent_turns = 4, 4
+        assert narrator.integrity()["checks"] == ["ok"]
+
+    def test_replies_that_grow_through_a_call_are_named(self):
+        # A slow model is slow evenly. A session falling behind the audio it is
+        # sent gets slower as the call goes on, and only the second half shows it.
+        narrator = self._narrator()
+        narrator.replies = [1.0, 1.2, 12.0, 20.0]
+        narrator.caller_turns, narrator.agent_turns = 4, 4
+        report = narrator.integrity()
+        assert "replies_drifting" in report["checks"]
+        assert report["reply_drift_ms"] > 2000
+
+    def test_a_uniformly_slow_model_is_not_a_broken_row(self):
+        narrator = self._narrator()
+        narrator.replies = [8.0, 8.2, 8.1, 8.3]
+        narrator.caller_turns, narrator.agent_turns = 4, 4
+        assert narrator.integrity()["checks"] == ["ok"]
+
+    def test_caller_turns_that_drew_no_reply_are_named(self):
+        narrator = self._narrator()
+        narrator.caller_turns, narrator.agent_turns = 10, 2
+        assert "turns_unanswered" in narrator.integrity()["checks"]
+        assert narrator.integrity()["answered"] == "2/10"
+
+    def test_a_call_where_neither_side_spoke_is_named(self):
+        assert "silent_call" in self._narrator().integrity()["checks"]
+
+    def test_audio_arriving_slower_than_the_clock_is_named(self):
+        clock = bot.AudioClock()
+        clock.add(-4.0)  # four seconds of audio short of the time that has passed
+        narrator = bot.CallNarrator(clock)
+        narrator.caller_turns, narrator.agent_turns = 4, 4
+        report = narrator.integrity()
+        assert "audio_in_starved" in report["checks"]
+        assert report["audio_in_drift_ms"] == -4000
+
+    def test_one_call_does_not_read_the_clock_of_the_one_before_it(self):
+        """The accumulator is a process-level object; the narrator is per call.
+
+        A narrator that reached for the global rather than being handed one
+        would report the previous call's audio on this call's row."""
+        busy = bot.AudioClock()
+        busy.add(600.0)
+        fresh = bot.CallNarrator()
+        fresh.caller_turns, fresh.agent_turns = 4, 4
+        assert "audio_in_drift_ms" not in fresh.integrity()
+
+    def test_a_live_call_delivers_one_second_of_audio_per_second(self):
+        import bot
+
+        clock = bot.AudioClock()
+        assert clock.drift() is None
+        clock.add(1.0)
+        # Wall time has barely moved, so a second of audio is a second ahead.
+        assert 0.9 < clock.drift() <= 1.0
+
+
+class TestARowSaysWhereItDiffersFromTheOthers:
+    """One pipeline answers every row, but the session opened at the top of it is
+    not identical, because these services do not offer the same contract. What
+    differs is the part of a result that is ours rather than the model's, so it
+    travels with the score."""
+
+    @staticmethod
+    def _record(provider_key):
+        provider = bot.PROVIDERS[provider_key]
+        return bot.build_record(
+            provider_key, provider, provider.default_model, provider.default_voice,
+            bot.load_agent(asked()), asked(),
+        )
+
+    def test_every_native_row_declares_the_same_set(self):
+        expected = {"endpointing", "service_vad", "interruptions",
+                    "caller_transcription", "input_rate"}
+        for key in bot.PROVIDERS:
+            assert set(self._record(key)["divergences"]) == expected, key
+
+    def test_a_cascade_row_declares_it_too(self):
+        server = bot.load_agent(asked())
+        for key, text in bot.TEXT_MODELS.items():
+            record = bot.cascade_record(key, text, "m", server, asked())
+            assert record["divergences"]["endpointing"] == "stt", key
+
+    def test_the_declared_detector_is_the_one_the_service_is_built_with(self):
+        # The declaration and the builder are two places, so they can disagree.
+        # This is the check that stops them.
+        provider = bot.PROVIDERS["gemini-live"]
+        assert provider.service_vad is False
+        service = provider.build("k", provider.default_model, provider.default_voice, "p", {})
+        assert service._vad_disabled is True
+
+    def test_the_declared_interruption_owner_is_the_one_in_force(self):
+        for key, provider in bot.PROVIDERS.items():
+            if provider.turns != "provider":
+                continue
+            strategies = bot.user_aggregator_params(
+                realtime=True, turns=provider.turns, interruptions=provider.interruptions
+            ).user_turn_strategies
+            declared = self._record(key)["divergences"]["interruptions"]
+            assert strategies.enable_interruptions is (declared == "pipeline"), key

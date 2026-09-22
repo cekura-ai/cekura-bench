@@ -347,6 +347,12 @@
       "requested_preferences",
       "notes"
     ],
+    "completes_on": {
+      "zip_code": "zip_code",
+      "medicare_part_a_status": "has_medicare_part_a",
+      "medicare_part_b_status": "has_medicare_part_b",
+      "beneficiary_permission": "consent_id"
+    },
     "mock_data": [
       {
         "input": {

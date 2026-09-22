@@ -481,3 +481,125 @@ class TestDecliningDiffersFromAsserting:
         # Callers do say they are unsure of their Part B status, and the tables
         # hold a record for it, so it is an answer rather than a silence.
         assert self._qualify(has_medicare_part_b="unknown") != "exact"
+
+
+class TestAnIdentifierNamesItsRecord:
+    """A record id reaches an agent one way only: an earlier answer handed it over.
+
+    So it is not one field among many to be weighed against the rest. A row
+    holding a different one belongs to a different caller, and answering with it
+    hands that caller's identifiers to this one -- which the agent then carries
+    into every later call, failing each of them for a reason of ours.
+    """
+
+    @pytest.fixture
+    def medicare(self):
+        return MockToolServer("medicare")
+
+    # Every field naming the caller is right; one describing the call is not,
+    # and the scenario that authored it accepts more than one value there.
+    ONE_FIELD_APART = {
+        "consent_id": "perm_1017",
+        "caller_name": "Grace Thompson",
+        "callback_phone": "9165550194",
+        "state": "CA",
+        "zip_code": "95814",
+        "has_medicare_part_a": "yes",
+        "has_medicare_part_b": "yes",
+        "product_interest": "medicare_advantage",
+        "intake_intent": "new_shopping",
+    }
+
+    def test_the_record_the_identifier_names_is_the_one_answered(self, medicare):
+        assert medicare.call("save_medicare_qualification", self.ONE_FIELD_APART)["lead_id"] == "lead_2017"
+
+    def test_no_other_callers_record_can_be_reached(self, medicare):
+        """Nothing this call could disagree on may move it to another caller."""
+        for value in ("plan_review", "switching", "not_sure", ""):
+            answer = medicare.call("save_medicare_qualification", {**self.ONE_FIELD_APART, "intake_intent": value})
+            assert answer.get("lead_id") in {"lead_2017", None}, value
+
+    def test_an_identifier_no_record_holds_is_not_answered_from_a_neighbour(self, medicare):
+        answer = medicare.call("save_medicare_qualification", {**self.ONE_FIELD_APART, "consent_id": "perm_9999"})
+        assert "lead_id" not in answer
+
+
+class TestTheAnswerSaysWhatTheCallSaid:
+    """A row remembers a whole caller; a call carries what the agent gathered.
+
+    Returning the row unchanged answers with the part the agent never collected.
+    An agent repeating that downstream is then right for a reason it did not
+    earn, and the question it skipped stops being visible anywhere.
+    """
+
+    @pytest.fixture
+    def medicare(self):
+        return MockToolServer("medicare")
+
+    NEVER_ASKED_WHERE = {
+        "consent_id": "perm_1003",
+        "caller_name": "Patricia Lee",
+        "callback_phone": "2125550133",
+        "product_interest": "multiple",
+        "intake_intent": "new_shopping",
+        "has_medicare_part_a": "yes",
+        "has_medicare_part_b": "yes",
+    }
+
+    def test_a_field_the_call_never_carried_is_not_handed_back(self, medicare):
+        summary = medicare.call("save_medicare_qualification", self.NEVER_ASKED_WHERE)["safe_summary"]
+        assert "zip_code" not in summary and "state" not in summary
+
+    def test_a_field_the_call_carried_comes_back_as_the_call_had_it(self, medicare):
+        # Under whatever name the answer files it under: a summary renames as
+        # often as it repeats, and a rename would leak just as well.
+        summary = medicare.call("save_medicare_qualification", self.NEVER_ASKED_WHERE)["safe_summary"]
+        assert summary["intent"] == "new_shopping"
+        assert summary["product_interest"] == "multiple"
+
+    def test_what_the_record_computes_is_still_its_own(self, medicare):
+        answer = medicare.call("save_medicare_qualification", self.NEVER_ASKED_WHERE)
+        assert answer["lead_id"] == "lead_2004"
+
+
+class TestWhatIsMissingIsAFactAboutTheCall:
+    """The one path this contract has for recovering has to be reachable.
+
+    Saying what is absent is how an agent learns to go back and ask. Read off a
+    row, that message only ever fitted the call captured with it, so an agent
+    that left out something else was told nothing was missing -- and the harness
+    quietly finished the job the agent had not done.
+    """
+
+    @pytest.fixture
+    def medicare(self):
+        return MockToolServer("medicare")
+
+    def test_an_absent_field_is_named_whichever_record_answers(self, medicare):
+        for consent, caller in (("perm_1003", "Patricia Lee"), ("perm_1017", "Grace Thompson")):
+            answer = medicare.call("save_medicare_qualification", {
+                "consent_id": consent, "caller_name": caller, "callback_phone": "2125550133",
+                "product_interest": "multiple", "intake_intent": "new_shopping",
+                "has_medicare_part_a": "yes", "has_medicare_part_b": "yes",
+            })
+            assert answer["missing_fields"] == ["zip_code"], consent
+            assert answer["routing_ready"] is False, consent
+
+    def test_a_complete_call_is_not_told_to_go_back(self, medicare):
+        answer = medicare.call("save_medicare_qualification", {
+            "consent_id": "perm_1017", "caller_name": "Grace Thompson",
+            "callback_phone": "9165550194", "zip_code": "95814", "state": "CA",
+            "product_interest": "medicare_advantage", "intake_intent": "switching",
+            "has_medicare_part_a": "yes", "has_medicare_part_b": "yes",
+        })
+        assert answer["missing_fields"] == [] and answer["routing_ready"] is True
+
+    def test_every_name_it_can_report_is_one_the_agent_can_act_on(self, medicare):
+        """A gap named in words no argument matches is one nobody can close."""
+        import json as _json
+        tools = {t["name"]: t for t in _json.loads(
+            (medicare.root / medicare.suite / "mock-tools.json").read_text())}
+        schema = {d["name"]: d for d in medicare._definitions}
+        for name, tool in tools.items():
+            for need, argument in (tool.get("completes_on") or {}).items():
+                assert argument in (schema[name].get("parameters") or {}).get("properties", {}), f"{name}.{need}"

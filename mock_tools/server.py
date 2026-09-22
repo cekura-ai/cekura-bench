@@ -151,6 +151,56 @@ class ToolCallRecord:
         }
 
 
+_DROP = object()
+
+
+def _issued(wanted: dict[str, Any]) -> dict[str, Any]:
+    """The arguments this contract issued rather than the caller spoke.
+
+    A record id reaches an agent one way only: an earlier answer from this
+    table handed it over. So it is not one field among many to be weighed --
+    it names the record, and a row storing a different one is a different
+    caller's row however much else happens to agree.
+    """
+    return {key: value for key, value in wanted.items() if key.endswith("_id")}
+
+
+def _reflect(value: Any, by_name: dict[str, Any], by_value: dict[str, Any]) -> Any:
+    """Rewrite an answer so it says what the call said, not what the row holds.
+
+    A row remembers a whole caller. A call carries whatever the agent had
+    actually gathered, which on a call that skipped a question is less. Handing
+    the row back unchanged answers with the part the agent never collected, and
+    an agent that repeats it downstream is then right for a reason it did not
+    earn -- so the omission stops being visible anywhere.
+
+    Two ways a field of the row is recognised in the answer, because a summary
+    renames as often as it repeats: by the name it is stored under, and by the
+    value itself. The second is limited to text long enough to be a fact rather
+    than a flag, so that a ``true`` shared by an unrelated field is left alone.
+    """
+    if isinstance(value, dict):
+        kept = {}
+        for key, item in value.items():
+            answer = by_name.get(key, _MISSING)
+            if answer is _MISSING:
+                answer = _reflect(item, by_name, by_value)
+            if answer is not _DROP:
+                kept[key] = answer
+        return kept
+    if isinstance(value, list):
+        answers = [_reflect(item, by_name, by_value) for item in value]
+        return [answer for answer in answers if answer is not _DROP]
+    if isinstance(value, str) and len(value.strip()) >= 4:
+        answer = by_value.get(_normalize(value), _MISSING)
+        if answer is not _MISSING:
+            return answer
+    return value
+
+
+_MISSING = object()
+
+
 def _similarity(left: Any, right: Any) -> float:
     """How alike two argument values are, 0 to 100."""
     if _normalize(left) == _normalize(right):
@@ -280,6 +330,24 @@ class MockToolServer:
             for row in mock.get("mock_data", [])
         ]
 
+        # A record id names its row. Rows storing a different one are out of the
+        # running entirely, in both stages: answering across them hands one
+        # caller's identifiers to another, and an agent that carries those
+        # forward fails every later call for a reason of ours.
+        issued = _issued(wanted)
+        if issued:
+            eligible = [
+                (row, stored) for row, stored in rows
+                if all(_normalize(stored[key]) == _normalize(value)
+                       for key, value in issued.items() if key in stored)
+            ]
+            if len(eligible) < len(rows):
+                log.debug(
+                    "tool %s: %d of %d record(s) carry the id(s) the call named",
+                    name, len(eligible), len(rows),
+                )
+            rows = eligible
+
         best, best_shared = None, 0
         for row, stored in rows:
             shared = set(stored) & set(wanted)
@@ -289,7 +357,7 @@ class MockToolServer:
                 best, best_shared = row, len(shared)
         if best is not None:
             log.info("tool %s matched a record on %d field(s)", name, best_shared)
-            return self._record(name, arguments, best.get("output"), "exact")
+            return self._record(name, arguments, self._answer(name, best, wanted, arguments), "exact")
 
         nearest, best_score = None, -1.0
         for row, stored in rows:
@@ -307,10 +375,43 @@ class MockToolServer:
                 nearest, best_score = row, score
         if nearest is not None and best_score >= FUZZY_THRESHOLD:
             self._explain(name, wanted, rows, nearest, best_score)
-            return self._record(name, arguments, nearest.get("output"), "fuzzy")
+            return self._record(name, arguments, self._answer(name, nearest, wanted, arguments), "fuzzy")
 
         self._explain(name, wanted, rows, nearest, best_score)
         return self._record(name, arguments, {"result": "no_match"}, "none")
+
+    def _answer(self, name: str, row: dict, wanted: dict[str, Any],
+                arguments: dict[str, Any]) -> Any:
+        """The row's answer, told in terms of the call that reached it.
+
+        Anything the row remembers about a field the call did not carry is
+        dropped rather than returned, and ``missing_fields`` is worked out from
+        the call against the tool's own required list instead of being read off
+        the row. A row's list only ever described the call that was captured
+        with it, so an agent that left out something different was told nothing
+        was missing -- and the one path the contract has for recovering, saying
+        what is absent so the agent can go and ask, was unreachable.
+        """
+        output = row.get("output")
+        stored = row.get("input") or {}
+        by_name: dict[str, Any] = {}
+        by_value: dict[Any, Any] = {}
+        for key, value in stored.items():
+            answer = wanted.get(key, _DROP) if key not in arguments else arguments[key]
+            by_name[key] = answer
+            if isinstance(value, str) and len(value.strip()) >= 4:
+                by_value.setdefault(_normalize(value), answer)
+        answer = _reflect(output, by_name, by_value)
+        if isinstance(answer, dict) and "missing_fields" in answer:
+            completes = self._mocks[name].get("completes_on") or {}
+            absent = sorted(
+                need for need, argument in completes.items()
+                if (arguments or {}).get(argument) in (None, "", [])
+            )
+            answer["missing_fields"] = absent
+            if absent and "routing_ready" in answer:
+                answer["routing_ready"] = False
+        return answer
 
     def _explain(self, name, wanted, rows, nearest, score) -> None:
         """Name the fields that kept a call off the record it came closest to.

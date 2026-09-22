@@ -112,6 +112,12 @@ npm run benchmark -- --config benchmark.config.json --execute
 optional existing Cekura agent. `suite` is required and must be either
 `appointments` or `medicare`; each launch runs only that suite.
 
+Add `"scenarios": ["AS1", "AS12", "AS37"]` to run a named subset instead of the
+whole suite — a shakedown launch that only has to prove every field a board is
+scored from arrives. Codes, not ids, so what a run covered stays readable in the
+launch record; a code the catalog does not hold is an error rather than a silent
+omission.
+
 ## Optional provider setup
 
 The same command can create the target agent and launch the benchmark. Omit

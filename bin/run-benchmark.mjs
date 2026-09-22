@@ -226,14 +226,31 @@ function scenarioCode(scenario) {
   return String(scenario.name ?? "").match(/^(AS|MS)\d+\s*-/)?.[0] ?? null;
 }
 
+function scenarioNumber(scenario) {
+  return String(scenario.name ?? "").match(/^(AS|MS)\d+/)?.[0] ?? "";
+}
+
 const listed = await api(API_BASE_V1, `/scenarios/?agent_id=${config.catalogAgentId}&page_size=100`);
 const scenarios = (listed.results ?? listed)
   .filter((scenario) => scenarioCode(scenario))
   .sort((left, right) => String(left.name).localeCompare(String(right.name), undefined, { numeric: true }));
 const suitePrefix = config.suite === "appointments" ? "AS" : "MS";
-const suiteScenarios = scenarios.filter((scenario) => scenario.name.startsWith(suitePrefix));
+let suiteScenarios = scenarios.filter((scenario) => scenario.name.startsWith(suitePrefix));
 if (!suiteScenarios.length) {
   throw new Error(`Catalog does not contain ${suitePrefix} scenarios for suite: ${config.suite}`);
+}
+// A named subset, for a shakedown launch that only has to prove the pipe carries
+// every field a board is scored from. Codes, not ids: a code is stable across
+// catalogs and readable in the launch record, so what a small run covered stays
+// legible after the run id has aged out.
+if (config.scenarios?.length) {
+  const wanted = new Set(config.scenarios.map((code) => String(code).trim().toUpperCase()));
+  suiteScenarios = suiteScenarios.filter((scenario) => wanted.has(scenarioNumber(scenario)));
+  const found = new Set(suiteScenarios.map((scenario) => scenarioNumber(scenario)));
+  const missing = [...wanted].filter((code) => !found.has(code));
+  if (missing.length) {
+    throw new Error(`Catalog has no ${missing.join(", ")} for suite: ${config.suite}`);
+  }
 }
 
 const setupPayload = config.targetAgentId ? null : managedSetupPayload(config.agentSetup);
@@ -278,6 +295,7 @@ const plan = {
   suite: config.suite,
   transport: viaPipecat ? "pipecat" : "telephony",
   suite_scenarios: suiteScenarios.length,
+  ...(config.scenarios?.length ? { scenario_subset: suiteScenarios.map(scenarioNumber) } : {}),
   ...(setupPayload ? { agent_setup: redact(setupPayload) } : {}),
   ...(provisioned ? { agent_setup_result: redact(provisioned.result) } : {}),
   payload,

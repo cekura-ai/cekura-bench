@@ -601,6 +601,16 @@ class Provider:
     # and the record says so, because a row whose turns were decided locally is
     # not measuring the same thing as one whose were not.
     turns: str = "provider"
+    # Whether a caller talking over the agent is this pipeline's business.
+    #
+    # Usually it is: the agent is stopped here and the service is told the reply
+    # was cut short. One of these services handles it inside the model instead,
+    # announces that it broadcasts no interruption of its own, and asks the
+    # pipeline not to broadcast one either -- so a client-side interruption
+    # there cuts work the model was going to carry on with, and the row would be
+    # reporting this pipeline's barge-in rather than the service's. A service
+    # that asks for this is taken at its word.
+    interruptions: bool = True
 
 
 # Whether the caller's own words reach the record is a per-provider decision,
@@ -648,6 +658,7 @@ PROVIDERS: dict[str, Provider] = {
         _gpt_live, 24000, "gpt-live-1", "marin", ("OPENAI_API_KEY",),
         "pipecat.services.openai.live.llm",
         discloses=lambda settings: {"s2s_backend_model": backend_model(settings)},
+        interruptions=False,
     ),
     # Nova Sonic listens at 16 kHz and speaks at 24 kHz. The pipeline runs at the
     # input rate and the service resamples its own output.
@@ -1554,7 +1565,9 @@ class BenchVAD(SileroVADAnalyzer):
         return await super().analyze_audio(buffer)
 
 
-def user_aggregator_params(realtime: bool, turns: str = "provider") -> LLMUserAggregatorParams:
+def user_aggregator_params(
+    realtime: bool, turns: str = "provider", interruptions: bool = True
+) -> LLMUserAggregatorParams:
     """Parameters for the half of the context that holds what the caller said.
 
     Two separate things are being arranged here, and both were missing.
@@ -1597,9 +1610,14 @@ def user_aggregator_params(realtime: bool, turns: str = "provider") -> LLMUserAg
         # Cascade rows leave this unset on purpose. Their speech-to-text service
         # recommends its own strategies when it announces itself, and naming
         # strategies here would override that recommendation.
+        # Naming strategies here discards whatever the service recommends, so
+        # what it recommends has to be carried rather than lost: a service that
+        # handles being talked over inside the model asks for no interruption to
+        # be broadcast, and gets that here.
         user_turn_strategies=(
             None if not realtime
-            else ExternalUserTurnStrategies() if turns == "provider"
+            else ExternalUserTurnStrategies(enable_interruptions=interruptions)
+            if turns == "provider"
             else UserTurnStrategies()
         ),
     )
@@ -1674,7 +1692,9 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         aggregators = LLMContextAggregatorPair(
             context,
             realtime_service_mode=True,
-            user_params=user_aggregator_params(realtime=True, turns=provider.turns),
+            user_params=user_aggregator_params(
+                realtime=True, turns=provider.turns, interruptions=provider.interruptions
+            ),
         )
         # No separate speech-to-text or text-to-speech: the realtime model is the
         # whole agent, so the pipeline is the transport, the context and the model.

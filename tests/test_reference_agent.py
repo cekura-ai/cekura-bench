@@ -12,7 +12,6 @@ dependency-free.
 
 from __future__ import annotations
 
-import asyncio
 import os
 import sys
 from pathlib import Path
@@ -1584,27 +1583,29 @@ class TestEveryRowIsCheckedWhetherOrNotItLooksWrong:
         fresh.caller_turns, fresh.agent_turns = 4, 4
         assert "audio_in_drift_ms" not in fresh.integrity()
 
+    @staticmethod
+    def _clock(ticks: list[float]) -> "bot.AudioClock":
+        stamps = iter(ticks)
+        return bot.AudioClock(now=lambda: next(stamps))
+
     def test_the_tail_after_the_caller_stops_is_not_missing_caller_audio(self):
         """A call ends with the agent talking, tools finishing and the transport
-        closing. Caller audio has rightly stopped by then, so any reading taken
-        at the end would report the whole tail as audio that never arrived."""
-        ticks = iter([0.0, 1.0, 2.0, 3.0])
-        clock = bot.AudioClock(now=lambda: next(ticks))
+        closing. Caller audio has rightly stopped by then, so a reading taken at
+        the end would report the whole tail as audio that never arrived."""
+        clock = self._clock([0.0, 0.02, 0.04])
         for _ in range(3):
-            clock.add(1.0)
+            clock.add(0.02)
         narrator = bot.CallNarrator(clock)
         narrator.caller_turns, narrator.agent_turns = 4, 4
-        # Ten seconds of agent speech and shutdown follow the last caller buffer.
+        # No clock is read after the last buffer, so no tail can enter the figure.
         assert narrator.integrity()["checks"] == ["ok"]
 
     def test_audio_missing_while_the_caller_is_still_speaking_is_still_named(self):
-        """The counterpart: the gap that opens between two caller buffers is the
-        one worth reporting, and freezing the reading must not hide it."""
-        ticks = iter([0.0, 1.0, 8.0])
-        clock = bot.AudioClock(now=lambda: next(ticks))
-        clock.add(1.0)
-        clock.add(1.0)
-        clock.add(1.0)  # five seconds late
+        """The counterpart: a gap that opens between two caller buffers is the one
+        worth reporting, and taking the reading early must not hide it."""
+        clock = self._clock([0.0, 1.0, 8.0])
+        for _ in range(3):
+            clock.add(1.0)  # the third buffer is five seconds late
         narrator = bot.CallNarrator(clock)
         narrator.caller_turns, narrator.agent_turns = 4, 4
         report = narrator.integrity()
@@ -1627,51 +1628,69 @@ class TestAToolResultReachesTheModelThatAskedForIt:
     the agent while that push is waiting must not cost the model the answer."""
 
     @staticmethod
-    def _aggregator():
+    def _assistant(realtime: bool = True):
         from pipecat.processors.aggregators.llm_context import LLMContext
 
-        return bot.BenchAggregators(LLMContext([]), realtime_service_mode=True).assistant()
+        return bot.BenchAggregators(LLMContext([]), realtime_service_mode=realtime).assistant()
 
-    def test_a_barge_in_does_not_clear_a_result_waiting_to_be_delivered(self):
-        assistant = self._aggregator()
+    @staticmethod
+    async def _pushes_on_turn_end(assistant, waiting: bool) -> list:
+        """Where the assistant's context frames go when a caller's turn ends."""
+        from pipecat.frames.frames import UserStoppedSpeakingFrame
+        from pipecat.processors.frame_processor import FrameDirection
+
+        pushed: list = []
+
+        async def record(direction=None):
+            pushed.append(direction)
+
+        assistant.push_context_frame = record
+        assistant._push_context_on_bot_stopped_speaking = waiting
+        await assistant.process_frame(UserStoppedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+        return pushed
+
+    async def test_a_barge_in_does_not_clear_a_result_waiting_to_be_delivered(self):
+        assistant = self._assistant()
         assistant._push_context_on_bot_stopped_speaking = True
-        asyncio.run(assistant.reset())
+        await assistant.reset()
         assert assistant._push_context_on_bot_stopped_speaking is True
 
-    def test_the_waiting_result_is_delivered_once_the_caller_stops(self):
-        from pipecat.frames.frames import UserStoppedSpeakingFrame
+    @pytest.mark.parametrize("waiting, delivered", [(True, 1), (False, 0)])
+    async def test_a_waiting_result_is_delivered_when_the_turn_ends(self, waiting, delivered):
         from pipecat.processors.frame_processor import FrameDirection
 
-        assistant = self._aggregator()
-        pushed = []
+        pushed = await self._pushes_on_turn_end(self._assistant(), waiting)
+        assert pushed == [FrameDirection.UPSTREAM] * delivered
 
-        async def record(direction=None):
-            pushed.append(direction)
+    async def test_a_cascade_row_leaves_the_delivery_to_the_half_that_owns_it(self):
+        """There the user half pushes the context at turn end regardless, so a
+        second push here would answer the same turn twice."""
+        assert await self._pushes_on_turn_end(self._assistant(realtime=False), True) == []
 
-        assistant.push_context_frame = record
+    async def test_the_framework_still_needs_this(self):
+        """The one test that should fail on a framework upgrade.
 
-        async def drive():
-            assistant._push_context_on_bot_stopped_speaking = True
-            await assistant.process_frame(UserStoppedSpeakingFrame(), FrameDirection.DOWNSTREAM)
-
-        asyncio.run(drive())
-        assert pushed == [FrameDirection.UPSTREAM]
-
-    def test_a_turn_with_nothing_waiting_pushes_nothing(self):
-        from pipecat.frames.frames import UserStoppedSpeakingFrame
-        from pipecat.processors.frame_processor import FrameDirection
-
-        assistant = self._aggregator()
-        pushed = []
-
-        async def record(direction=None):
-            pushed.append(direction)
-
-        assistant.push_context_frame = record
-        asyncio.run(
-            assistant.process_frame(UserStoppedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+        This works around a defect: the stock aggregator clears a pending push
+        when the caller interrupts, and never retries it. If that stops being
+        true the workaround is not merely unnecessary, it pushes a second time
+        and the row records an answer the caller never prompted -- so this
+        asserts the defect is still there, and fails loudly when it is not."""
+        from pipecat.processors.aggregators.llm_context import LLMContext
+        from pipecat.processors.aggregators.llm_response_universal import (
+            LLMContextAggregatorPair,
         )
-        assert pushed == []
+
+        stock = LLMContextAggregatorPair(LLMContext([]), realtime_service_mode=True).assistant()
+        stock._push_context_on_bot_stopped_speaking = True
+        await stock.reset()
+        assert stock._push_context_on_bot_stopped_speaking is False, (
+            "the framework now keeps a pending context push across an interruption; "
+            "delete DeliversToolResults and BenchAggregators"
+        )
+        assert await self._pushes_on_turn_end(stock, True) == [], (
+            "the framework now delivers a deferred push when the caller's turn ends; "
+            "delete DeliversToolResults and BenchAggregators"
+        )
 
 
 class TestARowSaysWhereItDiffersFromTheOthers:

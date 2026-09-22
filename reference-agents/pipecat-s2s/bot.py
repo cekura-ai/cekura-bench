@@ -97,7 +97,6 @@ from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.aggregators.llm_response_universal import (
     LLMAssistantAggregator,
-    LLMAssistantAggregatorParams,
     LLMContextAggregatorPair,
     LLMUserAggregatorParams,
 )
@@ -1668,13 +1667,10 @@ class AudioClock:
     explains, so it is counted on every row rather than looked for after a row
     disappoints.
 
-    The comparison is made when audio arrives and not when it is asked for.
-    Caller audio stops before a call is finalised -- the agent is still
-    speaking, tools are still completing, the transport is still closing --
-    and wall time keeps running through all of it. Reading the two numbers at
-    the end would therefore count that ordinary tail as caller audio that never
-    came. Sampling on arrival keeps a gap that opened while the caller was
-    still being heard, which is the only gap that means anything.
+    The figure is taken as each buffer arrives rather than when it is read.
+    Caller audio stops before a call finishes -- the agent is still speaking,
+    tools are still completing, the transport is still closing -- so a reading
+    taken at the end would count that ordinary tail as audio that never came.
 
     One call at a time runs in a worker, so one accumulator is enough; it is
     reset when a call starts.
@@ -1685,20 +1681,17 @@ class AudioClock:
         self.reset()
 
     def reset(self) -> None:
-        self._began: float | None = None
-        self._audio = 0.0
+        self._last: float | None = None
         self._drift: float | None = None
 
     def add(self, seconds: float) -> None:
         now = self._now()
-        if self._began is None:
-            self._began = now
-        self._audio += seconds
-        self._drift = self._audio - (now - self._began)
+        elapsed = 0.0 if self._last is None else now - self._last
+        self._drift = (self._drift or 0.0) + seconds - elapsed
+        self._last = now
 
     def drift(self) -> float | None:
-        """Audio received minus wall time elapsed, in seconds, as of the last
-        buffer. None before any audio arrived."""
+        """Audio received minus wall time elapsed, as of the last buffer."""
         return self._drift
 
 
@@ -1731,32 +1724,38 @@ class BenchVAD(SileroVADAnalyzer):
 class DeliversToolResults(LLMAssistantAggregator):
     """Keeps a tool result from being lost to a barge-in.
 
-    A model is told what a tool returned by the context frame the aggregator
-    pushes, not by the result frame itself -- for a realtime service that push is
-    the only delivery there is. The push waits while the agent is speaking, and
-    is then skipped if the caller has started talking over it, which is exactly
-    when a tool that the agent narrated is most likely to finish. The result is
-    dropped and never retried, so the model asks for the same tool again on the
-    next turn, with the same arguments, for the rest of the call.
+    A realtime service is told what a tool returned by the context frame this
+    aggregator pushes, and by nothing else. That push waits while the agent is
+    speaking -- which is when a tool the agent narrated is most likely to finish
+    -- and is then skipped if the caller has begun talking over it. Dropped and
+    never retried, so the model asks for the same tool again on the next turn,
+    with the same arguments, for the rest of the call.
 
-    The pending push is kept here rather than cleared, and made once the caller
-    has stopped speaking and the turn can carry it.
+    The pending push is kept through the interruption and made once the caller's
+    turn is over.
     """
 
     async def reset(self):
-        # An interruption resets the aggregation, which is right for everything
-        # else it holds; a result the model has not been told about is not
-        # aggregation state and does not belong in that sweep.
+        # A result the model has not been told about is not aggregation state,
+        # so it does not belong in the sweep an interruption performs.
         pending = self._push_context_on_bot_stopped_speaking
         await super().reset()
         self._push_context_on_bot_stopped_speaking = pending
 
     async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
         await super().process_frame(frame, direction)
-        # By now the base class has cleared its own user-speaking flag, so the
-        # push it declined to make while the caller was talking can be made.
-        if isinstance(frame, UserStoppedSpeakingFrame) and self._push_context_on_bot_stopped_speaking:
-            logger.debug("a tool result outlived the turn it arrived in; delivering it now")
+        # Realtime rows only. A cascade row re-runs inference from the context on
+        # the user half's own turn-end push, which carries the result anyway;
+        # pushing again there would answer the same turn twice.
+        if (
+            self._push_context_on_bot_stopped_speaking
+            and self._realtime_service_mode
+            and isinstance(frame, UserStoppedSpeakingFrame)
+        ):
+            logger.debug(
+                "tool result outlived the turn it arrived in; delivering a context of "
+                "{} message(s) now the caller has stopped", len(self._context.get_messages())
+            )
             await self.push_context_frame(FrameDirection.UPSTREAM)
 
 
@@ -1765,10 +1764,13 @@ class BenchAggregators(LLMContextAggregatorPair):
 
     def __init__(self, context: LLMContext, **kwargs) -> None:
         super().__init__(context, **kwargs)
+        # Built from what the pair already resolved rather than from the raw
+        # arguments, so any normalising it does is not quietly lost here.
+        built = self._assistant
         self._assistant = DeliversToolResults(
             context,
-            params=kwargs.get("assistant_params") or LLMAssistantAggregatorParams(),
-            _realtime_service_mode=kwargs.get("realtime_service_mode"),
+            params=built._params,
+            _realtime_service_mode=built._realtime_service_mode,
             _paired_user_aggregator=self._user,
         )
 

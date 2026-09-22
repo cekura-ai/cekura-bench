@@ -84,7 +84,7 @@ from pipecat.services.llm_service import FunctionCallParams, LLMService
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.daily.transport import DailyParams
 from pipecat.transports.websocket.fastapi import FastAPIWebsocketParams
-from pipecat.turns.user_turn_strategies import ExternalUserTurnStrategies
+from pipecat.turns.user_turn_strategies import ExternalUserTurnStrategies, UserTurnStrategies
 
 # The mock-tool contract is shared with the service bench rather than reimplemented here.
 # Two implementations of one contract would drift, and a difference between lanes
@@ -386,6 +386,16 @@ class Provider:
     # place, is not comparable with one that does not unless it says so -- and
     # declaring it here is what stops a sixth provider being added without it.
     discloses: Callable[["Settings"], dict[str, str]] = lambda _settings: {}
+    # Where the caller's turn boundary comes from. Most of these services decide
+    # it on their own server and announce it, and that announcement is what the
+    # pipeline should follow -- provider endpointing is part of what a row
+    # measures. Three of them announce nothing at all: their API exposes an
+    # interruption event and no turn start or end, so a pipeline that keeps a
+    # conversation context has to find the boundary itself. Those rows run the
+    # framework's own recommended arrangement, a local detector deciding turns,
+    # and the record says so, because a row whose turns were decided locally is
+    # not measuring the same thing as one whose were not.
+    turns: str = "provider"
 
 
 # Whether the caller's own words reach the record is a per-provider decision,
@@ -421,6 +431,7 @@ PROVIDERS: dict[str, Provider] = {
     "gemini-live": Provider(
         _gemini, 16000, "models/gemini-2.5-flash-native-audio-preview-12-2025", "Charon",
         ("GEMINI_API_KEY", "GEMINI_AUTHORIZATION"), "pipecat.services.google.gemini_live.llm",
+        turns="local",
     ),
     "grok-realtime": Provider(
         _grok, 16000, "grok-voice-latest", "eve", ("XAI_API_KEY",),
@@ -439,6 +450,7 @@ PROVIDERS: dict[str, Provider] = {
         _nova_sonic, 16000, "amazon.nova-2-sonic-v1:0", "matthew", ("AWS_ACCESS_KEY_ID",),
         "pipecat.services.aws.nova_sonic.llm",
         discloses=lambda settings: {"aws_region": aws_region(settings)},
+        turns="local",
     ),
     # Qwen listens at 16 kHz and speaks at 24 kHz, and no framework service
     # exists for it -- see ``qwen_realtime``.
@@ -446,6 +458,7 @@ PROVIDERS: dict[str, Provider] = {
         _qwen_realtime, 16000, "qwen3-omni-flash-realtime", "Ethan", ("DASHSCOPE_API_KEY",),
         "qwen_realtime",
         discloses=lambda settings: {"qwen_region": qwen_region(settings)},
+        turns="local",
     ),
 }
 
@@ -918,6 +931,11 @@ def build_record(provider_key: str, provider: "Provider", model: str, voice: str
         # field that went unrecorded.
         **provider.discloses(settings),
         "pipeline_sample_rate": provider.input_rate,
+        # Who decided where the caller's turns ended. Three of these services
+        # announce no turn boundary at all, so those rows run a local detector
+        # instead -- a real configuration difference, and one a reader comparing
+        # two rows has to be able to see.
+        "turn_source": provider.turns,
         "config": provider_key,
     }
 
@@ -1010,7 +1028,7 @@ class BenchVAD(SileroVADAnalyzer):
         return await super().analyze_audio(buffer)
 
 
-def user_aggregator_params(realtime: bool) -> LLMUserAggregatorParams:
+def user_aggregator_params(realtime: bool, turns: str = "provider") -> LLMUserAggregatorParams:
     """Parameters for the half of the context that holds what the caller said.
 
     Two separate things are being arranged here, and both were missing.
@@ -1037,10 +1055,27 @@ def user_aggregator_params(realtime: bool) -> LLMUserAggregatorParams:
         # Same detector, same settings, every row: an instrument that varied by
         # provider would put its own variance into the column it is measuring.
         vad_analyzer=BenchVAD(),
+        # Three cases, not two.
+        #
+        # A realtime service that announces its turn boundary: follow it, so the
+        # provider's own endpointing is the authority, which is what the row is
+        # measuring.
+        #
+        # A realtime service that announces nothing -- its API has an
+        # interruption event and no turn start or end -- cannot be followed. The
+        # framework's own guidance for a pipeline like this one, which keeps a
+        # conversation context, is a local detector driving the default
+        # strategies, so that is what those rows run. It is a real difference
+        # between rows and the record names it rather than hiding it.
+        #
         # Cascade rows leave this unset on purpose. Their speech-to-text service
         # recommends its own strategies when it announces itself, and naming
         # strategies here would override that recommendation.
-        user_turn_strategies=ExternalUserTurnStrategies() if realtime else None,
+        user_turn_strategies=(
+            None if not realtime
+            else ExternalUserTurnStrategies() if turns == "provider"
+            else UserTurnStrategies()
+        ),
     )
 
 
@@ -1097,7 +1132,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         aggregators = LLMContextAggregatorPair(
             context,
             realtime_service_mode=True,
-            user_params=user_aggregator_params(realtime=True),
+            user_params=user_aggregator_params(realtime=True, turns=provider.turns),
         )
         # No separate speech-to-text or text-to-speech: the realtime model is the
         # whole agent, so the pipeline is the transport, the context and the model.
@@ -1307,6 +1342,13 @@ def warm() -> None:
         BenchVAD()
     except Exception as exc:  # noqa: BLE001 -- run_bot builds the real one and will raise in context
         logger.warning("could not warm the speech detector: {}", exc)
+
+    # The rows whose turns are decided locally load a turn model as well, and it
+    # loads on the first call that needs it unless it is built here.
+    try:
+        UserTurnStrategies()
+    except Exception as exc:  # noqa: BLE001 -- the row that needs it will raise in context
+        logger.warning("could not warm the turn detector: {}", exc)
 
 
 async def bot(runner_args: RunnerArguments) -> None:

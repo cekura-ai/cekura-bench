@@ -835,3 +835,52 @@ class TestTheRecordDoesNotDependOnAGoodbye:
         source = (AGENT_DIR / "bot.py").read_text()
         assert "trace.on_change = publish" in source
         assert source.index("def publish") < source.index("trace.on_change = publish")
+
+
+class TestWhoDecidesTheCallersTurns:
+    """Not every realtime service announces a turn boundary, and three do not.
+
+    Their API exposes an interruption event and no turn start or end. Following
+    an announcement that never comes leaves a pipeline that keeps a conversation
+    context with no turn boundary at all: the transcript still arrives, so the
+    run looks ordinary, but a caller who speaks across the end of the agent's
+    reply can go unanswered. Those rows run a local detector instead, which the
+    framework's own guidance prescribes for exactly this case.
+    """
+
+    SILENT = ("gemini-live", "nova-sonic", "qwen-realtime")
+
+    def test_the_services_that_announce_nothing_are_marked(self):
+        for name in self.SILENT:
+            assert bot.PROVIDERS[name].turns == "local", name
+
+    def test_every_other_service_is_followed(self):
+        for name, provider in bot.PROVIDERS.items():
+            if name not in self.SILENT:
+                assert provider.turns == "provider", name
+
+    def test_an_announced_boundary_is_followed(self):
+        from pipecat.turns.user_turn_strategies import ExternalUserTurnStrategies
+
+        params = bot.user_aggregator_params(realtime=True, turns="provider")
+        assert isinstance(params.user_turn_strategies, ExternalUserTurnStrategies)
+
+    def test_a_silent_service_gets_a_local_detector(self):
+        from pipecat.turns.user_turn_strategies import ExternalUserTurnStrategies
+
+        params = bot.user_aggregator_params(realtime=True, turns="local")
+        assert params.user_turn_strategies is not None
+        assert not isinstance(params.user_turn_strategies, ExternalUserTurnStrategies)
+        assert params.user_turn_strategies.stop, "a local row needs something to end a turn"
+
+    def test_a_cascade_is_unaffected(self):
+        assert bot.user_aggregator_params(realtime=False, turns="local").user_turn_strategies is None
+
+    def test_the_record_says_which_it_was(self):
+        # Two rows whose turns were decided by different things are not
+        # measuring the same thing, and a reader has to be able to see it.
+        record = bot.build_record(
+            "gemini-live", bot.PROVIDERS["gemini-live"], "m", "v",
+            bot.MockToolServer(suite="appointments"), asked(),
+        )
+        assert record["turn_source"] == "local"

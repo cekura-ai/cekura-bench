@@ -1068,6 +1068,55 @@ class CallNarrator(BaseObserver):
         self.barge_ins = 0
         self.errors = 0
         self._agent_speaking = False
+        self.replies: list[float] = []
+        self.endpointing: list[float] = []
+        self._heard_stop: float | None = None
+        self._turn_closed: float | None = None
+
+    def timing(self) -> dict[str, Any]:
+        """How long the agent took to answer, and how much of that was endpointing.
+
+        ``reply`` runs from the moment our own detector hears the caller stop to
+        the first audible agent audio. The detector is the same one on every row,
+        which is what makes the figure comparable: a service that decides a turn
+        is over on its own schedule is measured from the same instant as one whose
+        turns this pipeline decides.
+
+        ``endpointing`` is the part of that interval spent waiting for the turn to
+        be declared over -- detector stop to turn close. A service can be quick to
+        generate and slow to commit, and those are different findings, so it is
+        reported beside the total rather than folded into it.
+
+        Read it against ``turn_source``. Where a service announces its own turns
+        this measures that service's endpointing; where it does not, it measures
+        this pipeline's, which is the same detector on every such row. The two
+        groups are not comparable on this column, and the column exists so that
+        the difference is visible rather than buried in the reply figure.
+
+        Both are detector-derived and belong to this bench only. A figure anchored
+        on authored audio, where the caller's last sample is known exactly rather
+        than detected, is a different and better instrument.
+        """
+        def spread(values: list[float]) -> dict[str, float] | None:
+            if not values:
+                return None
+            ordered = sorted(values)
+            def at(q: float) -> float:
+                return ordered[min(len(ordered) - 1, int(q * len(ordered)))]
+            return {
+                "count": len(ordered),
+                "p50_ms": round(at(0.5) * 1000),
+                "p90_ms": round(at(0.9) * 1000),
+                "max_ms": round(ordered[-1] * 1000),
+            }
+
+        timing: dict[str, Any] = {}
+        reply, endpointing = spread(self.replies), spread(self.endpointing)
+        if reply:
+            timing["reply"] = reply
+        if endpointing:
+            timing["endpointing"] = endpointing
+        return timing
 
     def _first_sighting(self, frame: Frame) -> bool:
         """False for a frame already narrated, or for the sibling of one."""
@@ -1101,12 +1150,23 @@ class CallNarrator(BaseObserver):
         if isinstance(frame, VADUserStartedSpeakingFrame):
             logger.debug("detector: caller speech starts")
         elif isinstance(frame, VADUserStoppedSpeakingFrame):
+            # The anchor. A later stop replaces an earlier one, so a caller who
+            # pauses mid-turn is measured from when they actually finished.
+            self._heard_stop = time.monotonic()
+            self._turn_closed = None
             logger.debug("detector: caller speech stops")
         elif isinstance(frame, UserStartedSpeakingFrame):
             self.caller_turns += 1
             logger.info("caller turn {} starts", self.caller_turns)
         elif isinstance(frame, UserStoppedSpeakingFrame):
-            logger.info("caller turn {} ends", self.caller_turns)
+            if self._heard_stop is not None:
+                self._turn_closed = time.monotonic()
+                waited = self._turn_closed - self._heard_stop
+                self.endpointing.append(waited)
+                logger.info("caller turn {} ends ({:.0f} ms after the detector heard it stop)",
+                            self.caller_turns, waited * 1000)
+            else:
+                logger.info("caller turn {} ends", self.caller_turns)
         elif isinstance(frame, TranscriptionFrame):
             logger.info("caller transcript: {}", _short(frame.text))
         elif isinstance(frame, LLMFullResponseStartFrame):
@@ -1115,8 +1175,17 @@ class CallNarrator(BaseObserver):
         elif isinstance(frame, LLMFullResponseEndFrame):
             logger.info("agent response {} ends", self.agent_turns)
         elif isinstance(frame, BotStartedSpeakingFrame):
+            # Only the first audio of a reply is a reply: once the agent is
+            # speaking, later starts belong to the same turn. A greeting has no
+            # caller stop before it and is not timed.
+            if not self._agent_speaking and self._heard_stop is not None:
+                answered = time.monotonic() - self._heard_stop
+                self.replies.append(answered)
+                self._heard_stop = None
+                logger.info("agent audio starts ({:.0f} ms after the caller stopped)", answered * 1000)
+            else:
+                logger.info("agent audio starts")
             self._agent_speaking = True
-            logger.info("agent audio starts")
         elif isinstance(frame, BotStoppedSpeakingFrame):
             self._agent_speaking = False
             logger.info("agent audio stops")
@@ -1624,7 +1693,11 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         if tracer is None:
             return
         try:
-            tracer.set_custom_metadata({**record, **trace.as_metadata(), **meter.as_metadata()})
+            timing = narrator.timing()
+            tracer.set_custom_metadata({
+                **record, **trace.as_metadata(), **meter.as_metadata(),
+                **({"timing": timing} if timing else {}),
+            })
         except Exception as exc:  # noqa: BLE001 -- never fail a call over a record
             logger.warning("could not update the run record: {}", exc)
 
@@ -1634,12 +1707,14 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         """The one line to read first when a result looks wrong."""
         usage = meter.as_metadata()["usage"]
         tools = trace.as_metadata()
+        reply = narrator.timing().get("reply")
         logger.info(
             "call summary: {:.0f}s, caller turns {}, agent responses {}, barge-ins {}, "
-            "tools {} ({} exact), errors {}, usage reports {}, log lines {}{}",
+            "tools {} ({} exact), errors {}, usage reports {}, log lines {}{}{}",
             usage["call_seconds"], narrator.caller_turns, narrator.agent_turns, narrator.barge_ins,
             tools["tool_call_count"], tools["tool_calls_matched"], narrator.errors, usage["usage_reports"],
             len(call_log.lines), f" (+{call_log.dropped} dropped)" if call_log.dropped else "",
+            f", reply p50 {reply['p50_ms']} ms / p90 {reply['p90_ms']} ms over {reply['count']}" if reply else "",
         )
 
     if tracer is not None:

@@ -252,6 +252,7 @@ def checks_for(payload: dict) -> tuple[list[tuple[str, bool, str]], dict, list, 
         key for key in ("input_audio_tokens", "output_audio_tokens", "live_audio_seconds") if key in usage
     )
     debug = sum(1 for line in logs if line.get("level") == "DEBUG")
+    reply = (meta.get("timing") or {}).get("reply") or {}
 
     checks = [
         ("caller turns in the transcript", len(users) > 0, f"{len(users)}"),
@@ -269,6 +270,9 @@ def checks_for(payload: dict) -> tuple[list[tuple[str, bool, str]], dict, list, 
         # comparison. A cascade is billed by seconds and characters instead.
         ("usage can be priced beside the other rows",
          meta.get("stack") != "native" or bool(priceable), priceable or "totals only: the speech half is not separable"),
+        ("reply latency was measured", bool(reply),
+         f"p50 {reply['p50_ms']} ms, p90 {reply['p90_ms']} ms over {reply['count']} reply(s)"
+         if reply else "no reply interval recorded"),
         ("log lines carry the call clock", bool(logs) and stamped == len(logs), f"{stamped}/{len(logs)}"),
         ("log includes the framework's DEBUG lines", debug > 0, f"{debug} DEBUG of {len(logs)}"),
     ]

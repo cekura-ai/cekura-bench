@@ -1456,3 +1456,35 @@ class TestTheMiddleOutcomeSurvivesTheExport:
 
     def test_an_outright_match_still_says_exact(self):
         assert self._trace()[1]["resolution"] == "exact"
+
+
+class TestHowLongTheAgentTookToAnswer:
+    """Timed from our own detector hearing the caller stop, because that instant
+    is the same on every row -- a service that decides its own turns is measured
+    from where a service whose turns this pipeline decides is measured."""
+
+    @staticmethod
+    def _narrator():
+        import bot
+
+        return bot.CallNarrator()
+
+    def test_a_greeting_is_not_a_reply(self):
+        narrator = self._narrator()
+        narrator._agent_speaking = False
+        assert narrator.timing() == {}
+
+    def test_the_interval_is_reported_with_its_spread(self):
+        narrator = self._narrator()
+        narrator.replies = [0.4, 0.9, 1.1, 3.0]
+        reply = narrator.timing()["reply"]
+        assert (reply["count"], reply["p50_ms"], reply["max_ms"]) == (4, 1100, 3000)
+
+    def test_endpointing_is_reported_beside_it_not_inside_it(self):
+        narrator = self._narrator()
+        narrator.replies, narrator.endpointing = [1.0], [0.6]
+        timing = narrator.timing()
+        assert timing["reply"]["p50_ms"] == 1000 and timing["endpointing"]["p50_ms"] == 600
+
+    def test_a_call_with_no_reply_exports_nothing_rather_than_zero(self):
+        assert "reply" not in self._narrator().timing()

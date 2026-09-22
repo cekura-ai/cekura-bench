@@ -96,6 +96,8 @@ from pipecat.pipeline.task import PipelineParams, PipelineTask
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.aggregators.llm_response_universal import (
+    LLMAssistantAggregator,
+    LLMAssistantAggregatorParams,
     LLMContextAggregatorPair,
     LLMUserAggregatorParams,
 )
@@ -1726,6 +1728,51 @@ class BenchVAD(SileroVADAnalyzer):
         return await super().analyze_audio(buffer)
 
 
+class DeliversToolResults(LLMAssistantAggregator):
+    """Keeps a tool result from being lost to a barge-in.
+
+    A model is told what a tool returned by the context frame the aggregator
+    pushes, not by the result frame itself -- for a realtime service that push is
+    the only delivery there is. The push waits while the agent is speaking, and
+    is then skipped if the caller has started talking over it, which is exactly
+    when a tool that the agent narrated is most likely to finish. The result is
+    dropped and never retried, so the model asks for the same tool again on the
+    next turn, with the same arguments, for the rest of the call.
+
+    The pending push is kept here rather than cleared, and made once the caller
+    has stopped speaking and the turn can carry it.
+    """
+
+    async def reset(self):
+        # An interruption resets the aggregation, which is right for everything
+        # else it holds; a result the model has not been told about is not
+        # aggregation state and does not belong in that sweep.
+        pending = self._push_context_on_bot_stopped_speaking
+        await super().reset()
+        self._push_context_on_bot_stopped_speaking = pending
+
+    async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
+        await super().process_frame(frame, direction)
+        # By now the base class has cleared its own user-speaking flag, so the
+        # push it declined to make while the caller was talking can be made.
+        if isinstance(frame, UserStoppedSpeakingFrame) and self._push_context_on_bot_stopped_speaking:
+            logger.debug("a tool result outlived the turn it arrived in; delivering it now")
+            await self.push_context_frame(FrameDirection.UPSTREAM)
+
+
+class BenchAggregators(LLMContextAggregatorPair):
+    """The framework's pair, with an assistant half that delivers tool results."""
+
+    def __init__(self, context: LLMContext, **kwargs) -> None:
+        super().__init__(context, **kwargs)
+        self._assistant = DeliversToolResults(
+            context,
+            params=kwargs.get("assistant_params") or LLMAssistantAggregatorParams(),
+            _realtime_service_mode=kwargs.get("realtime_service_mode"),
+            _paired_user_aggregator=self._user,
+        )
+
+
 def user_aggregator_params(
     realtime: bool, turns: str = "provider", interruptions: bool = True
 ) -> LLMUserAggregatorParams:
@@ -1823,7 +1870,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
             [{"role": "system", "content": server.system_prompt}, *opening_messages(server.first_message)],
             tools=build_tools(server),
         )
-        aggregators = LLMContextAggregatorPair(
+        aggregators = BenchAggregators(
             context, user_params=user_aggregator_params(realtime=False)
         )
         # Three services where the native path has one. Everything either side of
@@ -1851,7 +1898,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         llm = provider.build(credential, model, voice, server.system_prompt, settings)
         register_tools(llm, server, trace)
         context = LLMContext(opening_messages(server.first_message), tools=build_tools(server))
-        aggregators = LLMContextAggregatorPair(
+        aggregators = BenchAggregators(
             context,
             realtime_service_mode=True,
             user_params=user_aggregator_params(

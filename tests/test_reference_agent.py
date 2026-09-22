@@ -12,6 +12,7 @@ dependency-free.
 
 from __future__ import annotations
 
+import asyncio
 import os
 import sys
 from pathlib import Path
@@ -1618,6 +1619,59 @@ class TestEveryRowIsCheckedWhetherOrNotItLooksWrong:
         clock.add(1.0)
         # Wall time has barely moved, so a second of audio is a second ahead.
         assert 0.9 < clock.drift() <= 1.0
+
+
+class TestAToolResultReachesTheModelThatAskedForIt:
+    """A realtime service learns what a tool returned from the context frame the
+    assistant aggregator pushes, and from nothing else. A caller who talks over
+    the agent while that push is waiting must not cost the model the answer."""
+
+    @staticmethod
+    def _aggregator():
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        return bot.BenchAggregators(LLMContext([]), realtime_service_mode=True).assistant()
+
+    def test_a_barge_in_does_not_clear_a_result_waiting_to_be_delivered(self):
+        assistant = self._aggregator()
+        assistant._push_context_on_bot_stopped_speaking = True
+        asyncio.run(assistant.reset())
+        assert assistant._push_context_on_bot_stopped_speaking is True
+
+    def test_the_waiting_result_is_delivered_once_the_caller_stops(self):
+        from pipecat.frames.frames import UserStoppedSpeakingFrame
+        from pipecat.processors.frame_processor import FrameDirection
+
+        assistant = self._aggregator()
+        pushed = []
+
+        async def record(direction=None):
+            pushed.append(direction)
+
+        assistant.push_context_frame = record
+
+        async def drive():
+            assistant._push_context_on_bot_stopped_speaking = True
+            await assistant.process_frame(UserStoppedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+
+        asyncio.run(drive())
+        assert pushed == [FrameDirection.UPSTREAM]
+
+    def test_a_turn_with_nothing_waiting_pushes_nothing(self):
+        from pipecat.frames.frames import UserStoppedSpeakingFrame
+        from pipecat.processors.frame_processor import FrameDirection
+
+        assistant = self._aggregator()
+        pushed = []
+
+        async def record(direction=None):
+            pushed.append(direction)
+
+        assistant.push_context_frame = record
+        asyncio.run(
+            assistant.process_frame(UserStoppedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+        )
+        assert pushed == []
 
 
 class TestARowSaysWhereItDiffersFromTheOthers:

@@ -1583,6 +1583,33 @@ class TestEveryRowIsCheckedWhetherOrNotItLooksWrong:
         fresh.caller_turns, fresh.agent_turns = 4, 4
         assert "audio_in_drift_ms" not in fresh.integrity()
 
+    def test_the_tail_after_the_caller_stops_is_not_missing_caller_audio(self):
+        """A call ends with the agent talking, tools finishing and the transport
+        closing. Caller audio has rightly stopped by then, so any reading taken
+        at the end would report the whole tail as audio that never arrived."""
+        ticks = iter([0.0, 1.0, 2.0, 3.0])
+        clock = bot.AudioClock(now=lambda: next(ticks))
+        for _ in range(3):
+            clock.add(1.0)
+        narrator = bot.CallNarrator(clock)
+        narrator.caller_turns, narrator.agent_turns = 4, 4
+        # Ten seconds of agent speech and shutdown follow the last caller buffer.
+        assert narrator.integrity()["checks"] == ["ok"]
+
+    def test_audio_missing_while_the_caller_is_still_speaking_is_still_named(self):
+        """The counterpart: the gap that opens between two caller buffers is the
+        one worth reporting, and freezing the reading must not hide it."""
+        ticks = iter([0.0, 1.0, 8.0])
+        clock = bot.AudioClock(now=lambda: next(ticks))
+        clock.add(1.0)
+        clock.add(1.0)
+        clock.add(1.0)  # five seconds late
+        narrator = bot.CallNarrator(clock)
+        narrator.caller_turns, narrator.agent_turns = 4, 4
+        report = narrator.integrity()
+        assert "audio_in_starved" in report["checks"]
+        assert report["audio_in_drift_ms"] == -5000
+
     def test_a_live_call_delivers_one_second_of_audio_per_second(self):
         import bot
 

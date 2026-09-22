@@ -1666,27 +1666,38 @@ class AudioClock:
     explains, so it is counted on every row rather than looked for after a row
     disappoints.
 
+    The comparison is made when audio arrives and not when it is asked for.
+    Caller audio stops before a call is finalised -- the agent is still
+    speaking, tools are still completing, the transport is still closing --
+    and wall time keeps running through all of it. Reading the two numbers at
+    the end would therefore count that ordinary tail as caller audio that never
+    came. Sampling on arrival keeps a gap that opened while the caller was
+    still being heard, which is the only gap that means anything.
+
     One call at a time runs in a worker, so one accumulator is enough; it is
     reset when a call starts.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, now: Callable[[], float] = time.monotonic) -> None:
+        self._now = now
         self.reset()
 
     def reset(self) -> None:
         self._began: float | None = None
         self._audio = 0.0
+        self._drift: float | None = None
 
     def add(self, seconds: float) -> None:
+        now = self._now()
         if self._began is None:
-            self._began = time.monotonic()
+            self._began = now
         self._audio += seconds
+        self._drift = self._audio - (now - self._began)
 
     def drift(self) -> float | None:
-        """Audio received minus wall time elapsed, in seconds. None before audio."""
-        if self._began is None:
-            return None
-        return self._audio - (time.monotonic() - self._began)
+        """Audio received minus wall time elapsed, in seconds, as of the last
+        buffer. None before any audio arrived."""
+        return self._drift
 
 
 AUDIO_CLOCK = AudioClock()

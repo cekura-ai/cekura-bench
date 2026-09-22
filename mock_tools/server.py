@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import difflib
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -36,6 +37,28 @@ from typing import Any
 from mock_tools.spec import ToolSpec
 
 DEFINITIONS_ROOT = Path(__file__).resolve().parent.parent / "agent-definitions"
+
+
+# One instant, written several ways. The contract asks for ``YYYY-MM-DDTHH:MM:SS``
+# and the services oblige to different degrees: a space where the T belongs, the
+# seconds left off, a trailing Z. Every one of those names the same slot, and a
+# table lookup that treats them as different appointments scores a provider on
+# which ISO spelling it favours. Nothing in these contracts carries a timezone,
+# so there is no conversion to do -- and a real offset is deliberately NOT
+# canonicalised here, because a shifted time is a different instant and must
+# never match quietly.
+_TIMESTAMP = re.compile(
+    r"^(\d{4})-(\d{2})-(\d{2})[Tt ](\d{2}):(\d{2})(?::(\d{2}))?\s*(Z|z|\+00:?00)?$"
+)
+
+
+def _timestamp(value: str) -> str | None:
+    """The one spelling of a slot, or None when this is not a slot."""
+    found = _TIMESTAMP.match(value.strip())
+    if not found:
+        return None
+    year, month, day, hour, minute, second, _zulu = found.groups()
+    return f"{year}-{month}-{day}T{hour}:{minute}:{second or '00'}"
 
 
 def _normalize(value: Any) -> Any:
@@ -58,6 +81,9 @@ def _normalize(value: Any) -> Any:
     """
     if isinstance(value, str):
         stripped = value.strip()
+        slot = _timestamp(stripped)
+        if slot is not None:
+            return slot
         digits = "".join(ch for ch in stripped if ch.isdigit())
         if digits and len(digits) >= 7 and not any(ch.isalpha() for ch in stripped):
             # A leading country code is a dialling detail, not a different

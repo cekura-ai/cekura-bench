@@ -346,3 +346,48 @@ class TestTheOrderOfACategoryListSaysNothing:
         assert self._consent(
             lambda stored: stored + ["medicare_supplement"]
         ) != "exact"
+
+
+class TestOneSlotWrittenSeveralWays:
+    """Booking is the success action, so the slot must not turn on its spelling.
+
+    The contract asks for ``YYYY-MM-DDTHH:MM:SS`` and the services oblige to
+    different degrees -- a space where the T belongs, the seconds left off, a
+    trailing Z. Each names the same appointment, and which spelling a provider
+    favours says nothing about whether it booked what the caller agreed to.
+    """
+
+    @staticmethod
+    def _book(change):
+        import json
+
+        from mock_tools.server import MockToolServer
+
+        tools = {t["name"]: t for t in json.load(
+            open("agent-definitions/appointments/mock-tools.json")
+        )}
+        stored = tools["book_appointment"]["mock_data"][0]["input"]
+        server = MockToolServer(suite="appointments")
+        server.call("book_appointment", dict(stored, datetime=change(stored["datetime"])))
+        return server.calls[-1].resolution
+
+    def test_the_contracts_own_spelling(self):
+        assert self._book(lambda slot: slot) == "exact"
+
+    def test_a_space_where_the_t_belongs(self):
+        assert self._book(lambda slot: slot.replace("T", " ")) == "exact"
+
+    def test_the_seconds_left_off(self):
+        assert self._book(lambda slot: slot[:16]) == "exact"
+
+    def test_a_trailing_zulu(self):
+        # Nothing in these contracts carries a timezone, so a Z is notation.
+        assert self._book(lambda slot: slot + "Z") == "exact"
+
+    def test_a_different_hour_is_a_different_appointment(self):
+        assert self._book(lambda slot: slot.replace("T09", "T11")) != "exact"
+
+    def test_a_real_offset_is_not_quietly_accepted(self):
+        # A shifted time is a different instant. It is left to miss rather than
+        # canonicalised, because guessing a timezone here could move a booking.
+        assert self._book(lambda slot: slot + "+05:30") != "exact"

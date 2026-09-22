@@ -230,9 +230,25 @@ the call is over and the record cannot be changed after it is posted:
 | `tool_calls`, `tool_call_count`, `tool_calls_matched` | what the agent asked of its tools, with arguments, answers and ordering; recorded here rather than read from the framework's spans, which two of the five providers emit and three do not |
 | `config_source` | whether the session or the image decided the configuration — one deployment answers for every row, so a row that does not say which is a row nobody can place |
 | `worker_instance`, `worker_call` | which worker answered and how many calls it had already answered; the first call on a worker carries any start-up cost the warm-up did not remove |
+| `usage` | what the call consumed: tokens split by audio, text and cache, or audio seconds and characters for a cascade, plus the call's length |
 
 A phone call cannot be replayed and the provider endpoint moves underneath us, so
 a recording whose configuration is unknown is not evidence of anything.
+
+`usage` is recorded and not priced. Consumption is measured during the call and
+is gone afterwards; a price is a judgement about a vendor page on a date, and it
+will need correcting. Keeping them apart means a published cost can be revised,
+or disputed by the vendor, without running a single call again. The rates and
+the arithmetic live in `pricing/`, outside the image, because nothing about
+money belongs inside the thing being measured. The framework also writes these
+counts onto its trace spans, but that store empties after thirty days and a
+result outlives it.
+
+The splits are the measurement, not a nicety: audio tokens cost a multiple of
+text and cached input a fraction of fresh, so a single total cannot be priced at
+all. A provider that reports nothing contributes nothing and the record says so
+— `usage_reports` distinguishes a provider that does not report from a call that
+never reached a model, which are opposite findings, and neither is zero cost.
 
 Without credentials the agent still runs and still answers the phone. A missing
 key must never be the reason a benchmark call fails.

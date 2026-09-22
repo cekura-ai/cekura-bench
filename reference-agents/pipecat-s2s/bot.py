@@ -54,7 +54,13 @@ from pipecat.adapters.schemas.function_schema import FunctionSchema
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.audio.resamplers.soxr_stream_resampler import SOXRStreamAudioResampler
 from pipecat.audio.vad.silero import SileroVADAnalyzer
-from pipecat.frames.frames import EndTaskFrame, LLMRunFrame
+from pipecat.frames.frames import EndTaskFrame, LLMRunFrame, MetricsFrame
+from pipecat.metrics.metrics import (
+    LLMUsageMetricsData,
+    STTUsageMetricsData,
+    TTSUsageMetricsData,
+)
+from pipecat.observers.base_observer import BaseObserver, FramePushed
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
@@ -592,6 +598,95 @@ def build_tools(server: MockToolServer) -> ToolsSchema:
     return ToolsSchema(standard_tools=published + control)
 
 
+class UsageMeter(BaseObserver):
+    """Counts what a call consumed, so the row it produces can carry a price.
+
+    Cost is one of the few columns a benchmark is actually read for, and it is
+    the one that cannot be reconstructed after the fact: the framework reports
+    consumption per call and then the numbers are gone. They do reach the trace
+    store, but that empties after thirty days, and a board is questioned months
+    later -- so a figure that lives only there is a figure we cannot defend on
+    the day someone asks. This records it where the run record keeps it.
+
+    Consumption, not money. Prices change, differ by account and are a judgement
+    about a vendor page on a date; a token count is a measurement. Keeping them
+    apart means a published price can be corrected, and argued with, without
+    re-running a single call.
+
+    Three shapes, because the rows are billed three ways. A native speech model
+    bills tokens, and splits them into audio and text, and again into fresh and
+    cached -- the splits are not a detail, since audio costs multiples of text
+    and a cached prompt a fraction of a fresh one, so a single total cannot be
+    priced at all. A cascade bills its transcriber by audio seconds and its
+    voice by characters. Every field is summed across the call and left alone
+    otherwise; a provider that reports nothing simply contributes nothing, which
+    is a fact about that row worth seeing rather than a gap to paper over.
+    """
+
+    # The token fields worth keeping apart, in the framework's own names.
+    TOKEN_FIELDS = (
+        "prompt_tokens",
+        "completion_tokens",
+        "total_tokens",
+        "cache_read_input_tokens",
+        "cache_creation_input_tokens",
+        "reasoning_tokens",
+        "input_audio_tokens",
+        "output_audio_tokens",
+        "cache_read_input_audio_tokens",
+    )
+
+    def __init__(self) -> None:
+        super().__init__()
+        # Some rows are billed by the minute rather than by the token, so the
+        # length of the call is part of what it consumed. Measured from here --
+        # the pipeline is built immediately before the bot joins -- to the
+        # moment the record is taken.
+        self._opened = time.monotonic()
+        self._tokens: dict[str, int] = {}
+        self._stt_audio_seconds = 0.0
+        self._tts_characters = 0
+        self._reports = 0
+        self._seen: set[int] = set()
+
+    async def on_push_frame(self, data: FramePushed) -> None:
+        frame = data.frame
+        if not isinstance(frame, MetricsFrame) or frame.id in self._seen:
+            # A metrics frame is broadcast, so the same one arrives more than
+            # once; counting it twice would double the bill.
+            return
+        self._seen.add(frame.id)
+        for entry in frame.data:
+            if isinstance(entry, LLMUsageMetricsData):
+                self._reports += 1
+                for field in self.TOKEN_FIELDS:
+                    value = getattr(entry.value, field, None)
+                    if value:
+                        self._tokens[field] = self._tokens.get(field, 0) + value
+            elif isinstance(entry, STTUsageMetricsData):
+                self._stt_audio_seconds += entry.value.audio_seconds
+            elif isinstance(entry, TTSUsageMetricsData):
+                self._tts_characters += entry.value
+
+    def as_metadata(self) -> dict[str, Any]:
+        """What the call consumed, priced by nothing.
+
+        ``usage_reports`` is here because zero is ambiguous otherwise: a row
+        with no tokens may be a provider that does not report them or a call
+        that never reached the model, and those are different findings.
+        """
+        usage: dict[str, Any] = {
+            "call_seconds": round(time.monotonic() - self._opened, 3),
+            "usage_reports": self._reports,
+            **self._tokens,
+        }
+        if self._stt_audio_seconds:
+            usage["stt_audio_seconds"] = round(self._stt_audio_seconds, 3)
+        if self._tts_characters:
+            usage["tts_characters"] = self._tts_characters
+        return {"usage": usage}
+
+
 class ToolTrace:
     """What the agent asked of its tools, recorded by us rather than the provider.
 
@@ -974,7 +1069,8 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         audio_in_sample_rate=rate,
         audio_out_sample_rate=rate,
     )
-    task, tracer = create_task(pipeline, context, params, runner_args, transport, record)
+    meter = UsageMeter()
+    task, tracer = create_task(pipeline, context, params, runner_args, transport, record, [meter])
     if realtime and tracer is not None:
         capture_caller_turns(tracer, aggregators.user())
 
@@ -1000,7 +1096,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         # moment where both are true.
         if tracer is not None:
             try:
-                tracer.set_custom_metadata({**record, **trace.as_metadata()})
+                tracer.set_custom_metadata({**record, **trace.as_metadata(), **meter.as_metadata()})
             except Exception as exc:  # noqa: BLE001 -- never fail a call over a record
                 logger.warning("could not attach the tool trace: {}", exc)
         logger.info("tools called: {}", trace.as_metadata()["tool_call_count"])
@@ -1046,7 +1142,7 @@ def capture_caller_turns(tracer, user_aggregator) -> None:
         )
 
 
-def create_task(pipeline, context, params, runner_args, transport, record) -> tuple[PipelineTask, Any]:
+def create_task(pipeline, context, params, runner_args, transport, record, observers) -> tuple[PipelineTask, Any]:
     """Wrap the pipeline in Cekura tracing when credentials are present.
 
     Tracing is what makes an agent-bench run inspectable afterwards: transcripts, tool
@@ -1058,7 +1154,7 @@ def create_task(pipeline, context, params, runner_args, transport, record) -> tu
     api_key, agent_id = os.getenv("CEKURA_API_KEY"), os.getenv("CEKURA_AGENT_ID")
     if not (api_key and agent_id):
         logger.info("Cekura tracing off: CEKURA_API_KEY or CEKURA_AGENT_ID unset")
-        return PipelineTask(pipeline, params=params), None
+        return PipelineTask(pipeline, params=params, observers=observers), None
 
     try:
         from cekura.pipecat import PipecatTracer
@@ -1076,15 +1172,15 @@ def create_task(pipeline, context, params, runner_args, transport, record) -> tu
         if record.get("cekura_mode") == "observe":
             return tracer.observe_and_create_task(
                 pipeline, context, runner_args=runner_args, transport=transport,
-                custom_metadata=metadata, params=params,
+                custom_metadata=metadata, params=params, observers=observers,
             ), tracer
         return tracer.track_and_create_task(
             pipeline, context, runner_args=runner_args, transport=transport,
-            custom_metadata=metadata, params=params,
+            custom_metadata=metadata, params=params, observers=observers,
         ), tracer
     except Exception as exc:  # noqa: BLE001 -- observability must never fail a call
         logger.warning("Cekura tracing disabled: {}", exc)
-        return PipelineTask(pipeline, params=params), None
+        return PipelineTask(pipeline, params=params, observers=observers), None
 
 
 def warm() -> None:

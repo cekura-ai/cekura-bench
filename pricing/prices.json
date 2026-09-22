@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "note": "Rates were read from vendor documentation on read_on and have NOT been re-verified. No row may be published while verified is false. See README.md.",
+  "units": {
+    "per_million_tokens": "USD per 1,000,000 tokens, by lane",
+    "per_minute": "USD per minute of call",
+    "per_million_characters": "USD per 1,000,000 characters synthesised",
+    "per_hour_audio": "USD per hour of audio submitted"
+  },
+  "rows": {
+    "openai-realtime": {
+      "basis": "per_million_tokens",
+      "read_on": "2026-09-17",
+      "verified": false,
+      "source": "OpenAI API pricing documentation",
+      "rates": {"input_audio_tokens": 32.0, "output_audio_tokens": 64.0}
+    },
+    "gpt-live": {
+      "basis": "per_minute",
+      "read_on": "2026-09-17",
+      "verified": false,
+      "source": "OpenAI API pricing documentation",
+      "rates": {"minute": 0.05},
+      "note": "A second model runs behind this one; its cost is a separate line and is not included here."
+    },
+    "gemini-live": {
+      "basis": "per_million_tokens",
+      "read_on": "2026-09-17",
+      "verified": false,
+      "source": "Google AI pricing documentation",
+      "rates": {"input_audio_tokens": 3.0, "output_audio_tokens": 12.0},
+      "note": "Usage reports are lost when the connection closes before the turn completes, so totals for this row run low. Disclose on the row; do not estimate the difference."
+    },
+    "grok-realtime": {
+      "basis": "per_minute",
+      "read_on": "2026-09-17",
+      "verified": false,
+      "source": "xAI pricing documentation",
+      "rates": {"minute": 0.08}
+    },
+    "nova-sonic": {
+      "basis": "per_million_tokens",
+      "read_on": "2026-09-17",
+      "verified": false,
+      "source": "AWS Bedrock pricing documentation",
+      "rates": {"input_audio_tokens": 3.0, "output_audio_tokens": 12.0}
+    },
+    "qwen-realtime": {
+      "basis": "per_million_tokens",
+      "read_on": null,
+      "verified": false,
+      "source": null,
+      "rates": {}
+    }
+  },
+  "cascade_speech_path": {
+    "note": "Held fixed across every cascade row, so it is priced once here rather than per row.",
+    "stt": {
+      "basis": "per_hour_audio",
+      "read_on": null,
+      "verified": false,
+      "source": null,
+      "rates": {}
+    },
+    "tts": {
+      "basis": "per_million_characters",
+      "read_on": null,
+      "verified": false,
+      "source": null,
+      "rates": {}
+    }
+  },
+  "cascade_text_models": {
+    "cascade-baseline": {"basis": "per_million_tokens", "read_on": null, "verified": false, "source": null, "rates": {}},
+    "cascade-openai":   {"basis": "per_million_tokens", "read_on": null, "verified": false, "source": null, "rates": {}},
+    "cascade-google":   {"basis": "per_million_tokens", "read_on": null, "verified": false, "source": null, "rates": {}},
+    "cascade-grok":     {"basis": "per_million_tokens", "read_on": null, "verified": false, "source": null, "rates": {}},
+    "cascade-qwen":     {"basis": "per_million_tokens", "read_on": null, "verified": false, "source": null, "rates": {}}
+  }
+}

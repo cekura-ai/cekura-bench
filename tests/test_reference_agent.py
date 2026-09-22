@@ -886,6 +886,33 @@ class TestWhoDecidesTheCallersTurns:
         )
         assert record["turn_source"] == "local"
 
+    def test_a_cascade_says_its_turns_came_from_its_transcriber(self):
+        # Three answers, not two. A cascade follows the strategies its
+        # speech-to-text service recommends, so the endpointing figure beside
+        # its reply time belongs to that service rather than to the text model
+        # the row is about -- and a row that left this blank would be read as
+        # if it were comparable with a realtime service's own endpointing.
+        record = bot.cascade_record(
+            "cascade-openai", bot.TEXT_MODELS["cascade-openai"], "gpt-4.1",
+            bot.MockToolServer(suite="appointments"), asked(),
+        )
+        assert record["turn_source"] == "stt"
+
+    def test_every_row_says_whose_endpointing_it_reports(self):
+        # The latency column is split into reply and endpointing, and the
+        # second half cannot be read without knowing whose it is. A row missing
+        # this field is one nobody can place.
+        server = bot.MockToolServer(suite="appointments")
+        rows = [
+            bot.build_record(name, provider, "m", "v", server, asked())
+            for name, provider in bot.PROVIDERS.items()
+        ] + [
+            bot.cascade_record(key, text, "m", server, asked())
+            for key, text in bot.TEXT_MODELS.items()
+        ]
+        for record in rows:
+            assert record["turn_source"] in {"provider", "local", "stt"}, record["config"]
+
 
 class TestEveryLineIsOnTheCallClock:
     """A log line is placed by the time since the call started, not by the wall clock.

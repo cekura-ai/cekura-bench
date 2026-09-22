@@ -1087,11 +1087,12 @@ class CallNarrator(BaseObserver):
         generate and slow to commit, and those are different findings, so it is
         reported beside the total rather than folded into it.
 
-        Read it against ``turn_source``. Where a service announces its own turns
-        this measures that service's endpointing; where it does not, it measures
-        this pipeline's, which is the same detector on every such row. The two
-        groups are not comparable on this column, and the column exists so that
-        the difference is visible rather than buried in the reply figure.
+        Read it against ``turn_source``, which names whose endpointing this is:
+        the realtime service where it announces its own turns, this pipeline's
+        detector where it does not, or the speech-to-text service on a cascade
+        row. Rows from those three groups are not comparable on this column, and
+        the column exists so the difference is visible rather than buried in the
+        reply figure.
 
         Both are detector-derived and belong to this bench only. A figure anchored
         on authored audio, where the caller's last sample is known exactly rather
@@ -1474,6 +1475,12 @@ def cascade_record(key: str, text: TextModel, model: str, server: MockToolServer
         "tts_voice": settings.get("cascade_tts_voice", CASCADE_TTS_VOICE),
         "counterpart_to": text.counterpart_to,
         "pipeline_sample_rate": CASCADE_RATE,
+        # Who decided where the caller's turns ended -- a third answer, and the
+        # reason this field is not just native/local. These rows follow the
+        # strategies the speech-to-text service recommends, so the endpointing
+        # figure beside their reply time belongs to that service, named above,
+        # and not to the text model the row is otherwise about.
+        "turn_source": "stt",
         "config": key,
     }
 

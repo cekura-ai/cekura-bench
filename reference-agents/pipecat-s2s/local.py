@@ -3,26 +3,26 @@
 The platform never dials a number for an agent bench row. It asks Pipecat Cloud
 to start a session with a body -- provider, model, agent definition, a run id --
 and gets back a Daily room; the simulated caller then joins that room and the
-call happens there. Pipecat's own development runner exposes the same request
-(``POST /start``) with the same answer, so the whole arrangement runs locally
-with nothing changed in ``bot.py``: same body, same room, same tracing SDK,
-same payload posted at the end -- except that the payload lands on a receiver
-here instead of on the platform, where it can be read.
+call happens there. This file does the same three things on one machine, with
+nothing changed in ``bot.py``: the same body, a room of its own, the same
+``bot()`` entry point through the same ``DailyRunnerArguments``, the same
+tracing SDK, and the same payload posted at the end -- except that the payload
+lands on a receiver here instead of on the platform, where it can be read.
 
 That is the point of this file. When a run scores strangely, the question is
 whether the harness or the model produced it, and the fastest way to answer is
 to place one call on a laptop and read exactly what the platform would have
-been sent: the transcript, the tool rows, the log, the record. Four commands::
+been sent: the transcript, the tool rows, the log, the record. Three commands::
 
     python local.py receive                 # the stand-in for the platform: keeps every payload
-    python local.py serve                   # the agent, on Pipecat's development runner
-    python local.py start --provider gemini-live --agent-dir medicare
-                                            # what the platform does: start a session, get a room
+    python local.py call --provider gemini-live --agent-dir medicare
+                                            # mint a room, answer in it, post the payload
     python local.py inspect data/local-runs/<file>.json
                                             # read the payload the way the score will read it
 
-``start`` prints the room. Join it from a browser to be the caller yourself, or
-hand the room and token to a simulated caller. Everything the agent needs comes
+``call`` prints the room and a second token before it answers. Join the room
+from a browser to be the caller yourself, or hand the room and that token to a
+simulated caller. Everything the agent needs comes
 from a ``.env`` at the repository root (see the README's credential table); the
 Daily key may also be spelled ``daily_api_key`` there, which this file maps.
 
@@ -35,8 +35,8 @@ import argparse
 import json
 import os
 import re
-import subprocess
 import sys
+import time
 import urllib.request
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -49,16 +49,16 @@ STAMP = re.compile(r"^\[\d\d:\d\d\] ")
 CONTROL_TOKEN = re.compile(r"<ctrl\d+>")
 
 
-# ── serve: the agent on Pipecat's development runner ─────────────────────────
+# ── call: the agent, in a room, the way a session starts it ──────────────────
 
 def _environment(env_file: Path, receiver: str) -> dict[str, str]:
     """The deployment's environment, assembled from a local file.
 
-    Credentials stay in the file and reach the agent process only; nothing is
+    Credentials stay in the file and reach this process only; nothing is
     printed. The tracing SDK is pointed at the local receiver and its span
     exporter is switched off, so a call finalises promptly instead of retrying
-    against a host it cannot reach. The SDK needs *a* key and agent id to run
-    at all, so placeholders stand in when the file has none -- the receiver
+    against a collector it cannot reach. The SDK needs *a* key and agent id to
+    run at all, so placeholders stand in when the file has none -- the receiver
     does not check them.
     """
     from dotenv import dotenv_values
@@ -75,14 +75,92 @@ def _environment(env_file: Path, receiver: str) -> dict[str, str]:
     return env
 
 
-def serve(args: argparse.Namespace) -> int:
+def _room(api_key: str, minutes: int) -> tuple[str, str, str]:
+    """A fresh room and two tokens: one for the agent, one for whoever calls it.
+
+    The room is created here rather than by Pipecat's development runner, which
+    always names the room it creates. A HIPAA-enabled Daily domain refuses a
+    named room outright, so that runner cannot create one at all on such a
+    domain. Everything else is what it does: an expiring room, an owner token
+    each side, and the same ``DailyRunnerArguments`` handed to the same
+    ``bot()`` the deployment runs.
+    """
+    import urllib.error
+
+    def post(path: str, payload: dict) -> dict:
+        request = urllib.request.Request(
+            f"https://api.daily.co/v1/{path}",
+            data=json.dumps(payload).encode(),
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                return json.loads(response.read())
+        except urllib.error.HTTPError as error:
+            raise SystemExit(f"Daily refused {path}: {error.read().decode('utf-8', 'replace')}") from None
+
+    expiry = int(time.time()) + minutes * 60
+    room = post("rooms", {"privacy": "private", "properties": {"exp": expiry, "eject_at_room_exp": True}})
+    tokens = [
+        post("meeting-tokens", {"properties": {"room_name": room["name"], "is_owner": True, "exp": expiry}})["token"]
+        for _ in range(2)
+    ]
+    return room["url"], tokens[0], tokens[1]
+
+
+def call(args: argparse.Namespace) -> int:
+    """Run one call: mint a room, then answer in it with the row's configuration.
+
+    The body is the row's configuration plus a run id -- the same keys the agent
+    reads from a session in the cloud, sent the same way.
+    """
     env = _environment(Path(args.env), args.receiver)
     if not env.get("DAILY_API_KEY"):
-        print("DAILY_API_KEY (or daily_api_key) is not set; the runner cannot create a room", file=sys.stderr)
+        print("DAILY_API_KEY (or daily_api_key) is not set; no room can be created", file=sys.stderr)
         return 2
-    command = [sys.executable, str(HERE / "bot.py"), "-t", "daily", "--host", args.host, "--port", str(args.port)]
-    print(f"serving the agent on http://{args.host}:{args.port}; payloads go to {args.receiver}")
-    return subprocess.call(command, cwd=HERE, env=env)
+
+    body = {
+        "s2s_provider": args.provider,
+        "agent_dir": args.agent_dir,
+        "cekura_run_id": args.run_id or int(time.time()),
+    }
+    if args.model:
+        body["s2s_model"] = args.model
+    if args.voice:
+        body["s2s_voice"] = args.voice
+    for extra in args.set or []:
+        key, _, value = extra.partition("=")
+        body[key] = value
+
+    room_url, agent_token, caller_token = _room(env["DAILY_API_KEY"], args.minutes)
+    session_id = f"local-{args.provider}-{int(time.time())}"
+    # Printed and flushed before the agent starts, because whoever is going to
+    # call has to be able to join before the agent gives up waiting.
+    print(json.dumps({
+        "sessionId": session_id, "dailyRoom": room_url,
+        "dailyToken": agent_token, "callerToken": caller_token, "body": body,
+    }), flush=True)
+    print(f"\njoin as the caller: {room_url}", file=sys.stderr, flush=True)
+
+    os.environ.update(env)
+    sys.path.insert(0, str(HERE))
+    sys.argv = [sys.argv[0]]  # the agent's own runner must not see our arguments
+    import asyncio
+
+    import bot  # noqa: E402 -- after the environment is in place, as a deployment imports it
+    from pipecat.runner.types import DailyRunnerArguments  # noqa: E402
+
+    arguments = DailyRunnerArguments(
+        room_url=room_url, token=agent_token, body=body, session_id=session_id
+    )
+    arguments.handle_sigint = False
+    try:
+        asyncio.run(asyncio.wait_for(bot.bot(arguments), timeout=args.timeout))
+    except asyncio.TimeoutError:
+        print(f"the agent was still in the call after {args.timeout}s", file=sys.stderr)
+        return 1
+    return 0
 
 
 # ── receive: the stand-in for the platform ───────────────────────────────────
@@ -132,41 +210,6 @@ def receive(args: argparse.Namespace) -> int:
     return 0
 
 
-# ── start: what the platform does to begin a run ─────────────────────────────
-
-def start(args: argparse.Namespace) -> int:
-    """Ask the runner for a session, the way the platform asks Pipecat Cloud.
-
-    The body is the row's configuration plus a run id, exactly as the platform
-    sends it: the same keys the agent reads from a session in the cloud.
-    """
-    body = {
-        "s2s_provider": args.provider,
-        "agent_dir": args.agent_dir,
-        "cekura_run_id": args.run_id or int(datetime.now().timestamp()),
-    }
-    if args.model:
-        body["s2s_model"] = args.model
-    if args.voice:
-        body["s2s_voice"] = args.voice
-    for extra in args.set or []:
-        key, _, value = extra.partition("=")
-        body[key] = value
-    request = urllib.request.Request(
-        f"{args.runner}/start",
-        data=json.dumps({"transport": "daily", "createDailyRoom": True, "body": body}).encode(),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    with urllib.request.urlopen(request, timeout=60) as response:
-        answer = json.loads(response.read())
-    answer["body"] = body
-    print(json.dumps(answer, indent=1))
-    if not args.quiet:
-        print(f"\njoin as the caller: {answer.get('dailyRoom')}", file=sys.stderr)
-    return 0
-
-
 # ── inspect: read a payload the way the score reads it ───────────────────────
 
 def report(payload: dict, path: Path | None = None) -> str:
@@ -176,6 +219,14 @@ def report(payload: dict, path: Path | None = None) -> str:
     logs = payload.get("logs") or []
 
     users = [row for row in transcript if row.get("role") == "user"]
+    # A caller row that opens by repeating its own first words is the mark of a
+    # service that restates the whole turn on every final. It tripled one row's
+    # caller text while the others were clean.
+    restated = 0
+    for row in users:
+        words = str(row.get("content") or "").split()
+        if len(words) >= 6 and " ".join(words[:3]) in " ".join(words[3:]):
+            restated += 1
     agent_text = [row for row in transcript if row.get("role") == "assistant" and row.get("content")]
     requests = [row for row in transcript if row.get("role") == "assistant" and row.get("tool_calls")]
     answers = [row for row in transcript if row.get("role") == "tool"]
@@ -185,6 +236,11 @@ def report(payload: dict, path: Path | None = None) -> str:
     recorded = meta.get("tool_calls") or []
     usage = meta.get("usage") or {}
     stamped = sum(1 for line in logs if STAMP.match(line.get("message", "")))
+    # What a native row needs before its cost can sit beside another's: either
+    # the tokens split out by audio, or the seconds a per-second model billed.
+    priceable = ", ".join(
+        key for key in ("input_audio_tokens", "output_audio_tokens", "live_audio_seconds") if key in usage
+    )
     debug = sum(1 for line in logs if line.get("level") == "DEBUG")
 
     checks = [
@@ -195,7 +251,14 @@ def report(payload: dict, path: Path | None = None) -> str:
          len(requested) == len(recorded), f"{len(requested)} in transcript, {len(recorded)} on the record"),
         ("record was finished (tools + usage present)", "tool_call_count" in meta and "usage" in meta,
          ", ".join(sorted(k for k in ("tool_call_count", "usage") if k in meta)) or "neither"),
+        ("no caller row restates itself", restated == 0, f"{restated} of {len(users)} row(s)"),
         ("usage was reported by the provider", usage.get("usage_reports", 0) > 0, f"{usage.get('usage_reports', 0)} report(s)"),
+        # Audio tokens cost a multiple of text tokens, so a native row reporting
+        # one undifferentiated total cannot be priced on the same basis as one
+        # that splits them -- and a cost column that mixes the two is not a
+        # comparison. A cascade is billed by seconds and characters instead.
+        ("usage can be priced beside the other rows",
+         meta.get("stack") != "native" or bool(priceable), priceable or "totals only: the speech half is not separable"),
         ("log lines carry the call clock", bool(logs) and stamped == len(logs), f"{stamped}/{len(logs)}"),
         ("log includes the framework's DEBUG lines", debug > 0, f"{debug} DEBUG of {len(logs)}"),
     ]
@@ -243,29 +306,18 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p = sub.add_parser("serve", help="run the agent on Pipecat's development runner")
-    p.add_argument("--env", default=str(ROOT / ".env"), help="dotenv file holding the credentials")
-    p.add_argument("--host", default="127.0.0.1")
-    p.add_argument("--port", type=int, default=7860)
-    p.add_argument("--receiver", default="http://127.0.0.1:8765", help="where the tracing SDK posts the payload")
-    p.set_defaults(run=serve)
-
-    p = sub.add_parser("receive", help="accept the payloads the agent posts at the end of each call")
-    p.add_argument("--host", default="127.0.0.1")
-    p.add_argument("--port", type=int, default=8765)
-    p.add_argument("--out", default=str(RUNS))
-    p.set_defaults(run=receive)
-
-    p = sub.add_parser("start", help="start a session and get a room, as the platform does")
+    p = sub.add_parser("call", help="mint a room and answer in it with one row's configuration")
     p.add_argument("--provider", required=True)
     p.add_argument("--agent-dir", required=True, choices=sorted(d.name for d in (ROOT / "agent-definitions").iterdir() if d.is_dir()))
     p.add_argument("--model")
     p.add_argument("--voice")
     p.add_argument("--run-id", type=int, help="stands in for the platform's run id")
     p.add_argument("--set", action="append", metavar="KEY=VALUE", help="any other session key")
-    p.add_argument("--runner", default="http://127.0.0.1:7860")
-    p.add_argument("--quiet", action="store_true", help="print only the JSON answer")
-    p.set_defaults(run=start)
+    p.add_argument("--env", default=str(ROOT / ".env"), help="dotenv file holding the credentials")
+    p.add_argument("--receiver", default="http://127.0.0.1:8765", help="where the tracing SDK posts the payload")
+    p.add_argument("--minutes", type=int, default=20, help="how long the room lives")
+    p.add_argument("--timeout", type=int, default=600, help="give up if the call has not ended by then")
+    p.set_defaults(run=call)
 
     p = sub.add_parser("inspect", help="read one or more payloads the way the score reads them")
     p.add_argument("payload", nargs="+")

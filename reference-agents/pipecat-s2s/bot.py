@@ -785,15 +785,124 @@ def build_tools(server: MockToolServer) -> ToolsSchema:
 CONTROL_TOKEN = re.compile(r"<ctrl\d+>")
 
 
+def _short(value: Any, width: int = 300) -> str:
+    """One line of a value, for a log: enough to recognise it, not to reproduce it."""
+    try:
+        text = json.dumps(value, ensure_ascii=False, default=str)
+    except Exception:  # noqa: BLE001
+        text = repr(value)
+    return text if len(text) <= width else text[:width] + "…"
+
+
 class DropControlTokens(FrameProcessor):
-    """Keep tokenizer artifacts out of the transcript of what the agent said."""
+    """Keep tokenizer artifacts out of the transcript of what the agent said.
+
+    Every removal is logged. An empty agent turn has two very different causes
+    -- the model produced nothing, or it produced only control tokens and this
+    processor emptied it -- and from the transcript alone they are identical.
+    One is a finding about the model and the other would look like our filter
+    damaging the evidence, so the log has to say which happened.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.removed = 0
 
     async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
         await super().process_frame(frame, direction)
         if isinstance(frame, (TTSTextFrame, LLMTextFrame)) and "<ctrl" in frame.text:
             cleaned = CONTROL_TOKEN.sub("", frame.text)
             # Whitespace that only ever separated the tokens is not speech either.
-            frame.text = "" if not cleaned.strip() else cleaned
+            emptied = not cleaned.strip()
+            self.removed += len(CONTROL_TOKEN.findall(frame.text))
+            logger.info(
+                "control tokens removed from what the agent said ({} so far){}: {}",
+                self.removed,
+                "; the turn is now empty, so the model said nothing else" if emptied else "",
+                _short(frame.text, 200),
+            )
+            frame.text = "" if emptied else cleaned
+        await self.push_frame(frame, direction)
+
+
+class RestatementIsNotSpeech(FrameProcessor):
+    """A final transcript that restates the turn so far is a restatement, not new speech.
+
+    These services do not agree on what a *final* caller transcript is. Most
+    send one per turn. One sends several, each restating the whole turn to
+    date -- "Hi, I'd like to book", then "Hi, I'd like to book a new
+    appointment.", then that again -- and the aggregator, correctly for every
+    other service, appends each one. The caller's words end up in the record two
+    or three times over.
+
+    That is not a small blemish on one row. The transcript is what a judge
+    reads and what a word-level comparison counts, so the row with the
+    stuttering caller is scored against a conversation that did not happen,
+    while the others are not. A difference between rows has to come from the
+    agents, and this one came from us.
+
+    So only the part of a final that is new is passed on. The aggregator's own
+    appending then reconstructs exactly the text the service last reported. For
+    a service that sends one final per turn this changes nothing at all, which
+    is the test of whether a correction like this is fair: it has to be a
+    statement about transcripts in general, not a patch aimed at one vendor.
+    """
+
+    # How much of the shorter version two finals must agree on before the later
+    # one is read as a rewrite of the same words rather than a new sentence.
+    # It has to tolerate a corrected word -- "book an" becomes "book a new" --
+    # while refusing two genuinely different utterances.
+    SAME_TURN = 0.6
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._said: list[str] = []
+        self.restatements = 0
+
+    @staticmethod
+    def _compare(words: list[str]) -> list[str]:
+        """The form two versions of the same words are compared in.
+
+        Case and punctuation are not evidence of new speech: the same service
+        rewrites "July 8th." as "July 8th if possible." on the next pass, and a
+        byte comparison would call that a fresh sentence and append the lot.
+        """
+        return ["".join(ch for ch in word if ch.isalnum()).lower() for word in words]
+
+    @staticmethod
+    def _agree_on(said: list[str], new: list[str]) -> int:
+        """How many words from the start the two versions agree on."""
+        agreed = 0
+        for left, right in zip(said, new):
+            if left != right:
+                break
+            agreed += 1
+        return agreed
+
+    async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
+        await super().process_frame(frame, direction)
+        if isinstance(frame, UserStartedSpeakingFrame):
+            # A new turn: nothing has been said in it yet. Every service on this
+            # board announces this, which is what makes the reset reliable.
+            self._said = []
+        elif isinstance(frame, TranscriptionFrame) and frame.text.strip():
+            words = frame.text.split()
+            said, new = self._compare(self._said), self._compare(words)
+            agreed = self._agree_on(said, new)
+            shorter = min(len(said), len(new))
+            if said and (agreed == shorter or (agreed >= 2 and agreed >= self.SAME_TURN * shorter)):
+                # The same words again, carried on or corrected. Only what comes
+                # after the part they agree on is new.
+                self.restatements += 1
+                rest = " ".join(words[agreed:])
+                self._said = words if len(new) >= len(said) else self._said
+                if not rest:
+                    logger.debug("the transcript restated the turn and added nothing; not passed on")
+                    return
+                logger.debug("the transcript restated the turn; passing on only {}", _short(rest, 120))
+                frame.text = rest
+            else:
+                self._said = self._said + words
         await self.push_frame(frame, direction)
 
 
@@ -845,6 +954,9 @@ class UsageMeter(BaseObserver):
         self._tokens: dict[str, int] = {}
         self._stt_audio_seconds = 0.0
         self._tts_characters = 0
+        # One provider bills its speech model by the second and reports it
+        # nowhere a metrics frame can reach. See ``record_live_audio``.
+        self._live_audio_seconds = 0.0
         self._reports = 0
         self._seen: set[int] = set()
 
@@ -867,6 +979,10 @@ class UsageMeter(BaseObserver):
             elif isinstance(entry, TTSUsageMetricsData):
                 self._tts_characters += entry.value
 
+    def record_live_audio(self, seconds: float) -> None:
+        """Seconds of live audio, reported cumulatively, so the largest wins."""
+        self._live_audio_seconds = max(self._live_audio_seconds, seconds)
+
     def as_metadata(self) -> dict[str, Any]:
         """What the call consumed, priced by nothing.
 
@@ -883,16 +999,9 @@ class UsageMeter(BaseObserver):
             usage["stt_audio_seconds"] = round(self._stt_audio_seconds, 3)
         if self._tts_characters:
             usage["tts_characters"] = self._tts_characters
+        if self._live_audio_seconds:
+            usage["live_audio_seconds"] = round(self._live_audio_seconds, 3)
         return {"usage": usage}
-
-
-def _short(value: Any, width: int = 300) -> str:
-    """One line of a value, for a log: enough to recognise it, not to reproduce it."""
-    try:
-        text = json.dumps(value, ensure_ascii=False, default=str)
-    except Exception:  # noqa: BLE001
-        text = repr(value)
-    return text if len(text) <= width else text[:width] + "…"
 
 
 class CallNarrator(BaseObserver):
@@ -909,22 +1018,52 @@ class CallNarrator(BaseObserver):
     them and once when the pipeline adopts them as a turn: the gap between the
     two is the endpointing delay, and the rows on this board differ in where
     that decision is made.
+
+    Two things had to be got right for these counts to mean the same thing on
+    every row, and both were wrong first time round.
+
+    A broadcast frame is *two* frames -- the framework constructs one for each
+    direction and links them by ``broadcast_sibling_id`` -- so counting by frame
+    identity alone counts every turn twice. Which frames are broadcast differs
+    by provider, so the error was not even a constant factor: it would have
+    inflated some rows more than others.
+
+    And an interruption frame does not mean the caller interrupted. In realtime
+    mode the aggregator broadcasts one at the *start of every caller turn*,
+    whether or not the agent was saying anything. A barge-in is an interruption
+    that arrives while the agent is actually speaking, so that is what is
+    counted; the rest are ordinary turn starts and stay at DEBUG.
     """
+
+    # Enough to catch a broadcast pair, which arrives back to back, without
+    # holding every frame of a ten-minute call.
+    MEMORY = 512
 
     def __init__(self) -> None:
         super().__init__()
-        self._seen: set[int] = set()
+        self._seen: dict[int, None] = {}
         self.caller_turns = 0
         self.agent_turns = 0
-        self.interruptions = 0
+        self.barge_ins = 0
         self.errors = 0
+        self._agent_speaking = False
+
+    def _first_sighting(self, frame: Frame) -> bool:
+        """False for a frame already narrated, or for the sibling of one."""
+        if frame.id in self._seen:
+            return False
+        self._seen[frame.id] = None
+        sibling = getattr(frame, "broadcast_sibling_id", None)
+        if sibling is not None:
+            self._seen[sibling] = None
+        while len(self._seen) > self.MEMORY:
+            self._seen.pop(next(iter(self._seen)))
+        return True
 
     async def on_push_frame(self, data: FramePushed) -> None:
         frame = data.frame
-        if frame.id in self._seen:
-            # System frames are broadcast to every processor; one line each.
+        if not self._first_sighting(frame):
             return
-        self._seen.add(frame.id)
         if isinstance(frame, VADUserStartedSpeakingFrame):
             logger.debug("detector: caller speech starts")
         elif isinstance(frame, VADUserStoppedSpeakingFrame):
@@ -942,12 +1081,17 @@ class CallNarrator(BaseObserver):
         elif isinstance(frame, LLMFullResponseEndFrame):
             logger.info("agent response {} ends", self.agent_turns)
         elif isinstance(frame, BotStartedSpeakingFrame):
+            self._agent_speaking = True
             logger.info("agent audio starts")
         elif isinstance(frame, BotStoppedSpeakingFrame):
+            self._agent_speaking = False
             logger.info("agent audio stops")
         elif isinstance(frame, InterruptionFrame):
-            self.interruptions += 1
-            logger.info("interruption {}: the caller spoke over the agent", self.interruptions)
+            if self._agent_speaking:
+                self.barge_ins += 1
+                logger.info("barge-in {}: the caller spoke over the agent", self.barge_ins)
+            else:
+                logger.debug("interruption while the agent was silent (an ordinary turn start)")
         elif isinstance(frame, FunctionCallInProgressFrame):
             logger.info("tool {} requested by the model with {}", frame.function_name, _short(frame.arguments))
         elif isinstance(frame, FunctionCallResultFrame):
@@ -1334,6 +1478,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
     settings = Settings(body)
     server = load_agent(settings)
     trace = ToolTrace()
+    restatements = RestatementIsNotSpeech()
     name = settings.get("s2s_provider", "openai-realtime")
     cascade = TEXT_MODELS.get(name)
 
@@ -1356,7 +1501,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         )
         # Three services where the native path has one. Everything either side of
         # them -- transport, context, tools, greeting -- is the same code.
-        stages = [transport.input(), stt, aggregators.user(), llm, tts, transport.output(),
+        stages = [transport.input(), stt, aggregators.user(), restatements, llm, tts, transport.output(),
                   DropControlTokens(), aggregators.assistant()]
         rate = CASCADE_RATE
         realtime = False
@@ -1382,7 +1527,11 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         )
         # No separate speech-to-text or text-to-speech: the realtime model is the
         # whole agent, so the pipeline is the transport, the context and the model.
-        stages = [transport.input(), aggregators.user(), llm, transport.output(),
+        # ``restatements`` sits between the context and the service, because a
+        # caller transcript travels *upstream* from the service to the context:
+        # it has to be trimmed before the aggregator appends it, so it belongs on
+        # the service side of the aggregator, not the transport side.
+        stages = [transport.input(), aggregators.user(), restatements, llm, transport.output(),
                   DropControlTokens(), aggregators.assistant()]
         rate = provider.input_rate
         realtime = True
@@ -1395,6 +1544,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         audio_out_sample_rate=rate,
     )
     meter = UsageMeter()
+    capture_live_audio(llm, meter)
     narrator = CallNarrator()
     task, tracer = create_task(pipeline, context, params, runner_args, transport, record, [meter, narrator])
     if tracer is not None:
@@ -1439,9 +1589,9 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         usage = meter.as_metadata()["usage"]
         tools = trace.as_metadata()
         logger.info(
-            "call summary: {:.0f}s, caller turns {}, agent responses {}, interruptions {}, "
+            "call summary: {:.0f}s, caller turns {}, agent responses {}, barge-ins {}, "
             "tools {} ({} exact), errors {}, usage reports {}, log lines {}{}",
-            usage["call_seconds"], narrator.caller_turns, narrator.agent_turns, narrator.interruptions,
+            usage["call_seconds"], narrator.caller_turns, narrator.agent_turns, narrator.barge_ins,
             tools["tool_call_count"], tools["tool_calls_matched"], narrator.errors, usage["usage_reports"],
             len(call_log.lines), f" (+{call_log.dropped} dropped)" if call_log.dropped else "",
         )
@@ -1559,6 +1709,33 @@ def sweep_transcript(capture, context: LLMContext) -> int:
     if added:
         logger.info("transcript: {} row(s) written after the last agent turn were swept into the export", added)
     return added
+
+
+def capture_live_audio(llm: LLMService, meter: UsageMeter) -> None:
+    """Record the seconds a provider bills for, where the framework only logs them.
+
+    One of these services does not bill its speech model by the token at all. It
+    reports the session's audio duration in seconds, and the framework prints
+    that to the log and emits no metric for it -- so the token counts that do
+    reach the record are the *backend* model's, and they are the cheaper half.
+    A row priced from those alone understates what the call cost by most of it,
+    and it would sit on a board next to rows that are complete.
+
+    There is no public surface for this, so the service's own reporting is
+    wrapped and still called. A service that reports no seconds is untouched,
+    which is every other row.
+    """
+    original = getattr(llm, "_report_usage", None)
+    if original is None:
+        return
+
+    async def report(usage: Any):
+        seconds = getattr(usage, "seconds", None)
+        if seconds is not None:
+            meter.record_live_audio(float(seconds))
+        return await original(usage)
+
+    llm._report_usage = report
 
 
 def capture_caller_turns(tracer, user_aggregator) -> None:

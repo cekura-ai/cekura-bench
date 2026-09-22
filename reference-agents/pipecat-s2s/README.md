@@ -299,21 +299,24 @@ file serves local WebRTC, Daily and both telephony providers unchanged.
 ### Locally, the way the platform runs it
 
 The platform starts a Pipecat Cloud session with a body and gets back a Daily
-room; the simulated caller joins the room. Pipecat's development runner answers
-the same `POST /start` the same way, so the whole arrangement runs on one
-machine with `bot.py` unchanged — same body, same room, same SDK, same payload
-at the end, posted to a local receiver instead of the platform where it can be
-read. `local.py` is the four steps:
+room; the simulated caller joins the room. `local.py` does the same on one
+machine with `bot.py` unchanged — the same session body, the same `bot()` entry
+point through the same runner arguments, the same SDK, and the same payload at
+the end, posted to a local receiver instead of the platform where it can be
+read:
 
 ```bash
 python local.py receive                                    # stand-in for the platform: keeps every payload
-python local.py serve                                      # the agent on the dev runner; credentials from ../../.env
-python local.py start --provider gemini-live --agent-dir medicare   # a session and a room, as the platform gets them
+python local.py call --provider gemini-live --agent-dir medicare   # a room, and the agent answering in it
 python local.py inspect ../../data/local-runs/<file>.json  # read it the way the score will
 ```
 
-`start` prints the room: join it from a browser to be the caller, or hand the
-room and token to a simulated caller. `inspect` checks what a scored run
+`call` prints the room and a second token before it answers: join the room from
+a browser to be the caller, or hand the room and that token to a simulated
+caller. It mints the room itself rather than going through Pipecat's
+development runner, which always names the room it creates — a HIPAA-enabled
+Daily domain refuses a named room, so that runner cannot create one there at
+all. `inspect` checks what a scored run
 depends on — caller turns present, agent words present, no control tokens,
 tool rows in the transcript matching the record, the record finished, usage
 reported, every log line on the call clock with the framework's DEBUG lines in

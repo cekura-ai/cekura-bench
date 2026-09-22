@@ -1037,7 +1037,6 @@ class TestTheCallTellsItsOwnStory:
         from pipecat.frames.frames import (
             FunctionCallInProgressFrame,
             FunctionCallResultFrame,
-            InterruptionFrame,
             LLMFullResponseEndFrame,
             LLMFullResponseStartFrame,
             TranscriptionFrame,
@@ -1053,7 +1052,6 @@ class TestTheCallTellsItsOwnStory:
             FunctionCallInProgressFrame(function_name="lookup_patient", tool_call_id="c1", arguments={"phone": "1"}, cancel_on_interruption=False),
             FunctionCallResultFrame(function_name="lookup_patient", tool_call_id="c1", arguments={"phone": "1"}, result={"ok": True}),
             LLMFullResponseEndFrame(),
-            InterruptionFrame(),
         )
         assert lines == [
             "caller turn 1 starts",
@@ -1063,9 +1061,48 @@ class TestTheCallTellsItsOwnStory:
             'tool lookup_patient requested by the model with {"phone": "1"}',
             'tool lookup_patient result handed back: {"ok": true}',
             "agent response 1 ends",
-            "interruption 1: the caller spoke over the agent",
         ]
-        assert (narrator.caller_turns, narrator.agent_turns, narrator.interruptions) == (1, 1, 1)
+        assert (narrator.caller_turns, narrator.agent_turns) == (1, 1)
+
+    def test_a_broadcast_pair_is_one_event_not_two(self):
+        # The framework constructs a separate frame for each direction and links
+        # them. Counting by frame identity alone counted every turn twice, and
+        # which frames are broadcast differs by provider -- so the inflation was
+        # not even a constant factor across rows.
+        from pipecat.frames.frames import UserStartedSpeakingFrame, UserStoppedSpeakingFrame
+
+        def pair(cls):
+            downstream, upstream = cls(), cls()
+            downstream.broadcast_sibling_id = upstream.id
+            upstream.broadcast_sibling_id = downstream.id
+            return downstream, upstream
+
+        narrator, lines = self._narrate(*pair(UserStartedSpeakingFrame), *pair(UserStoppedSpeakingFrame))
+        assert lines == ["caller turn 1 starts", "caller turn 1 ends"]
+        assert narrator.caller_turns == 1
+
+    def test_only_an_interruption_over_live_audio_is_a_barge_in(self):
+        # In realtime mode the aggregator broadcasts an interruption at the
+        # start of every caller turn, whether or not the agent was saying
+        # anything, so counting those would report a barge-in per turn on every
+        # row. A barge-in is one that lands while the agent is speaking.
+        from pipecat.frames.frames import (
+            BotStartedSpeakingFrame,
+            BotStoppedSpeakingFrame,
+            InterruptionFrame,
+        )
+
+        narrator, lines = self._narrate(
+            InterruptionFrame(),                     # ordinary turn start, agent silent
+            BotStartedSpeakingFrame(),
+            InterruptionFrame(),                     # the caller cuts in
+            BotStoppedSpeakingFrame(),
+            InterruptionFrame(),                     # silent again
+        )
+        assert narrator.barge_ins == 1
+        assert [line for line in lines if "barge-in" in line] == [
+            "barge-in 1: the caller spoke over the agent"
+        ]
 
     def test_errors_and_endings_are_narrated(self):
         from pipecat.frames.frames import CancelFrame, EndFrame, ErrorFrame
@@ -1186,3 +1223,207 @@ class TestToolRowsAfterTheLastTurnAreExported:
         assert ("assistant", True, None) in rows, "the model's request for end_call"
         assert ("tool", False, "c9") in rows, "and its answer"
         assert published == ["record", "summary"]
+
+
+class TestARestatedTranscriptIsNotRepeatedSpeech:
+    """One service restates the whole turn on every final; the rest send one.
+
+    The aggregator appends each final, which is right for every service that
+    sends one per turn and triples the caller's words for the one that does
+    not. The transcript is what a judge reads and what a word-level comparison
+    counts, so that row was being scored against a conversation nobody had.
+
+    The correction is a statement about transcripts, not about a vendor: pass on
+    only the part of a final that is new. For a service sending one final per
+    turn it does nothing, which is the test of whether it is fair.
+    """
+
+    @staticmethod
+    async def _through(*texts, restart_between=False):
+        import asyncio
+
+        from pipecat.frames.frames import Frame, StartFrame, TranscriptionFrame, UserStartedSpeakingFrame
+        from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
+        from pipecat.utils.time import time_now_iso8601
+
+        kept: list[str] = []
+
+        class Sink(FrameProcessor):
+            async def process_frame(self, frame: Frame, direction: FrameDirection):
+                await super().process_frame(frame, direction)
+                if isinstance(frame, TranscriptionFrame):
+                    kept.append(frame.text)
+
+        from pipecat.pipeline.pipeline import Pipeline
+        from pipecat.pipeline.runner import PipelineRunner
+        from pipecat.pipeline.task import PipelineParams, PipelineTask
+
+        filter_ = bot.RestatementIsNotSpeech()
+
+        class Source(FrameProcessor):
+            async def process_frame(self, frame: Frame, direction: FrameDirection):
+                await super().process_frame(frame, direction)
+                if isinstance(frame, StartFrame):
+                    self.create_task(self._script())
+                await self.push_frame(frame, direction)
+
+            async def _script(self):
+                await asyncio.sleep(0.05)
+                await self.push_frame(UserStartedSpeakingFrame())
+                for text in texts:
+                    if text is None:
+                        await self.push_frame(UserStartedSpeakingFrame())
+                        continue
+                    await self.push_frame(TranscriptionFrame(text, "", time_now_iso8601()))
+                    await asyncio.sleep(0.02)
+                await asyncio.sleep(0.3)
+                await self.queue_frame_and_wait_for_end()
+
+            async def queue_frame_and_wait_for_end(self):
+                pass
+
+        task = PipelineTask(Pipeline([Source(), filter_, Sink()]), params=PipelineParams())
+        runner = PipelineRunner(handle_sigint=False)
+        running = asyncio.create_task(runner.run(task))
+        await asyncio.sleep(1.0)
+        await task.stop_when_done()
+        await asyncio.wait_for(running, timeout=30)
+        return kept, filter_
+
+    @pytest.mark.asyncio
+    async def test_a_cumulative_turn_is_reassembled_once(self):
+        # The exact shape one service sent for a real caller turn.
+        kept, filter_ = await self._through(
+            "Hi, I'd like to book",
+            "Hi, I'd like to book a new appointment.",
+            "Hi, I'd like to book a new appointment.",
+        )
+        # What the aggregator would append is what the service last reported.
+        assert " ".join(kept) == "Hi, I'd like to book a new appointment."
+        assert filter_.restatements == 2
+
+    @pytest.mark.asyncio
+    async def test_one_final_per_turn_is_untouched(self):
+        # Every other service on the board. A correction that changed these rows
+        # would be a patch aimed at one vendor rather than a fix.
+        kept, filter_ = await self._through("I need to book an appointment.")
+        assert kept == ["I need to book an appointment."]
+        assert filter_.restatements == 0
+
+    @pytest.mark.asyncio
+    async def test_a_new_turn_starts_again(self):
+        # The same words in a later turn are new speech, not a restatement.
+        kept, _ = await self._through("Yes, that's correct.", None, "Yes, that's correct.")
+        assert kept == ["Yes, that's correct.", "Yes, that's correct."]
+
+    @pytest.mark.asyncio
+    async def test_genuinely_new_speech_survives(self):
+        kept, _ = await self._through("No.", "Wait, actually yes.")
+        assert " ".join(kept) == "No. Wait, actually yes."
+
+    @pytest.mark.asyncio
+    async def test_punctuation_does_not_make_a_restatement_look_new(self):
+        # The same service rewrites "July 8th." as "July 8th if possible." on
+        # the next pass. Compared byte for byte that is a fresh sentence, and
+        # the whole thing is appended again.
+        kept, filter_ = await self._through(
+            "July 8th.", "July 8th if possible.", "July 8th if possible.",
+        )
+        assert " ".join(kept) == "July 8th. if possible."
+        assert filter_.restatements == 2
+
+    @pytest.mark.asyncio
+    async def test_a_shorter_rewrite_is_not_appended(self):
+        # It also revises downwards: "Perfect, got it." becomes "Perfect, got."
+        # The longer version stands; appending the shorter one would say it twice.
+        kept, filter_ = await self._through("Perfect, got it.", "Perfect, got.")
+        assert " ".join(kept) == "Perfect, got it."
+        assert filter_.restatements == 1
+
+
+class TestTheSpeechHalfOfACostIsRecorded:
+    """One provider bills its speech model by the second, and only logs it.
+
+    Its token counts come from the *backend* text model it delegates to, which
+    is the cheaper half. A row priced from those alone understates the call by
+    most of it, and would sit on a board beside rows that are complete.
+    """
+
+    @pytest.mark.asyncio
+    async def test_the_seconds_reach_the_record(self):
+        reported = []
+
+        class LiveService:
+            async def _report_usage(self, usage):
+                reported.append(usage)
+
+        meter = bot.UsageMeter()
+        service = LiveService()
+        bot.capture_live_audio(service, meter)
+        # Reported cumulatively during the call, so the last figure is the call's.
+        await service._report_usage(SimpleNamespace(seconds=42.0))
+        await service._report_usage(SimpleNamespace(seconds=104.0))
+        assert meter.as_metadata()["usage"]["live_audio_seconds"] == 104.0
+        assert len(reported) == 2, "the service's own reporting must still happen"
+
+    @pytest.mark.asyncio
+    async def test_a_service_that_bills_by_the_token_is_untouched(self):
+        class TokenService:
+            pass
+
+        meter = bot.UsageMeter()
+        bot.capture_live_audio(TokenService(), meter)
+        assert "live_audio_seconds" not in meter.as_metadata()["usage"]
+
+
+class TestARewrittenWordIsStillTheSameTurn:
+    """The same service also corrects words as it goes, not only adds them.
+
+    "Hi, I'd like to book an" becomes "Hi, I'd like to book a new appointment."
+    Compared word for word those diverge at the article, so a strict test reads
+    the second as a new sentence and appends the whole thing again. Two versions
+    that agree on most of their words are the same words, rewritten.
+    """
+
+    @staticmethod
+    def _run(*finals: str) -> str:
+        """What the aggregator would end up with, without a pipeline."""
+        import asyncio
+
+        from pipecat.frames.frames import TranscriptionFrame, UserStartedSpeakingFrame
+        from pipecat.processors.frame_processor import FrameDirection
+        from pipecat.utils.time import time_now_iso8601
+
+        filter_ = bot.RestatementIsNotSpeech()
+        kept: list[str] = []
+
+        async def push(frame, direction=FrameDirection.UPSTREAM):
+            if isinstance(frame, TranscriptionFrame):
+                kept.append(frame.text)
+
+        filter_.push_frame = push
+
+        async def drive():
+            await filter_.process_frame(UserStartedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+            for text in finals:
+                await filter_.process_frame(
+                    TranscriptionFrame(text, "", time_now_iso8601()), FrameDirection.UPSTREAM
+                )
+
+        asyncio.run(drive())
+        return " ".join(kept)
+
+    def test_a_corrected_word_does_not_repeat_the_sentence(self):
+        said = self._run(
+            "Hi, I'd like to book an",
+            "Hi, I'd like to book a new appointment.",
+            "Hi, I'd like to book a new appointment.",
+        )
+        # The stray article survives -- what was already reported cannot be
+        # withdrawn -- but the sentence is said once, not three times.
+        assert said.count("appointment") == 1, said
+        assert said.lower().count("hi") == 1, said
+
+    def test_two_different_utterances_are_both_kept(self):
+        said = self._run("I need to cancel.", "Actually, let me reschedule instead.")
+        assert said == "I need to cancel. Actually, let me reschedule instead."

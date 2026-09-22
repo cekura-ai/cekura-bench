@@ -249,3 +249,52 @@ class TestWhenSpeechBendsAnArgument:
     def test_an_undeclared_tool_is_not_resolved_at_all(self, server):
         server.call("transfer_to_human", {})
         assert server.calls[-1].resolution == "unknown"
+
+
+class TestAnEnumWrittenTwoWaysIsOneCategory:
+    """Several fields are enumerations, and the caller does not speak in tokens.
+
+    The tables store ``original_medicare``; the caller says "Original Medicare".
+    A model that echoes the caller and a model that writes the token have chosen
+    the same category and differ only in punctuation. Scoring those differently
+    would rank a provider on its formatting habits, and providers differ in that
+    habit, so the column would tilt for a reason that has nothing to do with
+    understanding the caller.
+    """
+
+    @staticmethod
+    def _qualified(coverage: str):
+        from mock_tools.server import MockToolServer
+
+        server = MockToolServer(suite="medicare")
+        consent = server.call("record_medicare_permissions", {
+            "caller_name": "Maria Gomez", "callback_phone": "4155550199",
+            "contact_consent": True, "data_sharing_consent": True,
+            "scope_of_appointment_product_types": ["medicare_advantage"],
+            "caller_relationship": "self",
+        })["consent_id"]
+        output = server.call("save_medicare_qualification", {
+            "caller_name": "Maria Gomez", "callback_phone": "4155550199",
+            "consent_id": consent, "state": "CA", "zip_code": "94105",
+            "age_band": "already_medicare_age", "has_medicare_part_a": "yes",
+            "has_medicare_part_b": "yes", "current_coverage": coverage,
+            "product_interest": "medicare_advantage", "intake_intent": "new_shopping",
+            "caller_relationship": "self",
+        })
+        return server.calls[-1], output
+
+    def test_the_stored_token_matches(self):
+        record, output = self._qualified("original_medicare")
+        assert record.resolution == "exact"
+        assert output["lead_id"] == "lead_2001"
+
+    def test_the_spoken_form_matches_the_same_record(self):
+        record, output = self._qualified("Original Medicare")
+        assert record.resolution == "exact"
+        assert output["lead_id"] == "lead_2001"
+
+    def test_the_wrong_category_still_does_not(self):
+        # The part worth measuring survives: choosing a different category is a
+        # real miss, and only the punctuation was ever forgiven.
+        record, _ = self._qualified("medicare_advantage")
+        assert record.resolution != "exact"

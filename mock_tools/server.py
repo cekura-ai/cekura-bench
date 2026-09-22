@@ -46,6 +46,15 @@ def _normalize(value: Any) -> Any:
     strings are compared as digits and everything else case-insensitively, so the
     score reflects whether the right record was requested rather than whose
     formatter ran.
+
+    Separators go the same way, and for the same reason. Several of these fields
+    are declared as enumerations whose values are written ``original_medicare``,
+    while the caller says "Original Medicare" -- so a model that echoes the
+    caller and a model that writes the token have chosen the *same category* and
+    differ only in punctuation. Treating those as different records would score
+    a provider on its formatting habits rather than on whether it understood the
+    caller, and providers differ in that habit, so the column would tilt.
+    Choosing the wrong category still misses, which is the part worth measuring.
     """
     if isinstance(value, str):
         stripped = value.strip()
@@ -57,7 +66,11 @@ def _normalize(value: Any) -> Any:
             if len(digits) == 11 and digits.startswith("1"):
                 digits = digits[1:]
             return digits
-        return stripped.lower()
+        # Anything that is not a letter or a digit separates words; what the
+        # words are is what distinguishes one record from another.
+        return " ".join("".join(
+            ch if ch.isalnum() else " " for ch in stripped
+        ).lower().split())
     if isinstance(value, (int, float, bool)) or value is None:
         return value
     if isinstance(value, list):

@@ -29,8 +29,9 @@ from __future__ import annotations
 
 import difflib
 import json
-import re
+import logging
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -38,46 +39,49 @@ from mock_tools.spec import ToolSpec
 
 DEFINITIONS_ROOT = Path(__file__).resolve().parent.parent / "agent-definitions"
 
-
-# One instant, written several ways. The contract asks for ``YYYY-MM-DDTHH:MM:SS``
-# and the services oblige to different degrees: a space where the T belongs, the
-# seconds left off, a trailing Z. Every one of those names the same slot, and a
-# table lookup that treats them as different appointments scores a provider on
-# which ISO spelling it favours. Nothing in these contracts carries a timezone,
-# so there is no conversion to do -- and a real offset is deliberately NOT
-# canonicalised here, because a shifted time is a different instant and must
-# never match quietly.
-_TIMESTAMP = re.compile(
-    r"^(\d{4})-(\d{2})-(\d{2})[Tt ](\d{2}):(\d{2})(?::(\d{2}))?\s*(Z|z|\+00:?00)?$"
-)
+# Why a call resolved the way it did is the question every tool-accuracy
+# investigation starts from, so the answer is logged rather than reconstructed
+# afterwards. Standard library logging keeps this module free of a dependency:
+# the agent under test bridges it into its own log, and nothing is emitted
+# unless the host configures a handler.
+log = logging.getLogger("mock_tools")
 
 
+# One slot, several spellings. The contract asks for ``YYYY-MM-DDTHH:MM:SS`` and
+# services oblige to different degrees: a space where the T belongs, the seconds
+# left off, fractional seconds, a trailing Z. All name the same slot, and scoring
+# them as different appointments would rank a service on its ISO spelling.
+#
+# A real UTC offset is deliberately not canonicalised: a shifted time is a
+# different instant and must never match quietly. ``Z`` and ``+00:00`` are read as
+# notation, because nothing in these contracts carries a timezone for them to be
+# relative to.
 def _timestamp(value: str) -> str | None:
-    """The one spelling of a slot, or None when this is not a slot."""
-    found = _TIMESTAMP.match(value.strip())
-    if not found:
+    """The one spelling of a slot, or None when this is not a slot.
+
+    A dated slot always carries its separators here, and requiring one keeps the
+    compact form the parser also accepts from reading a bare number as a date.
+    """
+    if "-" not in value:
         return None
-    year, month, day, hour, minute, second, _zulu = found.groups()
-    return f"{year}-{month}-{day}T{hour}:{minute}:{second or '00'}"
+    try:
+        moment = datetime.fromisoformat(value.strip())
+    except ValueError:
+        return None
+    if moment.utcoffset():
+        return None
+    return moment.replace(tzinfo=None, microsecond=0).isoformat()
 
 
 def _normalize(value: Any) -> Any:
     """Compare arguments the way the contract means them, not byte for byte.
 
-    A model that answers "(415) 555-0123" for a field documented as ten digits
-    has followed the instruction; one that answers "415-555-0123" has too. Digit
-    strings are compared as digits and everything else case-insensitively, so the
-    score reflects whether the right record was requested rather than whose
-    formatter ran.
-
-    Separators go the same way, and for the same reason. Several of these fields
-    are declared as enumerations whose values are written ``original_medicare``,
-    while the caller says "Original Medicare" -- so a model that echoes the
-    caller and a model that writes the token have chosen the *same category* and
-    differ only in punctuation. Treating those as different records would score
-    a provider on its formatting habits rather than on whether it understood the
-    caller, and providers differ in that habit, so the column would tilt.
-    Choosing the wrong category still misses, which is the part worth measuring.
+    Digit strings are compared as digits, and everything else case- and
+    punctuation-insensitively, so a slot, a phone number or an enum written two
+    ways names one record. ``original_medicare`` and "Original Medicare" are the
+    same category; the wrong category still misses, which is the part worth
+    measuring. Formatting is a habit that differs between services, and scoring
+    it would tilt the column it feeds.
     """
     if isinstance(value, str):
         stripped = value.strip()
@@ -100,12 +104,9 @@ def _normalize(value: Any) -> Any:
     if isinstance(value, (int, float, bool)) or value is None:
         return value
     if isinstance(value, list):
-        # Order is not part of what a list of categories says. Both arrays these
-        # contracts declare are sets -- the product types a caller agreed may be
-        # discussed, and the fields collected for a handoff -- so a model that
-        # reports the same two categories in the other order has reported the
-        # same consent. Models differ in the order they emit array members, and
-        # nothing about that order distinguishes one record from another.
+        # The arrays these contracts declare are sets -- the product types a
+        # caller consented to, the fields collected for a handoff -- so order is
+        # not part of the record. A narrower or wider list still misses.
         return sorted((_normalize(item) for item in value), key=repr)
     if isinstance(value, dict):
         return {key: _normalize(item) for key, item in sorted(value.items())}
@@ -117,6 +118,16 @@ def _normalize(value: Any) -> Any:
 # digit, and a table lookup that treats a bent name as an unknown record turns a
 # transcription error into a task failure -- which is a different measurement.
 FUZZY_THRESHOLD = 30.0
+
+# Enum values that decline to answer rather than naming a category. Spelled out
+# because the difference is a matter of meaning: "unknown" withholds a fact,
+# where "spouse" asserts one and can be wrong.
+DECLINES = frozenset({"unknown", "not_sure", "not_applicable", "none", "other"})
+
+
+def _declined(field_name: str, value: Any, abstentions: frozenset) -> bool:
+    """Whether this argument declines to answer. Only a plain string can."""
+    return isinstance(value, str) and (field_name, value) in abstentions
 
 
 @dataclass
@@ -163,6 +174,7 @@ class MockToolServer:
         self._mocks = {m["name"]: m for m in json.loads((directory / "mock-tools.json").read_text())}
         self.system_prompt = (directory / "system-prompt.txt").read_text().strip()
         self.first_message = (directory / "first-message.txt").read_text().strip()
+        self._abstentions = self._build_abstentions()
 
     # -- what the model is told ------------------------------------------
 
@@ -178,30 +190,45 @@ class MockToolServer:
 
     # -- answering --------------------------------------------------------
 
-    def _abstentions(self, name: str) -> frozenset[str]:
-        """The (field, value) pairs that mean "the caller did not say", not a claim.
+    def _build_abstentions(self) -> dict[str, frozenset[str]]:
+        """Per tool, the (field, value) pairs that say nothing about the record.
 
-        Several optional fields offer ``unknown`` in their own enum while the tool's
-        prose tells the agent to omit an argument it has no value for. An agent that
-        resolves that toward the enum and one that resolves it toward the prose have
-        said the same thing -- nothing -- so both must score alike, and which way a
-        given service leans is a habit of that service rather than a fact about the
-        call. A required field is excluded: there the agent is asked to commit, and
-        declining to is an answer in itself.
+        An optional field's enum may offer a value meaning the agent has nothing
+        to report, while the tool's prose says to omit an argument it has no value
+        for. Both say the same thing, so both must score alike, and which one an
+        agent reaches for is a habit of that agent rather than a fact about the
+        call.
+
+        Two conditions, and both are needed. The value must be one that declines
+        to answer rather than asserting something -- naming a category the caller
+        does not fit is a claim, and a wrong claim must still miss. And no record
+        may use it: where a record does, the contract treats it as a real answer
+        and it stays compared, as an ``unknown`` Part B status does, which is a
+        thing callers say and the tables keep a record for.
+
+        Required fields are excluded throughout: there the agent is asked to
+        commit, and declining is itself an answer.
         """
-        cached = getattr(self, "_abstention_cache", None)
-        if cached is None:
-            cached = self._abstention_cache = {}
-        if name not in cached:
-            definition = next((d for d in self._definitions if d["name"] == name), {})
+        abstentions: dict[str, frozenset[str]] = {}
+        for definition in self._definitions:
+            name = definition["name"]
             parameters = definition.get("parameters") or {}
             required = set(parameters.get("required") or ())
-            cached[name] = frozenset(
-                field
-                for field, schema in (parameters.get("properties") or {}).items()
-                if field not in required and "unknown" in (schema.get("enum") or ())
-            )
-        return cached[name]
+            rows = self._mocks.get(name, {}).get("mock_data", [])
+            pairs = set()
+            for field_name, schema in (parameters.get("properties") or {}).items():
+                if field_name in required:
+                    continue
+                recorded = {
+                    json.dumps(row["input"][field_name], sort_keys=True)
+                    for row in rows
+                    if field_name in (row.get("input") or {})
+                }
+                for choice in schema.get("enum") or ():
+                    if choice in DECLINES and json.dumps(choice, sort_keys=True) not in recorded:
+                        pairs.add((field_name, choice))
+            abstentions[name] = frozenset(pairs)
+        return abstentions
 
     def call(self, name: str, arguments: dict[str, Any]) -> Any:
         """Answer one tool call from the table, in two stages.
@@ -235,17 +262,18 @@ class MockToolServer:
         """
         mock = self._mocks.get(name)
         if mock is None:
+            log.warning("tool %s is not declared by the %s contract", name, self.suite)
             return self._record(name, arguments, {"error": f"unknown tool {name}"}, "unknown")
 
         freetext = set(mock.get("freetext_params") or ())
-        abstained = self._abstentions(name)
+        abstained = self._abstentions.get(name, frozenset())
         # Free text cannot be compared: no two agents write the same sentence,
         # and a row never stores one. An argument the model left empty is an
         # argument it did not send.
         wanted = {
             key: value
             for key, value in (arguments or {}).items()
-            if value is not None and key not in freetext and not (key in abstained and value == "unknown")
+            if value is not None and key not in freetext and not _declined(key, value, abstained)
         }
         rows = [
             (row, {k: v for k, v in (row.get("input") or {}).items() if k not in freetext})
@@ -260,6 +288,7 @@ class MockToolServer:
             if all(_normalize(wanted[key]) == _normalize(stored[key]) for key in shared):
                 best, best_shared = row, len(shared)
         if best is not None:
+            log.info("tool %s matched a record on %d field(s)", name, best_shared)
             return self._record(name, arguments, best.get("output"), "exact")
 
         nearest, best_score = None, -1.0
@@ -277,9 +306,35 @@ class MockToolServer:
             if score > best_score:
                 nearest, best_score = row, score
         if nearest is not None and best_score >= FUZZY_THRESHOLD:
+            self._explain(name, wanted, rows, nearest, best_score)
             return self._record(name, arguments, nearest.get("output"), "fuzzy")
 
+        self._explain(name, wanted, rows, nearest, best_score)
         return self._record(name, arguments, {"result": "no_match"}, "none")
+
+    def _explain(self, name, wanted, rows, nearest, score) -> None:
+        """Name the fields that kept a call off the record it came closest to.
+
+        Only ever called when a call did not match outright, so the comparison
+        it repeats costs nothing on the path that did.
+        """
+        if nearest is None:
+            log.info("tool %s matched no record; the contract has none to compare", name)
+            return
+        stored = next((s for row, s in rows if row is nearest), {})
+        disagreed = {
+            key: (wanted[key], stored[key])
+            for key in set(stored) & set(wanted)
+            if _normalize(wanted[key]) != _normalize(stored[key])
+        }
+        log.info(
+            "tool %s did not match outright (nearest record scored %.1f); "
+            "%d field(s) shared and equal, disagreed on %s",
+            name, score, len(set(stored) & set(wanted)) - len(disagreed),
+            ", ".join(f"{k}={s!r} sent as {w!r}" for k, (w, s) in sorted(disagreed.items())) or "nothing",
+        )
+        for key in sorted(set(wanted) - set(stored)):
+            log.debug("tool %s sent %s=%r, which that record does not carry", name, key, wanted[key])
 
     def _record(self, name: str, arguments: dict[str, Any], output: Any, resolution: str) -> Any:
         record = ToolCallRecord(name, arguments, resolution == "exact", output, resolution)

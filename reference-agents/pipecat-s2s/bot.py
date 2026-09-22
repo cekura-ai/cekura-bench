@@ -40,6 +40,7 @@ from __future__ import annotations
 import contextvars
 import hashlib
 import json
+import logging
 import os
 import re
 import subprocess
@@ -143,18 +144,11 @@ _calls_answered = 0
 
 # ── the call's own log ───────────────────────────────────────────────────────
 #
-# A run is debugged from its log, and the log is only useful if every line of it
-# can be placed on the call's clock and every line reaches the run record. Neither
-# was true. Lines carried a wall-clock time that nobody reading a result can
-# relate to "the caller's second turn", and the tracing SDK kept only lines at
-# INFO and above, and only from the moment the task was created -- so the
-# framework's own account of what it did with each turn, which is all at DEBUG,
-# never left the container.
-#
-# So every line is stamped with the time since this call started, and every line
-# from the call's first moment is kept for the record, at whatever level the
-# framework logged it. The stamp is the same shape the platform's own testing
-# agent uses, so the two sides of a call read on one clock.
+# A run is debugged from its log, so every line carries [MM:SS] since the call
+# was answered, and every line from the call's first moment is kept for the run
+# record at whatever level it was logged -- including the framework's own DEBUG
+# account of what it did with each turn. The stamp matches the one the calling
+# side uses, so both halves of a call read on a single clock.
 
 _CALL: contextvars.ContextVar[str | None] = contextvars.ContextVar("bench_call", default=None)
 _CLOCK: contextvars.ContextVar[float | None] = contextvars.ContextVar("bench_clock", default=None)
@@ -192,6 +186,29 @@ def _stamp(record: dict) -> None:
 logger.configure(patcher=_stamp)
 
 
+class _ToLoguru(logging.Handler):
+    """Carry the standard library's log records into the run record.
+
+    The mock tool server says why each call resolved as it did, and it does so
+    through the standard library so that it carries no logging dependency of its
+    own. Those lines belong in the record beside everything else, so they are
+    re-emitted here: they then pick up the call clock and the call id like any
+    other line, and ship with the payload.
+    """
+
+    def emit(self, record: logging.LogRecord) -> None:
+        level = logger.level(record.levelname).name if record.levelname in _LEVELS else "INFO"
+        logger.bind(std_logger=record.name).opt(depth=6, exception=record.exc_info).log(
+            level, record.getMessage()
+        )
+
+
+_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+logging.getLogger("mock_tools").handlers = [_ToLoguru()]
+logging.getLogger("mock_tools").setLevel(logging.DEBUG)
+logging.getLogger("mock_tools").propagate = False
+
+
 class CallLog:
     """Every line logged while a call is up, for the run's record.
 
@@ -215,7 +232,10 @@ class CallLog:
         self.call_id = call_id
         self.lines: list[dict[str, Any]] = []
         self.dropped = 0
-        self._sink_id: int | None = logger.add(self._sink, level=self.LEVEL)
+        # ``format`` is minimal on purpose: the sink reads the record and
+        # discards the rendered string, so rendering the full template would
+        # be paid on every line of the call for nothing.
+        self._sink_id: int | None = logger.add(self._sink, level=self.LEVEL, format="{message}")
 
     def _sink(self, message) -> None:
         record = message.record
@@ -260,9 +280,15 @@ class CallLog:
         if hasattr(tracer, "_session_logs"):
             tracer._session_logs = self.lines
             tracer._log_sink_id = self._sink_id
-            self._sink_id = None  # the SDK owns it now
 
     def close(self) -> None:
+        """Always remove the sink, even after handing it over.
+
+        The sink lives on the process-wide logger, so one left installed keeps
+        this call's lines alive and goes on capturing the next call's. The SDK
+        normally removes it during finalisation; removing it twice is free, and
+        not removing it at all is not.
+        """
         if self._sink_id is not None:
             try:
                 logger.remove(self._sink_id)
@@ -811,11 +837,15 @@ class DropControlTokens(FrameProcessor):
     async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
         await super().process_frame(frame, direction)
         if isinstance(frame, (TTSTextFrame, LLMTextFrame)) and "<ctrl" in frame.text:
-            cleaned = CONTROL_TOKEN.sub("", frame.text)
+            cleaned, found = CONTROL_TOKEN.subn("", frame.text)
             # Whitespace that only ever separated the tokens is not speech either.
             emptied = not cleaned.strip()
-            self.removed += len(CONTROL_TOKEN.findall(frame.text))
-            logger.info(
+            self.removed += found
+            # Text arrives in chunks, so this can fire many times in one turn.
+            # Only an emptied turn changes how the transcript should be read, so
+            # that is the case worth an INFO line.
+            report = logger.info if emptied else logger.debug
+            report(
                 "control tokens removed from what the agent said ({} so far){}: {}",
                 self.removed,
                 "; the turn is now empty, so the model said nothing else" if emptied else "",
@@ -828,24 +858,16 @@ class DropControlTokens(FrameProcessor):
 class RestatementIsNotSpeech(FrameProcessor):
     """A final transcript that restates the turn so far is a restatement, not new speech.
 
-    These services do not agree on what a *final* caller transcript is. Most
-    send one per turn. One sends several, each restating the whole turn to
-    date -- "Hi, I'd like to book", then "Hi, I'd like to book a new
-    appointment.", then that again -- and the aggregator, correctly for every
-    other service, appends each one. The caller's words end up in the record two
-    or three times over.
+    Services disagree on what a *final* caller transcript is. Most send one per
+    turn; some send several, each restating the whole turn to date. The
+    aggregator appends every final, which is right for the first kind and
+    records the caller's words two or three times over for the second.
 
-    That is not a small blemish on one row. The transcript is what a judge
-    reads and what a word-level comparison counts, so the row with the
-    stuttering caller is scored against a conversation that did not happen,
-    while the others are not. A difference between rows has to come from the
-    agents, and this one came from us.
-
-    So only the part of a final that is new is passed on. The aggregator's own
-    appending then reconstructs exactly the text the service last reported. For
-    a service that sends one final per turn this changes nothing at all, which
-    is the test of whether a correction like this is fair: it has to be a
-    statement about transcripts in general, not a patch aimed at one vendor.
+    Only the part of a final that is new is passed on, so the aggregator's own
+    appending reconstructs exactly the text the service last reported. A service
+    that sends one final per turn is unaffected, which is the test of a
+    correction like this: it must be a statement about transcripts in general
+    rather than an adjustment aimed at one service.
     """
 
     # How much of the shorter version two finals must agree on before the later
@@ -890,12 +912,13 @@ class RestatementIsNotSpeech(FrameProcessor):
             said, new = self._compare(self._said), self._compare(words)
             agreed = self._agree_on(said, new)
             shorter = min(len(said), len(new))
-            if said and (agreed == shorter or (agreed >= 2 and agreed >= self.SAME_TURN * shorter)):
+            if said and agreed >= 2 and (agreed == shorter or agreed >= self.SAME_TURN * shorter):
                 # The same words again, carried on or corrected. Only what comes
                 # after the part they agree on is new.
                 self.restatements += 1
                 rest = " ".join(words[agreed:])
-                self._said = words if len(new) >= len(said) else self._said
+                if len(new) >= len(said):
+                    self._said = words
                 if not rest:
                     logger.debug("the transcript restated the turn and added nothing; not passed on")
                     return
@@ -1019,20 +1042,18 @@ class CallNarrator(BaseObserver):
     two is the endpointing delay, and the rows on this board differ in where
     that decision is made.
 
-    Two things had to be got right for these counts to mean the same thing on
-    every row, and both were wrong first time round.
+    Two rules keep these counts meaning the same thing on every row.
 
-    A broadcast frame is *two* frames -- the framework constructs one for each
-    direction and links them by ``broadcast_sibling_id`` -- so counting by frame
+    A broadcast frame is *two* frames: the framework constructs one for each
+    direction and links them by ``broadcast_sibling_id``, so counting by frame
     identity alone counts every turn twice. Which frames are broadcast differs
-    by provider, so the error was not even a constant factor: it would have
-    inflated some rows more than others.
+    by service, so the error would not even be a constant factor across rows.
 
     And an interruption frame does not mean the caller interrupted. In realtime
-    mode the aggregator broadcasts one at the *start of every caller turn*,
-    whether or not the agent was saying anything. A barge-in is an interruption
-    that arrives while the agent is actually speaking, so that is what is
-    counted; the rest are ordinary turn starts and stay at DEBUG.
+    mode the aggregator broadcasts one at the start of every caller turn,
+    whether or not the agent was speaking. A barge-in is an interruption that
+    arrives while the agent is actually speaking; the rest are ordinary turn
+    starts and stay at DEBUG.
     """
 
     # Enough to catch a broadcast pair, which arrives back to back, without
@@ -1060,9 +1081,22 @@ class CallNarrator(BaseObserver):
             self._seen.pop(next(iter(self._seen)))
         return True
 
+    # Everything this narrates. Audio frames outnumber these by orders of
+    # magnitude, so they are turned away before anything else happens -- which
+    # also keeps the dedupe window holding only frames that were narrated,
+    # rather than being flushed by audio within the second.
+    NARRATED = (
+        VADUserStartedSpeakingFrame, VADUserStoppedSpeakingFrame,
+        UserStartedSpeakingFrame, UserStoppedSpeakingFrame, TranscriptionFrame,
+        LLMFullResponseStartFrame, LLMFullResponseEndFrame,
+        BotStartedSpeakingFrame, BotStoppedSpeakingFrame, InterruptionFrame,
+        FunctionCallInProgressFrame, FunctionCallResultFrame,
+        ErrorFrame, EndFrame, CancelFrame, MetricsFrame,
+    )
+
     async def on_push_frame(self, data: FramePushed) -> None:
         frame = data.frame
-        if not self._first_sighting(frame):
+        if not isinstance(frame, self.NARRATED) or not self._first_sighting(frame):
             return
         if isinstance(frame, VADUserStartedSpeakingFrame):
             logger.debug("detector: caller speech starts")
@@ -1092,10 +1126,13 @@ class CallNarrator(BaseObserver):
                 logger.info("barge-in {}: the caller spoke over the agent", self.barge_ins)
             else:
                 logger.debug("interruption while the agent was silent (an ordinary turn start)")
+        # Only the timing: these two bracket how long the tool took on the call
+        # clock. What was asked and what came back is on the handler's own line,
+        # which also knows the resolution, so it is not repeated here.
         elif isinstance(frame, FunctionCallInProgressFrame):
-            logger.info("tool {} requested by the model with {}", frame.function_name, _short(frame.arguments))
+            logger.info("tool {} requested", frame.function_name)
         elif isinstance(frame, FunctionCallResultFrame):
-            logger.info("tool {} result handed back: {}", frame.function_name, _short(frame.result))
+            logger.info("tool {} answered", frame.function_name)
         elif isinstance(frame, ErrorFrame):
             self.errors += 1
             logger.warning("error frame{}: {}", " (fatal)" if frame.fatal else "", frame.error)
@@ -1501,7 +1538,11 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         )
         # Three services where the native path has one. Everything either side of
         # them -- transport, context, tools, greeting -- is the same code.
-        stages = [transport.input(), stt, aggregators.user(), restatements, llm, tts, transport.output(),
+        # ``restatements`` sits between the transcription source and the context,
+        # which here means straight after the speech-to-text service: a cascade
+        # transcript travels *downstream*, so anything after the aggregator would
+        # see it only once the aggregator had already appended it.
+        stages = [transport.input(), stt, restatements, aggregators.user(), llm, tts, transport.output(),
                   DropControlTokens(), aggregators.assistant()]
         rate = CASCADE_RATE
         realtime = False
@@ -1527,10 +1568,10 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         )
         # No separate speech-to-text or text-to-speech: the realtime model is the
         # whole agent, so the pipeline is the transport, the context and the model.
-        # ``restatements`` sits between the context and the service, because a
-        # caller transcript travels *upstream* from the service to the context:
-        # it has to be trimmed before the aggregator appends it, so it belongs on
-        # the service side of the aggregator, not the transport side.
+        # ``restatements`` again sits between the transcription source and the
+        # context, which here is the other side of the aggregator: a caller
+        # transcript travels *upstream* from the realtime service, so it must be
+        # trimmed on the service side to reach the filter before the aggregator.
         stages = [transport.input(), aggregators.user(), restatements, llm, transport.output(),
                   DropControlTokens(), aggregators.assistant()]
         rate = provider.input_rate
@@ -1688,7 +1729,7 @@ def finish_record(tracer, context: LLMContext, publish: Callable[[], None], summ
     capture.to_dict = to_dict
 
 
-def sweep_transcript(capture, context: LLMContext) -> int:
+def sweep_transcript(capture, context: LLMContext) -> None:
     """Copy context rows the exporter has not seen yet, the way it copies them itself."""
     messages = context.messages
     start = getattr(capture, "last_processed_index", len(messages))
@@ -1708,7 +1749,6 @@ def sweep_transcript(capture, context: LLMContext) -> int:
     capture.last_processed_index = len(messages)
     if added:
         logger.info("transcript: {} row(s) written after the last agent turn were swept into the export", added)
-    return added
 
 
 def capture_live_audio(llm: LLMService, meter: UsageMeter) -> None:

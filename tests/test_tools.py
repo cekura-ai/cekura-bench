@@ -455,3 +455,29 @@ class TestAPhraseTheAgentComposesIsNotAnIdentifier:
             server.calls.clear()
             answered.append(server.call("create_handoff_summary", dict(row["input"], destination="somewhere")))
         assert answered == [row["output"] for row in rows]
+
+
+class TestDecliningDiffersFromAsserting:
+    """An abstention is dropped only where it declines to answer AND no record
+    uses it. Where a record does use it, the contract means it as a real answer."""
+
+    @staticmethod
+    def _qualify(**overrides):
+        server = MockToolServer(suite="medicare")
+        stored = server._mocks["save_medicare_qualification"]["mock_data"][0]["input"]
+        server.call("save_medicare_qualification", dict(stored, **overrides))
+        return server.calls[-1].resolution
+
+    def test_an_election_window_nobody_is_sure_of(self):
+        assert self._qualify(election_window="not_sure") == "exact"
+
+    def test_a_relationship_that_names_no_category(self):
+        assert self._qualify(caller_relationship="other") == "exact"
+
+    def test_naming_the_wrong_relationship_is_a_claim(self):
+        assert self._qualify(caller_relationship="spouse") != "exact"
+
+    def test_a_status_the_contract_keeps_a_record_for_is_compared(self):
+        # Callers do say they are unsure of their Part B status, and the tables
+        # hold a record for it, so it is an answer rather than a silence.
+        assert self._qualify(has_medicare_part_b="unknown") != "exact"

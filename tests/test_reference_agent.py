@@ -996,7 +996,12 @@ class TestTheWholeCallLogIsKept:
         assert any("after the handover" in line["message"] for line in log.lines)
         # The SDK's sink is gone: nothing more lands in its old list.
         assert sdk_lines == []
-        assert log._sink_id is None, "the SDK owns the sink after the handover"
+        # The id is kept, not surrendered: the sink lives on the process-wide
+        # logger, and if the SDK never finalises, close() is the only thing that
+        # will take it down. Removing it twice is harmless.
+        assert log._sink_id is not None
+        log.close()
+        log.close()
 
 
 class TestTheCallTellsItsOwnStory:
@@ -1058,8 +1063,8 @@ class TestTheCallTellsItsOwnStory:
             "caller transcript: \"book me in\"",
             "caller turn 1 ends",
             "agent response 1 starts",
-            'tool lookup_patient requested by the model with {"phone": "1"}',
-            'tool lookup_patient result handed back: {"ok": true}',
+            'tool lookup_patient requested',
+            'tool lookup_patient answered',
             "agent response 1 ends",
         ]
         assert (narrator.caller_turns, narrator.agent_turns) == (1, 1)

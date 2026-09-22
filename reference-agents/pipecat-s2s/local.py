@@ -37,6 +37,7 @@ import os
 import re
 import sys
 import time
+import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -50,6 +51,11 @@ CONTROL_TOKEN = re.compile(r"<ctrl\d+>")
 
 
 # ── call: the agent, in a room, the way a session starts it ──────────────────
+
+# Settings that make a run local rather than deployed. Re-applied after the
+# agent is imported, because importing it reloads the repository's .env.
+_RIG_SETTINGS = ("CEKURA_HOST", "CEKURA_OTEL_TRACES", "BENCH_LOG_LEVEL")
+
 
 def _environment(env_file: Path, receiver: str) -> dict[str, str]:
     """The deployment's environment, assembled from a local file.
@@ -85,7 +91,6 @@ def _room(api_key: str, minutes: int) -> tuple[str, str, str]:
     each side, and the same ``DailyRunnerArguments`` handed to the same
     ``bot()`` the deployment runs.
     """
-    import urllib.error
 
     def post(path: str, payload: dict) -> dict:
         request = urllib.request.Request(
@@ -149,6 +154,11 @@ def call(args: argparse.Namespace) -> int:
     import asyncio
 
     import bot  # noqa: E402 -- after the environment is in place, as a deployment imports it
+
+    # Importing the agent loads the repository's own .env over the environment,
+    # exactly as it does in the cloud. The few settings that point the run at
+    # this machine rather than at the platform are therefore re-applied after it.
+    os.environ.update({key: env[key] for key in _RIG_SETTINGS if key in env})
     from pipecat.runner.types import DailyRunnerArguments  # noqa: E402
 
     arguments = DailyRunnerArguments(
@@ -212,8 +222,8 @@ def receive(args: argparse.Namespace) -> int:
 
 # ── inspect: read a payload the way the score reads it ───────────────────────
 
-def report(payload: dict, path: Path | None = None) -> str:
-    """One screen on a run: what reached the record, and what did not."""
+def checks_for(payload: dict) -> tuple[list[tuple[str, bool, str]], dict, list, dict]:
+    """Every check a run has to pass, with what each one saw."""
     transcript = payload.get("transcript") or []
     meta = ((payload.get("provider_data") or {}).get("custom_metadata")) or {}
     logs = payload.get("logs") or []
@@ -262,6 +272,18 @@ def report(payload: dict, path: Path | None = None) -> str:
         ("log lines carry the call clock", bool(logs) and stamped == len(logs), f"{stamped}/{len(logs)}"),
         ("log includes the framework's DEBUG lines", debug > 0, f"{debug} DEBUG of {len(logs)}"),
     ]
+    return checks, meta, recorded if recorded else requested, usage
+
+
+def report(payload: dict, path: Path | None = None) -> str:
+    """One screen on a run: what reached the record, and what did not."""
+    checks, meta, tools, usage = checks_for(payload)
+    recorded = (((payload.get("provider_data") or {}).get("custom_metadata")) or {}).get("tool_calls") or []
+    requested = [] if recorded else tools
+    misses = sum(
+        1 for row in (payload.get("transcript") or [])
+        if row.get("role") == "tool" and "no_match" in json.dumps(row.get("content", ""))
+    )
     width = max(len(name) for name, _, _ in checks)
     lines = []
     if path is not None:
@@ -274,11 +296,14 @@ def report(payload: dict, path: Path | None = None) -> str:
     )
     for name, ok, detail in checks:
         lines.append(f"  {'PASS' if ok else 'FAIL'}  {name.ljust(width)}  {detail}")
-    if requested:
+    if recorded:
         lines.append("tools: " + ", ".join(
             f"{call['name']}:{call.get('resolution', 'exact' if call.get('matched') else 'none')}"
             for call in recorded
-        ) if recorded else "tools (transcript only): " + ", ".join(str(n) for n in requested))
+        ))
+    elif requested:
+        lines.append("tools (transcript only): " + ", ".join(str(n) for n in requested))
+    if recorded or requested:
         if misses:
             lines.append(f"  {misses} tool answer(s) were no_match")
     if usage:
@@ -291,9 +316,8 @@ def inspect(args: argparse.Namespace) -> int:
     for name in args.payload:
         path = Path(name)
         payload = json.loads(path.read_text())
-        text = report(payload, path)
-        print(text, end="\n\n")
-        failed += text.count("  FAIL  ")
+        print(report(payload, path), end="\n\n")
+        failed += sum(1 for _, ok, _ in checks_for(payload)[0] if not ok)
         if args.logs:
             for line in payload.get("logs") or []:
                 print(f"{line.get('level', ''):8} {line.get('message', '')}")
@@ -318,6 +342,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--minutes", type=int, default=20, help="how long the room lives")
     p.add_argument("--timeout", type=int, default=600, help="give up if the call has not ended by then")
     p.set_defaults(run=call)
+
+    p = sub.add_parser("receive", help="stand in for the platform webhook and keep what the SDK posts")
+    p.add_argument("--host", default="127.0.0.1")
+    p.add_argument("--port", type=int, default=8765)
+    p.add_argument("--out", default=str(RUNS), help="where payloads are written")
+    p.set_defaults(run=receive)
 
     p = sub.add_parser("inspect", help="read one or more payloads the way the score reads them")
     p.add_argument("payload", nargs="+")

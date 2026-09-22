@@ -37,7 +37,9 @@ Run it::
 
 from __future__ import annotations
 
+import contextvars
 import hashlib
+import json
 import os
 import re
 import subprocess
@@ -45,6 +47,7 @@ import sys
 import time
 import uuid
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Callable
@@ -56,16 +59,33 @@ from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.audio.resamplers.soxr_stream_resampler import SOXRStreamAudioResampler
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.frames.frames import (
+    BotStartedSpeakingFrame,
+    BotStoppedSpeakingFrame,
+    CancelFrame,
+    EndFrame,
     EndTaskFrame,
+    ErrorFrame,
     Frame,
+    FunctionCallInProgressFrame,
+    FunctionCallResultFrame,
+    InterruptionFrame,
+    LLMFullResponseEndFrame,
+    LLMFullResponseStartFrame,
     LLMRunFrame,
     LLMTextFrame,
     MetricsFrame,
     TTSTextFrame,
+    TranscriptionFrame,
+    UserStartedSpeakingFrame,
+    UserStoppedSpeakingFrame,
+    VADUserStartedSpeakingFrame,
+    VADUserStoppedSpeakingFrame,
 )
 from pipecat.metrics.metrics import (
     LLMUsageMetricsData,
+    ProcessingMetricsData,
     STTUsageMetricsData,
+    TTFBMetricsData,
     TTSUsageMetricsData,
 )
 from pipecat.observers.base_observer import BaseObserver, FramePushed
@@ -119,6 +139,136 @@ load_dotenv(override=True)
 # a first-call outlier can be identified rather than guessed at.
 INSTANCE = uuid.uuid4().hex[:12]
 _calls_answered = 0
+
+
+# ── the call's own log ───────────────────────────────────────────────────────
+#
+# A run is debugged from its log, and the log is only useful if every line of it
+# can be placed on the call's clock and every line reaches the run record. Neither
+# was true. Lines carried a wall-clock time that nobody reading a result can
+# relate to "the caller's second turn", and the tracing SDK kept only lines at
+# INFO and above, and only from the moment the task was created -- so the
+# framework's own account of what it did with each turn, which is all at DEBUG,
+# never left the container.
+#
+# So every line is stamped with the time since this call started, and every line
+# from the call's first moment is kept for the record, at whatever level the
+# framework logged it. The stamp is the same shape the platform's own testing
+# agent uses, so the two sides of a call read on one clock.
+
+_CALL: contextvars.ContextVar[str | None] = contextvars.ContextVar("bench_call", default=None)
+_CLOCK: contextvars.ContextVar[float | None] = contextvars.ContextVar("bench_clock", default=None)
+# A worker answers one call at a time in the deployment, but a local runner may
+# answer several in one process. The context variables keep them apart where a
+# context is carried; the latest values stand in where one is not, which is the
+# transport's own threads calling back into us.
+_latest_call: str | None = None
+_latest_clock: float | None = None
+
+
+def start_call_clock(call_id: str) -> None:
+    """Zero the clock every log line is stamped against, for the call just answered."""
+    global _latest_call, _latest_clock
+    _latest_call, _latest_clock = call_id, time.monotonic()
+    _CALL.set(call_id)
+    _CLOCK.set(_latest_clock)
+
+
+def call_stamp(now: float | None = None) -> str:
+    """``[MM:SS]`` since the call started, or ``[--:--]`` before any call has."""
+    started = _CLOCK.get() or _latest_clock
+    if started is None:
+        return "[--:--]"
+    elapsed = int((now if now is not None else time.monotonic()) - started)
+    return f"[{elapsed // 60:02d}:{elapsed % 60:02d}]"
+
+
+def _stamp(record: dict) -> None:
+    """Put the call clock on every line, wherever it is going."""
+    record["message"] = f"{call_stamp()} {record['message']}"
+    record["extra"]["bench_call"] = _CALL.get() or _latest_call
+
+
+logger.configure(patcher=_stamp)
+
+
+class CallLog:
+    """Every line logged while a call is up, for the run's record.
+
+    The tracing SDK ships the log with the run, which is where a reader looks
+    for it months later; it just keeps too little of it. This collects from the
+    call's first line rather than from task creation, and at DEBUG rather than
+    INFO, and then hands the collection to the SDK so the record carries it
+    without a second exporter. The level is a knob because a campaign that has
+    stopped being debugged can turn the volume down without a code change.
+
+    Bounded, because a payload is not a log file: a line is cut at a fixed
+    width and the collection stops at a fixed count, and the record says so
+    when either happens, so a reader knows to go to the container.
+    """
+
+    LEVEL = os.getenv("BENCH_LOG_LEVEL", "DEBUG").upper()
+    MAX_LINES = int(os.getenv("BENCH_LOG_MAX_LINES", "6000"))
+    MAX_CHARS = 1000
+
+    def __init__(self, call_id: str) -> None:
+        self.call_id = call_id
+        self.lines: list[dict[str, Any]] = []
+        self.dropped = 0
+        self._sink_id: int | None = logger.add(self._sink, level=self.LEVEL)
+
+    def _sink(self, message) -> None:
+        record = message.record
+        owner = record["extra"].get("bench_call")
+        if owner is not None and owner != self.call_id:
+            return
+        if len(self.lines) >= self.MAX_LINES:
+            if self.dropped == 0:
+                self.lines.append({
+                    "timestamp": record["time"].timestamp(),
+                    "level": "WARNING",
+                    "logger": __name__,
+                    "message": f"{call_stamp()} log capture reached {self.MAX_LINES} lines; "
+                               "the rest of this call is in the container log only",
+                })
+            self.dropped += 1
+            return
+        text = record["message"]
+        if len(text) > self.MAX_CHARS:
+            text = text[: self.MAX_CHARS] + f"… [{len(text) - self.MAX_CHARS} more chars]"
+        self.lines.append({
+            "timestamp": record["time"].timestamp(),
+            "level": record["level"].name,
+            "logger": record["name"],
+            "message": text,
+        })
+
+    def hand_to(self, tracer: Any) -> None:
+        """Make this the log the SDK ships, in place of its own narrower one.
+
+        The SDK opened a sink of its own when the task was created; it is
+        closed here, and the SDK is pointed at this collection and this sink
+        instead, so that its own finalisation removes the sink and ships the
+        lines exactly as it would have shipped its own.
+        """
+        own = getattr(tracer, "_log_sink_id", None)
+        if own is not None:
+            try:
+                logger.remove(own)
+            except ValueError:
+                pass
+        if hasattr(tracer, "_session_logs"):
+            tracer._session_logs = self.lines
+            tracer._log_sink_id = self._sink_id
+            self._sink_id = None  # the SDK owns it now
+
+    def close(self) -> None:
+        if self._sink_id is not None:
+            try:
+                logger.remove(self._sink_id)
+            except ValueError:
+                pass
+            self._sink_id = None
 
 
 # ── what this call asked for ─────────────────────────────────────────────────
@@ -736,6 +886,87 @@ class UsageMeter(BaseObserver):
         return {"usage": usage}
 
 
+def _short(value: Any, width: int = 300) -> str:
+    """One line of a value, for a log: enough to recognise it, not to reproduce it."""
+    try:
+        text = json.dumps(value, ensure_ascii=False, default=str)
+    except Exception:  # noqa: BLE001
+        text = repr(value)
+    return text if len(text) <= width else text[:width] + "…"
+
+
+class CallNarrator(BaseObserver):
+    """Writes the call's story into its log, one line per thing that happened.
+
+    The framework logs what each processor did to each frame, which is the
+    right record for debugging the framework and the wrong one for reading a
+    call: the question a result raises is "when did the caller stop, when did
+    the agent start, what did it call, what came back", and the answer is
+    scattered across a thousand DEBUG lines from a dozen modules. These lines
+    put it in one place, at INFO, on the call clock.
+
+    Speech boundaries are logged twice on purpose, once when the detector hears
+    them and once when the pipeline adopts them as a turn: the gap between the
+    two is the endpointing delay, and the rows on this board differ in where
+    that decision is made.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._seen: set[int] = set()
+        self.caller_turns = 0
+        self.agent_turns = 0
+        self.interruptions = 0
+        self.errors = 0
+
+    async def on_push_frame(self, data: FramePushed) -> None:
+        frame = data.frame
+        if frame.id in self._seen:
+            # System frames are broadcast to every processor; one line each.
+            return
+        self._seen.add(frame.id)
+        if isinstance(frame, VADUserStartedSpeakingFrame):
+            logger.debug("detector: caller speech starts")
+        elif isinstance(frame, VADUserStoppedSpeakingFrame):
+            logger.debug("detector: caller speech stops")
+        elif isinstance(frame, UserStartedSpeakingFrame):
+            self.caller_turns += 1
+            logger.info("caller turn {} starts", self.caller_turns)
+        elif isinstance(frame, UserStoppedSpeakingFrame):
+            logger.info("caller turn {} ends", self.caller_turns)
+        elif isinstance(frame, TranscriptionFrame):
+            logger.info("caller transcript: {}", _short(frame.text))
+        elif isinstance(frame, LLMFullResponseStartFrame):
+            self.agent_turns += 1
+            logger.info("agent response {} starts", self.agent_turns)
+        elif isinstance(frame, LLMFullResponseEndFrame):
+            logger.info("agent response {} ends", self.agent_turns)
+        elif isinstance(frame, BotStartedSpeakingFrame):
+            logger.info("agent audio starts")
+        elif isinstance(frame, BotStoppedSpeakingFrame):
+            logger.info("agent audio stops")
+        elif isinstance(frame, InterruptionFrame):
+            self.interruptions += 1
+            logger.info("interruption {}: the caller spoke over the agent", self.interruptions)
+        elif isinstance(frame, FunctionCallInProgressFrame):
+            logger.info("tool {} requested by the model with {}", frame.function_name, _short(frame.arguments))
+        elif isinstance(frame, FunctionCallResultFrame):
+            logger.info("tool {} result handed back: {}", frame.function_name, _short(frame.result))
+        elif isinstance(frame, ErrorFrame):
+            self.errors += 1
+            logger.warning("error frame{}: {}", " (fatal)" if frame.fatal else "", frame.error)
+        elif isinstance(frame, EndFrame):
+            logger.info("pipeline ending: the agent closed the call")
+        elif isinstance(frame, CancelFrame):
+            logger.info("pipeline cancelled: the call was torn down")
+        elif isinstance(frame, MetricsFrame):
+            for entry in frame.data:
+                if isinstance(entry, TTFBMetricsData):
+                    logger.debug("ttfb {} {:.0f} ms", entry.processor, entry.value * 1000)
+                elif isinstance(entry, ProcessingMetricsData):
+                    logger.debug("processing {} {:.0f} ms", entry.processor, entry.value * 1000)
+
+
 class ToolTrace:
     """What the agent asked of its tools, recorded by us rather than the provider.
 
@@ -816,8 +1047,12 @@ def register_tools(llm: LLMService, server: MockToolServer, trace: ToolTrace) ->
         # Three outcomes, not two: a row found outright, the nearest row found
         # after speech bent an argument, and nothing found. Reading a call log
         # afterwards, the middle one is the interesting case and a bare
-        # hit-or-miss hides it.
-        logger.info("tool {} -> {}", params.function_name, record.resolution)
+        # hit-or-miss hides it. The arguments and the answer are on the same
+        # line, because a miss is only explicable next to what was asked.
+        logger.info(
+            "tool {} -> {} for {} => {}",
+            params.function_name, record.resolution, _short(arguments), _short(result),
+        )
         await params.result_callback(result)
 
     async def end_call(params: FunctionCallParams) -> None:
@@ -1084,7 +1319,19 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
     # call, and not by the image -- one deployment answers for every row.
     global _calls_answered
     _calls_answered += 1
-    settings = Settings(getattr(runner_args, "body", None))
+    # The log starts here, on this call's clock, before anything else is done:
+    # a failure in the lines below is exactly what a reader will want the log
+    # for, and the session id is the key the platform files the run under.
+    session_id = str(getattr(runner_args, "session_id", "") or uuid.uuid4().hex[:12])
+    start_call_clock(session_id)
+    call_log = CallLog(session_id)
+    body = getattr(runner_args, "body", None)
+    logger.info(
+        "call {} answered by worker {} (call {} on it); session keys: {}",
+        session_id, INSTANCE, _calls_answered,
+        sorted(body.keys()) if isinstance(body, dict) else "none",
+    )
+    settings = Settings(body)
     server = load_agent(settings)
     trace = ToolTrace()
     name = settings.get("s2s_provider", "openai-realtime")
@@ -1094,9 +1341,8 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         model = settings.get("s2s_model", cascade.default_model)
         credential = _credential(cascade.credential_env, name)
         record = cascade_record(name, cascade, model, server, settings)
-        # Small on purpose: this one only has to survive a build that fails, and
-        # it is outside the window the run's own log capture covers. The record
-        # itself is logged further down, once that window is open.
+        # Ahead of the build on purpose: a build that fails is then the next
+        # line in the log after the thing it was building.
         logger.info("building {} on {}", name, model)
 
         stt, llm, tts = build_cascade(cascade, credential, model, server.system_prompt, settings)
@@ -1149,25 +1395,35 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         audio_out_sample_rate=rate,
     )
     meter = UsageMeter()
-    task, tracer = create_task(pipeline, context, params, runner_args, transport, record, [meter])
-    if realtime and tracer is not None:
-        capture_caller_turns(tracer, aggregators.user())
+    narrator = CallNarrator()
+    task, tracer = create_task(pipeline, context, params, runner_args, transport, record, [meter, narrator])
+    if tracer is not None:
+        call_log.hand_to(tracer)
+        if realtime:
+            capture_caller_turns(tracer, aggregators.user())
+    logger.info("agent bench reference agent: {}", record)
+
+    # What each side said, in the log as well as the transcript: the log is
+    # where a reader reconstructs a call, and a transcript row without the
+    # turn events around it says what was said but not when or why.
+    @aggregators.user().event_handler("on_user_turn_message_added")
+    async def _caller_said(_aggregator, message):
+        logger.info("caller said: {}", _short(message.content, 500))
+
+    @aggregators.assistant().event_handler("on_assistant_turn_stopped")
+    async def _agent_said(_aggregator, message):
+        logger.info(
+            "agent said{}: {}", " (interrupted)" if message.interrupted else "", _short(message.content, 500)
+        )
 
     def publish() -> None:
         """Rewrite the run's record with everything known so far.
 
         The record is assembled from three pieces -- the configuration, the tool
         trace and what the call consumed -- and only the first is complete when
-        the run starts. The obvious place to finish it is the moment the caller
-        leaves, and that moment does not reliably arrive: when the agent ends the
-        call itself, which is how a scenario normally finishes, the transport
-        tears down before it reports a departed caller, so the handler never
-        runs and everything but the configuration is lost.
-
-        Writing the record repeatedly costs an assignment and removes the
-        dependency on a last moment. Whatever happens, the record holds what was
-        known at the most recent tool call -- and the last tool call of a
-        scenario is the one that ends it.
+        the run starts. It is rewritten after every tool call, and once more at
+        the moment the SDK takes its snapshot (see ``finish_record``), so
+        whatever ends the call, the record holds everything that happened.
         """
         if tracer is None:
             return
@@ -1178,30 +1434,131 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
 
     trace.on_change = publish
 
-    # The run's log capture opens inside ``create_task`` and not before, so a line
-    # logged earlier reaches the container's output and never the run. That is
-    # where the configuration line belongs: a log read months later against a
-    # single result has to say which provider, model, contract and commit
-    # produced it, without a second system to cross-reference.
-    logger.info("agent bench reference agent: {}", record)
+    def summarise() -> None:
+        """The one line to read first when a result looks wrong."""
+        usage = meter.as_metadata()["usage"]
+        tools = trace.as_metadata()
+        logger.info(
+            "call summary: {:.0f}s, caller turns {}, agent responses {}, interruptions {}, "
+            "tools {} ({} exact), errors {}, usage reports {}, log lines {}{}",
+            usage["call_seconds"], narrator.caller_turns, narrator.agent_turns, narrator.interruptions,
+            tools["tool_call_count"], tools["tool_calls_matched"], narrator.errors, usage["usage_reports"],
+            len(call_log.lines), f" (+{call_log.dropped} dropped)" if call_log.dropped else "",
+        )
+
+    if tracer is not None:
+        finish_record(tracer, context, publish, summarise)
+
+    _on_transport_event(transport, "on_joined", lambda *_: logger.info("transport: joined"))
+    _on_transport_event(transport, "on_left", lambda *_: logger.info("transport: left"))
+    _on_transport_event(transport, "on_error", lambda _t, error: logger.warning("transport error: {}", error))
+    _on_transport_event(
+        transport, "on_participant_joined",
+        lambda _t, participant: logger.info("transport: participant joined {}", _participant_id(participant)),
+    )
+    _on_transport_event(
+        transport, "on_participant_left",
+        lambda _t, participant, reason=None: logger.info(
+            "transport: participant left {} ({})", _participant_id(participant), reason
+        ),
+    )
 
     @transport.event_handler("on_client_connected")
     async def _on_connected(_transport, _client):
         # Every call opens from the agent, and this first context frame is also
         # what installs the tools on the realtime session.
-        logger.info("caller connected")
+        logger.info("caller connected; opening the call")
         await task.queue_frames([LLMRunFrame()])
 
     @transport.event_handler("on_client_disconnected")
     async def _on_disconnected(_transport, _client):
-        logger.info("caller disconnected")
-        # A caller who hangs up leaves no tool call behind to trigger the
-        # rewrite, so the record is brought up to date here too.
+        logger.info("caller disconnected; tearing the call down")
         publish()
-        logger.info("tools called: {}", trace.as_metadata()["tool_call_count"])
         await task.cancel()
 
-    await PipelineRunner(handle_sigint=False).run(task)
+    try:
+        await PipelineRunner(handle_sigint=False).run(task)
+    finally:
+        if tracer is None:
+            # Nobody shipped the log; say where the call ended up anyway.
+            summarise()
+        call_log.close()
+        logger.info("call {} finished", session_id)
+
+
+def _participant_id(participant: Any) -> str:
+    if isinstance(participant, dict):
+        return str(participant.get("id") or participant.get("info", {}).get("userName") or "?")
+    return str(getattr(participant, "identity", None) or participant)
+
+
+def _on_transport_event(transport: BaseTransport, event: str, handler: Callable) -> None:
+    """Log a transport event when this transport has it; not every transport does."""
+    async def _handle(*args, **kwargs):
+        handler(*args, **kwargs)
+
+    # Asked first rather than tried: the framework answers an unknown event
+    # with a warning in the log, and five of those on every telephony call would
+    # bury the lines this exists to add.
+    if event in getattr(transport, "_event_handlers", {}):
+        transport.add_event_handler(event, _handle)
+
+
+def finish_record(tracer, context: LLMContext, publish: Callable[[], None], summarise: Callable[[], None]) -> None:
+    """Complete the transcript and the record at the moment the SDK reads them.
+
+    Two things are otherwise lost. A tool call after the agent's last spoken
+    turn -- ``end_call`` and ``transfer_call`` are always that, and a scenario is
+    scored on whether they were made -- is written to the context but never to
+    the exported transcript, because the exporter copies the context only when
+    an assistant turn ends and no turn ends after the call is over. And the
+    record's usage figures are whatever the last tool call left them at.
+
+    The SDK snapshots the transcript inside its own finalisation, and every path
+    that ends a call -- the agent hanging up, the caller hanging up, the
+    pipeline ending -- goes through that one method. So the snapshot is wrapped:
+    first the rows still in the context are copied over, then the record is
+    rewritten, then the snapshot proceeds. That is the reliable last moment
+    this file previously said did not exist.
+    """
+    capture = getattr(tracer, "_transcript_capture", None)
+    if capture is None:
+        return
+    original = capture.to_dict
+
+    def to_dict():
+        try:
+            sweep_transcript(capture, context)
+            publish()
+            summarise()
+        except Exception as exc:  # noqa: BLE001 -- never lose the snapshot over its trimmings
+            logger.warning("could not finish the record: {}", exc)
+        return original()
+
+    capture.to_dict = to_dict
+
+
+def sweep_transcript(capture, context: LLMContext) -> int:
+    """Copy context rows the exporter has not seen yet, the way it copies them itself."""
+    messages = context.messages
+    start = getattr(capture, "last_processed_index", len(messages))
+    now = datetime.now(timezone.utc).isoformat()
+    added = 0
+    for message in messages[start:]:
+        if not isinstance(message, dict) or message.get("role") == "user":
+            continue
+        capture.session_transcript.append({
+            "started_at": now,
+            "ended_at": now,
+            "_cekura_timing_role": "assistant",
+            "_cekura_turn_index": getattr(capture, "_assistant_turn_count", 0),
+            **message,
+        })
+        added += 1
+    capture.last_processed_index = len(messages)
+    if added:
+        logger.info("transcript: {} row(s) written after the last agent turn were swept into the export", added)
+    return added
 
 
 def capture_caller_turns(tracer, user_aggregator) -> None:
@@ -1262,6 +1619,10 @@ def create_task(pipeline, context, params, runner_args, transport, record, obser
             api_key=api_key,
             agent_id=int(agent_id),
             host=os.getenv("CEKURA_HOST", "https://api.cekura.ai"),
+            # Off for a local run against a local receiver, where the span
+            # exporter would otherwise retry against a host it cannot reach for
+            # the whole call and then hold the finalisation for its timeout.
+            enable_otel_traces=os.getenv("CEKURA_OTEL_TRACES", "1").lower() not in ("0", "false", "no"),
         )
         metadata = dict(record)
         # "track" correlates a scenario run and captures transcripts and metadata;

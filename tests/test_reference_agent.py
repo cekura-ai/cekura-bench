@@ -724,10 +724,11 @@ class TestCallerWordsAreExported:
 class TestTheRunCanBeIdentifiedFromItsOwnLogs:
     """The configuration line has to land inside the window the run captures.
 
-    The tracing SDK starts capturing when the task is created and not before, so
-    a line logged earlier reaches the container's output and never the run
-    record. A log read months later against a single result has to say which
-    provider, model, contract and commit produced it.
+    The agent now collects its log from the call's first line, but the SDK's
+    own capture -- the fallback if that handover ever fails -- opens only when
+    the task is created. The configuration line stays after that point so it
+    reaches the record either way: a log read months later against a single
+    result has to say which provider, model, contract and commit produced it.
     """
 
     @staticmethod
@@ -884,3 +885,304 @@ class TestWhoDecidesTheCallersTurns:
             bot.MockToolServer(suite="appointments"), asked(),
         )
         assert record["turn_source"] == "local"
+
+
+class TestEveryLineIsOnTheCallClock:
+    """A log line is placed by the time since the call started, not by the wall clock.
+
+    A result raises questions like "what happened around the caller's second
+    turn", and a wall-clock timestamp answers none of them. The stamp is the
+    same shape the platform's own testing agent puts on its lines, so the two
+    sides of a call read on one clock.
+    """
+
+    def test_the_stamp_is_minutes_and_seconds(self):
+        bot.start_call_clock("clock-test")
+        started = bot._CLOCK.get()
+        assert bot.call_stamp(now=started) == "[00:00]"
+        assert bot.call_stamp(now=started + 125.7) == "[02:05]"
+
+    def test_every_logged_line_carries_it(self):
+        from loguru import logger
+
+        bot.start_call_clock("clock-test-2")
+        seen = []
+        sink = logger.add(lambda m: seen.append(m.record["message"]), level="DEBUG")
+        try:
+            logger.debug("hello from the test")
+        finally:
+            logger.remove(sink)
+        assert any(line.startswith("[00:00] hello from the test") for line in seen), seen
+
+
+class TestTheWholeCallLogIsKept:
+    """The record ships the log from the call's first line, at DEBUG.
+
+    The SDK's own capture opens when the task is created and keeps INFO and
+    above, so the framework's account of each turn -- all at DEBUG -- never left
+    the container, and nothing logged while the pipeline was being built did
+    either. This collection replaces it and is handed to the SDK so the record
+    carries it without a second exporter.
+    """
+
+    def _log_of(self, call_id: str) -> "bot.CallLog":
+        bot.start_call_clock(call_id)
+        return bot.CallLog(call_id)
+
+    def test_debug_lines_are_kept(self):
+        from loguru import logger
+
+        log = self._log_of("keep-debug")
+        try:
+            logger.debug("framework detail")
+            logger.info("headline")
+        finally:
+            log.close()
+        levels = [line["level"] for line in log.lines]
+        assert "DEBUG" in levels and "INFO" in levels
+        assert all(line["message"].startswith("[00:0") for line in log.lines)
+
+    def test_another_calls_lines_are_not_mixed_in(self):
+        from loguru import logger
+
+        first = self._log_of("call-a")
+        try:
+            logger.info("line for a")
+            bot.start_call_clock("call-b")
+            logger.info("line for b")
+        finally:
+            first.close()
+        assert [line["message"].split("] ", 1)[1] for line in first.lines] == ["line for a"]
+
+    def test_a_long_line_is_cut_and_says_so(self):
+        from loguru import logger
+
+        log = self._log_of("long-line")
+        try:
+            logger.info("x" * (bot.CallLog.MAX_CHARS + 50))
+        finally:
+            log.close()
+        assert "more chars]" in log.lines[-1]["message"]
+        assert len(log.lines[-1]["message"]) < bot.CallLog.MAX_CHARS + 40
+
+    def test_the_collection_is_bounded_and_marks_where_it_stopped(self, monkeypatch):
+        from loguru import logger
+
+        monkeypatch.setattr(bot.CallLog, "MAX_LINES", 3)
+        log = self._log_of("bounded")
+        try:
+            for i in range(6):
+                logger.info("line {}", i)
+        finally:
+            log.close()
+        assert len(log.lines) == 4  # three kept, one marker
+        assert "log capture reached 3 lines" in log.lines[-1]["message"]
+        assert log.dropped == 3
+
+    def test_it_is_handed_to_the_sdk_in_place_of_its_own(self):
+        from loguru import logger
+
+        sdk_lines: list = []
+        sdk_sink = logger.add(lambda m: sdk_lines.append(m.record["message"]), level="INFO")
+        tracer = SimpleNamespace(_log_sink_id=sdk_sink, _session_logs=sdk_lines)
+
+        log = self._log_of("handover")
+        log.hand_to(tracer)
+        try:
+            logger.debug("after the handover")
+        finally:
+            logger.remove(tracer._log_sink_id)
+        assert tracer._session_logs is log.lines
+        assert any("after the handover" in line["message"] for line in log.lines)
+        # The SDK's sink is gone: nothing more lands in its old list.
+        assert sdk_lines == []
+        assert log._sink_id is None, "the SDK owns the sink after the handover"
+
+
+class TestTheCallTellsItsOwnStory:
+    """One INFO line per thing that happened, on the call clock.
+
+    The framework's DEBUG lines are the right record for debugging the
+    framework and the wrong one for reading a call. These are the lines a
+    reader wants first: turn boundaries, what each side said, tools asked and
+    answered, interruptions, errors, how the pipeline ended.
+    """
+
+    @staticmethod
+    def _narrate(*frames):
+        import asyncio
+
+        from loguru import logger
+        from pipecat.observers.base_observer import FramePushed
+        from pipecat.processors.frame_processor import FrameDirection
+
+        narrator = bot.CallNarrator()
+        seen: list[str] = []
+        sink = logger.add(lambda m: seen.append(m.record["message"]), level="DEBUG")
+
+        async def run():
+            for frame in frames:
+                push = FramePushed(source=None, destination=None, frame=frame, direction=FrameDirection.DOWNSTREAM, timestamp=0)
+                await narrator.on_push_frame(push)
+                # Broadcast frames arrive at every processor; the story has one line each.
+                await narrator.on_push_frame(push)
+
+        try:
+            asyncio.run(run())
+        finally:
+            logger.remove(sink)
+        return narrator, [line.split("] ", 1)[1] for line in seen]
+
+    def test_turns_speech_and_tools_are_narrated_once_each(self):
+        from pipecat.frames.frames import (
+            FunctionCallInProgressFrame,
+            FunctionCallResultFrame,
+            InterruptionFrame,
+            LLMFullResponseEndFrame,
+            LLMFullResponseStartFrame,
+            TranscriptionFrame,
+            UserStartedSpeakingFrame,
+            UserStoppedSpeakingFrame,
+        )
+
+        narrator, lines = self._narrate(
+            UserStartedSpeakingFrame(),
+            TranscriptionFrame("book me in", "", "t"),
+            UserStoppedSpeakingFrame(),
+            LLMFullResponseStartFrame(),
+            FunctionCallInProgressFrame(function_name="lookup_patient", tool_call_id="c1", arguments={"phone": "1"}, cancel_on_interruption=False),
+            FunctionCallResultFrame(function_name="lookup_patient", tool_call_id="c1", arguments={"phone": "1"}, result={"ok": True}),
+            LLMFullResponseEndFrame(),
+            InterruptionFrame(),
+        )
+        assert lines == [
+            "caller turn 1 starts",
+            "caller transcript: \"book me in\"",
+            "caller turn 1 ends",
+            "agent response 1 starts",
+            'tool lookup_patient requested by the model with {"phone": "1"}',
+            'tool lookup_patient result handed back: {"ok": true}',
+            "agent response 1 ends",
+            "interruption 1: the caller spoke over the agent",
+        ]
+        assert (narrator.caller_turns, narrator.agent_turns, narrator.interruptions) == (1, 1, 1)
+
+    def test_errors_and_endings_are_narrated(self):
+        from pipecat.frames.frames import CancelFrame, EndFrame, ErrorFrame
+
+        narrator, lines = self._narrate(ErrorFrame("boom"), EndFrame(), CancelFrame())
+        assert lines[0].startswith("error frame: ") and "boom" in lines[0]
+        assert "pipeline ending" in lines[1] and "pipeline cancelled" in lines[2]
+        assert narrator.errors == 1
+
+
+class TestEventsATransportLacksAreSkippedQuietly:
+    """Asking a transport for an event it never emits must not put a warning in every call."""
+
+    def test_an_unknown_event_is_skipped_without_a_warning(self):
+        from loguru import logger
+        from pipecat.utils.base_object import BaseObject
+
+        transport = BaseObject()
+        seen = []
+        sink = logger.add(lambda m: seen.append(m.record["message"]), level="WARNING")
+        try:
+            bot._on_transport_event(transport, "on_participant_joined", lambda *_: None)
+        finally:
+            logger.remove(sink)
+        assert seen == []
+
+
+class TestToolRowsAfterTheLastTurnAreExported:
+    """A tool call that ends the call has to reach the exported transcript.
+
+    The exporter copies the context into the transcript when an assistant turn
+    ends, and no turn ends after the call is over -- so ``end_call`` and
+    ``transfer_call``, which are always the last thing the agent does, were
+    written to the context and never exported. A scenario is scored on whether
+    they were made. The SDK snapshots the transcript inside its finalisation,
+    on every path that ends a call, and that snapshot is where the rows still in
+    the context are swept across.
+    """
+
+    @staticmethod
+    async def _run(finish: bool):
+        import asyncio
+
+        from cekura.pipecat._speech_timing import SpeechTimingObserver
+        from cekura.pipecat.tracer import TranscriptCapture
+        from pipecat.frames.frames import (
+            EndTaskFrame,
+            Frame,
+            FunctionCallInProgressFrame,
+            FunctionCallResultFrame,
+            LLMFullResponseEndFrame,
+            LLMFullResponseStartFrame,
+            LLMTextFrame,
+            StartFrame,
+        )
+        from pipecat.pipeline.pipeline import Pipeline
+        from pipecat.pipeline.runner import PipelineRunner
+        from pipecat.pipeline.task import PipelineParams, PipelineTask
+        from pipecat.processors.aggregators.llm_context import LLMContext
+        from pipecat.processors.aggregators.llm_response_universal import LLMContextAggregatorPair
+        from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
+
+        class FakeRealtimeService(FrameProcessor):
+            async def process_frame(self, frame: Frame, direction: FrameDirection):
+                await super().process_frame(frame, direction)
+                if isinstance(frame, StartFrame):
+                    self.create_task(self._script())
+                await self.push_frame(frame, direction)
+
+            async def _script(self):
+                await asyncio.sleep(0.05)
+                await self.push_frame(LLMFullResponseStartFrame())
+                await self.push_frame(LLMTextFrame("thanks for calling, goodbye"))
+                await self.push_frame(LLMFullResponseEndFrame())
+                await asyncio.sleep(0.2)
+                # The agent hangs up: a tool call, its result, and the end of the task.
+                await self.push_frame(FunctionCallInProgressFrame(
+                    function_name="end_call", tool_call_id="c9", arguments={}, cancel_on_interruption=False,
+                ))
+                await asyncio.sleep(0.05)
+                await self.push_frame(FunctionCallResultFrame(
+                    function_name="end_call", tool_call_id="c9", arguments={}, result={"status": "ending_call"},
+                ))
+                await self.push_frame(EndTaskFrame(), FrameDirection.UPSTREAM)
+
+        context = LLMContext([{"role": "user", "content": "greet"}])
+        pair = LLMContextAggregatorPair(
+            context, realtime_service_mode=True, user_params=bot.user_aggregator_params(realtime=True),
+        )
+        capture = TranscriptCapture(context, SpeechTimingObserver())
+
+        @pair.assistant().event_handler("on_assistant_turn_stopped")
+        async def _stopped(aggregator, message):
+            await capture.on_assistant_turn_stopped(message)
+
+        published = []
+        if finish:
+            bot.finish_record(
+                SimpleNamespace(_transcript_capture=capture), context,
+                publish=lambda: published.append("record"), summarise=lambda: published.append("summary"),
+            )
+
+        task = PipelineTask(Pipeline([pair.user(), FakeRealtimeService(), pair.assistant()]), params=PipelineParams())
+        await asyncio.wait_for(PipelineRunner(handle_sigint=False).run(task), timeout=30)
+        # What the SDK does at finalisation.
+        snapshot = capture.to_dict()
+        rows = [(e.get("role"), "tool_calls" in e, e.get("tool_call_id")) for e in snapshot["transcript"]]
+        return rows, published
+
+    @pytest.mark.asyncio
+    async def test_the_context_has_the_rows_and_the_export_did_not(self):
+        rows, _ = await self._run(finish=False)
+        assert ("tool", False, "c9") not in rows
+
+    @pytest.mark.asyncio
+    async def test_the_snapshot_sweeps_them_in_and_finishes_the_record(self):
+        rows, published = await self._run(finish=True)
+        assert ("assistant", True, None) in rows, "the model's request for end_call"
+        assert ("tool", False, "c9") in rows, "and its answer"
+        assert published == ["record", "summary"]

@@ -218,8 +218,9 @@ additionally uploads the call audio and starts evaluation.
 
 Every call carries a **build record** as trace metadata, and it is also logged
 once at startup so the answer survives when only container logs do. The record is
-completed when the caller disconnects, because the tool trace is only whole once
-the call is over and the record cannot be changed after it is posted:
+rewritten after every tool call and finished at the moment the SDK snapshots the
+run — the one point every ending passes through, whether the agent hung up, the
+caller did, or the pipeline stopped — so it is whole however the call ended:
 
 | Field | Why a call is not evidence without it |
 |---|---|
@@ -253,6 +254,36 @@ never reached a model, which are opposite findings, and neither is zero cost.
 Without credentials the agent still runs and still answers the phone. A missing
 key must never be the reason a benchmark call fails.
 
+### The call's log
+
+A run is debugged from its log, and the log has to answer "what happened around
+the caller's second turn" — so every line is stamped `[MM:SS]` from the moment
+the call was answered, the same shape the platform's own testing agent uses,
+and the two sides of a call read on one clock.
+
+The SDK ships the log with the run. Left to itself it keeps INFO and above from
+the moment the task is created, which loses the framework's account of each
+turn (all at DEBUG) and everything logged while the pipeline was being built.
+The agent therefore collects from the call's first line at DEBUG and hands that
+collection to the SDK in place of its own, so the record carries it with no
+second exporter. `BENCH_LOG_LEVEL` turns the volume down for a campaign that has
+stopped being debugged; `BENCH_LOG_MAX_LINES` bounds the payload, and the log
+says where it stopped.
+
+On top of the framework's lines, the call is narrated at INFO: each caller turn
+starting and ending, the detector's own speech boundaries (the gap between the
+two is the endpointing delay), what each side said, each tool as the model
+requested it and as it was answered, interruptions, errors, and how the
+pipeline ended. The last line of a call is a one-line summary; read it first.
+
+### Tool rows after the last turn
+
+The SDK copies the context into the exported transcript when an assistant turn
+ends. `end_call` and `transfer_call` are always the last thing the agent does,
+after its last turn, so they reached the context and never the transcript — and
+a scenario is scored on whether they were made. The rows still in the context
+are swept into the export inside the SDK's own snapshot, on every ending.
+
 ## Running it
 
 ```bash
@@ -264,6 +295,31 @@ export OPENAI_API_KEY=... S2S_PROVIDER=openai-realtime AGENT_DIR=appointments
 For a phone call, deploy it and point a Twilio or Telnyx number at the runner;
 `create_transport` selects the transport from the runner arguments, so the same
 file serves local WebRTC, Daily and both telephony providers unchanged.
+
+### Locally, the way the platform runs it
+
+The platform starts a Pipecat Cloud session with a body and gets back a Daily
+room; the simulated caller joins the room. Pipecat's development runner answers
+the same `POST /start` the same way, so the whole arrangement runs on one
+machine with `bot.py` unchanged — same body, same room, same SDK, same payload
+at the end, posted to a local receiver instead of the platform where it can be
+read. `local.py` is the four steps:
+
+```bash
+python local.py receive                                    # stand-in for the platform: keeps every payload
+python local.py serve                                      # the agent on the dev runner; credentials from ../../.env
+python local.py start --provider gemini-live --agent-dir medicare   # a session and a room, as the platform gets them
+python local.py inspect ../../data/local-runs/<file>.json  # read it the way the score will
+```
+
+`start` prints the room: join it from a browser to be the caller, or hand the
+room and token to a simulated caller. `inspect` checks what a scored run
+depends on — caller turns present, agent words present, no control tokens,
+tool rows in the transcript matching the record, the record finished, usage
+reported, every log line on the call clock with the framework's DEBUG lines in
+it — and prints the tools, their resolutions and the usage. A FAIL there is a
+harness fault to fix before any cohort runs; a clean sheet says the harness is
+not what a strange score is measuring.
 
 ## Deploying it
 

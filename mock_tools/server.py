@@ -74,7 +74,13 @@ def _normalize(value: Any) -> Any:
     if isinstance(value, (int, float, bool)) or value is None:
         return value
     if isinstance(value, list):
-        return [_normalize(item) for item in value]
+        # Order is not part of what a list of categories says. Both arrays these
+        # contracts declare are sets -- the product types a caller agreed may be
+        # discussed, and the fields collected for a handoff -- so a model that
+        # reports the same two categories in the other order has reported the
+        # same consent. Models differ in the order they emit array members, and
+        # nothing about that order distinguishes one record from another.
+        return sorted((_normalize(item) for item in value), key=repr)
     if isinstance(value, dict):
         return {key: _normalize(item) for key, item in sorted(value.items())}
     return value

@@ -298,3 +298,51 @@ class TestAnEnumWrittenTwoWaysIsOneCategory:
         # real miss, and only the punctuation was ever forgiven.
         record, _ = self._qualified("medicare_advantage")
         assert record.resolution != "exact"
+
+
+class TestTheOrderOfACategoryListSaysNothing:
+    """Both arrays these contracts declare are sets, not sequences.
+
+    A caller who agreed that Medicare Advantage and Part D may be discussed has
+    agreed to the same two things whichever order the model lists them in, and
+    models differ in the order they emit array members. Scoring the order would
+    rank a provider on an arbitrary habit.
+    """
+
+    @staticmethod
+    def _consent(scope):
+        import json
+
+        from mock_tools.server import MockToolServer
+
+        tools = {t["name"]: t for t in json.load(
+            open("agent-definitions/medicare/mock-tools.json")
+        )}
+        row = next(
+            r for r in tools["record_medicare_permissions"]["mock_data"]
+            if isinstance(r["input"].get("scope_of_appointment_product_types"), list)
+            and len(r["input"]["scope_of_appointment_product_types"]) > 1
+        )
+        stored = row["input"]["scope_of_appointment_product_types"]
+        server = MockToolServer(suite="medicare")
+        server.call("record_medicare_permissions", dict(
+            row["input"],
+            scope_of_appointment_product_types=scope(list(stored)),
+        ))
+        return server.calls[-1].resolution
+
+    def test_the_stored_order_matches(self):
+        assert self._consent(lambda stored: stored) == "exact"
+
+    def test_the_other_order_is_the_same_consent(self):
+        assert self._consent(lambda stored: list(reversed(stored))) == "exact"
+
+    def test_a_narrower_consent_is_a_different_record(self):
+        assert self._consent(lambda stored: stored[:1]) != "exact"
+
+    def test_a_wider_consent_is_a_different_record(self):
+        # Agreeing to discuss one more product category is a different consent,
+        # and consent is the one thing here that must not be approximated.
+        assert self._consent(
+            lambda stored: stored + ["medicare_supplement"]
+        ) != "exact"

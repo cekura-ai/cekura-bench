@@ -315,7 +315,9 @@ class MockToolServer:
             log.warning("tool %s is not declared by the %s contract", name, self.suite)
             return self._record(name, arguments, {"error": f"unknown tool {name}"}, "unknown")
 
-        freetext = set(mock.get("freetext_params") or ())
+        # Two kinds of field a record cannot be chosen by: text no two agents
+        # write the same way, and an answer the conversation never settled.
+        freetext = set(mock.get("freetext_params") or ()) | set(mock.get("undetermined_params") or ())
         abstained = self._abstentions.get(name, frozenset())
         # Free text cannot be compared: no two agents write the same sentence,
         # and a row never stores one. An argument the model left empty is an

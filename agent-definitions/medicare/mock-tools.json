@@ -347,6 +347,9 @@
       "requested_preferences",
       "notes"
     ],
+    "undetermined_params": [
+      "intake_intent"
+    ],
     "completes_on": {
       "zip_code": "zip_code",
       "medicare_part_a_status": "has_medicare_part_a",

@@ -6,7 +6,7 @@
  * can contain transcripts, logs, traces and tool argument values, so it is
  * intentionally ignored by git and must remain local.
  */
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 const API = "https://api.cekura.ai/test_framework/v1";
@@ -52,6 +52,12 @@ function client(options) {
 }
 async function main() {
   const options = parse(process.argv.slice(2)); if (options.help) return process.stdout.write(usage());
+  try {
+    if ((await readdir(options.out)).length) throw new Error(`Refusing to overwrite non-empty export directory: ${options.out}`);
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  await mkdir(options.out, { recursive: true });
   const get = client(options), manifest = { schemaVersion: 2, generatedAt: new Date().toISOString(), recordingsFetched: false, results: options.results, errors: [] };
   await pool(options.results, options.concurrency, async (target) => {
     const base = join(options.out, target.suite), runRoot = join(base, "runs"), logRoot = join(base, "logs"), traceRoot = join(base, "traces");

@@ -36,4 +36,5 @@ test("builder keeps missing metrics separate and excludes raw values from public
   assert.equal(result.website.results[0].latencyP90Ms, 1900);
   const publicText = await readFile(join(out, "s2s-benchmark.json"), "utf8");
   assert.equal(publicText.includes("fixture-only"), false);
+  await assert.rejects(() => build({ raw, definitions, output: out, root: process.cwd(), campaign: { repeats: 2 } }), /Refusing to overwrite/);
 });

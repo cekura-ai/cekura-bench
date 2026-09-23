@@ -45,6 +45,14 @@ class TestOneRowIsOneBuild:
         row = summarize(runs(record(), record()))["rows"][0]
         assert row["configuration"]["disclosures"] == {"grok_reasoning": "high"}
 
+    def test_each_suite_is_its_own_row(self):
+        medicare = record(agent_definition="medicare", system_prompt_sha256="q", cekura_agent_id=2)
+        rows = summarize(runs(record(cekura_agent_id=1), medicare, record(cekura_agent_id=1)))["rows"]
+        assert [(row["row"], row["suite"], row["runs"]) for row in rows] == [
+            ("grok-realtime", "appointments", 2), ("grok-realtime", "medicare", 1),
+        ]
+        assert "cekura_agent_id" not in rows[0]["configuration"]["disclosures"]
+
     def test_a_run_without_an_agent_record_is_refused(self, tmp_path):
         path = tmp_path / "runs.jsonl"
         path.write_text(json.dumps({"run_id": 1}) + "\n")

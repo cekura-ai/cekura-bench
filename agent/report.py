@@ -21,6 +21,9 @@ Rules, stated once:
 
 * **One build per row.** A row whose runs carry more than one agent commit is
   refused: a board cell describes one build, and a mixture describes none.
+* **One suite per row.** Each agent definition is its own prompt, tools and
+  scenarios, so a provider gets one row per definition, and nothing is
+  combined across them.
 * **Cost is a ratio of totals.** Per minute is total priced dollars over total
   priced call minutes, so long calls weigh as much as they cost. A cost is
   publishable only when every run in the row was priced from verified rates;
@@ -66,7 +69,7 @@ CONFIGURATION_FIELDS = (
 COMMON_FIELDS = set(CONFIGURATION_FIELDS) | {
     "bench", "agent_commit", "config_source", "config", "worker_instance", "worker_call",
     "cekura_mode", "divergences", "tool_calls", "tool_call_count", "tool_calls_matched",
-    "tool_calls_cancelled", "usage", "timing", "integrity",
+    "tool_calls_cancelled", "usage", "timing", "integrity", "cekura_agent_id",
 }
 CALL_CONTROL = {"end_call", "transfer_call"}
 
@@ -189,15 +192,17 @@ def tools(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
             "runs_with_a_repeated_call": runs_with_repeats, "runs_not_closed_by_the_agent": runs_without_close}
 
 
-def summarize_row(row: str, runs: Sequence[dict[str, Any]], table: dict[str, Any]) -> dict[str, Any]:
+def summarize_row(row: str, suite: str, runs: Sequence[dict[str, Any]], table: dict[str, Any]) -> dict[str, Any]:
     records = [run["custom_metadata"] for run in runs]
-    commit = _single([r.get("agent_commit") for r in records], "agent_commit", row)
+    label = f"{row} ({suite})"
+    commit = _single([r.get("agent_commit") for r in records], "agent_commit", label)
     return {
         "row": row,
+        "suite": suite,
         "runs": len(runs),
         "scenarios": len({run.get("scenario_id") for run in runs}),
         "agent_commit": commit,
-        "configuration": configuration(records, row),
+        "configuration": configuration(records, label),
         "cost": cost(records, row, table),
         "integrity": integrity(records),
         "tools": tools(records),
@@ -206,15 +211,22 @@ def summarize_row(row: str, runs: Sequence[dict[str, Any]], table: dict[str, Any
 
 def summarize(runs: Sequence[dict[str, Any]], table: dict[str, Any] | None = None) -> dict[str, Any]:
     table = table if table is not None else load_table()
-    by_row: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    by_row: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
     for run in runs:
-        record = run["custom_metadata"]
-        by_row[record.get("config") or record.get("s2s_provider") or "unknown"].append(run)
+        by_row[_row(run["custom_metadata"]), _suite(run["custom_metadata"])].append(run)
     return {
         "schema": "agent_bench_harness_columns_v1",
         "price_table": {"schema": table.get("schema"), "note": table.get("note")},
-        "rows": [summarize_row(row, rows, table) for row, rows in sorted(by_row.items())],
+        "rows": [summarize_row(row, suite, rows, table) for (row, suite), rows in sorted(by_row.items())],
     }
+
+
+def _row(record: dict[str, Any]) -> str:
+    return record.get("config") or record.get("s2s_provider") or "unknown"
+
+
+def _suite(record: dict[str, Any]) -> str:
+    return record.get("agent_definition") or "unknown"
 
 
 def turns(runs: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -226,7 +238,7 @@ def turns(runs: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
         for kind in ("reply", "endpointing"):
             for turn in (timing.get(kind) or {}).get("turns") or ():
                 rows.append({
-                    "row": record.get("config") or record.get("s2s_provider"),
+                    "row": _row(record), "suite": _suite(record),
                     "run_id": run.get("run_id"), "scenario_id": run.get("scenario_id"),
                     "measure": f"agent_{kind}_ms", "caller_stopped_at_s": turn.get("caller_stopped_at_s"),
                     "ms": turn.get("ms"),

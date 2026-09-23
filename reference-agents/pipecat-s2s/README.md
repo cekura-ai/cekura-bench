@@ -58,7 +58,7 @@ quotes the body.
 |---|---|
 | provider key | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, `DASHSCOPE_API_KEY`, or for Bedrock `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`); see below for why an API key cannot work |
 | `DEEPGRAM_API_KEY`, `ELEVENLABS_API_KEY` | cascade rows only |
-| `CEKURA_API_KEY`, `CEKURA_AGENT_ID` | tracing is off without both |
+| `CEKURA_API_KEY`, `CEKURA_AGENT_ID_<DEFINITION>` | tracing is off without both; one platform agent per agent definition (`CEKURA_AGENT_ID_APPOINTMENTS`, `CEKURA_AGENT_ID_MEDICARE`), with `CEKURA_AGENT_ID` for a deployment that serves one |
 | `AGENT_COMMIT` | stamped by the build; names what was actually deployed |
 
 ## Start-up
@@ -280,9 +280,11 @@ and that is a change to the contract rather than something to fake in the agent.
 
 ## Observability
 
-With `CEKURA_API_KEY` and `CEKURA_AGENT_ID` set, the run is traced through the
-Cekura Pipecat SDK: transcripts, tool calls, logs and spans land against the run
-instead of in a container's stdout. `track` correlates a scenario run; `observe`
+With `CEKURA_API_KEY` and the loaded definition's agent id set, the run is traced
+through the Cekura Pipecat SDK: transcripts, tool calls, logs and spans land against
+the run instead of in a container's stdout. The platform files a session under the
+agent id it was sent and a run looks only under its own agent, so each definition
+reports to its own platform agent, and the record names it (`cekura_agent_id`). `track` correlates a scenario run; `observe`
 additionally uploads the call audio and starts evaluation.
 
 Every call carries a **build record** as trace metadata, and it is also logged
@@ -409,7 +411,7 @@ arguments and a record that cannot name the code it ran is not a record.
 Credentials live in the secret set named in `pcc-deploy.toml`, never in the
 image or the session. Create it once with `pipecat cloud secrets set
 cekura-s2s-secrets --file <env file>` holding the variables in the table above;
-add `CEKURA_API_KEY` and `CEKURA_AGENT_ID` when the platform agent exists.
+add `CEKURA_API_KEY` and one `CEKURA_AGENT_ID_<DEFINITION>` per platform agent.
 
 ## Verified
 

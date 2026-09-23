@@ -2993,6 +2993,24 @@ def capture_caller_turns(tracer, user_aggregator) -> None:
         )
 
 
+def cekura_agent_id(definition: str | None) -> str | None:
+    """The platform agent this call's record is filed under.
+
+    Each agent definition is its own platform agent, because the platform files
+    a traced session under the agent id the tracer sends and a run looks only
+    under its own agent's id: a medicare call reported as the appointments
+    agent would run, and then come back to its run with no transcript and no
+    record. So the id follows the definition that was loaded --
+    ``CEKURA_AGENT_ID_<DEFINITION>`` -- and ``CEKURA_AGENT_ID`` answers only
+    for a deployment that serves one definition.
+    """
+    if definition:
+        specific = os.getenv(f"CEKURA_AGENT_ID_{definition.upper().replace('-', '_')}")
+        if specific:
+            return specific
+    return os.getenv("CEKURA_AGENT_ID")
+
+
 def create_task(pipeline, context, params, runner_args, transport, record, observers) -> tuple[PipelineTask, Any]:
     """Wrap the pipeline in Cekura tracing when credentials are present.
 
@@ -3002,9 +3020,10 @@ def create_task(pipeline, context, params, runner_args, transport, record, obser
     it is simply not observed -- a missing key must not be the reason a benchmark
     call fails.
     """
-    api_key, agent_id = os.getenv("CEKURA_API_KEY"), os.getenv("CEKURA_AGENT_ID")
+    definition = record.get("agent_definition")
+    api_key, agent_id = os.getenv("CEKURA_API_KEY"), cekura_agent_id(definition)
     if not (api_key and agent_id):
-        logger.info("Cekura tracing off: CEKURA_API_KEY or CEKURA_AGENT_ID unset")
+        logger.info("Cekura tracing off: CEKURA_API_KEY or the agent id for {} unset", definition)
         return PipelineTask(pipeline, params=params, observers=observers), None
 
     try:
@@ -3019,6 +3038,8 @@ def create_task(pipeline, context, params, runner_args, transport, record, obser
             # the whole call and then hold the finalisation for its timeout.
             enable_otel_traces=os.getenv("CEKURA_OTEL_TRACES", "1").lower() not in ("0", "false", "no"),
         )
+        # On the record itself, which is sent again whole when the call ends.
+        record["cekura_agent_id"] = int(agent_id)
         metadata = dict(record)
         # "track" correlates a scenario run and captures transcripts and metadata;
         # "observe" additionally uploads the call audio and starts evaluation.

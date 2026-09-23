@@ -2702,3 +2702,44 @@ class TestAHangUpEndsTheCallOnceTheGoodbyeHasPlayed:
         no_hang_up = bot.CallNarrator(hangup=SimpleNamespace(hung_up_at=None, left_at=None))
         no_hang_up.caller_turns, no_hang_up.agent_turns = 4, 4
         assert "hangup_tail_ms" not in no_hang_up.integrity()
+
+
+class TestEachDefinitionReportsToItsOwnAgent:
+    """A run finds its transcript only under its own platform agent, so the
+    record goes to the agent for the definition that was loaded."""
+
+    @pytest.fixture(autouse=True)
+    def _agents(self, monkeypatch):
+        monkeypatch.setenv("CEKURA_AGENT_ID", "10")
+        monkeypatch.setenv("CEKURA_AGENT_ID_APPOINTMENTS", "11")
+        monkeypatch.setenv("CEKURA_AGENT_ID_MEDICARE", "22")
+
+    def test_the_id_follows_the_definition(self):
+        assert bot.cekura_agent_id("appointments") == "11"
+        assert bot.cekura_agent_id("medicare") == "22"
+
+    def test_the_plain_id_answers_only_for_a_definition_without_its_own(self, monkeypatch):
+        monkeypatch.delenv("CEKURA_AGENT_ID_MEDICARE")
+        assert bot.cekura_agent_id("medicare") == "10"
+
+    def test_the_tracer_and_the_record_name_that_agent(self, monkeypatch):
+        import cekura.pipecat
+
+        built = {}
+
+        class Tracer:
+            def __init__(self, **kwargs):
+                built.update(kwargs)
+
+            def track_and_create_task(self, pipeline, context, **kwargs):
+                built["custom_metadata"] = kwargs["custom_metadata"]
+                return "task"
+
+        monkeypatch.setenv("CEKURA_API_KEY", "key")
+        monkeypatch.setattr(cekura.pipecat, "PipecatTracer", Tracer)
+        record = {"agent_definition": "medicare"}
+        task, _ = bot.create_task("pipeline", "context", None, None, None, record, [])
+        assert task == "task"
+        assert built["agent_id"] == 22 and built["custom_metadata"]["cekura_agent_id"] == 22
+        # The record is sent again whole when the call ends, so the id has to be on it.
+        assert record["cekura_agent_id"] == 22

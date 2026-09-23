@@ -2024,6 +2024,30 @@ class TestVendorDefaultsAreExplicitAndOnTheRecord:
         record = record_for("gpt-live")
         assert (record["s2s_backend_model"], record["s2s_backend_reasoning"]) == ("gpt-6-sol", "low")
 
+    @pytest.mark.parametrize("key", ["cascade-openai", "cascade-google", "cascade-grok"])
+    def test_a_cascade_counterpart_sends_its_level_and_says_so(self, key):
+        text = bot.TEXT_MODELS[key]
+        assert text.reasoning, key
+        service = text.build("k", text.default_model, text.reasoning)
+        if key == "cascade-google":
+            # Unset, the framework would pick the lowest level the model takes.
+            assert service._settings.thinking.thinking_level == text.reasoning
+        elif key == "cascade-openai":
+            assert service._settings.reasoning.effort == text.reasoning
+        else:
+            assert service._settings.extra == {"reasoning_effort": text.reasoning}
+        assert service._settings.model == text.default_model
+        record = bot.cascade_record(key, text, text.default_model, bot.load_agent(asked()), asked())
+        assert record["llm_reasoning"] == text.reasoning
+
+    def test_the_cascade_baseline_has_no_reasoning_step(self):
+        text = bot.TEXT_MODELS["cascade-baseline"]
+        assert text.build("k", text.default_model, text.reasoning)._settings.extra == {}
+        record = bot.cascade_record(
+            "cascade-baseline", text, text.default_model, bot.load_agent(asked()), asked()
+        )
+        assert record["llm_reasoning"] == "none"
+
     def test_qwen_runs_its_audio_model(self):
         provider = bot.PROVIDERS["qwen-realtime"]
         assert (provider.default_model, provider.default_voice) == ("qwen-audio-3.0-realtime-plus", "longanqian")

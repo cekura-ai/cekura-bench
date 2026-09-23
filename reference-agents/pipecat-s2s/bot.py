@@ -1069,34 +1069,58 @@ CASCADE_RATE = 16000
 class TextModel:
     """A vendor's text model, as the counterpart to its speech model."""
 
-    build: Callable[[str, str], LLMService]
+    build: Callable[[str, str, str | None], LLMService]
     default_model: str
     credential_env: tuple[str, ...]
     module: str
     # The speech model this one is the counterpart to, or None for the neutral
     # baseline that belongs to no vendor.
     counterpart_to: str | None = None
+    # Sent on every call and named on the record, for the same reason as the
+    # native rows' levels. None only for a model with no reasoning step.
+    reasoning: str | None = None
 
 
-def _openai_text(api_key: str, model: str) -> LLMService:
+def _openai_text(api_key: str, model: str, reasoning: str | None) -> LLMService:
     from pipecat.services.openai.llm import OpenAILLMService
 
     return OpenAILLMService(api_key=api_key, model=model)
 
 
-def _google_text(api_key: str, model: str) -> LLMService:
+def _openai_responses_text(api_key: str, model: str, reasoning: str | None) -> LLMService:
+    # The Responses API, because chat completions refuses a reasoning effort
+    # alongside function tools on the current models.
+    from pipecat.services.openai.responses.llm import (
+        OpenAIResponsesLLMService,
+        OpenAIResponsesLLMSettings,
+        OpenAIResponsesReasoningConfig,
+    )
+
+    return OpenAIResponsesLLMService(
+        api_key=api_key,
+        settings=OpenAIResponsesLLMSettings(
+            model=model, reasoning=OpenAIResponsesReasoningConfig(effort=reasoning)
+        ),
+    )
+
+
+def _google_text(api_key: str, model: str, reasoning: str | None) -> LLMService:
     from pipecat.services.google.llm import GoogleLLMService
 
-    return GoogleLLMService(api_key=api_key, model=model)
+    # Named, because unset is not the vendor's default here: the framework
+    # drops a Gemini Flash model to the lowest thinking level it accepts.
+    thinking = GoogleLLMService.ThinkingConfig(thinking_level=reasoning) if reasoning else None
+    return GoogleLLMService(api_key=api_key, settings=GoogleLLMService.Settings(model=model, thinking=thinking))
 
 
-def _grok_text(api_key: str, model: str) -> LLMService:
-    from pipecat.services.grok.llm import GrokLLMService
+def _grok_text(api_key: str, model: str, reasoning: str | None) -> LLMService:
+    from pipecat.services.xai.llm import GrokLLMService
 
-    return GrokLLMService(api_key=api_key, model=model)
+    extra = {"reasoning_effort": reasoning} if reasoning else {}
+    return GrokLLMService(api_key=api_key, settings=GrokLLMService.Settings(model=model, extra=extra))
 
 
-def _qwen_text(api_key: str, model: str) -> LLMService:
+def _qwen_text(api_key: str, model: str, reasoning: str | None) -> LLMService:
     from pipecat.services.qwen.llm import QwenLLMService
 
     return QwenLLMService(api_key=api_key, model=model)
@@ -1105,21 +1129,28 @@ def _qwen_text(api_key: str, model: str) -> LLMService:
 TEXT_MODELS: dict[str, TextModel] = {
     # The neutral baseline: the pipeline every cascade row shares, with a text
     # model chosen for being widely understood rather than for matching anyone.
+    # It is also held still, so the baseline means the same thing run to run.
     "cascade-baseline": TextModel(
         _openai_text, "gpt-4.1", ("OPENAI_API_KEY",), "pipecat.services.openai.llm",
     ),
+    # Each counterpart is the vendor's current text model at a named level. The
+    # OpenAI row runs the model and effort GPT-Live's backend runs: at high, its
+    # larger models took several seconds to say anything, before the speech path
+    # adds its own time.
     "cascade-openai": TextModel(
-        _openai_text, "gpt-4.1", ("OPENAI_API_KEY",), "pipecat.services.openai.llm",
-        counterpart_to="openai-realtime",
+        _openai_responses_text, "gpt-6-sol", ("OPENAI_API_KEY",), "pipecat.services.openai.responses.llm",
+        counterpart_to="openai-realtime", reasoning="low",
     ),
     "cascade-google": TextModel(
-        _google_text, "gemini-2.5-flash", ("GEMINI_API_KEY", "GEMINI_AUTHORIZATION"),
-        "pipecat.services.google.llm", counterpart_to="gemini-live",
+        _google_text, "gemini-3.8-flash", ("GEMINI_API_KEY", "GEMINI_AUTHORIZATION"),
+        "pipecat.services.google.llm", counterpart_to="gemini-live", reasoning="high",
     ),
     "cascade-grok": TextModel(
-        _grok_text, "grok-4", ("XAI_API_KEY",), "pipecat.services.grok.llm",
-        counterpart_to="grok-realtime",
+        _grok_text, "grok-4.7", ("XAI_API_KEY",), "pipecat.services.xai.llm",
+        counterpart_to="grok-realtime", reasoning="high",
     ),
+    # Not yet brought up to date: there is no credential to list the vendor's
+    # models with, and this row cannot start without one either.
     "cascade-qwen": TextModel(
         _qwen_text, "qwen-plus", ("DASHSCOPE_API_KEY",), "pipecat.services.qwen.llm",
         counterpart_to="qwen-realtime",
@@ -1133,7 +1164,7 @@ def build_cascade(text: TextModel, credential: str, model: str, instructions: st
     from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
 
     stt = DeepgramFluxSTTService(api_key=os.environ["DEEPGRAM_API_KEY"], model=CASCADE_STT_MODEL)
-    llm = text.build(credential, model)
+    llm = text.build(credential, model, text.reasoning)
     tts = ElevenLabsTTSService(
         api_key=os.environ["ELEVENLABS_API_KEY"],
         voice_id=settings.get("cascade_tts_voice", CASCADE_TTS_VOICE),
@@ -2348,6 +2379,7 @@ def cascade_record(key: str, text: TextModel, model: str, server: MockToolServer
         **_common_record(server, settings),
         "stack": "cascade",
         "llm_model": model,
+        "llm_reasoning": text.reasoning or "none",
         "stt_model": CASCADE_STT_MODEL,
         "tts_model": CASCADE_TTS_MODEL,
         "tts_voice": settings.get("cascade_tts_voice", CASCADE_TTS_VOICE),

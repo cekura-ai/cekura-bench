@@ -93,6 +93,8 @@ def gemini_service(service_class, **attributes):
     async def quiet(*_args, **_kwargs):
         return None
 
+    service._connect = quiet
+    service._disconnect = quiet
     service._process_completed_function_calls = quiet
     service._create_initial_response = quiet
     for name, value in attributes.items():
@@ -1979,10 +1981,7 @@ class TestAConfigurationReconnectOpensANewGeminiSession:
         async def connect(session_resumption_handle=None):
             resumed.append(session_resumption_handle)
 
-        async def disconnect():
-            return None
-
-        service._connect, service._disconnect = connect, disconnect
+        service._connect = connect
         return service, resumed
 
     @staticmethod
@@ -2156,3 +2155,78 @@ class TestAWithdrawnGeminiToolCallIsClosedAndMarked:
         trace.on_change = lambda: rewrites.append(1)
         trace.cancel(["fc-9"])
         assert trace.as_metadata()["tool_calls_cancelled"] == 0 and rewrites == []
+
+
+class TestAHangUpIsNotHeldOpenForHalfAMinute:
+    """A hang-up has to reach the caller as a call that ended.
+
+    The service holds the pipeline's end frame while the bot is still
+    responding. How long it holds it is this row's to set, and why is at the
+    constant these read.
+
+    They read the wait the deferral actually asks for rather than setting one
+    on the instance: an override that stopped reaching the timer would leave
+    every hang-up waiting out the framework's own half minute with a test that
+    patched the instance still passing.
+    """
+
+    @staticmethod
+    async def _the_wait_a_held_hang_up_asks_for(service_class):
+        """Defer a real EndFrame in a real service, reading the wait it asks
+        for instead of serving it."""
+        import asyncio
+        from unittest.mock import patch
+
+        from pipecat.clocks.system_clock import SystemClock
+        from pipecat.frames.frames import EndFrame
+        from pipecat.processors.frame_processor import (
+            FrameDirection,
+            FrameProcessorSetup,
+        )
+        from pipecat.utils.asyncio.task_manager import TaskManager
+
+        service = gemini_service(service_class, _bot_is_responding=True)
+        await service.setup(FrameProcessorSetup(
+            clock=SystemClock(), task_manager=TaskManager(), pipeline_worker=None,
+        ))
+        released, asked_for = [], []
+
+        async def queue_frame(frame, *_args, **_kwargs):
+            released.append(type(frame).__name__)
+
+        service.queue_frame = queue_frame
+        yield_only = asyncio.sleep
+
+        async def record(seconds, *_args, **_kwargs):
+            asked_for.append(seconds)
+            await yield_only(0)
+
+        with patch("asyncio.sleep", record):
+            await service.process_frame(EndFrame(), FrameDirection.DOWNSTREAM)
+            held = not released
+            for _ in range(5):
+                await yield_only(0)
+        return held, asked_for, released
+
+    async def test_this_row_waits_seconds_where_the_framework_waits_half_a_minute(self):
+        service_class = bot.gemini_service_class()
+        held, asked_for, released = await self._the_wait_a_held_hang_up_asks_for(service_class)
+        assert held, "the end frame went straight through; there was nothing to hold"
+        assert asked_for == [service_class._END_FRAME_DEFERRAL_TIMEOUT_SECS], (
+            "the wait the row sets is not the wait the deferral asks for"
+        )
+        assert 0 < asked_for[0] <= 10, "longer than this and the caller hears a dead line"
+        assert released == ["EndFrame"], "the hang-up was held and never let go"
+
+    async def test_the_framework_still_holds_the_end_frame(self):
+        # The tripwire: if the service stops deferring, or learns that a turn
+        # ending in a tool call will never be reported complete, the row's
+        # shortened wait is dead weight and should go rather than sit there
+        # looking load-bearing.
+        from pipecat.services.google.gemini_live.llm import GeminiLiveLLMService
+
+        held, asked_for, released = await self._the_wait_a_held_hang_up_asks_for(
+            GeminiLiveLLMService
+        )
+        assert held and released == ["EndFrame"]
+        assert asked_for[0] > 10, "the framework's own wait no longer leaves anything to shorten"

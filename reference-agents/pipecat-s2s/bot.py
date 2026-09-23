@@ -64,7 +64,7 @@ from pipecat.frames.frames import (
     BotStoppedSpeakingFrame,
     CancelFrame,
     EndFrame,
-    EndTaskFrame,
+    EndWorkerFrame,
     ErrorFrame,
     Frame,
     FunctionCallCancelFrame,
@@ -419,6 +419,27 @@ def gemini_service_class():
     from pipecat.services.google.gemini_live.llm import GeminiLiveLLMService
 
     class GeminiResumesQuietly(GeminiLiveLLMService):
+        # How long a hang-up may be held back.
+        #
+        # The service defers the pipeline's end frame until its server reports
+        # the turn complete, and gives up after thirty seconds. A turn that
+        # ended in the tool call that closes the call is never reported
+        # complete -- the server is waiting on that very call's result -- so
+        # every hang-up the agent makes from inside a turn waited out the whole
+        # timeout: the agent silent, the line open, the caller still talking
+        # into it, which a transcript reads as an agent that stopped answering
+        # rather than one that hung up. It happened on four of the six calls
+        # measured here that reached a closing tool, three of them for the full
+        # thirty seconds.
+        #
+        # Five seconds is the wait worth keeping. What the deferral protects is
+        # the tail of a turn the server has not finished sending; audio already
+        # sent is queued in the transport downstream of here and drains whether
+        # this session is open or not. Pushing a cancel frame instead does not
+        # work: by then the worker's push queue is blocked behind the very end
+        # frame that is stuck, so the cancel is received and never acted on.
+        _END_FRAME_DEFERRAL_TIMEOUT_SECS = 5.0
+
         async def _handle_server_message(self, message):
             await super()._handle_server_message(message)
             cancellation = getattr(message, "tool_call_cancellation", None)
@@ -1735,7 +1756,7 @@ def register_tools(llm: LLMService, server: MockToolServer, trace: ToolTrace) ->
         trace.record("end_call", params.arguments or {}, True, result, requested, "exact",
                      tool_call_id=params.tool_call_id)
         await params.result_callback(result)
-        await params.llm.push_frame(EndTaskFrame())
+        await params.llm.push_frame(EndWorkerFrame())
 
     async def transfer_call(params: FunctionCallParams) -> None:
         requested = trace._offset()
@@ -1744,7 +1765,7 @@ def register_tools(llm: LLMService, server: MockToolServer, trace: ToolTrace) ->
         trace.record("transfer_call", params.arguments or {}, True, result, requested, "exact",
                      tool_call_id=params.tool_call_id)
         await params.result_callback(result)
-        await params.llm.push_frame(EndTaskFrame())
+        await params.llm.push_frame(EndWorkerFrame())
 
     for name in server.tool_names:
         llm.register_function(name, handler)

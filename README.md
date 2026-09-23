@@ -346,6 +346,29 @@ the compared evidence uses the same evaluator version and context. This keeps
 the test harness fair while acknowledging that good voice-agent evaluation is
 an empirical test-design process, not a one-shot prompt.
 
+## S2S benchmark exports
+
+The S2S export path is deliberately two-stage. It keeps sensitive source data
+local while producing the small, reproducible aggregate used by the benchmark
+page.
+
+1. `npm run export:s2s -- --result <suite:provider:result-id> --out <local-dir>`
+   reads completed result, run, log and trace records. It never launches a
+   campaign or fetches recordings. Its output can contain transcripts, logs,
+   traces and tool arguments, so it is gitignored and local-only.
+2. `npm run build:s2s -- --raw <local-dir> --definitions <local-contract-dir> --campaign <campaign.json> --out <output-dir>`
+   validates the captured records with `agent.report` and `agent.tool_score`,
+   then produces `s2s-benchmark.json`, a manifest, a scenario matrix and a
+   tool-failure breakdown. The latter four are safe for the vault or website:
+   they include only settings, identifiers, booleans, counts, timings and
+   argument names, never transcript, log, trace or argument values.
+
+The campaign template is at
+[`config/s2s-export-campaign.example.json`](config/s2s-export-campaign.example.json).
+It records the campaign decisions supplied by the operator; neither command
+contains a default campaign, production result ID, API key or evaluator
+contract fixture.
+
 ## License
 
 The code here is MIT licensed. See `LICENSE`.

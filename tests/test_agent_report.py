@@ -87,6 +87,16 @@ class TestIntegrityAndTools:
         assert row["integrity"]["flags"] == {"hangup_held": 1}
         assert row["integrity"]["hangup_tail_ms"]["max"] == 4200
 
+    def test_a_service_failure_is_counted_apart_and_listed(self):
+        stalled = record(integrity={"checks": ["turns_unanswered", "reply_stalled"]})
+        erred = record(integrity={"checks": ["service_error"]})
+        model_miss = record(integrity={"checks": ["turns_unanswered"]})
+        row = summarize(runs(record(), stalled, erred, model_miss))["rows"][0]
+        assert row["integrity"]["service_failure_runs"] == 2
+        assert row["integrity"]["service_failure_run_ids"] == [1, 2]
+        # Still in the row: counted apart, not dropped.
+        assert row["runs"] == 4
+
     def test_a_repeated_call_and_a_missing_hang_up_are_counted(self):
         repeated = record(tool_calls=[
             {"name": "lookup", "arguments": {"id": "1"}, "resolution": "exact"},

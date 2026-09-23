@@ -34,6 +34,11 @@ Rules, stated once:
 * **A flagged run is counted, not dropped.** Integrity checks name runs that
   need looking at before they are scored; the tally is published beside the
   score so an exclusion decided later is visible as one.
+* **A service failure is counted apart.** A run where the model's service
+  raised an error, left the caller waiting ten seconds or more, or stopped
+  processing the caller's audio is listed by id, so the row can be scored with
+  and without them. They stay in the row: a deployment on that service meets
+  them too.
 * **Latency is not a column here.** The agent's own timings are
   detector-derived and measured at the agent, not at the caller's ear, so the
   board's latency is the platform's, read from the recording. Every turn the
@@ -72,6 +77,8 @@ COMMON_FIELDS = set(CONFIGURATION_FIELDS) | {
     "tool_calls_cancelled", "usage", "timing", "integrity", "cekura_agent_id",
 }
 CALL_CONTROL = {"end_call", "transfer_call"}
+# Checks that name the service rather than the model's answer.
+SERVICE_FAILURES = {"service_error", "reply_stalled", "caller_audio_unacknowledged"}
 
 
 class ReportError(ValueError):
@@ -167,7 +174,12 @@ def integrity(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
         if tail is not None:
             tails.append(tail)
     return {"ok_runs": clean, "flagged_runs": len(records) - clean - missing, "flags": dict(flagged),
-            "runs_without_checks": missing, "hangup_tail_ms": _spread(tails), "closed_by": dict(closed_by)}
+            "runs_without_checks": missing, "hangup_tail_ms": _spread(tails), "closed_by": dict(closed_by),
+            "service_failure_runs": sum(1 for r in records if _service_failed(r))}
+
+
+def _service_failed(record: dict[str, Any]) -> bool:
+    return bool(SERVICE_FAILURES & set((record.get("integrity") or {}).get("checks") or ()))
 
 
 def tools(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
@@ -205,7 +217,8 @@ def summarize_row(row: str, suite: str, runs: Sequence[dict[str, Any]], table: d
         "agent_commit": commit,
         "configuration": configuration(records, label),
         "cost": cost(records, row, table),
-        "integrity": integrity(records),
+        "integrity": {**integrity(records), "service_failure_run_ids": sorted(
+            (run.get("run_id") for run in runs if _service_failed(run["custom_metadata"])), key=str)},
         "tools": tools(records),
     }
 

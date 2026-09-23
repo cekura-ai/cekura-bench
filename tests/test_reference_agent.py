@@ -1715,7 +1715,7 @@ class TestEveryRowIsCheckedWhetherOrNotItLooksWrong:
     def test_a_steady_call_reports_that_the_checks_ran(self):
         narrator = self._narrator()
         narrator.replies = [1.0, 1.2, 0.9, 1.1]
-        narrator.caller_turns, narrator.agent_turns = 4, 4
+        narrator.caller_turns, narrator.audible_turns = 4, 4
         assert narrator.integrity()["checks"] == ["ok"]
 
     def test_replies_that_grow_through_a_call_are_named(self):
@@ -1723,7 +1723,7 @@ class TestEveryRowIsCheckedWhetherOrNotItLooksWrong:
         # sent gets slower as the call goes on, and only the second half shows it.
         narrator = self._narrator()
         narrator.replies = [1.0, 1.2, 12.0, 20.0]
-        narrator.caller_turns, narrator.agent_turns = 4, 4
+        narrator.caller_turns, narrator.audible_turns = 4, 4
         report = narrator.integrity()
         assert "replies_drifting" in report["checks"]
         assert report["reply_drift_ms"] > 2000
@@ -1731,12 +1731,12 @@ class TestEveryRowIsCheckedWhetherOrNotItLooksWrong:
     def test_a_uniformly_slow_model_is_not_a_broken_row(self):
         narrator = self._narrator()
         narrator.replies = [8.0, 8.2, 8.1, 8.3]
-        narrator.caller_turns, narrator.agent_turns = 4, 4
+        narrator.caller_turns, narrator.audible_turns = 4, 4
         assert narrator.integrity()["checks"] == ["ok"]
 
     def test_caller_turns_that_drew_no_reply_are_named(self):
         narrator = self._narrator()
-        narrator.caller_turns, narrator.agent_turns = 10, 2
+        narrator.caller_turns, narrator.audible_turns = 10, 2
         assert "turns_unanswered" in narrator.integrity()["checks"]
         assert narrator.integrity()["answered"] == "2/10"
 
@@ -1747,7 +1747,7 @@ class TestEveryRowIsCheckedWhetherOrNotItLooksWrong:
         clock = bot.AudioClock()
         clock.add(-4.0)  # four seconds of audio short of the time that has passed
         narrator = bot.CallNarrator(clock)
-        narrator.caller_turns, narrator.agent_turns = 4, 4
+        narrator.caller_turns, narrator.audible_turns = 4, 4
         report = narrator.integrity()
         assert "audio_in_starved" in report["checks"]
         assert report["audio_in_drift_ms"] == -4000
@@ -1760,7 +1760,7 @@ class TestEveryRowIsCheckedWhetherOrNotItLooksWrong:
         busy = bot.AudioClock()
         busy.add(600.0)
         fresh = bot.CallNarrator()
-        fresh.caller_turns, fresh.agent_turns = 4, 4
+        fresh.caller_turns, fresh.audible_turns = 4, 4
         assert "audio_in_drift_ms" not in fresh.integrity()
 
     @staticmethod
@@ -1776,7 +1776,7 @@ class TestEveryRowIsCheckedWhetherOrNotItLooksWrong:
         for _ in range(3):
             clock.add(0.02)
         narrator = bot.CallNarrator(clock)
-        narrator.caller_turns, narrator.agent_turns = 4, 4
+        narrator.caller_turns, narrator.audible_turns = 4, 4
         # No clock is read after the last buffer, so no tail can enter the figure.
         assert narrator.integrity()["checks"] == ["ok"]
 
@@ -1787,7 +1787,7 @@ class TestEveryRowIsCheckedWhetherOrNotItLooksWrong:
         for _ in range(3):
             clock.add(1.0)  # the third buffer is five seconds late
         narrator = bot.CallNarrator(clock)
-        narrator.caller_turns, narrator.agent_turns = 4, 4
+        narrator.caller_turns, narrator.audible_turns = 4, 4
         report = narrator.integrity()
         assert "audio_in_starved" in report["checks"]
         assert report["audio_in_drift_ms"] == -5000
@@ -1800,6 +1800,138 @@ class TestEveryRowIsCheckedWhetherOrNotItLooksWrong:
         clock.add(1.0)
         # Wall time has barely moved, so a second of audio is a second ahead.
         assert 0.9 < clock.drift() <= 1.0
+
+
+class TestAFailingServiceIsNamedNotScoredAsAnAnswer:
+    """A service that errs, goes quiet or stops hearing the caller produces a
+    call that reads like a model that answered badly. These checks name it, so
+    the board can count those runs apart from the model's own misses."""
+
+    class _Clock:
+        def __init__(self) -> None:
+            self.t = 0.0
+
+        def __call__(self) -> float:
+            return self.t
+
+    def _narrate(self, *steps):
+        """Frames at chosen moments: each step is a time in seconds, a frame, or a callable."""
+        import asyncio
+
+        from pipecat.observers.base_observer import FramePushed
+        from pipecat.processors.frame_processor import FrameDirection
+
+        clock = self._Clock()
+        narrator = bot.CallNarrator(now=clock)
+
+        async def run():
+            for step in steps:
+                if isinstance(step, (int, float)):
+                    clock.t = float(step)
+                elif callable(step) and not hasattr(step, "id"):
+                    step(narrator)
+                else:
+                    await narrator.on_push_frame(FramePushed(
+                        source=None, destination=None, frame=step,
+                        direction=FrameDirection.DOWNSTREAM, timestamp=0))
+
+        asyncio.run(run())
+        return narrator, clock
+
+    @staticmethod
+    def _frames():
+        from pipecat.frames import frames
+        return frames
+
+    def test_a_reply_the_service_started_but_never_voiced_is_not_an_answer(self):
+        f = self._frames()
+        narrator, _ = self._narrate(
+            f.UserStartedSpeakingFrame(), f.UserStoppedSpeakingFrame(),
+            f.LLMFullResponseStartFrame(), f.LLMFullResponseEndFrame(),
+            f.UserStartedSpeakingFrame(), f.UserStoppedSpeakingFrame(),
+            f.LLMFullResponseStartFrame(), f.LLMFullResponseEndFrame(),
+        )
+        report = narrator.integrity()
+        assert narrator.agent_turns == 2
+        assert report["answered"] == "0/2"
+        assert "turns_unanswered" in report["checks"]
+
+    def test_an_error_during_the_call_is_named_with_its_message_once(self):
+        f = self._frames()
+        narrator, _ = self._narrate(
+            1.0, f.ErrorFrame("model currently not available"),
+            2.0, f.ErrorFrame("model currently not available"),
+            3.0, f.ErrorFrame("Error code: 400"),
+        )
+        report = narrator.integrity()
+        assert "service_error" in report["checks"]
+        assert report["service_errors"]["count"] == 3
+        assert report["service_errors"]["messages"] == ["model currently not available", "Error code: 400"]
+
+    def test_an_error_the_teardown_throws_is_kept_apart(self):
+        f = self._frames()
+        narrator, _ = self._narrate(
+            1.0, f.CancelFrame(),
+            2.0, f.ErrorFrame("The session is closing and cannot accept new client events."),
+        )
+        report = narrator.integrity()
+        assert "service_error" not in report["checks"]
+        assert report["teardown_errors"] == 1
+
+    def test_a_turn_the_caller_gave_up_waiting_on_is_a_stall(self):
+        f = self._frames()
+        narrator, _ = self._narrate(
+            0.0, f.VADUserStartedSpeakingFrame(), 2.0, f.VADUserStoppedSpeakingFrame(),
+            13.0, f.VADUserStartedSpeakingFrame(),  # eleven seconds of nothing, then "hello?"
+            14.0, f.VADUserStoppedSpeakingFrame(), 15.5, f.BotStartedSpeakingFrame(),
+        )
+        report = narrator.integrity()
+        assert "reply_stalled" in report["checks"]
+        assert [(s["owed"], s["ms"], s["answered"]) for s in report["stalls"]] == [("reply", 11000, False)]
+
+    def test_a_slow_reply_that_arrives_is_not_a_stall(self):
+        f = self._frames()
+        narrator, _ = self._narrate(
+            0.0, f.VADUserStoppedSpeakingFrame(), 8.5, f.BotStartedSpeakingFrame(),
+            10.0, f.BotStoppedSpeakingFrame(), 11.0, f.VADUserStartedSpeakingFrame(),
+            11.5, f.VADUserStoppedSpeakingFrame(), 12.0, f.VADUserStartedSpeakingFrame(),  # a pause mid-turn
+        )
+        assert "reply_stalled" not in narrator.integrity()["checks"]
+
+    def test_a_greeting_that_comes_half_a_minute_late_is_a_stall(self):
+        f = self._frames()
+        narrator, _ = self._narrate(0.0, lambda n: n.caller_connected(), 33.0, f.BotStartedSpeakingFrame())
+        report = narrator.integrity()
+        assert [(s["owed"], s["ms"], s["answered"]) for s in report["stalls"]] == [("greeting", 33000, True)]
+
+    def test_a_wait_still_open_when_the_call_ends_is_a_stall(self):
+        f = self._frames()
+        narrator, _ = self._narrate(0.0, f.VADUserStoppedSpeakingFrame(), 10.5, f.CancelFrame())
+        report = narrator.integrity()
+        assert [(s["ms"], s["answered"]) for s in report["stalls"]] == [(10500, False)]
+
+    def test_caller_turns_the_service_never_transcribed_are_named(self):
+        f = self._frames()
+        narrator, clock = self._narrate(
+            0.0, f.UserStartedSpeakingFrame(), f.TranscriptionFrame("hi", "", "t"),
+            5.0, f.UserStartedSpeakingFrame(),
+            16.0, f.UserStartedSpeakingFrame(),
+            27.0, f.UserStartedSpeakingFrame(),
+            30.0,
+        )
+        report = narrator.integrity()
+        assert "caller_audio_unacknowledged" in report["checks"]
+        # The last turn is three seconds old; its transcript may still be on the way.
+        assert report["unheard_turns"] == 2
+
+    def test_one_transcript_for_several_turns_hears_all_of_them(self):
+        f = self._frames()
+        narrator, _ = self._narrate(
+            0.0, f.UserStartedSpeakingFrame(), 4.0, f.UserStartedSpeakingFrame(),
+            8.0, f.UserStartedSpeakingFrame(), 9.0, f.TranscriptionFrame("all three turns", "", "t"),
+            40.0,
+        )
+        assert "caller_audio_unacknowledged" not in narrator.integrity()["checks"]
 
 
 class TestAToolResultReachesTheModelThatAskedForIt:
@@ -2449,7 +2581,7 @@ class TestAGoodbyeLeftOpenIsClosedForTheAgent:
 
         closed = bot.CallNarrator(hangup=SimpleNamespace(
             hung_up_at=time.monotonic(), left_at=time.monotonic(), closed_by="harness"))
-        closed.caller_turns, closed.agent_turns = 4, 4
+        closed.caller_turns, closed.audible_turns = 4, 4
         report = closed.integrity()
         assert report["checks"] == ["ok"], "a call the backstop closed was still delivered as a call"
         assert report["closed_by"] == "harness"
@@ -2705,12 +2837,12 @@ class TestAHangUpEndsTheCallOnceTheGoodbyeHasPlayed:
         held = bot.CallNarrator(
             hangup=SimpleNamespace(hung_up_at=time.monotonic() - 5.0, left_at=None, closed_by="agent")
         )
-        held.caller_turns, held.agent_turns = 4, 4
+        held.caller_turns, held.audible_turns = 4, 4
         report = held.integrity()
         assert "hangup_held" in report["checks"] and report["hangup_tail_ms"] >= 5000
 
         prompt = bot.CallNarrator(hangup=SimpleNamespace(hung_up_at=time.monotonic(), left_at=None, closed_by="agent"))
-        prompt.caller_turns, prompt.agent_turns = 4, 4
+        prompt.caller_turns, prompt.audible_turns = 4, 4
         assert prompt.integrity()["checks"] == ["ok"]
 
         # The caller is let go when the room is left, whatever the teardown does after.
@@ -2719,12 +2851,12 @@ class TestAHangUpEndsTheCallOnceTheGoodbyeHasPlayed:
                 hung_up_at=time.monotonic() - 5.0, left_at=time.monotonic() - 4.98, closed_by="agent"
             )
         )
-        left_early.caller_turns, left_early.agent_turns = 4, 4
+        left_early.caller_turns, left_early.audible_turns = 4, 4
         report = left_early.integrity()
         assert report["checks"] == ["ok"] and report["hangup_tail_ms"] < 100
 
         no_hang_up = bot.CallNarrator(hangup=SimpleNamespace(hung_up_at=None, left_at=None))
-        no_hang_up.caller_turns, no_hang_up.agent_turns = 4, 4
+        no_hang_up.caller_turns, no_hang_up.audible_turns = 4, 4
         assert "hangup_tail_ms" not in no_hang_up.integrity()
 
 

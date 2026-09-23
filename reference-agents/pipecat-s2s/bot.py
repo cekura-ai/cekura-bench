@@ -1798,18 +1798,42 @@ class CallNarrator(BaseObserver):
     # holding every frame of a ten-minute call.
     MEMORY = 512
 
-    def __init__(self, clock: "AudioClock | None" = None, hangup: HangsUpOnceHeard | None = None) -> None:
+    def __init__(
+        self,
+        clock: "AudioClock | None" = None,
+        hangup: HangsUpOnceHeard | None = None,
+        now: Callable[[], float] = time.monotonic,
+    ) -> None:
         super().__init__()
         # Handed in rather than reached for, so this narrator reports the call it
         # was built for and nothing a previous one left behind.
         self._clock = clock if clock is not None else AudioClock()
         self._hangup = hangup
+        self._now = now
         self._seen: dict[int, None] = {}
         self.caller_turns = 0
+        # Replies the service started, and replies the caller could hear. They
+        # differ when a service begins a response and fails before any audio,
+        # and only the second is an answer.
         self.agent_turns = 0
+        self.audible_turns = 0
         self.barge_ins = 0
         self.errors = 0
         self._agent_speaking = False
+        # The wait the agent owes the caller: open from the caller connecting
+        # (the greeting) or stopping (a reply), settled by the agent's audio or
+        # by the caller giving up and speaking again.
+        self._owed_since: float | None = None
+        self._owed_kind = ""
+        self.stalls: list[dict[str, Any]] = []
+        # Caller turns the service has not yet sent a transcript after.
+        self._untranscribed_turns: list[float] = []
+        # Errors while the call was live, apart from the ones a teardown throws.
+        self._call_errors = 0
+        self._first_error_at_s: float | None = None
+        self._error_messages: dict[str, None] = {}
+        self._teardown_errors = 0
+        self._ended_at: float | None = None
         self.replies: list[float] = []
         self.endpointing: list[float] = []
         # The same figures turn by turn, each with the moment in the call the
@@ -1872,6 +1896,52 @@ class CallNarrator(BaseObserver):
         return {"caller_stopped_at_s": round(stopped, 3) if stopped is not None else None,
                 "ms": round(seconds * 1000)}
 
+    def caller_connected(self) -> None:
+        """The call opens from the agent, so from here it owes the greeting."""
+        if self.audible_turns == 0 and self._owed_since is None:
+            self._owe("greeting")
+
+    def _owe(self, kind: str) -> None:
+        self._owed_since, self._owed_kind = self._now(), kind
+
+    def _settle(self, answered: bool) -> None:
+        if self._owed_since is None:
+            return
+        stall = self._stall(self._now(), answered)
+        if stall is not None:
+            self.stalls.append(stall)
+        self._owed_since = None
+
+    def _stall(self, until: float, answered: bool) -> dict[str, Any] | None:
+        waited = until - self._owed_since
+        if waited * 1000 < self.STALLED_REPLY_MS:
+            return None
+        began = call_elapsed(self._owed_since)
+        return {"owed": self._owed_kind, "at_s": round(began, 3) if began is not None else None,
+                "ms": round(waited * 1000), "answered": answered}
+
+    def _ended_by(self) -> float | None:
+        """When the caller's side of the call ended: the hang-up or the teardown, whichever came first."""
+        ends = [t for t in (self._hangup.hung_up_at if self._hangup else None, self._ended_at) if t is not None]
+        return min(ends) if ends else None
+
+    def _call_ended_at(self) -> float:
+        ended = self._ended_by()
+        return ended if ended is not None else self._now()
+
+    def _note_error(self, frame: ErrorFrame) -> None:
+        ended = self._ended_by()
+        if ended is not None and self._now() >= ended:
+            self._teardown_errors += 1
+            return
+        self._call_errors += 1
+        if self._first_error_at_s is None:
+            at = call_elapsed(self._now())
+            self._first_error_at_s = round(at, 3) if at is not None else None
+        if len(self._error_messages) < self.ERROR_MESSAGES:
+            text = str(frame.error)
+            self._error_messages[text if len(text) <= 200 else text[:200] + "…"] = None
+
     # What a healthy call looks like, as numbers rather than as judgement.
     #
     # These are deliberately loose. They are not a quality bar -- a slow model is
@@ -1883,6 +1953,20 @@ class CallNarrator(BaseObserver):
     STARVED_AUDIO_MS = 1000
     ANSWERED_SHARE = 0.6
     HELD_HANGUP_MS = 2000
+    # The silence after which the platform's simulated caller asks whether
+    # anyone is still there: a wait this long is a dead line to the caller,
+    # however it ends. The slowest healthy tool turns measured here, where a
+    # reply takes two model calls, start their audio in about eight seconds.
+    STALLED_REPLY_MS = 10000
+    # A service that transcribes the caller sends each transcript within a
+    # second or two of the turn, and some send one for several turns at once,
+    # so only turns this old at the end of the call are counted as unheard,
+    # and one alone is not a finding.
+    TRANSCRIPT_GRACE_S = 10.0
+    UNHEARD_TURNS = 2
+    # Distinct error messages kept on the record; a failing socket can raise
+    # the same one hundreds of times.
+    ERROR_MESSAGES = 3
 
     def integrity(self) -> dict[str, Any]:
         """Whether this call was delivered and answered as a call, not just scored.
@@ -1897,13 +1981,26 @@ class CallNarrator(BaseObserver):
         is being sent gets slower as the call goes on, and the gap between halves
         is what separates the two. ``audio_in_drift_ms`` is the caller audio the
         pipeline received against the time it ran, which should be zero on a live
-        call. ``answered`` is how many caller turns drew a reply: a call the agent
-        is too far behind to answer still produces turns, and they score as
-        silence. ``hangup_tail_ms`` runs from the moment the agent's hang-up was
-        acted on to the moment the caller was let go: a hang-up that is decided
-        but does not end the call leaves the caller talking into a line nobody
-        is listening on, and the transcript reads that as an agent that stopped
-        answering.
+        call. ``answered`` is how many caller turns drew a reply the caller
+        could hear: a call the agent is too far behind to answer still produces
+        turns, and they score as silence. A response the service started and
+        abandoned before any audio is not an answer. ``hangup_tail_ms`` runs
+        from the moment the agent's hang-up was acted on to the moment the
+        caller was let go: a hang-up that is decided but does not end the call
+        leaves the caller talking into a line nobody is listening on, and the
+        transcript reads that as an agent that stopped answering.
+
+        Three checks name a service that failed rather than a model that
+        answered badly, so a board can count those runs apart. ``service_errors``
+        are the errors raised while the call was live -- a rejected request, a
+        model the vendor says is unavailable, a dropped socket -- with the ones a
+        teardown throws after the hang-up kept separately. ``stalls`` are the
+        waits of ``STALLED_REPLY_MS`` or more for the agent's audio, answered in
+        the end or not, including the greeting. ``unheard_turns`` are caller
+        turns the service never sent a transcript after: every row here is
+        configured to transcribe the caller, so a session still accepting audio
+        but no longer processing it shows as turns with no transcript, whatever
+        the timing.
         """
         report: dict[str, Any] = {}
         failed: list[str] = []
@@ -1924,12 +2021,38 @@ class CallNarrator(BaseObserver):
                 failed.append("audio_in_starved")
 
         if self.caller_turns:
-            report["answered"] = f"{self.agent_turns}/{self.caller_turns}"
-            if self.agent_turns < self.caller_turns * self.ANSWERED_SHARE:
+            report["answered"] = f"{self.audible_turns}/{self.caller_turns}"
+            if self.audible_turns < self.caller_turns * self.ANSWERED_SHARE:
                 failed.append("turns_unanswered")
-        elif self.agent_turns == 0:
+        elif self.audible_turns == 0:
             # Neither side said anything. The row exists and holds no call.
             failed.append("silent_call")
+
+        ended = self._call_ended_at()
+        if self._call_errors:
+            report["service_errors"] = {
+                "count": self._call_errors,
+                "first_at_s": self._first_error_at_s,
+                "messages": list(self._error_messages),
+            }
+            failed.append("service_error")
+        if self._teardown_errors:
+            report["teardown_errors"] = self._teardown_errors
+
+        stalls = list(self.stalls)
+        if self._owed_since is not None:
+            # Still owed when the call ended: the caller heard nothing to the end.
+            stall = self._stall(ended, answered=False)
+            if stall is not None:
+                stalls.append(stall)
+        if stalls:
+            report["stalls"] = stalls
+            failed.append("reply_stalled")
+
+        unheard = sum(1 for started in self._untranscribed_turns if ended - started >= self.TRANSCRIPT_GRACE_S)
+        if unheard >= self.UNHEARD_TURNS:
+            report["unheard_turns"] = unheard
+            failed.append("caller_audio_unacknowledged")
 
         hung_up_at = self._hangup.hung_up_at if self._hangup is not None else None
         if hung_up_at is not None:
@@ -1978,19 +2101,24 @@ class CallNarrator(BaseObserver):
         if not isinstance(frame, self.NARRATED) or not self._first_sighting(frame):
             return
         if isinstance(frame, VADUserStartedSpeakingFrame):
+            # A caller who speaks again has stopped waiting for whatever was owed.
+            self._settle(answered=False)
             logger.debug("detector: caller speech starts")
         elif isinstance(frame, VADUserStoppedSpeakingFrame):
             # The anchor. A later stop replaces an earlier one, so a caller who
             # pauses mid-turn is measured from when they actually finished.
-            self._heard_stop = time.monotonic()
+            self._heard_stop = self._now()
             self._turn_closed = None
+            if not self._agent_speaking:
+                self._owe("reply")
             logger.debug("detector: caller speech stops")
         elif isinstance(frame, UserStartedSpeakingFrame):
             self.caller_turns += 1
+            self._untranscribed_turns.append(self._now())
             logger.info("caller turn {} starts", self.caller_turns)
         elif isinstance(frame, UserStoppedSpeakingFrame):
             if self._heard_stop is not None:
-                self._turn_closed = time.monotonic()
+                self._turn_closed = self._now()
                 waited = self._turn_closed - self._heard_stop
                 self.endpointing.append(waited)
                 self.endpointing_turns.append(self._turn(waited))
@@ -1999,6 +2127,8 @@ class CallNarrator(BaseObserver):
             else:
                 logger.info("caller turn {} ends", self.caller_turns)
         elif isinstance(frame, TranscriptionFrame):
+            # One transcript can cover several turns, so it settles all of them.
+            self._untranscribed_turns.clear()
             logger.info("caller transcript: {}", _short(frame.text))
         elif isinstance(frame, LLMFullResponseStartFrame):
             self.agent_turns += 1
@@ -2009,8 +2139,11 @@ class CallNarrator(BaseObserver):
             # Only the first audio of a reply is a reply: once the agent is
             # speaking, later starts belong to the same turn. A greeting has no
             # caller stop before it and is not timed.
+            if not self._agent_speaking:
+                self.audible_turns += 1
+                self._settle(answered=True)
             if not self._agent_speaking and self._heard_stop is not None:
-                answered = time.monotonic() - self._heard_stop
+                answered = self._now() - self._heard_stop
                 self.replies.append(answered)
                 self.reply_turns.append(self._turn(answered))
                 self._heard_stop = None
@@ -2038,10 +2171,13 @@ class CallNarrator(BaseObserver):
             logger.info("tool {} cancelled", frame.function_name)
         elif isinstance(frame, ErrorFrame):
             self.errors += 1
+            self._note_error(frame)
             logger.warning("error frame{}: {}", " (fatal)" if frame.fatal else "", frame.error)
         elif isinstance(frame, EndFrame):
+            self._ended_at = self._ended_at or self._now()
             logger.info("pipeline ending: the agent closed the call")
         elif isinstance(frame, CancelFrame):
+            self._ended_at = self._ended_at or self._now()
             logger.info("pipeline cancelled: the call was torn down")
         elif isinstance(frame, MetricsFrame):
             for entry in frame.data:
@@ -2793,9 +2929,10 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         reply = narrator.timing().get("reply")
         checks = narrator.integrity()
         logger.info(
-            "call summary: {:.0f}s, caller turns {}, agent responses {}, barge-ins {}, "
+            "call summary: {:.0f}s, caller turns {}, agent responses {} ({} heard), barge-ins {}, "
             "tools {} ({} exact), errors {}, usage reports {}, log lines {}{}{}",
-            usage["call_seconds"], narrator.caller_turns, narrator.agent_turns, narrator.barge_ins,
+            usage["call_seconds"], narrator.caller_turns, narrator.agent_turns, narrator.audible_turns,
+            narrator.barge_ins,
             tools["tool_call_count"], tools["tool_calls_matched"], narrator.errors, usage["usage_reports"],
             len(call_log.lines), f" (+{call_log.dropped} dropped)" if call_log.dropped else "",
             f", reply p50 {reply['p50_ms']} ms / p90 {reply['p90_ms']} ms over {reply['count']}" if reply else "",
@@ -2831,6 +2968,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         # Every call opens from the agent, and this first context frame is also
         # what installs the tools on the realtime session.
         logger.info("caller connected; opening the call")
+        narrator.caller_connected()
         backstop.start()
         await task.queue_frames([LLMRunFrame()])
 

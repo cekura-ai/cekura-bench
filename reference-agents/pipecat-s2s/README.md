@@ -131,8 +131,11 @@ its own tools, so this row's prompt carries one extra section, in the shape the
 vendor's prompting guide prescribes: what the backend can do, when to delegate
 (a step needs a record checked or saved, a transfer, a goodbye so the call can
 be ended), and when not to. The backend receives the agent's instructions
-whole. The record names the addendum as `prompt_addendum`, because a row whose
-prompt differs from the others has to say so.
+whole. The record names the addendum as `prompt_addendum` and hashes it as
+`prompt_addendum_sha256`, because a row whose prompt differs from the others
+has to say so -- and the name alone would let the section be rewritten with
+every digest on the record unchanged, since `system_prompt_sha256` covers the
+agent prompt this row shares with the rest.
 
 ## Three vendor defaults are sent explicitly
 
@@ -156,7 +159,11 @@ happens depends on how quickly the server hands out its first handle: the
 preview model took longer than the framework's start-up, the current model does
 not, so moving to it exposed the hole on every call. A reconnect made to change
 the configuration therefore drops the handle and opens a new session here; a
-reconnect after a mid-call error still resumes, as before.
+reconnect after a mid-call error still resumes, as before. The handle is
+dropped inside the reconnect rather than when the context arrives, because the
+framework reconnects on that first context only when there is something to
+apply: a handle discarded for a reconnect that never happens would leave a
+later mid-call error with nothing to resume from.
 
 ## A tool result is delivered while the agent is still speaking, where the row allows it
 
@@ -166,10 +173,20 @@ a caller talking over the agent makes Gemini withdraw the call
 (`toolCallCancellation`, sent when a client interrupts a server turn): the
 result then answers a call the model has abandoned, and the model asks again,
 so the row gains a duplicate for each barge-in. Gemini and Nova Sonic only
-forward a result when a context frame carries one, so on those rows it is
-delivered the moment it exists. OpenAI Realtime opens a new response on a
-result, so its timing is left to the framework and its narration is not cut.
-The record names this as `result_delivery`.
+forward a result when a context frame carries one and nothing prompts the model
+afterwards, so on those rows the result is delivered the moment it exists
+(`immediate`). OpenAI Realtime and Grok open a new response when a result
+lands, so a late result is not orphaned: their timing is left to the framework
+and their narration is not cut (`after_speech`). GPT-Live takes the result off
+the frame itself and never reads it out of the context, so this pipeline does
+not time its delivery at all (`service`). The record names the row's case as
+`result_delivery`.
+
+Measured, on the rows where it matters: Gemini delivers mid-narration and the
+duplicate is gone. Nova never reaches the state -- it ends its content block
+before calling a tool and waits silently, so a result has never once arrived
+while that row was speaking, and the setting stands on the structural argument
+rather than on an observation.
 
 The framework also has no branch for the withdrawal message. It is handled
 here: a withdrawn call gets no late result, the pipeline is told it was

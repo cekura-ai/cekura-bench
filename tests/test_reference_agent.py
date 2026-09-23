@@ -37,6 +37,142 @@ def asked(**overrides) -> bot.Settings:
     return bot.Settings({"agent_dir": "appointments", **overrides})
 
 
+class StubLLM:
+    """As much of an ``LLMService`` as ``register_tools`` binds to.
+
+    One copy: the handlers it collects are the subject of several tests, and a
+    per-test copy meant every new framework call in ``register_tools`` had to
+    be stubbed four times.
+    """
+
+    def __init__(self):
+        self.registered = {}
+
+    def register_function(self, name, handler, **_kwargs):
+        self.registered[name] = handler
+
+    def event_handler(self, _name):
+        return lambda fn: fn
+
+
+def a_call(**overrides):
+    """One tool call, shaped the way the framework hands it to a handler.
+
+    Answers land on ``.answers`` so a test can read what the handler replied.
+    """
+    answers = []
+
+    class Params:
+        tool_call_id = "call-1"
+        function_name = "lookup_patient"
+        arguments = {}
+
+        async def result_callback(self, result):
+            answers.append(result)
+
+    for name, value in overrides.items():
+        setattr(Params, name, value)
+    call = Params()
+    call.answers = answers
+    return call
+
+
+def gemini_service(service_class, **attributes):
+    """The Gemini service the row builds, with the network cut.
+
+    Takes the model from the provider table so a model pin cannot leave the
+    tests exercising a name the harness no longer runs.
+    """
+    service = service_class(
+        api_key="k",
+        settings=service_class.Settings(
+            model=bot.PROVIDERS["gemini-live"].default_model, system_instruction="p"
+        ),
+    )
+
+    async def quiet(*_args, **_kwargs):
+        return None
+
+    service._process_completed_function_calls = quiet
+    service._create_initial_response = quiet
+    for name, value in attributes.items():
+        setattr(service, name, value)
+    return service
+
+
+def make_frame(cls, **fields):
+    """A frame carrying only the fields this version of the framework declares.
+
+    Frame signatures move between releases; a test that names a field the
+    installed version dropped fails for the wrong reason.
+    """
+    import dataclasses
+
+    names = {f.name for f in dataclasses.fields(cls)}
+    return cls(**{k: v for k, v in fields.items() if k in names})
+
+
+def spy_on_pushes(assistant) -> list:
+    """Record the direction of every context frame the assistant pushes, while
+    still letting the real push run so its bookkeeping happens."""
+    from pipecat.processors.frame_processor import FrameDirection
+
+    pushed: list = []
+    real = assistant.push_context_frame
+
+    async def record(direction=FrameDirection.DOWNSTREAM):
+        pushed.append(direction)
+        await real(direction)
+
+    assistant.push_context_frame = record
+    return pushed
+
+
+async def narrate_a_tool_call(assistant, *, cancel_on_interruption=True):
+    """The frames a narrated tool call produces, in the pipeline's own order.
+
+    The agent narrates while the tool runs, so the result frame reaches the
+    aggregator behind the narration's audio, with the agent still speaking.
+    This is the shared prefix: what follows it -- a barge-in, or the agent
+    simply finishing -- is what each test is about. One copy, because the
+    sequence *is* the fixture, and two copies drift apart silently.
+    """
+    from pipecat.frames.frames import (
+        BotStartedSpeakingFrame,
+        FunctionCallFromLLM,
+        FunctionCallInProgressFrame,
+        FunctionCallResultFrame,
+        FunctionCallsStartedFrame,
+        LLMTextFrame,
+    )
+    from pipecat.processors.frame_processor import FrameDirection
+
+    call = {"function_name": "lookup", "tool_call_id": "call-1", "arguments": {"id": 1}}
+    # What the response-start frame records; that frame needs a running
+    # pipeline's task manager, which a unit test does not have.
+    assistant._assistant_turn_start_timestamp = "t0"
+    for frame in [
+        BotStartedSpeakingFrame(),
+        make_frame(LLMTextFrame, text="Let me look that up for you."),
+        make_frame(FunctionCallsStartedFrame,
+                   function_calls=[make_frame(FunctionCallFromLLM, **call, context=None)]),
+        make_frame(FunctionCallInProgressFrame, **call, cancel_on_interruption=cancel_on_interruption),
+        make_frame(FunctionCallResultFrame, **call, result={"found": True},
+                   run_llm=None, properties=None),
+    ]:
+        await assistant.process_frame(frame, FrameDirection.DOWNSTREAM)
+
+
+def record_for(provider_key, **overrides):
+    """The published record for a row, built the way ``run_bot`` builds it."""
+    provider = bot.PROVIDERS[provider_key]
+    settings = asked(**overrides)
+    return bot.build_record(
+        provider_key, provider, provider.default_model, provider.default_voice,
+        bot.load_agent(settings), settings,
+    )
+
+
 class TestProviderTable:
     def test_openai_realtime_runs_the_pipeline_at_24k(self):
         """This service does not resample and accepts 24 kHz only.
@@ -127,58 +263,26 @@ class TestTools:
 
     async def test_a_registered_handler_answers_from_the_contract(self):
         server = bot.load_agent(asked())
-        registered = {}
-
-        class StubLLM:
-            def register_function(self, name, handler, **_kwargs):
-                registered[name] = handler
-
-            def event_handler(self, _name):
-                return lambda fn: fn
-
+        llm = StubLLM()
         trace = bot.ToolTrace()
-        bot.register_tools(StubLLM(), server, trace)
-        assert set(registered) == set(server.tool_names) | set(bot.CALL_CONTROL)
+        bot.register_tools(llm, server, trace)
+        assert set(llm.registered) == set(server.tool_names) | set(bot.CALL_CONTROL)
 
-        answers = []
-
-        class Params:
-            tool_call_id = "call-1"
-            function_name = "lookup_patient"
-            arguments = {"phone": "2025550188"}
-
-            async def result_callback(self, result):
-                answers.append(result)
-
-        await registered["lookup_patient"](Params())
-        assert answers and answers[0]["patient_id"] == "p_1002"
+        call = a_call(arguments={"phone": "2025550188"})
+        await llm.registered["lookup_patient"](call)
+        assert call.answers and call.answers[0]["patient_id"] == "p_1002"
 
     async def test_an_unknown_record_is_reported_as_a_miss(self):
         server = bot.load_agent(asked())
-        registered = {}
-
-        class StubLLM:
-            def register_function(self, name, handler, **_kwargs):
-                registered[name] = handler
-
-            def event_handler(self, _name):
-                return lambda fn: fn
-
+        llm = StubLLM()
         trace = bot.ToolTrace()
-        bot.register_tools(StubLLM(), server, trace)
-        answers = []
+        bot.register_tools(llm, server, trace)
 
-        class Params:
-            tool_call_id = "call-1"
-            function_name = "lookup_patient"
-            arguments = {"phone": "4045550000"}
-
-            async def result_callback(self, result):
-                answers.append(result)
-
-        await registered["lookup_patient"](Params())
+        call = a_call(arguments={"phone": "4045550000"})
+        await llm.registered["lookup_patient"](call)
         # A number nothing in the table resembles is answered by the contract's
         # own "no patient found" row, not by an invented patient.
+        answers = call.answers
         assert "patient_id" not in answers[0]
         assert answers[0]["match"] is False
         assert server.calls[-1].matched is False
@@ -194,28 +298,10 @@ class TestTools:
         of the call is ours, so it is recorded here instead.
         """
         server = bot.MockToolServer(suite="appointments")
-        registered = {}
-
-        class StubLLM:
-            def register_function(self, name, handler, **_kwargs):
-                registered[name] = handler
-
-            def event_handler(self, _name):
-                return lambda fn: fn
-
+        llm = StubLLM()
         trace = bot.ToolTrace()
-        bot.register_tools(StubLLM(), server, trace)
-
-        class Params:
-            tool_call_id = "call-1"
-            function_name = "lookup_patient"
-            arguments = {"phone": "2025550188"}
-            llm = None
-
-            async def result_callback(self, result):
-                pass
-
-        await registered["lookup_patient"](Params())
+        bot.register_tools(llm, server, trace)
+        await llm.registered["lookup_patient"](a_call(arguments={"phone": "2025550188"}, llm=None))
         metadata = trace.as_metadata()
         assert metadata["tool_call_count"] == 1
         assert metadata["tool_calls_matched"] == 1
@@ -818,29 +904,12 @@ class TestTheRecordDoesNotDependOnAGoodbye:
     @pytest.mark.asyncio
     async def test_recording_a_tool_call_rewrites_the_record(self):
         server = bot.MockToolServer(suite="appointments")
-        registered = {}
-
-        class StubLLM:
-            def register_function(self, name, handler, **_kwargs):
-                registered[name] = handler
-
-            def event_handler(self, _name):
-                return lambda fn: fn
-
+        llm = StubLLM()
         trace = bot.ToolTrace()
         rewrites = []
         trace.on_change = lambda: rewrites.append(len(trace.as_metadata()["tool_calls"]))
-        bot.register_tools(StubLLM(), server, trace)
-
-        class Params:
-            tool_call_id = "call-1"
-            function_name = "lookup_patient"
-            arguments = {"phone": "2025550188"}
-
-            async def result_callback(self, result):
-                pass
-
-        await registered["lookup_patient"](Params())
+        bot.register_tools(llm, server, trace)
+        await llm.registered["lookup_patient"](a_call(arguments={"phone": "2025550188"}))
         assert rewrites == [1], "the record must be rewritten as each call lands"
 
     def test_ending_the_call_is_itself_a_recorded_call(self):
@@ -1652,73 +1721,32 @@ class TestAToolResultReachesTheModelThatAskedForIt:
         return bot.BenchAggregators(LLMContext([]), realtime_service_mode=realtime).assistant()
 
     @staticmethod
-    def _spy(assistant) -> list:
-        """Record the direction of every context frame the assistant pushes,
-        while still letting the real push run so its bookkeeping happens."""
-        from pipecat.processors.frame_processor import FrameDirection
-
-        pushed: list = []
-        real = assistant.push_context_frame
-
-        async def record(direction=FrameDirection.DOWNSTREAM):
-            pushed.append(direction)
-            await real(direction)
-
-        assistant.push_context_frame = record
-        return pushed
-
-    @staticmethod
     async def _narrated_tool_call_then_barge_in(assistant) -> None:
-        """The frames a barge-in produces, in the order the pipeline delivers them.
-
-        The agent narrates while a tool runs, so the result frame reaches the
-        aggregator behind the narration's audio, while the agent is still
-        speaking. The caller then talks over it: the user half announces the
+        """The caller talks over the narration: the user half announces the
         turn, broadcasts an interruption, and the transport reports the agent
         has stopped. The caller's turn ends a moment later."""
-        import dataclasses
-
         from pipecat.frames.frames import (
-            BotStartedSpeakingFrame,
             BotStoppedSpeakingFrame,
-            FunctionCallFromLLM,
-            FunctionCallInProgressFrame,
-            FunctionCallResultFrame,
-            FunctionCallsStartedFrame,
             InterruptionFrame,
-            LLMTextFrame,
             UserStartedSpeakingFrame,
             UserStoppedSpeakingFrame,
         )
         from pipecat.processors.frame_processor import FrameDirection
 
-        def make(cls, **fields):
-            names = {f.name for f in dataclasses.fields(cls)}
-            return cls(**{k: v for k, v in fields.items() if k in names})
-
-        call = {"function_name": "lookup", "tool_call_id": "call-1", "arguments": {"id": 1}}
-        # What the response-start frame records; that frame needs a running
-        # pipeline's task manager, which a unit test does not have.
-        assistant._assistant_turn_start_timestamp = "t0"
-        frames = [
-            BotStartedSpeakingFrame(),
-            make(LLMTextFrame, text="Let me look that up for you."),
-            make(FunctionCallsStartedFrame, function_calls=[make(FunctionCallFromLLM, **call, context=None)]),
-            make(FunctionCallInProgressFrame, **call, cancel_on_interruption=False),
-            make(FunctionCallResultFrame, **call, result={"found": True}, run_llm=None, properties=None),
+        await narrate_a_tool_call(assistant, cancel_on_interruption=False)
+        for frame in [
             UserStartedSpeakingFrame(),
             InterruptionFrame(),
             BotStoppedSpeakingFrame(),
             UserStoppedSpeakingFrame(),
-        ]
-        for frame in frames:
+        ]:
             await assistant.process_frame(frame, FrameDirection.DOWNSTREAM)
 
     async def test_a_result_interrupted_by_the_caller_is_delivered_once_the_turn_ends(self):
         from pipecat.processors.frame_processor import FrameDirection
 
         assistant = self._assistant()
-        pushed = self._spy(assistant)
+        pushed = spy_on_pushes(assistant)
         await self._narrated_tool_call_then_barge_in(assistant)
         # One downstream push records the cut-off narration; exactly one upstream
         # push tells the model what the tool returned.
@@ -1734,7 +1762,7 @@ class TestAToolResultReachesTheModelThatAskedForIt:
         from pipecat.processors.frame_processor import FrameDirection
 
         assistant = self._assistant(realtime=False)
-        pushed = self._spy(assistant)
+        pushed = spy_on_pushes(assistant)
         await self._narrated_tool_call_then_barge_in(assistant)
         assert FrameDirection.UPSTREAM not in pushed
         assert assistant._push_context_on_bot_stopped_speaking is False
@@ -1756,7 +1784,7 @@ class TestAToolResultReachesTheModelThatAskedForIt:
         from pipecat.processors.frame_processor import FrameDirection
 
         stock = LLMContextAggregatorPair(LLMContext([]), realtime_service_mode=True).assistant()
-        pushed = self._spy(stock)
+        pushed = spy_on_pushes(stock)
         await self._narrated_tool_call_then_barge_in(stock)
         assert FrameDirection.UPSTREAM not in pushed, (
             "the framework now delivers a tool result interrupted by a barge-in; "
@@ -1820,19 +1848,11 @@ class TestARowSaysWhereItDiffersFromTheOthers:
     differs is the part of a result that is ours rather than the model's, so it
     travels with the score."""
 
-    @staticmethod
-    def _record(provider_key):
-        provider = bot.PROVIDERS[provider_key]
-        return bot.build_record(
-            provider_key, provider, provider.default_model, provider.default_voice,
-            bot.load_agent(asked()), asked(),
-        )
-
     def test_every_native_row_declares_the_same_set(self):
         expected = {"endpointing", "service_vad", "interruptions",
                     "caller_transcription", "input_rate", "result_delivery"}
         for key in bot.PROVIDERS:
-            assert set(self._record(key)["divergences"]) == expected, key
+            assert set(record_for(key)["divergences"]) == expected, key
 
     def test_a_cascade_row_declares_it_too(self):
         server = bot.load_agent(asked())
@@ -1855,7 +1875,7 @@ class TestARowSaysWhereItDiffersFromTheOthers:
             strategies = bot.user_aggregator_params(
                 realtime=True, turns=provider.turns, interruptions=provider.interruptions
             ).user_turn_strategies
-            declared = self._record(key)["divergences"]["interruptions"]
+            declared = record_for(key)["divergences"]["interruptions"]
             assert strategies.enable_interruptions is (declared == "pipeline"), key
 
 
@@ -1880,10 +1900,7 @@ class TestVendorDefaultsAreExplicitAndOnTheRecord:
         assert properties.turn_detection.type == "server_vad"
         for name, value in bot.GROK_VAD.items():
             assert getattr(properties.turn_detection, name) == value, name
-        record = bot.build_record(
-            "grok-realtime", provider, provider.default_model, provider.default_voice,
-            bot.load_agent(asked()), asked(),
-        )
+        record = record_for("grok-realtime")
         assert record["grok_reasoning"] == bot.GROK_REASONING
         assert "threshold 0.85" in record["grok_vad"]
 
@@ -1892,10 +1909,7 @@ class TestVendorDefaultsAreExplicitAndOnTheRecord:
         provider = bot.PROVIDERS["nova-sonic"]
         service = provider.build("AKIAEXAMPLE", provider.default_model, provider.default_voice, "p", asked())
         assert service._settings.endpointing_sensitivity == bot.NOVA_ENDPOINTING
-        record = bot.build_record(
-            "nova-sonic", provider, provider.default_model, provider.default_voice,
-            bot.load_agent(asked()), asked(),
-        )
+        record = record_for("nova-sonic")
         assert record["nova_endpointing"] == bot.NOVA_ENDPOINTING
 
     def test_the_live_model_is_told_when_to_delegate_and_the_backend_gets_the_prompt(self):
@@ -1908,11 +1922,13 @@ class TestVendorDefaultsAreExplicitAndOnTheRecord:
         backend = service._delegation.settings
         assert backend.system_instruction == "AGENT PROMPT"
         assert backend.model == bot.backend_model(asked())
-        record = bot.build_record(
-            "gpt-live", provider, provider.default_model, provider.default_voice,
-            bot.load_agent(asked()), asked(),
-        )
+        record = record_for("gpt-live")
         assert record["prompt_addendum"] == "gpt-live-delegation"
+        # The name alone would let the section be rewritten with every digest
+        # on the record unchanged, so the section is hashed too -- and it is
+        # not the prompt digest, which covers the prompt this row shares.
+        assert record["prompt_addendum_sha256"] != record["system_prompt_sha256"]
+        assert record["prompt_addendum_sha256"] == bot._digest(bot.DELEGATION_PROMPT)
 
     def test_every_other_row_gets_the_prompt_unchanged(self, monkeypatch):
         monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "secretpart")
@@ -1932,9 +1948,12 @@ class TestVendorDefaultsAreExplicitAndOnTheRecord:
         assert nova["turn_source"] == "local" and nova["divergences"]["endpointing"] == "provider"
         assert gemini["turn_source"] == "local" and gemini["divergences"]["endpointing"] == "local"
 
-    def test_a_row_answers_locally_exactly_when_the_service_detector_is_off(self):
-        for key, provider in bot.PROVIDERS.items():
-            assert (provider.answers == "local") is (not provider.service_vad), key
+    def test_the_row_that_takes_its_result_off_the_frame_says_so(self):
+        # GPT-Live never reads a tool result out of the context: the service
+        # takes it off the frame and answers at once, so neither the wait for
+        # the agent to stop speaking nor the immediate push describes it.
+        assert bot.PROVIDERS["gpt-live"].results == "service"
+        assert record_for("gpt-live")["divergences"]["result_delivery"] == "service"
 
 
 class TestAConfigurationReconnectOpensANewGeminiSession:
@@ -1945,73 +1964,70 @@ class TestAConfigurationReconnectOpensANewGeminiSession:
     handle by then, that reconnect resumes the tool-less session and the model
     spends the call unable to call anything. The handle is dropped for that one
     reconnect and kept for every later one.
+
+    These drive the real ``_reconnect`` and read the handle the connection was
+    actually opened with, because that is the thing the session is made of --
+    a test that stubs the reconnect can only assert that we called ourselves.
     """
 
     @staticmethod
     def _service(service_class):
-        return service_class(
-            api_key="k",
-            settings=service_class.Settings(model="models/gemini-3.8-live", system_instruction="p"),
-        )
+        service = gemini_service(service_class)
+        service._session_resumption_handle = "handle-from-the-first-connection"
+        resumed = []
 
-    def _first_context(self, service_class):
-        import asyncio
+        async def connect(session_resumption_handle=None):
+            resumed.append(session_resumption_handle)
 
+        async def disconnect():
+            return None
+
+        service._connect, service._disconnect = connect, disconnect
+        return service, resumed
+
+    @staticmethod
+    def _context_carrying_tools():
         from pipecat.adapters.schemas.function_schema import FunctionSchema
         from pipecat.adapters.schemas.tools_schema import ToolsSchema
         from pipecat.processors.aggregators.llm_context import LLMContext
 
-        service = self._service(service_class)
-        service._session_resumption_handle = "handle-from-the-first-connection"
-        seen = {}
-
-        async def reconnect():
-            seen["handle_at_reconnect"] = service._session_resumption_handle
-
-        async def quiet(*_args, **_kwargs):
-            return None
-
-        service._reconnect = reconnect
-        service._process_completed_function_calls = quiet
-        service._create_initial_response = quiet
-        context = LLMContext(
+        return LLMContext(
             [{"role": "assistant", "content": "hello"}],
             tools=ToolsSchema(standard_tools=[FunctionSchema("t", "d", {}, [])]),
         )
-        asyncio.run(service._handle_context(context))
-        return seen
 
-    def test_the_first_context_reconnects_without_the_handle(self):
-        seen = self._first_context(bot.gemini_service_class())
-        assert seen["handle_at_reconnect"] is None
+    async def test_the_first_context_opens_a_new_session(self):
+        service, resumed = self._service(bot.gemini_service_class())
+        await service._handle_context(self._context_carrying_tools())
+        assert resumed == [None]
 
-    def test_the_framework_still_resumes_there(self):
+    async def test_the_framework_still_resumes_there(self):
         # Tripwire: the day the framework opens a new session for a
         # configuration change, this override is redundant and should go.
         from pipecat.services.google.gemini_live.llm import GeminiLiveLLMService
-        seen = self._first_context(GeminiLiveLLMService)
-        assert seen["handle_at_reconnect"] == "handle-from-the-first-connection"
+        service, resumed = self._service(GeminiLiveLLMService)
+        await service._handle_context(self._context_carrying_tools())
+        assert resumed == ["handle-from-the-first-connection"]
 
-    def test_a_later_reconnect_still_resumes(self):
-        import asyncio
-
+    async def test_a_later_reconnect_still_resumes(self):
+        # The mid-call error path: the session is under way, and resuming is
+        # the whole point -- a new session there would lose the conversation.
         from pipecat.processors.aggregators.llm_context import LLMContext
 
-        service = self._service(bot.gemini_service_class())
+        service, resumed = self._service(bot.gemini_service_class())
         service._context = LLMContext([])
-        service._session_resumption_handle = "h"
-        seen = {}
+        await service._reconnect()
+        assert resumed == ["handle-from-the-first-connection"]
 
-        async def reconnect():
-            seen["handle"] = service._session_resumption_handle
+    async def test_a_handle_is_not_discarded_for_a_reconnect_that_never_happens(self):
+        # A context with nothing to apply does not reconnect, so the handle it
+        # arrived with has to survive for the next mid-call error to use.
+        from pipecat.processors.aggregators.llm_context import LLMContext
 
-        async def quiet(*_args, **_kwargs):
-            return None
-
-        service._reconnect = reconnect
-        service._process_completed_function_calls = quiet
-        asyncio.run(service._handle_context(LLMContext([])))
-        assert service._session_resumption_handle == "h"
+        service, resumed = self._service(bot.gemini_service_class())
+        await service._handle_context(LLMContext([{"role": "assistant", "content": "hi"}]))
+        assert resumed == []
+        assert service._session_resumption_handle == "handle-from-the-first-connection"
 
 
 class TestAResultIsDeliveredWhileTheAgentIsStillSpeaking:
@@ -2031,68 +2047,37 @@ class TestAResultIsDeliveredWhileTheAgentIsStillSpeaking:
         ).assistant()
 
     @staticmethod
-    async def _narrated_tool_call(assistant) -> list:
-        import dataclasses
-
-        from pipecat.frames.frames import (
-            BotStartedSpeakingFrame,
-            BotStoppedSpeakingFrame,
-            FunctionCallFromLLM,
-            FunctionCallInProgressFrame,
-            FunctionCallResultFrame,
-            FunctionCallsStartedFrame,
-            LLMTextFrame,
-        )
+    async def _narrated_tool_call(assistant):
+        """Upstream pushes before the agent stops speaking, and after."""
+        from pipecat.frames.frames import BotStoppedSpeakingFrame
         from pipecat.processors.frame_processor import FrameDirection
 
-        def make(cls, **fields):
-            names = {f.name for f in dataclasses.fields(cls)}
-            return cls(**{k: v for k, v in fields.items() if k in names})
+        pushes = spy_on_pushes(assistant)
 
-        pushes = []
-        real = assistant.push_context_frame
+        def upstream():
+            return [d for d in pushes if d is FrameDirection.UPSTREAM]
 
-        async def spy(direction=FrameDirection.DOWNSTREAM):
-            pushes.append(direction)
-            await real(direction)
+        await narrate_a_tool_call(assistant)
+        before = upstream()
+        await assistant.process_frame(BotStoppedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+        return before, upstream()
 
-        assistant.push_context_frame = spy
-        assistant._assistant_turn_start_timestamp = "t0"
-        call = {"function_name": "lookup", "tool_call_id": "call-1", "arguments": {"id": 1}}
-        before_stop = None
-        for frame in [
-            BotStartedSpeakingFrame(),
-            make(LLMTextFrame, text="Let me look that up."),
-            make(FunctionCallsStartedFrame, function_calls=[make(FunctionCallFromLLM, **call, context=None)]),
-            make(FunctionCallInProgressFrame, **call, cancel_on_interruption=True),
-            make(FunctionCallResultFrame, **call, result={"found": True}, run_llm=None, properties=None),
-            BotStoppedSpeakingFrame(),
-        ]:
-            if isinstance(frame, BotStoppedSpeakingFrame):
-                before_stop = [d for d in pushes if d is FrameDirection.UPSTREAM]
-            await assistant.process_frame(frame, FrameDirection.DOWNSTREAM)
-        return before_stop, [d for d in pushes if d is FrameDirection.UPSTREAM]
-
-    def test_an_immediate_row_delivers_before_the_agent_stops(self):
-        import asyncio
-
-        before, after = asyncio.run(self._narrated_tool_call(self._assistant(True)))
+    async def test_an_immediate_row_delivers_before_the_agent_stops(self):
+        before, after = await self._narrated_tool_call(self._assistant(True))
         assert len(before) == 1 and len(after) == 1
 
-    def test_a_row_left_to_the_framework_delivers_after(self):
-        import asyncio
-
-        before, after = asyncio.run(self._narrated_tool_call(self._assistant(False)))
+    async def test_a_row_left_to_the_framework_delivers_after(self):
+        before, after = await self._narrated_tool_call(self._assistant(False))
         assert len(before) == 0 and len(after) == 1
 
     def test_the_rows_that_only_forward_a_result_are_the_immediate_ones(self):
         assert {k for k, p in bot.PROVIDERS.items() if p.results == "immediate"} == {"gemini-live", "nova-sonic"}
-        for key in ("openai-realtime", "grok-realtime", "gpt-live"):
+        for key in ("openai-realtime", "grok-realtime"):
             assert bot.PROVIDERS[key].results == "after_speech", key
 
 
 class TestAWithdrawnGeminiToolCallIsClosedAndMarked:
-    """The service withdraws a call the caller interrupted; the framework has no branch for it."""
+    """The service withdraws a call it is no longer waiting for; the framework has no branch for it."""
 
     @staticmethod
     def _message(ids):
@@ -2103,13 +2088,10 @@ class TestAWithdrawnGeminiToolCallIsClosedAndMarked:
         )
 
     @staticmethod
-    def _service(service_class):
+    def _service(service_class, still_running=()):
         from pipecat.processors.aggregators.llm_context import LLMContext
 
-        service = service_class(
-            api_key="k",
-            settings=service_class.Settings(model="models/gemini-3.8-live", system_instruction="p"),
-        )
+        service = gemini_service(service_class)
         service._context = LLMContext([])
         service._tool_call_id_to_name = {"fc-1": "lookup"}
         seen = {"frames": [], "events": []}
@@ -2117,40 +2099,60 @@ class TestAWithdrawnGeminiToolCallIsClosedAndMarked:
         async def broadcast(frame_cls, **kwargs):
             seen["frames"].append((frame_cls.__name__, kwargs))
 
-        async def no_tasks(_predicate, **_kwargs):
-            return []
+        async def cancel_tasks(predicate, **_kwargs):
+            running = [SimpleNamespace(tool_call_id=tid, function_name="lookup")
+                       for tid in still_running]
+            return [item for item in running if predicate(item)]
 
         async def event(name, *args):
             seen["events"].append((name, args))
 
         service.broadcast_frame = broadcast
-        service._cancel_function_call_tasks = no_tasks
+        service._cancel_function_call_tasks = cancel_tasks
         service._call_event_handler = event
         return service, seen
 
-    def test_the_withdrawn_call_gets_no_result_and_the_pipeline_is_told(self):
-        import asyncio
-
+    async def test_the_withdrawn_call_gets_no_result_and_the_pipeline_is_told(self):
         service, seen = self._service(bot.gemini_service_class())
-        asyncio.run(service._handle_server_message(self._message(["fc-1"])))
+        await service._handle_server_message(self._message(["fc-1"]))
         assert "fc-1" in service._completed_tool_calls
-        assert seen["frames"] == [("FunctionCallCancelFrame", {"function_name": "lookup", "tool_call_id": "fc-1"})]
+        assert seen["frames"] == [
+            ("FunctionCallCancelFrame",
+             {"function_name": "lookup", "tool_call_id": "fc-1", "run_llm": False}),
+        ]
         assert [name for name, _ in seen["events"]] == ["on_function_calls_cancelled"]
         assert seen["events"][0][1][0][0].tool_call_id == "fc-1"
 
-    def test_the_framework_still_ignores_the_message(self):
-        import asyncio
+    async def test_a_call_withdrawn_while_it_was_still_running_is_left_to_the_framework(self):
+        # The framework's own helper settles a running call. Broadcasting a
+        # second cancellation for it would settle it twice.
+        service, seen = self._service(bot.gemini_service_class(), still_running=["fc-1"])
+        await service._handle_server_message(self._message(["fc-1"]))
+        assert "fc-1" in service._completed_tool_calls
+        assert seen["frames"] == [] and seen["events"] == []
 
+    async def test_the_framework_still_ignores_the_message(self):
         from pipecat.services.google.gemini_live.llm import GeminiLiveLLMService
         service, seen = self._service(GeminiLiveLLMService)
-        asyncio.run(service._handle_server_message(self._message(["fc-1"])))
+        await service._handle_server_message(self._message(["fc-1"]))
         assert "fc-1" not in service._completed_tool_calls and seen["frames"] == []
 
     def test_the_trace_marks_a_withdrawn_call_and_keeps_it(self):
         trace = bot.ToolTrace()
+        rewrites = []
         trace.record("lookup", {"id": 1}, True, {"found": True}, 0.0, "exact", tool_call_id="fc-1")
         trace.record("lookup", {"id": 1}, True, {"found": True}, 5.0, "exact", tool_call_id="fc-2")
-        trace.cancel("fc-1")
+        trace.on_change = lambda: rewrites.append(1)
+        trace.cancel(["fc-1", "fc-2"])
         meta = trace.as_metadata()
-        assert meta["tool_call_count"] == 2 and meta["tool_calls_cancelled"] == 1
-        assert meta["tool_calls"][0]["cancelled"] is True and "cancelled" not in meta["tool_calls"][1]
+        assert meta["tool_call_count"] == 2 and meta["tool_calls_cancelled"] == 2
+        assert rewrites == [1], "a withdrawn batch rewrites the record once, not once per call"
+
+    def test_a_call_withdrawn_before_it_returned_is_not_on_the_record(self):
+        # Nothing to mark, and nothing to count: the handler was cancelled
+        # mid-run, so the call never reached the trace.
+        trace = bot.ToolTrace()
+        rewrites = []
+        trace.on_change = lambda: rewrites.append(1)
+        trace.cancel(["fc-9"])
+        assert trace.as_metadata()["tool_calls_cancelled"] == 0 and rewrites == []

@@ -38,7 +38,6 @@ Run it::
 from __future__ import annotations
 
 import contextvars
-import functools
 import hashlib
 import json
 import logging
@@ -69,7 +68,6 @@ from pipecat.frames.frames import (
     ErrorFrame,
     Frame,
     FunctionCallCancelFrame,
-    FunctionCallFromLLM,
     FunctionCallInProgressFrame,
     FunctionCallResultFrame,
     InterruptionFrame,
@@ -105,7 +103,11 @@ from pipecat.processors.aggregators.llm_response_universal import (
 )
 from pipecat.runner.types import RunnerArguments
 from pipecat.runner.utils import create_transport
-from pipecat.services.llm_service import FunctionCallParams, LLMService
+from pipecat.services.llm_service import (
+    FunctionCallParams,
+    FunctionCallRunnerItem,
+    LLMService,
+)
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.daily.transport import DailyParams
 from pipecat.transports.websocket.fastapi import FastAPIWebsocketParams
@@ -387,7 +389,7 @@ def _openai(api_key: str, model: str, voice: str, instructions: str, settings: S
     )
 
 
-@functools.lru_cache(maxsize=None)
+@lru_cache(maxsize=None)
 def gemini_service_class():
     """The framework's Gemini service, minus one replay after a reconnect.
 
@@ -425,50 +427,82 @@ def gemini_service_class():
                 await self._handle_tool_call_cancellation(ids)
 
         async def _handle_tool_call_cancellation(self, ids: list[str]) -> None:
-            """The service withdrew tool calls the caller interrupted.
+            """The service withdrew tool calls it is no longer waiting for.
 
             The framework has no branch for this message, so a withdrawn call
             went on looking like an open one: its result was still sent, and
             the record kept a call the model had itself abandoned and would
             ask for again. Each id is closed here so no result follows it, the
             pipeline is told the call was cancelled, and the trace marks it.
+
+            The message says only *that* the service withdrew the call. The
+            API reference says it follows a client interruption, but that is
+            the reference's account, not something this harness observed, so
+            nothing here states a cause -- a log a reader assigns fault from
+            must not put words in the service's mouth.
             """
             wanted = set(ids)
-            in_flight = {
-                item.tool_call_id
-                for item in await self._cancel_function_call_tasks(
-                    lambda item: item.tool_call_id in wanted,
-                    reason="withdrawn by the service after the caller interrupted",
-                )
-            }
+            cancelled = await self._cancel_function_call_tasks(
+                lambda item: item.tool_call_id in wanted,
+                reason="withdrawn by the service (toolCallCancellation)",
+            )
+            # A call still running is settled by the helper above. It never
+            # reached the trace, so there is nothing on the record to mark --
+            # which is why the two cases are logged apart rather than together.
+            running = {item.tool_call_id: item.function_name for item in cancelled}
+            self._completed_tool_calls.update(ids)
             settled = []
             for tool_call_id in ids:
-                name = self._tool_call_id_to_name.get(tool_call_id, "?")
-                logger.info(
-                    "the service withdrew tool call {} ({}) after the caller interrupted; "
-                    "its result will not be sent", name, tool_call_id,
-                )
-                self._completed_tool_calls.add(tool_call_id)
-                if tool_call_id in in_flight:
+                name = (self._tool_call_id_to_name.get(tool_call_id)
+                        or running.get(tool_call_id, "unknown"))
+                if tool_call_id in running:
+                    logger.info(
+                        "the service withdrew tool call {} ({}) while it was still "
+                        "running; it never reached the record", name, tool_call_id,
+                    )
                     continue
-                await self.broadcast_frame(
-                    FunctionCallCancelFrame, function_name=name, tool_call_id=tool_call_id
+                logger.info(
+                    "the service withdrew tool call {} ({}) after it had returned; its "
+                    "result will not be sent", name, tool_call_id,
                 )
-                settled.append(FunctionCallFromLLM(
-                    function_name=name, tool_call_id=tool_call_id, arguments={}, context=self._context
+                settled.append(await self._broadcast_function_call_cancelled(
+                    FunctionCallRunnerItem(
+                        registry_item=self._functions.get(name),
+                        function_name=name,
+                        tool_call_id=tool_call_id,
+                        arguments={},
+                        context=self._context,
+                    )
                 ))
             if settled:
                 await self._call_event_handler("on_function_calls_cancelled", settled)
+
+        # Set when the context that carries the tools arrives, consumed by the
+        # one reconnect that applies them.
+        _open_a_new_session: bool = False
 
         async def _handle_context(self, context):
             if not self._context:
                 # The first context is the one that carries the tools, and the
                 # reconnect it triggers exists to apply them. Resuming would
-                # keep the old setup, so the handle is dropped first.
-                self._session_resumption_handle = None
+                # keep the setup the session was opened with, which has none.
+                # The handle is dropped in the reconnect rather than here: the
+                # framework reconnects on the first context only when there is
+                # something to apply, and a handle discarded for a reconnect
+                # that never happens leaves a later mid-call error with nothing
+                # to resume from.
+                self._open_a_new_session = True
             await super()._handle_context(context)
 
         async def _reconnect(self):
+            if self._open_a_new_session:
+                self._open_a_new_session = False
+                logger.info(
+                    "opening a new Gemini session to apply the tools (the service had "
+                    "already issued a resumption handle: {})",
+                    bool(self._session_resumption_handle),
+                )
+                self._session_resumption_handle = None
             resuming = bool(self._session_resumption_handle)
             delivered = set(self._completed_tool_calls)
             names = dict(self._tool_call_id_to_name)
@@ -476,6 +510,10 @@ def gemini_service_class():
             if resuming:
                 self._completed_tool_calls |= delivered
                 self._tool_call_id_to_name = {**names, **self._tool_call_id_to_name}
+                logger.info(
+                    "resumed the Gemini session, carrying {} already-delivered tool "
+                    "result(s) across the reconnect so none is sent twice", len(delivered),
+                )
 
     return GeminiResumesQuietly
 
@@ -770,21 +808,18 @@ class Provider:
     # and the record says so, because a row whose turns were decided locally is
     # not measuring the same thing as one whose were not.
     turns: str = "provider"
-    # Who decides *when the model answers*, which is not the same question. A
-    # service that runs its own detector over the audio answers when that
-    # detector says the caller has finished, whatever the pipeline decided
-    # about the turn -- so a row whose turns are local can still carry the
-    # provider's endpointing in its reply time, and the record has to say
-    # which. Only a service whose own detector is switched off answers on the
-    # pipeline's word.
-    answers: str = "provider"
-    # When a tool's result is handed to the model. The framework waits for the
-    # agent to stop speaking, which for a narrated tool is exactly the window
-    # in which a caller talking over the agent makes the service withdraw the
-    # call -- the model then asks again, and the row gains a duplicate. A
-    # service whose context handling only forwards the result can be told at
-    # once; one that also opens a new response on the result is left to the
-    # framework's timing, so its narration is not cut.
+    # When a tool's result is handed to the model, of which there are three
+    # cases and the difference between them is the row's behaviour under a
+    # barge-in. ``after_speech``: the framework waits for the agent to stop
+    # speaking, which for a narrated tool is exactly the window in which a
+    # caller talking over the agent makes the service withdraw the call -- but
+    # these services also open a new response when the result lands, so a late
+    # result is not orphaned and the wait costs only the narration it spares.
+    # ``immediate``: the service's context handling merely forwards the result
+    # and nothing prompts the model afterwards, so the result has to arrive
+    # while the model is still waiting for it. ``service``: the service takes
+    # the result off the frame itself and never reads it out of the context,
+    # so this pipeline does not time the delivery at all.
     results: str = "after_speech"
     # Whether this service runs its own voice-activity detection on the audio it
     # is sent. Leaving it on means the whole call has to be streamed for it to
@@ -798,6 +833,20 @@ class Provider:
     # about the conversation and everything about whether a row has a caller in
     # it, which makes it worth a published cell rather than a comment.
     caller_transcription: str = "asked"
+
+    @property
+    def answers(self) -> str:
+        """Who decides *when the model answers*, which is not the turn question.
+
+        A service that runs its own detector over the audio answers when that
+        detector says the caller has finished, whatever the pipeline decided
+        about the turn -- so a row whose turns are local can still carry the
+        provider's endpointing in its reply time, and the record has to say
+        which. Only a service whose own detector is switched off answers on
+        the pipeline's word, which is what makes this derived rather than a
+        seventh thing to set correctly per row.
+        """
+        return "local" if not self.service_vad else "provider"
     # Whether a caller talking over the agent is this pipeline's business.
     #
     # Usually it is: the agent is stopped here and the service is told the reply
@@ -860,7 +909,7 @@ PROVIDERS: dict[str, Provider] = {
     "gemini-live": Provider(
         _gemini, 16000, "models/gemini-3.8-live", "Charon",
         ("GEMINI_API_KEY", "GEMINI_AUTHORIZATION"), "pipecat.services.google.gemini_live.llm",
-        turns="local", answers="local", results="immediate", service_vad=False,
+        turns="local", results="immediate", service_vad=False,
         caller_transcription="automatic",
     ),
     # Pinned to the versioned name the vendor's ``latest`` alias resolves to
@@ -883,9 +932,14 @@ PROVIDERS: dict[str, Provider] = {
         "pipecat.services.openai.live.llm",
         discloses=lambda settings: {
             "s2s_backend_model": backend_model(settings),
+            # Named *and* hashed. The name alone would let the section be
+            # rewritten without any digest on the record changing, and
+            # ``system_prompt_sha256`` covers the agent prompt the row shares
+            # with every other row, not the addendum this one adds to it.
             "prompt_addendum": "gpt-live-delegation",
+            "prompt_addendum_sha256": _digest(DELEGATION_PROMPT),
         },
-        interruptions=False, caller_transcription="automatic",
+        results="service", interruptions=False, caller_transcription="automatic",
     ),
     # Nova Sonic listens at 16 kHz and speaks at 24 kHz. The pipeline runs at the
     # input rate and the service resamples its own output.
@@ -1606,17 +1660,27 @@ class ToolTrace:
         if self.on_change is not None:
             self.on_change()
 
-    def cancel(self, tool_call_id: str) -> None:
-        """The service withdrew this call after the caller interrupted.
+    def cancel(self, tool_call_ids: list[str]) -> None:
+        """The service withdrew these calls; it is no longer waiting for them.
 
-        The call stays on the record -- it was made, and the tool ran -- but
-        marked, because the model will ask again and a reader counting
-        duplicates has to be able to tell a withdrawn call from a repeated one.
+        A call that had already returned stays on the record -- it was made,
+        and the tool ran -- but marked, because the model will ask again and a
+        reader counting duplicates has to be able to tell a withdrawn call
+        from a repeated one. A call withdrawn while it was still running never
+        reached the record, so there is nothing to mark and the count does not
+        cover it; that asymmetry is logged where it happens.
+
+        The batch is marked in one pass because rewriting the record is not a
+        flag flip -- it re-derives every published field and walks every call
+        -- and a service withdraws calls several at a time.
         """
+        wanted = set(tool_call_ids)
+        marked = 0
         for call in self._calls:
-            if call.get("tool_call_id") == tool_call_id:
+            if call.get("tool_call_id") in wanted:
                 call["cancelled"] = True
-        if self.on_change is not None:
+                marked += 1
+        if marked and self.on_change is not None:
             self.on_change()
 
     def as_metadata(self) -> dict[str, Any]:
@@ -1689,8 +1753,7 @@ def register_tools(llm: LLMService, server: MockToolServer, trace: ToolTrace) ->
 
     @llm.event_handler("on_function_calls_cancelled")
     async def _withdrawn(_llm, calls):
-        for call in calls:
-            trace.cancel(call.tool_call_id)
+        trace.cancel([call.tool_call_id for call in calls])
 
 
 def opening_messages(first_message: str) -> list[dict[str, Any]]:
@@ -1818,6 +1881,10 @@ def build_record(provider_key: str, provider: "Provider", model: str, voice: str
     }
 
 
+def _digest(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+
+
 def _common_record(server: MockToolServer, settings: Settings) -> dict[str, Any]:
     """The fields that describe the task rather than the stack.
 
@@ -1825,16 +1892,17 @@ def _common_record(server: MockToolServer, settings: Settings) -> dict[str, Any]
     lets the two be compared: if these digests differ, the two agents were not
     given the same job and no difference between them means anything.
     """
-    prompt = server.system_prompt or ""
     return {
         "bench": "agent",
         "agent_commit": _commit(),
         "agent_definition": server.suite,
-        "system_prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:16],
-        "first_message_sha256": hashlib.sha256((server.first_message or "").encode("utf-8")).hexdigest()[:16],
+        "system_prompt_sha256": _digest(server.system_prompt or ""),
+        "first_message_sha256": _digest(server.first_message or ""),
         # Every tool the model can call, the two call-control tools included: a
-        # reader checking why a call did not hang up needs to see that it could have.
-        "tools": ",".join([*server.tool_names, *CALL_CONTROL]),
+        # reader checking why a call did not hang up needs to see that it could
+        # have. Read off the schema the model is actually sent, so the record
+        # cannot claim a tool set that was never declared.
+        "tools": ",".join(tool.name for tool in build_tools(server).standard_tools),
         "pipecat_version": _version("pipecat-ai"),
         "cekura_version": _version("cekura"),
         "cekura_mode": settings.get("cekura_mode", "track"),
@@ -1998,9 +2066,6 @@ class DeliversToolResults(LLMAssistantAggregator):
         super().__init__(context, **kwargs)
         self._deliver_immediately = deliver_immediately
 
-    def _keeps_pending(self) -> bool:
-        return bool(self._realtime_service_mode)
-
     async def _maybe_push_context_after_function_result(self) -> None:
         # Where the row allows it, a result the agent is still narrating over
         # is delivered now rather than after the narration: the service is
@@ -2008,7 +2073,7 @@ class DeliversToolResults(LLMAssistantAggregator):
         # the service withdraw the call. Several results still travel together.
         if (
             self._deliver_immediately
-            and self._keeps_pending()
+            and self._realtime_service_mode
             and self._bot_speaking
             and not self.has_queued_frame(FunctionCallResultFrame)
         ):
@@ -2022,7 +2087,7 @@ class DeliversToolResults(LLMAssistantAggregator):
         # so it does not belong in the sweep an interruption performs.
         pending = self._push_context_on_bot_stopped_speaking
         await super().reset()
-        if self._keeps_pending():
+        if self._realtime_service_mode:
             self._push_context_on_bot_stopped_speaking = pending
 
     async def push_context_frame(self, direction: FrameDirection = FrameDirection.DOWNSTREAM):
@@ -2030,14 +2095,14 @@ class DeliversToolResults(LLMAssistantAggregator):
         # being recorded -- tells it nothing, so it cannot count as the delivery.
         pending = self._push_context_on_bot_stopped_speaking
         await super().push_context_frame(direction)
-        if direction is not FrameDirection.UPSTREAM and self._keeps_pending():
+        if direction is not FrameDirection.UPSTREAM and self._realtime_service_mode:
             self._push_context_on_bot_stopped_speaking = pending
 
     async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
         await super().process_frame(frame, direction)
         if (
             self._push_context_on_bot_stopped_speaking
-            and self._keeps_pending()
+            and self._realtime_service_mode
             and isinstance(frame, UserStoppedSpeakingFrame)
         ):
             logger.debug(

@@ -68,6 +68,8 @@ from pipecat.frames.frames import (
     EndTaskFrame,
     ErrorFrame,
     Frame,
+    FunctionCallCancelFrame,
+    FunctionCallFromLLM,
     FunctionCallInProgressFrame,
     FunctionCallResultFrame,
     InterruptionFrame,
@@ -415,6 +417,49 @@ def gemini_service_class():
     from pipecat.services.google.gemini_live.llm import GeminiLiveLLMService
 
     class GeminiResumesQuietly(GeminiLiveLLMService):
+        async def _handle_server_message(self, message):
+            await super()._handle_server_message(message)
+            cancellation = getattr(message, "tool_call_cancellation", None)
+            ids = list(getattr(cancellation, "ids", None) or [])
+            if ids:
+                await self._handle_tool_call_cancellation(ids)
+
+        async def _handle_tool_call_cancellation(self, ids: list[str]) -> None:
+            """The service withdrew tool calls the caller interrupted.
+
+            The framework has no branch for this message, so a withdrawn call
+            went on looking like an open one: its result was still sent, and
+            the record kept a call the model had itself abandoned and would
+            ask for again. Each id is closed here so no result follows it, the
+            pipeline is told the call was cancelled, and the trace marks it.
+            """
+            wanted = set(ids)
+            in_flight = {
+                item.tool_call_id
+                for item in await self._cancel_function_call_tasks(
+                    lambda item: item.tool_call_id in wanted,
+                    reason="withdrawn by the service after the caller interrupted",
+                )
+            }
+            settled = []
+            for tool_call_id in ids:
+                name = self._tool_call_id_to_name.get(tool_call_id, "?")
+                logger.info(
+                    "the service withdrew tool call {} ({}) after the caller interrupted; "
+                    "its result will not be sent", name, tool_call_id,
+                )
+                self._completed_tool_calls.add(tool_call_id)
+                if tool_call_id in in_flight:
+                    continue
+                await self.broadcast_frame(
+                    FunctionCallCancelFrame, function_name=name, tool_call_id=tool_call_id
+                )
+                settled.append(FunctionCallFromLLM(
+                    function_name=name, tool_call_id=tool_call_id, arguments={}, context=self._context
+                ))
+            if settled:
+                await self._call_event_handler("on_function_calls_cancelled", settled)
+
         async def _handle_context(self, context):
             if not self._context:
                 # The first context is the one that carries the tools, and the
@@ -733,6 +778,14 @@ class Provider:
     # which. Only a service whose own detector is switched off answers on the
     # pipeline's word.
     answers: str = "provider"
+    # When a tool's result is handed to the model. The framework waits for the
+    # agent to stop speaking, which for a narrated tool is exactly the window
+    # in which a caller talking over the agent makes the service withdraw the
+    # call -- the model then asks again, and the row gains a duplicate. A
+    # service whose context handling only forwards the result can be told at
+    # once; one that also opens a new response on the result is left to the
+    # framework's timing, so its narration is not cut.
+    results: str = "after_speech"
     # Whether this service runs its own voice-activity detection on the audio it
     # is sent. Leaving it on means the whole call has to be streamed for it to
     # listen to, silences included; turning it off means the shared detector
@@ -807,7 +860,8 @@ PROVIDERS: dict[str, Provider] = {
     "gemini-live": Provider(
         _gemini, 16000, "models/gemini-3.8-live", "Charon",
         ("GEMINI_API_KEY", "GEMINI_AUTHORIZATION"), "pipecat.services.google.gemini_live.llm",
-        turns="local", answers="local", service_vad=False, caller_transcription="automatic",
+        turns="local", answers="local", results="immediate", service_vad=False,
+        caller_transcription="automatic",
     ),
     # Pinned to the versioned name the vendor's ``latest`` alias resolves to
     # today: an alias is not a configuration. 24 kHz is the rate the vendor
@@ -842,7 +896,7 @@ PROVIDERS: dict[str, Provider] = {
             "aws_region": aws_region(settings),
             "nova_endpointing": NOVA_ENDPOINTING,
         },
-        turns="local", caller_transcription="automatic",
+        turns="local", results="immediate", caller_transcription="automatic",
     ),
     # Qwen listens at 16 kHz and speaks at 24 kHz, and no framework service
     # exists for it -- see ``qwen_realtime``.
@@ -1419,7 +1473,7 @@ class CallNarrator(BaseObserver):
         UserStartedSpeakingFrame, UserStoppedSpeakingFrame, TranscriptionFrame,
         LLMFullResponseStartFrame, LLMFullResponseEndFrame,
         BotStartedSpeakingFrame, BotStoppedSpeakingFrame, InterruptionFrame,
-        FunctionCallInProgressFrame, FunctionCallResultFrame,
+        FunctionCallInProgressFrame, FunctionCallResultFrame, FunctionCallCancelFrame,
         ErrorFrame, EndFrame, CancelFrame, MetricsFrame,
     )
 
@@ -1482,6 +1536,8 @@ class CallNarrator(BaseObserver):
             logger.info("tool {} requested", frame.function_name)
         elif isinstance(frame, FunctionCallResultFrame):
             logger.info("tool {} answered", frame.function_name)
+        elif isinstance(frame, FunctionCallCancelFrame):
+            logger.info("tool {} cancelled", frame.function_name)
         elif isinstance(frame, ErrorFrame):
             self.errors += 1
             logger.warning("error frame{}: {}", " (fatal)" if frame.fatal else "", frame.error)
@@ -1531,10 +1587,11 @@ class ToolTrace:
         return round((now - self._origin) * 1000, 1)
 
     def record(self, name: str, arguments: dict, matched: bool, output: Any, requested_ms: float,
-               resolution: str = "none") -> None:
+               resolution: str = "none", tool_call_id: str | None = None) -> None:
         self._calls.append(
             {
                 "name": name,
+                "tool_call_id": tool_call_id,
                 "arguments": arguments,
                 "matched": matched,
                 # Three outcomes, not two. A record found after speech bent an
@@ -1546,6 +1603,19 @@ class ToolTrace:
                 "answered_ms": self._offset(),
             }
         )
+        if self.on_change is not None:
+            self.on_change()
+
+    def cancel(self, tool_call_id: str) -> None:
+        """The service withdrew this call after the caller interrupted.
+
+        The call stays on the record -- it was made, and the tool ran -- but
+        marked, because the model will ask again and a reader counting
+        duplicates has to be able to tell a withdrawn call from a repeated one.
+        """
+        for call in self._calls:
+            if call.get("tool_call_id") == tool_call_id:
+                call["cancelled"] = True
         if self.on_change is not None:
             self.on_change()
 
@@ -1561,6 +1631,7 @@ class ToolTrace:
             "tool_calls": self._calls,
             "tool_call_count": len(self._calls),
             "tool_calls_matched": sum(1 for call in self._calls if call["matched"]),
+            "tool_calls_cancelled": sum(1 for call in self._calls if call.get("cancelled")),
         }
 
 
@@ -1578,7 +1649,8 @@ def register_tools(llm: LLMService, server: MockToolServer, trace: ToolTrace) ->
         arguments = params.arguments or {}
         result = server.call(params.function_name, arguments)
         record = server.calls[-1]
-        trace.record(params.function_name, arguments, record.matched, result, requested, record.resolution)
+        trace.record(params.function_name, arguments, record.matched, result, requested, record.resolution,
+                     tool_call_id=params.tool_call_id)
         # Three outcomes, not two: a row found outright, the nearest row found
         # after speech bent an argument, and nothing found. Reading a call log
         # afterwards, the middle one is the interesting case and a bare
@@ -1596,7 +1668,8 @@ def register_tools(llm: LLMService, server: MockToolServer, trace: ToolTrace) ->
         result = {"status": "ending_call"}
         # Recorded like any other call: whether the agent terminated the call
         # appropriately is scored, so the row has to say whether it tried.
-        trace.record("end_call", params.arguments or {}, True, result, requested, "exact")
+        trace.record("end_call", params.arguments or {}, True, result, requested, "exact",
+                     tool_call_id=params.tool_call_id)
         await params.result_callback(result)
         await params.llm.push_frame(EndTaskFrame())
 
@@ -1604,7 +1677,8 @@ def register_tools(llm: LLMService, server: MockToolServer, trace: ToolTrace) ->
         requested = trace._offset()
         logger.info("transfer_call -- mock handover, closing the call")
         result = {"status": "transferred"}
-        trace.record("transfer_call", params.arguments or {}, True, result, requested, "exact")
+        trace.record("transfer_call", params.arguments or {}, True, result, requested, "exact",
+                     tool_call_id=params.tool_call_id)
         await params.result_callback(result)
         await params.llm.push_frame(EndTaskFrame())
 
@@ -1612,6 +1686,11 @@ def register_tools(llm: LLMService, server: MockToolServer, trace: ToolTrace) ->
         llm.register_function(name, handler)
     llm.register_function("end_call", end_call)
     llm.register_function("transfer_call", transfer_call)
+
+    @llm.event_handler("on_function_calls_cancelled")
+    async def _withdrawn(_llm, calls):
+        for call in calls:
+            trace.cancel(call.tool_call_id)
 
 
 def opening_messages(first_message: str) -> list[dict[str, Any]]:
@@ -1723,6 +1802,9 @@ def build_record(provider_key: str, provider: "Provider", model: str, voice: str
             "endpointing": provider.answers,
             # Whether the service ran its own detector over the audio as well.
             "service_vad": "on" if provider.service_vad else "off",
+            # Whether a tool's result reached the model at once or after the
+            # agent finished speaking.
+            "result_delivery": provider.results,
             # Who stops the agent when the caller talks over it.
             "interruptions": "pipeline" if provider.interruptions else "model",
             # Whether the caller's words had to be asked for.
@@ -1912,8 +1994,28 @@ class DeliversToolResults(LLMAssistantAggregator):
     here would answer the same turn twice.
     """
 
+    def __init__(self, context: LLMContext, *, deliver_immediately: bool = False, **kwargs) -> None:
+        super().__init__(context, **kwargs)
+        self._deliver_immediately = deliver_immediately
+
     def _keeps_pending(self) -> bool:
         return bool(self._realtime_service_mode)
+
+    async def _maybe_push_context_after_function_result(self) -> None:
+        # Where the row allows it, a result the agent is still narrating over
+        # is delivered now rather than after the narration: the service is
+        # waiting for it, and the wait is the window in which a barge-in makes
+        # the service withdraw the call. Several results still travel together.
+        if (
+            self._deliver_immediately
+            and self._keeps_pending()
+            and self._bot_speaking
+            and not self.has_queued_frame(FunctionCallResultFrame)
+        ):
+            logger.debug("tool result delivered while the agent is still speaking")
+            await self.push_context_frame(FrameDirection.UPSTREAM)
+            return
+        await super()._maybe_push_context_after_function_result()
 
     async def reset(self):
         # A result the model has not been told about is not aggregation state,
@@ -1948,13 +2050,14 @@ class DeliversToolResults(LLMAssistantAggregator):
 class BenchAggregators(LLMContextAggregatorPair):
     """The framework's pair, with an assistant half that delivers tool results."""
 
-    def __init__(self, context: LLMContext, **kwargs) -> None:
+    def __init__(self, context: LLMContext, *, deliver_immediately: bool = False, **kwargs) -> None:
         super().__init__(context, **kwargs)
         # Built from what the pair already resolved rather than from the raw
         # arguments, so any normalising it does is not quietly lost here.
         built = self._assistant
         self._assistant = DeliversToolResults(
             context,
+            deliver_immediately=deliver_immediately,
             params=built._params,
             _realtime_service_mode=built._realtime_service_mode,
             _paired_user_aggregator=self._user,
@@ -2089,6 +2192,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         aggregators = BenchAggregators(
             context,
             realtime_service_mode=True,
+            deliver_immediately=provider.results == "immediate",
             user_params=user_aggregator_params(
                 realtime=True, turns=provider.turns, interruptions=provider.interruptions
             ),

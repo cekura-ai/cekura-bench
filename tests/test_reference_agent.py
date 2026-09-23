@@ -133,6 +133,9 @@ class TestTools:
             def register_function(self, name, handler, **_kwargs):
                 registered[name] = handler
 
+            def event_handler(self, _name):
+                return lambda fn: fn
+
         trace = bot.ToolTrace()
         bot.register_tools(StubLLM(), server, trace)
         assert set(registered) == set(server.tool_names) | set(bot.CALL_CONTROL)
@@ -140,6 +143,7 @@ class TestTools:
         answers = []
 
         class Params:
+            tool_call_id = "call-1"
             function_name = "lookup_patient"
             arguments = {"phone": "2025550188"}
 
@@ -157,11 +161,15 @@ class TestTools:
             def register_function(self, name, handler, **_kwargs):
                 registered[name] = handler
 
+            def event_handler(self, _name):
+                return lambda fn: fn
+
         trace = bot.ToolTrace()
         bot.register_tools(StubLLM(), server, trace)
         answers = []
 
         class Params:
+            tool_call_id = "call-1"
             function_name = "lookup_patient"
             arguments = {"phone": "4045550000"}
 
@@ -192,10 +200,14 @@ class TestTools:
             def register_function(self, name, handler, **_kwargs):
                 registered[name] = handler
 
+            def event_handler(self, _name):
+                return lambda fn: fn
+
         trace = bot.ToolTrace()
         bot.register_tools(StubLLM(), server, trace)
 
         class Params:
+            tool_call_id = "call-1"
             function_name = "lookup_patient"
             arguments = {"phone": "2025550188"}
             llm = None
@@ -812,12 +824,16 @@ class TestTheRecordDoesNotDependOnAGoodbye:
             def register_function(self, name, handler, **_kwargs):
                 registered[name] = handler
 
+            def event_handler(self, _name):
+                return lambda fn: fn
+
         trace = bot.ToolTrace()
         rewrites = []
         trace.on_change = lambda: rewrites.append(len(trace.as_metadata()["tool_calls"]))
         bot.register_tools(StubLLM(), server, trace)
 
         class Params:
+            tool_call_id = "call-1"
             function_name = "lookup_patient"
             arguments = {"phone": "2025550188"}
 
@@ -1814,7 +1830,7 @@ class TestARowSaysWhereItDiffersFromTheOthers:
 
     def test_every_native_row_declares_the_same_set(self):
         expected = {"endpointing", "service_vad", "interruptions",
-                    "caller_transcription", "input_rate"}
+                    "caller_transcription", "input_rate", "result_delivery"}
         for key in bot.PROVIDERS:
             assert set(self._record(key)["divergences"]) == expected, key
 
@@ -1996,3 +2012,145 @@ class TestAConfigurationReconnectOpensANewGeminiSession:
         service._process_completed_function_calls = quiet
         asyncio.run(service._handle_context(LLMContext([])))
         assert service._session_resumption_handle == "h"
+
+
+class TestAResultIsDeliveredWhileTheAgentIsStillSpeaking:
+    """The wait for the agent to stop is the window in which a barge-in withdraws the call.
+
+    A service whose context handling only forwards the result can have it at
+    once. One that opens a new response on it keeps the framework's timing, so
+    its narration is not cut short.
+    """
+
+    @staticmethod
+    def _assistant(deliver_immediately: bool):
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        return bot.BenchAggregators(
+            LLMContext([]), realtime_service_mode=True, deliver_immediately=deliver_immediately
+        ).assistant()
+
+    @staticmethod
+    async def _narrated_tool_call(assistant) -> list:
+        import dataclasses
+
+        from pipecat.frames.frames import (
+            BotStartedSpeakingFrame,
+            BotStoppedSpeakingFrame,
+            FunctionCallFromLLM,
+            FunctionCallInProgressFrame,
+            FunctionCallResultFrame,
+            FunctionCallsStartedFrame,
+            LLMTextFrame,
+        )
+        from pipecat.processors.frame_processor import FrameDirection
+
+        def make(cls, **fields):
+            names = {f.name for f in dataclasses.fields(cls)}
+            return cls(**{k: v for k, v in fields.items() if k in names})
+
+        pushes = []
+        real = assistant.push_context_frame
+
+        async def spy(direction=FrameDirection.DOWNSTREAM):
+            pushes.append(direction)
+            await real(direction)
+
+        assistant.push_context_frame = spy
+        assistant._assistant_turn_start_timestamp = "t0"
+        call = {"function_name": "lookup", "tool_call_id": "call-1", "arguments": {"id": 1}}
+        before_stop = None
+        for frame in [
+            BotStartedSpeakingFrame(),
+            make(LLMTextFrame, text="Let me look that up."),
+            make(FunctionCallsStartedFrame, function_calls=[make(FunctionCallFromLLM, **call, context=None)]),
+            make(FunctionCallInProgressFrame, **call, cancel_on_interruption=True),
+            make(FunctionCallResultFrame, **call, result={"found": True}, run_llm=None, properties=None),
+            BotStoppedSpeakingFrame(),
+        ]:
+            if isinstance(frame, BotStoppedSpeakingFrame):
+                before_stop = [d for d in pushes if d is FrameDirection.UPSTREAM]
+            await assistant.process_frame(frame, FrameDirection.DOWNSTREAM)
+        return before_stop, [d for d in pushes if d is FrameDirection.UPSTREAM]
+
+    def test_an_immediate_row_delivers_before_the_agent_stops(self):
+        import asyncio
+
+        before, after = asyncio.run(self._narrated_tool_call(self._assistant(True)))
+        assert len(before) == 1 and len(after) == 1
+
+    def test_a_row_left_to_the_framework_delivers_after(self):
+        import asyncio
+
+        before, after = asyncio.run(self._narrated_tool_call(self._assistant(False)))
+        assert len(before) == 0 and len(after) == 1
+
+    def test_the_rows_that_only_forward_a_result_are_the_immediate_ones(self):
+        assert {k for k, p in bot.PROVIDERS.items() if p.results == "immediate"} == {"gemini-live", "nova-sonic"}
+        for key in ("openai-realtime", "grok-realtime", "gpt-live"):
+            assert bot.PROVIDERS[key].results == "after_speech", key
+
+
+class TestAWithdrawnGeminiToolCallIsClosedAndMarked:
+    """The service withdraws a call the caller interrupted; the framework has no branch for it."""
+
+    @staticmethod
+    def _message(ids):
+        return SimpleNamespace(
+            server_content=None, tool_call=None, session_resumption_update=None,
+            usage_metadata=None, setup_complete=None, go_away=None,
+            tool_call_cancellation=SimpleNamespace(ids=ids),
+        )
+
+    @staticmethod
+    def _service(service_class):
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service = service_class(
+            api_key="k",
+            settings=service_class.Settings(model="models/gemini-3.8-live", system_instruction="p"),
+        )
+        service._context = LLMContext([])
+        service._tool_call_id_to_name = {"fc-1": "lookup"}
+        seen = {"frames": [], "events": []}
+
+        async def broadcast(frame_cls, **kwargs):
+            seen["frames"].append((frame_cls.__name__, kwargs))
+
+        async def no_tasks(_predicate, **_kwargs):
+            return []
+
+        async def event(name, *args):
+            seen["events"].append((name, args))
+
+        service.broadcast_frame = broadcast
+        service._cancel_function_call_tasks = no_tasks
+        service._call_event_handler = event
+        return service, seen
+
+    def test_the_withdrawn_call_gets_no_result_and_the_pipeline_is_told(self):
+        import asyncio
+
+        service, seen = self._service(bot.gemini_service_class())
+        asyncio.run(service._handle_server_message(self._message(["fc-1"])))
+        assert "fc-1" in service._completed_tool_calls
+        assert seen["frames"] == [("FunctionCallCancelFrame", {"function_name": "lookup", "tool_call_id": "fc-1"})]
+        assert [name for name, _ in seen["events"]] == ["on_function_calls_cancelled"]
+        assert seen["events"][0][1][0][0].tool_call_id == "fc-1"
+
+    def test_the_framework_still_ignores_the_message(self):
+        import asyncio
+
+        from pipecat.services.google.gemini_live.llm import GeminiLiveLLMService
+        service, seen = self._service(GeminiLiveLLMService)
+        asyncio.run(service._handle_server_message(self._message(["fc-1"])))
+        assert "fc-1" not in service._completed_tool_calls and seen["frames"] == []
+
+    def test_the_trace_marks_a_withdrawn_call_and_keeps_it(self):
+        trace = bot.ToolTrace()
+        trace.record("lookup", {"id": 1}, True, {"found": True}, 0.0, "exact", tool_call_id="fc-1")
+        trace.record("lookup", {"id": 1}, True, {"found": True}, 5.0, "exact", tool_call_id="fc-2")
+        trace.cancel("fc-1")
+        meta = trace.as_metadata()
+        assert meta["tool_call_count"] == 2 and meta["tool_calls_cancelled"] == 1
+        assert meta["tool_calls"][0]["cancelled"] is True and "cancelled" not in meta["tool_calls"][1]

@@ -158,6 +158,24 @@ not, so moving to it exposed the hole on every call. A reconnect made to change
 the configuration therefore drops the handle and opens a new session here; a
 reconnect after a mid-call error still resumes, as before.
 
+## A tool result is delivered while the agent is still speaking, where the row allows it
+
+The framework hands a realtime model a tool's result only after the agent has
+stopped speaking. For a narrated tool that wait is exactly the window in which
+a caller talking over the agent makes Gemini withdraw the call
+(`toolCallCancellation`, sent when a client interrupts a server turn): the
+result then answers a call the model has abandoned, and the model asks again,
+so the row gains a duplicate for each barge-in. Gemini and Nova Sonic only
+forward a result when a context frame carries one, so on those rows it is
+delivered the moment it exists. OpenAI Realtime opens a new response on a
+result, so its timing is left to the framework and its narration is not cut.
+The record names this as `result_delivery`.
+
+The framework also has no branch for the withdrawal message. It is handled
+here: a withdrawn call gets no late result, the pipeline is told it was
+cancelled, and the trace marks it (`tool_calls_cancelled`), so a reader can
+tell a withdrawn call from a repeated one.
+
 ## Bedrock needs signed credentials, not an API key
 
 Nova Sonic is reached only through `InvokeModelWithBidirectionalStream`, and AWS

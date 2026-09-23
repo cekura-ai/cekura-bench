@@ -13,3 +13,10 @@ observable tool names, input schemas, and returned data must match.
 
 Do not combine the two directories in one agent run. Select the corresponding
 `suite` in the runner configuration.
+
+Each directory may also carry `expected-tool-calls.json`: the calls each
+scenario expects, keyed by scenario id, in the platform's contract form (literal
+values, or the `<freetext>`, `<optional>`, `<string_array>` and `$one_of`
+markers). `python -m agent.tool_score` scores recorded runs against it twice:
+strictly, as the platform's Tool Call Accuracy does, and as equivalent writes.
+The rules for both are in that module's docstring.

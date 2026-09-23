@@ -1,56 +1,137 @@
 {
-  "schema": 1,
-  "note": "Rates were read from vendor documentation on read_on and have NOT been re-verified. No row may be published while verified is false. See README.md.",
+  "schema": 2,
+  "note": "Rates marked verified were read from the vendor's own pricing page on read_on. A row whose rate is not verified may be computed but must not be published. See README.md.",
   "units": {
     "per_million_tokens": "USD per 1,000,000 tokens, by lane",
-    "per_minute": "USD per minute of call",
+    "per_minute": "USD per minute of the named measure",
     "per_million_characters": "USD per 1,000,000 characters synthesised",
     "per_hour_audio": "USD per hour of audio submitted"
   },
   "rows": {
     "openai-realtime": {
-      "basis": "per_million_tokens",
-      "read_on": "2026-09-17",
-      "verified": false,
-      "source": "OpenAI API pricing documentation",
-      "rates": {"input_audio_tokens": 32.0, "output_audio_tokens": 64.0}
+      "read_on": "2026-09-23",
+      "verified": true,
+      "source": "https://developers.openai.com/api/docs/pricing",
+      "reasoning_in_output": true,
+      "components": [
+        {
+          "name": "gpt-realtime-2.1",
+          "basis": "per_million_tokens",
+          "requires": [
+            "input_audio_tokens",
+            "output_audio_tokens"
+          ],
+          "rates": {
+            "text_input": 4.0,
+            "text_input_cached": 0.4,
+            "audio_input": 32.0,
+            "audio_input_cached": 0.4,
+            "text_output": 24.0,
+            "audio_output": 64.0
+          }
+        }
+      ],
+      "unmetered": [
+        "Caller transcription is billed per minute and the framework drops its usage, so it is not in this figure."
+      ]
     },
     "gpt-live": {
-      "basis": "per_minute",
-      "read_on": "2026-09-17",
-      "verified": false,
-      "source": "OpenAI API pricing documentation",
-      "rates": {"minute": 0.05},
-      "note": "A second model runs behind this one; its cost is a separate line and is not included here."
+      "read_on": "2026-09-23",
+      "verified": true,
+      "source": "https://developers.openai.com/api/docs/pricing",
+      "reasoning_in_output": true,
+      "components": [
+        {
+          "name": "gpt-live-1",
+          "basis": "per_minute",
+          "measure": "live_audio_seconds",
+          "requires": [
+            "live_audio_seconds"
+          ],
+          "rates": {
+            "minute": 0.05
+          }
+        },
+        {
+          "name": "backend gpt-6-sol",
+          "basis": "per_million_tokens",
+          "rates": {
+            "text_input": 2.0,
+            "text_input_cached": 0.2,
+            "text_output": 10.0
+          },
+          "note": "Short-context rates; the backend's prompts in these calls are a few thousand tokens."
+        }
+      ]
     },
     "gemini-live": {
-      "basis": "per_million_tokens",
-      "read_on": "2026-09-17",
-      "verified": false,
-      "source": "Google AI pricing documentation",
-      "rates": {"input_audio_tokens": 3.0, "output_audio_tokens": 12.0},
-      "note": "Usage reports are lost when the connection closes before the turn completes, so totals for this row run low. Disclose on the row; do not estimate the difference."
+      "read_on": "2026-09-23",
+      "verified": true,
+      "source": "https://ai.google.dev/gemini-api/docs/pricing",
+      "reasoning_in_output": false,
+      "components": [
+        {
+          "name": "gemini-3.8-live-extended-thinking",
+          "basis": "per_million_tokens",
+          "requires": [
+            "input_audio_tokens",
+            "output_audio_tokens"
+          ],
+          "rates": {
+            "text_input": 0.75,
+            "audio_input": 3.0,
+            "text_output": 4.5,
+            "audio_output": 12.0
+          }
+        }
+      ],
+      "note": "The vendor lists no cached-input rate for its Live models; a call reporting cached tokens is refused until one is read."
     },
     "grok-realtime": {
-      "basis": "per_minute",
-      "read_on": "2026-09-17",
-      "verified": false,
-      "source": "xAI pricing documentation",
-      "rates": {"minute": 0.08}
+      "read_on": "2026-09-23",
+      "verified": true,
+      "source": "https://docs.x.ai/docs/models",
+      "components": [
+        {
+          "name": "grok-voice-think-fast-2.0",
+          "basis": "per_minute",
+          "measure": "call_seconds",
+          "rates": {
+            "minute": 0.08
+          }
+        }
+      ],
+      "unmetered": [
+        "The vendor also lists a text-input charge without stating its unit, so it is not in this figure."
+      ]
     },
     "nova-sonic": {
-      "basis": "per_million_tokens",
-      "read_on": "2026-09-17",
+      "read_on": "2026-09-23",
       "verified": false,
-      "source": "AWS Bedrock pricing documentation",
-      "rates": {"input_audio_tokens": 3.0, "output_audio_tokens": 12.0}
+      "source": "third-party listings; the AWS Bedrock pricing page did not show a figure when read",
+      "reasoning_in_output": true,
+      "components": [
+        {
+          "name": "amazon.nova-2-sonic-v1:0",
+          "basis": "per_million_tokens",
+          "requires": [
+            "input_audio_tokens",
+            "output_audio_tokens"
+          ],
+          "rates": {
+            "text_input": 0.33,
+            "audio_input": 3.0,
+            "text_output": 2.75,
+            "audio_output": 12.0
+          }
+        }
+      ]
     },
     "qwen-realtime": {
-      "basis": "per_million_tokens",
       "read_on": null,
       "verified": false,
       "source": null,
-      "rates": {}
+      "components": []
     }
   },
   "cascade_speech_path": {
@@ -71,10 +152,43 @@
     }
   },
   "cascade_text_models": {
-    "cascade-baseline": {"basis": "per_million_tokens", "read_on": null, "verified": false, "source": null, "rates": {}},
-    "cascade-openai":   {"basis": "per_million_tokens", "read_on": null, "verified": false, "source": null, "rates": {}},
-    "cascade-google":   {"basis": "per_million_tokens", "read_on": null, "verified": false, "source": null, "rates": {}},
-    "cascade-grok":     {"basis": "per_million_tokens", "read_on": null, "verified": false, "source": null, "rates": {}},
-    "cascade-qwen":     {"basis": "per_million_tokens", "read_on": null, "verified": false, "source": null, "rates": {}}
+    "cascade-baseline": {
+      "read_on": null,
+      "verified": false,
+      "source": null,
+      "components": []
+    },
+    "cascade-openai": {
+      "read_on": null,
+      "verified": false,
+      "source": null,
+      "components": []
+    },
+    "cascade-google": {
+      "read_on": null,
+      "verified": false,
+      "source": null,
+      "components": []
+    },
+    "cascade-grok": {
+      "read_on": null,
+      "verified": false,
+      "source": null,
+      "components": []
+    },
+    "cascade-qwen": {
+      "read_on": null,
+      "verified": false,
+      "source": null,
+      "components": []
+    }
+  },
+  "lanes": {
+    "text_input": "prompt tokens that are neither audio nor cached",
+    "text_input_cached": "cached prompt tokens that are not audio",
+    "audio_input": "audio prompt tokens that are not cached",
+    "audio_input_cached": "cached audio prompt tokens",
+    "text_output": "output tokens that are not audio, plus reasoning where the vendor reports it apart",
+    "audio_output": "audio output tokens"
   }
 }

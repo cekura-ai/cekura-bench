@@ -12,6 +12,7 @@ dependency-free.
 
 from __future__ import annotations
 
+import inspect
 import os
 import sys
 from pathlib import Path
@@ -1495,6 +1496,60 @@ class TestTheSpeechHalfOfACostIsRecorded:
         assert "live_audio_seconds" not in meter.as_metadata()["usage"]
 
 
+class TestSpeechTokensAreKeptApartFromText:
+    """A row billed at one rate for speech and another for text needs both counts."""
+
+    @staticmethod
+    def _event(delta_in, delta_out, total_in, total_out):
+        return {"usageEvent": {"details": {
+            "delta": {"input": {"speechTokens": delta_in[0], "textTokens": delta_in[1]},
+                      "output": {"speechTokens": delta_out[0], "textTokens": delta_out[1]}},
+            "total": {"input": {"speechTokens": total_in[0], "textTokens": total_in[1]},
+                      "output": {"speechTokens": total_out[0], "textTokens": total_out[1]}},
+        }}}
+
+    @pytest.mark.asyncio
+    async def test_the_running_speech_totals_reach_the_record(self):
+        handled = []
+
+        class SpeechService:
+            async def _handle_usage_event(self, event_json):
+                handled.append(event_json)
+
+        meter = bot.UsageMeter()
+        service = SpeechService()
+        bot.capture_speech_tokens(service, meter)
+        await service._handle_usage_event(self._event((40, 900), (0, 0), (40, 900), (0, 0)))
+        await service._handle_usage_event(self._event((25, 0), (120, 30), (65, 900), (120, 30)))
+        usage = meter.as_metadata()["usage"]
+        assert usage["input_audio_tokens"] == 65
+        assert usage["output_audio_tokens"] == 120
+        assert len(handled) == 2, "the service's own reporting must still happen"
+
+    @pytest.mark.asyncio
+    async def test_a_service_without_the_split_is_untouched(self):
+        class TokenService:
+            pass
+
+        meter = bot.UsageMeter()
+        bot.capture_speech_tokens(TokenService(), meter)
+        assert "input_audio_tokens" not in meter.as_metadata()["usage"]
+
+    def test_the_framework_still_collapses_the_split(self):
+        # Tripwire: if the framework starts reporting speech apart, this wrapper
+        # becomes a second writer of the same fields and should go.
+        from pipecat.services.aws.nova_sonic.llm import AWSNovaSonicLLMService
+
+        source = inspect.getsource(AWSNovaSonicLLMService._handle_usage_event)
+        assert "input_audio_tokens" not in source
+        assert 'get("speechTokens", 0) + input_tokens.get("textTokens", 0)' in source
+
+    def test_every_call_captures_both(self):
+        source = inspect.getsource(bot.run_bot)
+        assert "capture_live_audio(llm, meter)" in source
+        assert "capture_speech_tokens(llm, meter)" in source
+
+
 class TestARewrittenWordIsStillTheSameTurn:
     """The same service also corrects words as it goes, not only adds them.
 
@@ -1602,6 +1657,44 @@ class TestHowLongTheAgentTookToAnswer:
 
     def test_a_call_with_no_reply_exports_nothing_rather_than_zero(self):
         assert "reply" not in self._narrator().timing()
+
+    @pytest.mark.asyncio
+    async def test_every_turn_is_kept_with_when_in_the_call_it_happened(self):
+        # The spread is a summary; the turns are the measurement, and a later
+        # reading lines them up with the platform's own per-turn figures.
+        import asyncio
+
+        from pipecat.frames.frames import (
+            BotStartedSpeakingFrame,
+            BotStoppedSpeakingFrame,
+            UserStoppedSpeakingFrame,
+            VADUserStoppedSpeakingFrame,
+        )
+        from pipecat.observers.base_observer import FramePushed
+        from pipecat.processors.frame_processor import FrameDirection
+
+        bot.start_call_clock("turns")
+        narrator = self._narrator()
+
+        async def push(frame):
+            await narrator.on_push_frame(FramePushed(
+                source=None, destination=None, frame=frame, direction=FrameDirection.DOWNSTREAM, timestamp=0))
+
+        for _ in range(2):
+            await push(VADUserStoppedSpeakingFrame())
+            await asyncio.sleep(0.02)
+            await push(UserStoppedSpeakingFrame())
+            await asyncio.sleep(0.03)
+            await push(BotStartedSpeakingFrame())
+            await push(BotStoppedSpeakingFrame())
+
+        timing = narrator.timing()
+        replies, endpointing = timing["reply"]["turns"], timing["endpointing"]["turns"]
+        assert len(replies) == len(endpointing) == timing["reply"]["count"] == 2
+        assert all(turn["ms"] >= 45 for turn in replies)
+        assert all(15 <= turn["ms"] < replies[0]["ms"] for turn in endpointing)
+        assert replies[0]["caller_stopped_at_s"] < replies[1]["caller_stopped_at_s"]
+        assert replies[0]["caller_stopped_at_s"] == endpointing[0]["caller_stopped_at_s"]
 
 
 class TestEveryRowIsCheckedWhetherOrNotItLooksWrong:
@@ -1905,6 +1998,36 @@ class TestVendorDefaultsAreExplicitAndOnTheRecord:
         record = record_for("grok-realtime")
         assert record["grok_reasoning"] == bot.GROK_REASONING
         assert "threshold 0.85" in record["grok_vad"]
+
+    def test_openai_sends_its_best_reasoning_effort_and_says_so(self):
+        provider = bot.PROVIDERS["openai-realtime"]
+        service = provider.build("k", provider.default_model, provider.default_voice, "p", asked())
+        assert service._settings.session_properties.reasoning.effort == bot.OPENAI_REASONING == "high"
+        assert record_for("openai-realtime")["openai_reasoning"] == "high"
+
+    def test_gemini_runs_its_thinking_model_at_a_named_level(self):
+        provider = bot.PROVIDERS["gemini-live"]
+        assert provider.default_model.endswith("-extended-thinking")
+        service = provider.build("k", provider.default_model, provider.default_voice, "p", asked())
+        assert service._settings.thinking.thinking_level.value == bot.GEMINI_THINKING
+        # The framework reads the model id to decide the turn waits for the
+        # background reasoning to finish, and to not replace the level.
+        assert service._expects_interaction_status
+        assert service._resolved_thinking_config().thinking_level.value == "HIGH"
+        assert record_for("gemini-live")["gemini_thinking_level"] == "HIGH"
+
+    def test_the_live_backend_reasons_at_a_named_effort(self):
+        provider = bot.PROVIDERS["gpt-live"]
+        service = provider.build("k", provider.default_model, provider.default_voice, "p", asked())
+        backend = service._delegation.settings
+        assert (backend.model, backend.reasoning.effort) == ("gpt-6-sol", "low")
+        record = record_for("gpt-live")
+        assert (record["s2s_backend_model"], record["s2s_backend_reasoning"]) == ("gpt-6-sol", "low")
+
+    def test_qwen_runs_its_audio_model(self):
+        provider = bot.PROVIDERS["qwen-realtime"]
+        assert (provider.default_model, provider.default_voice) == ("qwen-audio-3.0-realtime-plus", "longanqian")
+        assert provider.caller_transcription == "automatic"
 
     def test_nova_sends_its_endpointing_sensitivity(self, monkeypatch):
         monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "secretpart")
@@ -2308,7 +2431,6 @@ class TestAHangUpEndsTheCallOnceTheGoodbyeHasPlayed:
         are harmless. If either stops being true, leaving early either leaves
         nothing or leaves twice, and this should fail before a call does."""
         import asyncio
-        import inspect
 
         from pipecat.transports.daily import transport as daily
         from pipecat.utils.shared import acquires, releases

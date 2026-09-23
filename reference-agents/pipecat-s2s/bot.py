@@ -175,6 +175,14 @@ def start_call_clock(call_id: str) -> None:
     _CLOCK.set(_latest_clock)
 
 
+def call_elapsed(now: float | None = None) -> float | None:
+    """Seconds since the call started, or None before any call has."""
+    started = _CLOCK.get() or _latest_clock
+    if started is None:
+        return None
+    return (now if now is not None else time.monotonic()) - started
+
+
 def call_stamp(now: float | None = None) -> str:
     """``[MM:SS]`` since the call started, or ``[--:--]`` before any call has."""
     started = _CLOCK.get() or _latest_clock
@@ -369,6 +377,7 @@ def _openai(api_key: str, model: str, voice: str, instructions: str, settings: S
         AudioInput,
         AudioOutput,
         InputAudioTranscription,
+        Reasoning,
         SessionProperties,
     )
     from pipecat.services.openai.realtime.llm import OpenAIRealtimeLLMService, OpenAIRealtimeLLMSettings
@@ -379,6 +388,9 @@ def _openai(api_key: str, model: str, voice: str, instructions: str, settings: S
             model=model,
             system_instruction=instructions,
             session_properties=SessionProperties(
+                # A named level, sent rather than left to the server, whose
+                # default the record could not name.
+                reasoning=Reasoning(effort=OPENAI_REASONING),
                 audio=AudioConfiguration(
                     # Asked for, because this service transcribes the caller only
                     # when told to. See ``CALLER_TRANSCRIPTION`` above the table.
@@ -520,6 +532,7 @@ def gemini_service_class():
 
 
 def _gemini(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
+    from google.genai.types import ThinkingConfig
     from pipecat.services.google.gemini_live.llm import GeminiLiveLLMSettings, GeminiVADParams
 
     # Turned off deliberately, and the reply times on this row depend on it.
@@ -549,6 +562,10 @@ def _gemini(api_key: str, model: str, voice: str, instructions: str, settings: S
             system_instruction=instructions,
             voice=voice,
             vad=GeminiVADParams(disabled=True),
+            # The extended-thinking model reasons in the background between
+            # output chunks, at a level the setup must name; the framework
+            # would otherwise pick the lowest. Sent as the row's setting.
+            thinking=ThinkingConfig(thinking_level=GEMINI_THINKING),
         ),
     )
 
@@ -590,7 +607,7 @@ def _grok(api_key: str, model: str, voice: str, instructions: str, settings: Set
 
 
 def _qwen_realtime(credential: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
-    """Qwen Omni Realtime, through the service in ``qwen_realtime``.
+    """Qwen's realtime audio model, through the service in ``qwen_realtime``.
 
     Pipecat has no service for this provider, so the protocol is spoken
     directly. See that module for why it is not a subclass of the OpenAI one.
@@ -623,7 +640,10 @@ def _gpt_live(api_key: str, model: str, voice: str, instructions: str, settings:
     does not disclose it is not comparable with one model's row.
     """
     from pipecat.services.openai.live.llm import OpenAILiveLLMService, OpenAILiveLLMSettings
-    from pipecat.services.openai.responses.llm import OpenAIResponsesLLMSettings
+    from pipecat.services.openai.responses.llm import (
+        OpenAIResponsesLLMSettings,
+        OpenAIResponsesReasoningConfig,
+    )
 
     return OpenAILiveLLMService(
         api_key=api_key,
@@ -635,8 +655,13 @@ def _gpt_live(api_key: str, model: str, voice: str, instructions: str, settings:
             # agent's instructions whole. Left unset, it would work from the
             # tool schemas and the transcript alone -- an agent that had never
             # read its own prompt.
+            # Its reasoning effort is named too: left unset, the framework turns
+            # a backend's reasoning off to keep latency down, which is not the
+            # configuration the row claims.
             settings=OpenAIResponsesLLMSettings(
-                model=backend_model(settings), system_instruction=instructions
+                model=backend_model(settings),
+                system_instruction=instructions,
+                reasoning=OpenAIResponsesReasoningConfig(effort=backend_reasoning(settings)),
             ),
         ),
     )
@@ -761,7 +786,17 @@ def backend_model(settings: Settings) -> str:
     is the model the vendor's own guide says to start from; a smaller backend
     is a cost row and is named as such by the session.
     """
-    return settings.get("s2s_backend_model", "gpt-5.6-terra")
+    return settings.get("s2s_backend_model", "gpt-6-sol")
+
+
+def backend_reasoning(settings: Settings) -> str:
+    """How hard that backend reasons.
+
+    The larger backend at medium stalled calls locally -- a reply twenty seconds
+    after a tool result, then a dropped connection -- so the row runs the
+    smaller backend at low until that is understood.
+    """
+    return settings.get("s2s_backend_reasoning", "low")
 
 
 def aws_region(settings: Settings) -> str:
@@ -862,14 +897,14 @@ class Provider:
 
 # Whether the caller's own words reach the record is a per-provider decision,
 # and it is not a detail: a scored run needs both halves of the conversation, and
-# a transcript holding only the agent reads as a caller who never spoke. Three of
+# a transcript holding only the agent reads as a caller who never spoke. Two of
 # these services transcribe the caller only when asked, and each asks
-# differently; three do it themselves. Nothing warns about the difference,
+# differently; four do it themselves. Nothing warns about the difference,
 # because a session without transcription is a working session.
 #
 #   openai-realtime   asked for  -- an input transcription config, default model
 #   grok-realtime     asked for  -- same shape, but only under its own ASR model
-#   qwen-realtime     asked for  -- NOT YET WIRED, see ``qwen_realtime``
+#   qwen-realtime     automatic  -- documented for the audio model; unconfirmed on a call
 #   gemini-live       automatic  -- the service configures both directions itself
 #   gpt-live          automatic  -- the protocol is transcript-driven throughout
 #   nova-sonic        automatic  -- the service emits caller transcripts natively
@@ -892,6 +927,13 @@ GROK_REASONING = "high"
 GROK_VAD = {"threshold": 0.85, "prefix_padding_ms": 333}
 NOVA_ENDPOINTING = "MEDIUM"
 
+# Where a vendor offers a reasoning or thinking level, each row runs its
+# model's strongest agent configuration at a named level, rather than whatever
+# the server does when nothing is sent -- a default the record cannot name. A
+# faster, lower setting is a different configuration and gets its own row.
+OPENAI_REASONING = "high"
+GEMINI_THINKING = "HIGH"
+
 
 # ``input_rate`` is load-bearing, not a tuning knob. These services do not
 # resample: each base64-encodes the audio frame it is handed and declares a rate
@@ -903,13 +945,16 @@ PROVIDERS: dict[str, Provider] = {
     "openai-realtime": Provider(
         _openai, 24000, "gpt-realtime-2.1", "marin", ("OPENAI_API_KEY",),
         "pipecat.services.openai.realtime.llm",
+        discloses=lambda settings: {"openai_reasoning": OPENAI_REASONING},
     ),
-    # The vendor's current general-availability Live model. The preview it
-    # replaces is the one whose empty control-token turns and mid-call
-    # connection drops are on the vendor's own issue tracker.
+    # The vendor's current Live model in its extended-thinking form, which is a
+    # separate model id rather than a setting: the plain model refuses a
+    # thinking level at all. The preview before both is the one whose empty
+    # control-token turns and mid-call drops are on the vendor's issue tracker.
     "gemini-live": Provider(
-        _gemini, 16000, "models/gemini-3.8-live", "Charon",
+        _gemini, 16000, "models/gemini-3.8-live-extended-thinking", "Charon",
         ("GEMINI_API_KEY", "GEMINI_AUTHORIZATION"), "pipecat.services.google.gemini_live.llm",
+        discloses=lambda settings: {"gemini_thinking_level": GEMINI_THINKING},
         turns="local", results="immediate", service_vad=False,
         caller_transcription="automatic",
     ),
@@ -933,6 +978,7 @@ PROVIDERS: dict[str, Provider] = {
         "pipecat.services.openai.live.llm",
         discloses=lambda settings: {
             "s2s_backend_model": backend_model(settings),
+            "s2s_backend_reasoning": backend_reasoning(settings),
             # Named *and* hashed. The name alone would let the section be
             # rewritten without any digest on the record changing, and
             # ``system_prompt_sha256`` covers the agent prompt the row shares
@@ -954,12 +1000,13 @@ PROVIDERS: dict[str, Provider] = {
         turns="local", results="immediate", caller_transcription="automatic",
     ),
     # Qwen listens at 16 kHz and speaks at 24 kHz, and no framework service
-    # exists for it -- see ``qwen_realtime``.
+    # exists for it -- see ``qwen_realtime``. Its audio model transcribes the
+    # caller on its own, as documented; that has not yet been seen on a call.
     "qwen-realtime": Provider(
-        _qwen_realtime, 16000, "qwen3-omni-flash-realtime", "Ethan", ("DASHSCOPE_API_KEY",),
+        _qwen_realtime, 16000, "qwen-audio-3.0-realtime-plus", "longanqian", ("DASHSCOPE_API_KEY",),
         "qwen_realtime",
         discloses=lambda settings: {"qwen_region": qwen_region(settings)},
-        turns="local",
+        turns="local", caller_transcription="automatic",
     ),
 }
 
@@ -1416,6 +1463,9 @@ class UsageMeter(BaseObserver):
         # One provider bills its speech model by the second and reports it
         # nowhere a metrics frame can reach. See ``record_live_audio``.
         self._live_audio_seconds = 0.0
+        # Another reports speech and text apart and the framework adds them
+        # together. See ``record_speech_tokens``.
+        self._speech_tokens: dict[str, int] = {}
         self._reports = 0
         self._seen: set[int] = set()
 
@@ -1442,6 +1492,16 @@ class UsageMeter(BaseObserver):
         """Seconds of live audio, reported cumulatively, so the largest wins."""
         self._live_audio_seconds = max(self._live_audio_seconds, seconds)
 
+    def record_speech_tokens(self, input_speech: int, output_speech: int) -> None:
+        """The speech share of the call's tokens, reported cumulatively, so the largest wins.
+
+        Stored under the same names the other rows use for their audio tokens,
+        which already sit inside ``prompt_tokens`` and ``completion_tokens``
+        there -- so text is the total less the audio on every row alike.
+        """
+        for field, value in (("input_audio_tokens", input_speech), ("output_audio_tokens", output_speech)):
+            self._speech_tokens[field] = max(self._speech_tokens.get(field, 0), int(value or 0))
+
     def as_metadata(self) -> dict[str, Any]:
         """What the call consumed, priced by nothing.
 
@@ -1453,6 +1513,7 @@ class UsageMeter(BaseObserver):
             "call_seconds": round(time.monotonic() - self._opened, 3),
             "usage_reports": self._reports,
             **self._tokens,
+            **{field: value for field, value in self._speech_tokens.items() if value},
         }
         if self._stt_audio_seconds:
             usage["stt_audio_seconds"] = round(self._stt_audio_seconds, 3)
@@ -1510,6 +1571,11 @@ class CallNarrator(BaseObserver):
         self._agent_speaking = False
         self.replies: list[float] = []
         self.endpointing: list[float] = []
+        # The same figures turn by turn, each with the moment in the call the
+        # caller stopped, so a later reading can line them up with the
+        # platform's own per-turn latencies from the recording.
+        self.reply_turns: list[dict[str, Any]] = []
+        self.endpointing_turns: list[dict[str, Any]] = []
         self._heard_stop: float | None = None
         self._turn_closed: float | None = None
 
@@ -1554,10 +1620,16 @@ class CallNarrator(BaseObserver):
         timing: dict[str, Any] = {}
         reply, endpointing = spread(self.replies), spread(self.endpointing)
         if reply:
-            timing["reply"] = reply
+            timing["reply"] = {**reply, "turns": self.reply_turns}
         if endpointing:
-            timing["endpointing"] = endpointing
+            timing["endpointing"] = {**endpointing, "turns": self.endpointing_turns}
         return timing
+
+    def _turn(self, seconds: float) -> dict[str, Any]:
+        """One turn's figure, stamped with when in the call the caller stopped."""
+        stopped = call_elapsed(self._heard_stop)
+        return {"caller_stopped_at_s": round(stopped, 3) if stopped is not None else None,
+                "ms": round(seconds * 1000)}
 
     # What a healthy call looks like, as numbers rather than as judgement.
     #
@@ -1677,6 +1749,7 @@ class CallNarrator(BaseObserver):
                 self._turn_closed = time.monotonic()
                 waited = self._turn_closed - self._heard_stop
                 self.endpointing.append(waited)
+                self.endpointing_turns.append(self._turn(waited))
                 logger.info("caller turn {} ends ({:.0f} ms after the detector heard it stop)",
                             self.caller_turns, waited * 1000)
             else:
@@ -1695,6 +1768,7 @@ class CallNarrator(BaseObserver):
             if not self._agent_speaking and self._heard_stop is not None:
                 answered = time.monotonic() - self._heard_stop
                 self.replies.append(answered)
+                self.reply_turns.append(self._turn(answered))
                 self._heard_stop = None
                 logger.info("agent audio starts ({:.0f} ms after the caller stopped)", answered * 1000)
             else:
@@ -2411,6 +2485,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
     )
     meter = UsageMeter()
     capture_live_audio(llm, meter)
+    capture_speech_tokens(llm, meter)
     narrator = CallNarrator(AUDIO_CLOCK, hangup)
     task, tracer = create_task(pipeline, context, params, runner_args, transport, record, [meter, narrator])
     if tracer is not None:
@@ -2617,6 +2692,35 @@ def capture_live_audio(llm: LLMService, meter: UsageMeter) -> None:
         return await original(usage)
 
     llm._report_usage = report
+
+
+def capture_speech_tokens(llm: LLMService, meter: UsageMeter) -> None:
+    """Keep the speech and text split a provider reports and the framework adds up.
+
+    One of these services bills speech tokens at many times the rate of text
+    tokens and reports the two apart, as running totals on every usage event.
+    The framework turns each event into a single input and output count, so a
+    record holding only those cannot be priced: nobody can say how much of it
+    was speech. The running totals are read off the same event before it is
+    handled, which is every other part of it untouched.
+
+    As with the live-audio seconds there is no public surface, so the handler is
+    wrapped and still called. A service without it is left alone.
+    """
+    original = getattr(llm, "_handle_usage_event", None)
+    if original is None:
+        return
+
+    async def handle(event_json: dict):
+        total = ((event_json.get("usageEvent") or {}).get("details") or {}).get("total") or {}
+        if total:
+            meter.record_speech_tokens(
+                (total.get("input") or {}).get("speechTokens", 0),
+                (total.get("output") or {}).get("speechTokens", 0),
+            )
+        return await original(event_json)
+
+    llm._handle_usage_event = handle
 
 
 def capture_caller_turns(tracer, user_aggregator) -> None:

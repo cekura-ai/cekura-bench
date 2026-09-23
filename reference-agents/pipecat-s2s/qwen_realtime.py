@@ -1,4 +1,4 @@
-"""Qwen Omni Realtime, spoken directly rather than through a framework service.
+"""Qwen's realtime audio model, spoken directly rather than through a framework service.
 
 Pipecat ships a realtime service for every other provider on the board, and
 none for this one. It is written here, in the benchmark, for the same reason
@@ -21,7 +21,7 @@ declare 24 kHz, which the output transport resamples. Declaring the wrong rate
 on those frames does not fail -- it plays the model's voice at the wrong speed,
 which reads as a bad model rather than bad wiring.
 
-Protocol: https://www.alibabacloud.com/help/en/model-studio/realtime
+Protocol: https://www.alibabacloud.com/help/en/model-studio/qwen-audio-realtime-user-guides
 """
 
 from __future__ import annotations
@@ -74,7 +74,7 @@ def _event_id() -> str:
 
 
 class QwenRealtimeLLMService(LLMService):
-    """One Qwen Omni Realtime session, for the length of one call.
+    """One Qwen realtime audio session, for the length of one call.
 
     The session is opened on the first frame and closed with the pipeline. Turn
     detection is the provider's own, which is the same choice every other native
@@ -87,8 +87,8 @@ class QwenRealtimeLLMService(LLMService):
         *,
         api_key: str,
         workspace_id: str,
-        model: str = "qwen3-omni-flash-realtime",
-        voice: str = "Ethan",
+        model: str = "qwen-audio-3.0-realtime-plus",
+        voice: str = "longanqian",
         instructions: str = "",
         region: str = "singapore",
         turn_detection: dict[str, Any] | None = None,
@@ -199,13 +199,11 @@ class QwenRealtimeLLMService(LLMService):
         return encoded
 
     async def _send_session_update(self):
-        # KNOWN GAP: this session never asks for input transcription, so the
-        # caller's words do not reach the record even though the completed-
-        # transcription event is handled below. The provider's ASR model id is
-        # not documented in anything we can test against without a key, and
-        # guessing one would fail the session rather than fail the field. The row
-        # is credential-blocked anyway; it must not be published until this is
-        # wired and verified on a real call.
+        # No input-transcription field: the audio model documents the caller's
+        # completed transcript as an event it sends on its own, with no setting
+        # to ask for it, and a guessed field could fail the session. The event
+        # is handled below. Until a real call has shown caller text arriving,
+        # the row must not be published.
         session: dict[str, Any] = {
             "modalities": ["text", "audio"],
             "voice": self._voice,

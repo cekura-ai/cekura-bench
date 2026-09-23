@@ -20,7 +20,7 @@ sys.path.insert(0, str(AGENT_DIR))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import bot  # noqa: E402
-from pricing.cost import load_table, price_call  # noqa: E402
+from pricing.cost import lanes, load_table, price_call  # noqa: E402
 
 
 def metrics(*entries):
@@ -107,15 +107,73 @@ class TestCountingWhatACallUsed:
         assert bot.UsageMeter().as_metadata()["usage"]["call_seconds"] >= 0
 
 
+# One realtime call as the record keeps it: the audio and cached counts sit
+# inside the prompt and output totals.
+OPENAI_CALL = {
+    "usage_reports": 15, "call_seconds": 112.4,
+    "prompt_tokens": 51_733, "cache_read_input_tokens": 42_560,
+    "input_audio_tokens": 1_933, "cache_read_input_audio_tokens": 1_024,
+    "completion_tokens": 2_058, "output_audio_tokens": 1_316,
+}
+
+
 class TestPricingACall:
-    def test_a_token_row_is_priced_by_lane(self):
-        price = price_call("openai-realtime", {"input_audio_tokens": 1_000_000})
-        assert price.usd == pytest.approx(32.0)
-        assert price.basis == "per_million_tokens"
+
+    def test_the_totals_split_into_the_lanes_vendors_price(self):
+        assert lanes(OPENAI_CALL) == {
+            "text_input": 8_264, "text_input_cached": 41_536,
+            "audio_input": 909, "audio_input_cached": 1_024,
+            "text_output": 742, "audio_output": 1_316,
+        }
+
+    def test_every_lane_is_priced_not_only_the_audio(self):
+        # Text is most of the tokens on a realtime row: the prompt and the tools
+        # are read again on every response. Pricing audio alone undercounts.
+        price = price_call("openai-realtime", OPENAI_CALL)
+        expected = (8_264 * 4 + 41_536 * 0.4 + 909 * 32 + 1_024 * 0.4 + 742 * 24 + 1_316 * 64) / 1e6
+        assert price.usd == pytest.approx(expected)
+        assert price.unmetered, "what the figure leaves out travels with it"
+
+    def test_reasoning_reported_beside_the_output_is_billed_as_output(self):
+        usage = {"usage_reports": 1, "prompt_tokens": 100, "input_audio_tokens": 100,
+                 "completion_tokens": 50, "output_audio_tokens": 50, "reasoning_tokens": 30}
+        assert lanes(usage, reasoning_in_output=False)["text_output"] == 30
+        assert lanes(usage, reasoning_in_output=True)["text_output"] == 0
+
+    def test_a_live_row_is_priced_on_its_audio_seconds_plus_its_backend(self):
+        usage = {"usage_reports": 8, "call_seconds": 106.5, "live_audio_seconds": 89.0,
+                 "prompt_tokens": 48_620, "cache_read_input_tokens": 44_656, "completion_tokens": 234}
+        price = price_call("gpt-live", usage)
+        assert price.lines["gpt-live-1"] == pytest.approx(0.05 * 89 / 60)
+        assert price.lines["backend gpt-6-sol"] == pytest.approx(
+            (3_964 * 2 + 44_656 * 0.2 + 234 * 10) / 1e6)
+        assert price.usd == pytest.approx(sum(price.lines.values()))
+
+    def test_a_live_row_without_its_seconds_is_not_priced_on_the_clock(self):
+        # The vendor bills the seconds it reports, not the pipeline's lifetime.
+        price = price_call("gpt-live", {"usage_reports": 1, "call_seconds": 120})
+        assert price.usd is None and "live_audio_seconds" in price.reason
 
     def test_a_per_minute_row_is_priced_by_the_clock(self):
-        price = price_call("gpt-live", {"call_seconds": 120})
-        assert price.usd == pytest.approx(0.10)
+        price = price_call("grok-realtime", {"call_seconds": 120, "usage_reports": 3})
+        assert price.usd == pytest.approx(0.16)
+
+    def test_a_record_without_the_speech_split_is_not_priced_as_text(self):
+        # Speech costs about ten times text there; the total alone would look cheap.
+        price = price_call("nova-sonic", {"usage_reports": 140, "prompt_tokens": 3_571, "completion_tokens": 1_991})
+        assert price.usd is None and "input_audio_tokens" in price.reason
+
+    def test_a_billed_lane_with_no_rate_is_a_refusal_not_free(self):
+        usage = {"usage_reports": 1, "prompt_tokens": 10, "input_audio_tokens": 10,
+                 "cache_read_input_tokens": 10, "cache_read_input_audio_tokens": 10,
+                 "completion_tokens": 5, "output_audio_tokens": 5}
+        price = price_call("gemini-live", usage)
+        assert price.usd is None and "audio_input_cached" in price.reason
+
+    def test_usage_that_does_not_add_up_is_refused(self):
+        price = price_call("openai-realtime", {"usage_reports": 1, "prompt_tokens": 10,
+                                               "input_audio_tokens": 50, "output_audio_tokens": 1})
+        assert price.usd is None and "does not add up" in price.reason
 
     def test_a_row_with_no_rate_yields_a_reason_not_a_zero(self):
         price = price_call("qwen-realtime", {"call_seconds": 60})
@@ -135,7 +193,9 @@ class TestTheTableItself:
     def test_nothing_is_publishable_until_a_rate_is_checked(self):
         # An unverified price may be computed and looked at; publishing one
         # would be asking to be believed rather than checked.
-        price = price_call("openai-realtime", {"input_audio_tokens": 1_000_000})
+        usage = {"usage_reports": 1, "prompt_tokens": 100, "input_audio_tokens": 80,
+                 "completion_tokens": 60, "output_audio_tokens": 50}
+        price = price_call("nova-sonic", usage)
         assert price.usd is not None
         assert price.publishable is False, "a rate must be verified before a row goes out"
 
@@ -145,12 +205,20 @@ class TestTheTableItself:
         missing = (set(bot.PROVIDERS) | set(bot.TEXT_MODELS)) - priced
         assert not missing, f"a row with no price entry would publish a blank cost: {sorted(missing)}"
 
-    def test_a_recorded_rate_carries_the_date_it_was_read(self):
+    def test_a_recorded_rate_carries_the_date_and_page_it_was_read_from(self):
         # An undated price is not reproducible.
         table = load_table()
         for name, entry in {**table["rows"], **table["cascade_text_models"]}.items():
-            if entry.get("rates"):
-                assert entry.get("read_on"), f"{name} has rates but no date"
+            if any(c.get("rates") for c in entry.get("components") or ()):
+                assert entry.get("read_on") and entry.get("source"), f"{name} has rates but no date or source"
+
+    def test_every_rate_names_a_lane_the_arithmetic_knows(self):
+        table = load_table()
+        known = set(lanes({}))
+        for name, entry in table["rows"].items():
+            for component in entry.get("components") or ():
+                if component["basis"] == "per_million_tokens":
+                    assert set(component["rates"]) <= known, f"{name}: {set(component['rates']) - known}"
 
     def test_the_table_is_valid_json_on_disk(self):
         json.loads((Path(__file__).resolve().parent.parent / "pricing" / "prices.json").read_text())

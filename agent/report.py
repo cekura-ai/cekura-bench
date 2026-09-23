@@ -154,15 +154,16 @@ def integrity(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
     missing = 0
     tails = []
     for record in records:
-        checks = (record.get("integrity") or {}).get("checks")
+        report = record.get("integrity") or {}
+        checks = report.get("checks")
         if checks is None:
             missing += 1
         elif checks == ["ok"]:
             clean += 1
         else:
             flagged.update(checks)
-        closed_by[(record.get("integrity") or {}).get("closed_by") or "caller_or_timeout"] += 1
-        tail = (record.get("integrity") or {}).get("hangup_tail_ms")
+        closed_by[report.get("closed_by") or "caller_or_timeout"] += 1
+        tail = report.get("hangup_tail_ms")
         if tail is not None:
             tails.append(tail)
     return {"ok_runs": clean, "flagged_runs": len(records) - clean - missing, "flags": dict(flagged),

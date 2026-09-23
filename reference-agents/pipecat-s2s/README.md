@@ -284,8 +284,9 @@ With `CEKURA_API_KEY` and the loaded definition's agent id set, the run is trace
 through the Cekura Pipecat SDK: transcripts, tool calls, logs and spans land against
 the run instead of in a container's stdout. The platform files a session under the
 agent id it was sent and a run looks only under its own agent, so each definition
-reports to its own platform agent, and the record names it (`cekura_agent_id`). `track` correlates a scenario run; `observe`
-additionally uploads the call audio and starts evaluation.
+reports to its own platform agent, and the record names it (`cekura_agent_id`).
+`track` correlates a scenario run; `observe` additionally uploads the call audio
+and starts evaluation.
 
 Every call carries a **build record** as trace metadata, and it is also logged
 once at startup so the answer survives when only container logs do. The record is

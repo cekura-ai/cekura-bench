@@ -1244,7 +1244,7 @@ class TestEventsATransportLacksAreSkippedQuietly:
         seen = []
         sink = logger.add(lambda m: seen.append(m.record["message"]), level="WARNING")
         try:
-            bot._on_transport_event(transport, "on_participant_joined", lambda *_: None)
+            bot._on_event(transport, "on_participant_joined", lambda *_: None)
         finally:
             logger.remove(sink)
         assert seen == []
@@ -2320,7 +2320,6 @@ class TestAGoodbyeLeftOpenIsClosedForTheAgent:
     def _after_goodbye():
         watch = bot.ClosesAfterAnUnfinishedGoodbye(lambda reason: None)
         watch.agent_said("Thanks for calling. Take care.", now=10.0)
-        watch._agent_stopped = 10.0
         return watch
 
     def test_a_caller_goodbye_into_silence_closes_three_seconds_after_it(self):
@@ -2368,7 +2367,6 @@ class TestAGoodbyeLeftOpenIsClosedForTheAgent:
     def test_an_interrupted_goodbye_is_not_one(self):
         watch = bot.ClosesAfterAnUnfinishedGoodbye(lambda reason: None)
         watch.agent_said("Thanks for calling. Take care.", interrupted=True, now=10.0)
-        watch._agent_stopped = 10.0
         assert not watch.due(60.0)
 
     async def test_the_frames_of_a_goodbye_left_open_end_the_call_and_name_the_closer(self):
@@ -2420,8 +2418,7 @@ class TestAGoodbyeLeftOpenIsClosedForTheAgent:
         finally:
             await watch.stop()
         assert ended == ["cancel"], "the call left open must end"
-        assert watch.fired_at is not None and hangup.reason == "backstop"
-        assert hangup.closed_by == "harness"
+        assert hangup.reason == "backstop" and hangup.closed_by == "harness"
 
     def test_who_closed_the_call_is_on_the_record_and_disclosed_on_every_row(self):
         import time
@@ -2436,7 +2433,6 @@ class TestAGoodbyeLeftOpenIsClosedForTheAgent:
         tool_closed = bot.HangsUpOnceHeard()
         tool_closed.reason = "end_call"
         assert tool_closed.closed_by == "agent"
-
 
 
 class TestEveryRowIsToldTheSameThing:
@@ -2682,18 +2678,22 @@ class TestAHangUpEndsTheCallOnceTheGoodbyeHasPlayed:
     def test_a_hang_up_that_did_not_end_the_call_is_named(self):
         import time
 
-        held = bot.CallNarrator(hangup=SimpleNamespace(hung_up_at=time.monotonic() - 5.0, left_at=None))
+        held = bot.CallNarrator(
+            hangup=SimpleNamespace(hung_up_at=time.monotonic() - 5.0, left_at=None, closed_by="agent")
+        )
         held.caller_turns, held.agent_turns = 4, 4
         report = held.integrity()
         assert "hangup_held" in report["checks"] and report["hangup_tail_ms"] >= 5000
 
-        prompt = bot.CallNarrator(hangup=SimpleNamespace(hung_up_at=time.monotonic(), left_at=None))
+        prompt = bot.CallNarrator(hangup=SimpleNamespace(hung_up_at=time.monotonic(), left_at=None, closed_by="agent"))
         prompt.caller_turns, prompt.agent_turns = 4, 4
         assert prompt.integrity()["checks"] == ["ok"]
 
         # The caller is let go when the room is left, whatever the teardown does after.
         left_early = bot.CallNarrator(
-            hangup=SimpleNamespace(hung_up_at=time.monotonic() - 5.0, left_at=time.monotonic() - 4.98)
+            hangup=SimpleNamespace(
+                hung_up_at=time.monotonic() - 5.0, left_at=time.monotonic() - 4.98, closed_by="agent"
+            )
         )
         left_early.caller_turns, left_early.agent_turns = 4, 4
         report = left_early.integrity()

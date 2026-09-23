@@ -38,6 +38,7 @@ Run it::
 from __future__ import annotations
 
 import contextvars
+import functools
 import hashlib
 import json
 import logging
@@ -384,12 +385,39 @@ def _openai(api_key: str, model: str, voice: str, instructions: str, settings: S
     )
 
 
+@functools.lru_cache(maxsize=None)
+def gemini_service_class():
+    """The framework's Gemini service, minus one replay after a reconnect.
+
+    The service drops its connection a few times an hour on a server-side
+    error and resumes the same session from a handle, so the server keeps the
+    conversation. Disconnecting also forgets which tool results have been
+    delivered, so the next context frame sends every result in the call again
+    -- five at a time by the third minute -- into a session that already holds
+    them, and a result still in flight across the gap goes out under a
+    placeholder name. Both are kept across a resume; a reconnect without a
+    handle re-seeds the history itself and is left alone.
+
+    Imported lazily like the builders, so a row that never touches this
+    provider does not load it.
+    """
+    from pipecat.services.google.gemini_live.llm import GeminiLiveLLMService
+
+    class GeminiResumesQuietly(GeminiLiveLLMService):
+        async def _reconnect(self):
+            resuming = bool(self._session_resumption_handle)
+            delivered = set(self._completed_tool_calls)
+            names = dict(self._tool_call_id_to_name)
+            await super()._reconnect()
+            if resuming:
+                self._completed_tool_calls |= delivered
+                self._tool_call_id_to_name = {**names, **self._tool_call_id_to_name}
+
+    return GeminiResumesQuietly
+
+
 def _gemini(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
-    from pipecat.services.google.gemini_live.llm import (
-        GeminiLiveLLMService,
-        GeminiLiveLLMSettings,
-        GeminiVADParams,
-    )
+    from pipecat.services.google.gemini_live.llm import GeminiLiveLLMSettings, GeminiVADParams
 
     # Turned off deliberately, and the reply times on this row depend on it.
     #
@@ -411,7 +439,7 @@ def _gemini(api_key: str, model: str, voice: str, instructions: str, settings: S
     # It is also what this row claims. ``turns="local"`` in the table below says
     # the boundary belongs to the shared detector, which is only true with the
     # service's own detector out of the way.
-    return GeminiLiveLLMService(
+    return gemini_service_class()(
         api_key=api_key,
         settings=GeminiLiveLLMSettings(
             model=model,
@@ -1585,7 +1613,9 @@ def _common_record(server: MockToolServer, settings: Settings) -> dict[str, Any]
         "agent_definition": server.suite,
         "system_prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:16],
         "first_message_sha256": hashlib.sha256((server.first_message or "").encode("utf-8")).hexdigest()[:16],
-        "tools": ",".join(server.tool_names),
+        # Every tool the model can call, the two call-control tools included: a
+        # reader checking why a call did not hang up needs to see that it could have.
+        "tools": ",".join([*server.tool_names, *CALL_CONTROL]),
         "pipecat_version": _version("pipecat-ai"),
         "cekura_version": _version("cekura"),
         "cekura_mode": settings.get("cekura_mode", "track"),
@@ -1725,31 +1755,50 @@ class DeliversToolResults(LLMAssistantAggregator):
     """Keeps a tool result from being lost to a barge-in.
 
     A realtime service is told what a tool returned by the context frame this
-    aggregator pushes, and by nothing else. That push waits while the agent is
-    speaking -- which is when a tool the agent narrated is most likely to finish
-    -- and is then skipped if the caller has begun talking over it. Dropped and
-    never retried, so the model asks for the same tool again on the next turn,
-    with the same arguments, for the rest of the call.
+    aggregator pushes upstream, and by nothing else. That push waits while the
+    agent is speaking -- which is when a tool the agent narrated is most likely
+    to finish, because the result frame queues behind the narration's audio in
+    the output transport -- and the stock class then forgets it if the caller
+    begins talking over the agent. Dropped and never retried, so the model asks
+    for the same tool again on the next turn, with the same arguments, and a
+    scored call gains an unmatched duplicate for each barge-in.
 
-    The pending push is kept through the interruption and made once the caller's
-    turn is over.
+    The forgetting happens in two places, and both have to be covered. An
+    interruption first records the cut-off utterance, which pushes a context
+    frame *downstream* for observers and clears the pending flag on the way;
+    only then does it reset the aggregation state. So the pending flag has to
+    survive a downstream push as well as a reset. It is delivered once the
+    caller's turn is over.
+
+    Realtime rows only. On a cascade row the user half re-runs inference from
+    the context at turn end, which carries the result anyway; a second push
+    here would answer the same turn twice.
     """
+
+    def _keeps_pending(self) -> bool:
+        return bool(self._realtime_service_mode)
 
     async def reset(self):
         # A result the model has not been told about is not aggregation state,
         # so it does not belong in the sweep an interruption performs.
         pending = self._push_context_on_bot_stopped_speaking
         await super().reset()
-        self._push_context_on_bot_stopped_speaking = pending
+        if self._keeps_pending():
+            self._push_context_on_bot_stopped_speaking = pending
+
+    async def push_context_frame(self, direction: FrameDirection = FrameDirection.DOWNSTREAM):
+        # The model is upstream. A downstream push -- an interrupted utterance
+        # being recorded -- tells it nothing, so it cannot count as the delivery.
+        pending = self._push_context_on_bot_stopped_speaking
+        await super().push_context_frame(direction)
+        if direction is not FrameDirection.UPSTREAM and self._keeps_pending():
+            self._push_context_on_bot_stopped_speaking = pending
 
     async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
         await super().process_frame(frame, direction)
-        # Realtime rows only. A cascade row re-runs inference from the context on
-        # the user half's own turn-end push, which carries the result anyway;
-        # pushing again there would answer the same turn twice.
         if (
             self._push_context_on_bot_stopped_speaking
-            and self._realtime_service_mode
+            and self._keeps_pending()
             and isinstance(frame, UserStoppedSpeakingFrame)
         ):
             logger.debug(

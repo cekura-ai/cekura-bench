@@ -1624,8 +1624,10 @@ class TestEveryRowIsCheckedWhetherOrNotItLooksWrong:
 
 class TestAToolResultReachesTheModelThatAskedForIt:
     """A realtime service learns what a tool returned from the context frame the
-    assistant aggregator pushes, and from nothing else. A caller who talks over
-    the agent while that push is waiting must not cost the model the answer."""
+    assistant aggregator pushes upstream, and from nothing else. A caller who
+    talks over the agent while that push is waiting must not cost the model the
+    answer -- otherwise it asks for the same tool again, and the call is scored
+    with a duplicate."""
 
     @staticmethod
     def _assistant(realtime: bool = True):
@@ -1634,62 +1636,165 @@ class TestAToolResultReachesTheModelThatAskedForIt:
         return bot.BenchAggregators(LLMContext([]), realtime_service_mode=realtime).assistant()
 
     @staticmethod
-    async def _pushes_on_turn_end(assistant, waiting: bool) -> list:
-        """Where the assistant's context frames go when a caller's turn ends."""
-        from pipecat.frames.frames import UserStoppedSpeakingFrame
+    def _spy(assistant) -> list:
+        """Record the direction of every context frame the assistant pushes,
+        while still letting the real push run so its bookkeeping happens."""
         from pipecat.processors.frame_processor import FrameDirection
 
         pushed: list = []
+        real = assistant.push_context_frame
 
-        async def record(direction=None):
+        async def record(direction=FrameDirection.DOWNSTREAM):
             pushed.append(direction)
+            await real(direction)
 
         assistant.push_context_frame = record
-        assistant._push_context_on_bot_stopped_speaking = waiting
-        await assistant.process_frame(UserStoppedSpeakingFrame(), FrameDirection.DOWNSTREAM)
         return pushed
 
-    async def test_a_barge_in_does_not_clear_a_result_waiting_to_be_delivered(self):
-        assistant = self._assistant()
-        assistant._push_context_on_bot_stopped_speaking = True
-        await assistant.reset()
-        assert assistant._push_context_on_bot_stopped_speaking is True
+    @staticmethod
+    async def _narrated_tool_call_then_barge_in(assistant) -> None:
+        """The frames a barge-in produces, in the order the pipeline delivers them.
 
-    @pytest.mark.parametrize("waiting, delivered", [(True, 1), (False, 0)])
-    async def test_a_waiting_result_is_delivered_when_the_turn_ends(self, waiting, delivered):
+        The agent narrates while a tool runs, so the result frame reaches the
+        aggregator behind the narration's audio, while the agent is still
+        speaking. The caller then talks over it: the user half announces the
+        turn, broadcasts an interruption, and the transport reports the agent
+        has stopped. The caller's turn ends a moment later."""
+        import dataclasses
+
+        from pipecat.frames.frames import (
+            BotStartedSpeakingFrame,
+            BotStoppedSpeakingFrame,
+            FunctionCallFromLLM,
+            FunctionCallInProgressFrame,
+            FunctionCallResultFrame,
+            FunctionCallsStartedFrame,
+            InterruptionFrame,
+            LLMTextFrame,
+            UserStartedSpeakingFrame,
+            UserStoppedSpeakingFrame,
+        )
         from pipecat.processors.frame_processor import FrameDirection
 
-        pushed = await self._pushes_on_turn_end(self._assistant(), waiting)
-        assert pushed == [FrameDirection.UPSTREAM] * delivered
+        def make(cls, **fields):
+            names = {f.name for f in dataclasses.fields(cls)}
+            return cls(**{k: v for k, v in fields.items() if k in names})
+
+        call = {"function_name": "lookup", "tool_call_id": "call-1", "arguments": {"id": 1}}
+        # What the response-start frame records; that frame needs a running
+        # pipeline's task manager, which a unit test does not have.
+        assistant._assistant_turn_start_timestamp = "t0"
+        frames = [
+            BotStartedSpeakingFrame(),
+            make(LLMTextFrame, text="Let me look that up for you."),
+            make(FunctionCallsStartedFrame, function_calls=[make(FunctionCallFromLLM, **call, context=None)]),
+            make(FunctionCallInProgressFrame, **call, cancel_on_interruption=False),
+            make(FunctionCallResultFrame, **call, result={"found": True}, run_llm=None, properties=None),
+            UserStartedSpeakingFrame(),
+            InterruptionFrame(),
+            BotStoppedSpeakingFrame(),
+            UserStoppedSpeakingFrame(),
+        ]
+        for frame in frames:
+            await assistant.process_frame(frame, FrameDirection.DOWNSTREAM)
+
+    async def test_a_result_interrupted_by_the_caller_is_delivered_once_the_turn_ends(self):
+        from pipecat.processors.frame_processor import FrameDirection
+
+        assistant = self._assistant()
+        pushed = self._spy(assistant)
+        await self._narrated_tool_call_then_barge_in(assistant)
+        # One downstream push records the cut-off narration; exactly one upstream
+        # push tells the model what the tool returned.
+        assert pushed.count(FrameDirection.UPSTREAM) == 1
+        assert pushed[-1] is FrameDirection.UPSTREAM
+        assert assistant._push_context_on_bot_stopped_speaking is False
+        results = [m for m in assistant.context.get_messages() if m.get("role") == "tool"]
+        assert [m.get("tool_call_id") for m in results] == ["call-1"]
 
     async def test_a_cascade_row_leaves_the_delivery_to_the_half_that_owns_it(self):
         """There the user half pushes the context at turn end regardless, so a
         second push here would answer the same turn twice."""
-        assert await self._pushes_on_turn_end(self._assistant(realtime=False), True) == []
+        from pipecat.processors.frame_processor import FrameDirection
+
+        assistant = self._assistant(realtime=False)
+        pushed = self._spy(assistant)
+        await self._narrated_tool_call_then_barge_in(assistant)
+        assert FrameDirection.UPSTREAM not in pushed
+        assert assistant._push_context_on_bot_stopped_speaking is False
 
     async def test_the_framework_still_needs_this(self):
         """The one test that should fail on a framework upgrade.
 
-        This works around a defect: the stock aggregator clears a pending push
-        when the caller interrupts, and never retries it. If that stops being
-        true the workaround is not merely unnecessary, it pushes a second time
-        and the row records an answer the caller never prompted -- so this
-        asserts the defect is still there, and fails loudly when it is not."""
+        This works around a defect: when the caller interrupts, the stock
+        aggregator records the cut-off utterance with a downstream push that
+        clears the pending delivery, then resets, and never retries. If that
+        stops being true the workaround is not merely unnecessary, it pushes a
+        second time and the row records an answer the caller never prompted --
+        so this asserts the defect is still there, and fails loudly when it is
+        not."""
         from pipecat.processors.aggregators.llm_context import LLMContext
         from pipecat.processors.aggregators.llm_response_universal import (
             LLMContextAggregatorPair,
         )
+        from pipecat.processors.frame_processor import FrameDirection
 
         stock = LLMContextAggregatorPair(LLMContext([]), realtime_service_mode=True).assistant()
-        stock._push_context_on_bot_stopped_speaking = True
-        await stock.reset()
-        assert stock._push_context_on_bot_stopped_speaking is False, (
-            "the framework now keeps a pending context push across an interruption; "
+        pushed = self._spy(stock)
+        await self._narrated_tool_call_then_barge_in(stock)
+        assert FrameDirection.UPSTREAM not in pushed, (
+            "the framework now delivers a tool result interrupted by a barge-in; "
             "delete DeliversToolResults and BenchAggregators"
         )
-        assert await self._pushes_on_turn_end(stock, True) == [], (
-            "the framework now delivers a deferred push when the caller's turn ends; "
-            "delete DeliversToolResults and BenchAggregators"
+
+
+class TestAResumedGeminiSessionIsNotToldOldResultsAgain:
+    """The service resumes a dropped connection from a handle the server gave
+    it, so the server still holds every tool result already delivered. The
+    reconnect must not make the next context frame deliver them all again."""
+
+    @staticmethod
+    def _service(service_class):
+        svc = service_class(api_key="unused")
+        svc._completed_tool_calls = {"call-1"}
+        svc._tool_call_id_to_name = {"call-1": "lookup"}
+        connected: list = []
+
+        async def disconnect():  # what the framework's own disconnect does to these
+            svc._completed_tool_calls = set()
+            svc._tool_call_id_to_name = {}
+
+        async def connect(session_resumption_handle=None):
+            connected.append(session_resumption_handle)
+
+        svc._disconnect, svc._connect = disconnect, connect
+        return svc, connected
+
+    async def test_a_resume_keeps_what_was_already_delivered(self):
+        svc, connected = self._service(bot.gemini_service_class())
+        svc._session_resumption_handle = "handle"
+        await svc._reconnect()
+        assert connected == ["handle"]
+        assert svc._completed_tool_calls == {"call-1"}
+        assert svc._tool_call_id_to_name == {"call-1": "lookup"}
+
+    async def test_a_fresh_reconnect_starts_clean_as_before(self):
+        """Without a handle the framework re-seeds the history itself, and marks
+        those results delivered as it goes; nothing to carry over."""
+        svc, connected = self._service(bot.gemini_service_class())
+        await svc._reconnect()
+        assert connected == [None]
+        assert svc._completed_tool_calls == set()
+
+    async def test_the_framework_still_needs_this(self):
+        from pipecat.services.google.gemini_live.llm import GeminiLiveLLMService
+
+        svc, _ = self._service(GeminiLiveLLMService)
+        svc._session_resumption_handle = "handle"
+        await svc._reconnect()
+        assert svc._completed_tool_calls == set(), (
+            "the framework now keeps delivered tool results across a resumed session; "
+            "delete gemini_service_class"
         )
 
 

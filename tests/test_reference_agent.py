@@ -2280,6 +2280,197 @@ class TestAWithdrawnGeminiToolCallIsClosedAndMarked:
         assert trace.as_metadata()["tool_calls_cancelled"] == 0 and rewrites == []
 
 
+class TestAGoodbyeLeftOpenIsClosedForTheAgent:
+    """A model can say goodbye and never hang up. The backstop closes that call
+    -- and only that call -- the same way on every row, and the record says who
+    closed it."""
+
+    @pytest.mark.parametrize("text", [
+        "Great. Thanks for calling the clinic. Take care.",
+        "You're all set. Have a great day!",
+        "Goodbye.",
+        "Alright, bye now.",
+    ])
+    def test_a_turn_ending_on_a_sign_off_is_a_goodbye(self, text):
+        assert bot.is_farewell(text)
+
+    @pytest.mark.parametrize("text", [
+        # A greeting thanks the caller for calling and then asks what they need.
+        "Thank you for calling the clinic, this is Ava. How can I help you today?",
+        "You're welcome. Is there anything else I can help with?",
+        "I'll take care of that booking now.",
+        "Your appointment is booked for Tuesday at ten.",
+    ])
+    def test_a_question_a_task_or_a_result_is_not(self, text):
+        assert not bot.is_farewell(text)
+
+    @pytest.mark.parametrize("text, closes", [
+        ("Bye", True), ("Okay, got it", True), ("Thanks, you too.", True), ("No, that's all. Thanks", True),
+        ("Are you still there", False), ("Wait, can I also reschedule?", False),
+        ("Actually I need to change the time", False), ("What was the confirmation number?", False),
+        ("Okay but I also wanted to ask about my other appointment next week please", False),
+        # Past an acknowledgement's length, only saying outright that they are done counts.
+        ("Perfect, got it. Thank you, that’s all I needed", True),
+        ("Okay great, I think my last appointment was with Doctor Lee sometime in May", False),
+    ])
+    def test_only_a_goodbye_or_an_acknowledgement_answers_one(self, text, closes):
+        assert bot.is_closing_reply(text) is closes
+
+    @staticmethod
+    def _after_goodbye():
+        watch = bot.ClosesAfterAnUnfinishedGoodbye(lambda reason: None)
+        watch.agent_said("Thanks for calling. Take care.", now=10.0)
+        watch._agent_stopped = 10.0
+        return watch
+
+    def test_a_caller_goodbye_into_silence_closes_three_seconds_after_it(self):
+        watch = self._after_goodbye()
+        watch._caller_stopped = 14.0
+        watch.caller_said("Bye")
+        assert not watch.due(16.9)
+        assert watch.due(17.0)
+
+    def test_silence_on_both_sides_closes_after_five_seconds(self):
+        watch = self._after_goodbye()
+        assert not watch.due(14.9)
+        assert watch.due(15.0)
+
+    def test_a_caller_who_asks_something_is_answered_not_hung_up_on(self):
+        watch = self._after_goodbye()
+        watch._caller_stopped = 12.0
+        watch.caller_said("Wait, what was the confirmation number?")
+        assert not watch.due(60.0)
+
+    def test_the_agent_speaking_again_stands_the_backstop_down(self):
+        # A correction after a goodbye is the agent still working.
+        watch = self._after_goodbye()
+        watch._agent_speaking = True
+        assert not watch.due(30.0)
+        watch.agent_said("Sorry, the correct confirmation number is C W nine K two M.", now=31.0)
+        watch._agent_speaking, watch._agent_stopped = False, 32.0
+        assert not watch.due(60.0)
+
+    def test_a_running_tool_or_a_fresh_delegation_holds_it_off(self):
+        watch = self._after_goodbye()
+        watch._tools.add("call_1")
+        assert not watch.due(30.0)
+        watch._tools.clear()
+        watch.delegated(now=14.0)
+        assert not watch.due(17.9), "a backend asked after the goodbye may be closing the call itself"
+        assert watch.due(18.0)
+
+    def test_a_caller_reply_not_yet_transcribed_waits_out_the_silence(self):
+        watch = self._after_goodbye()
+        watch._caller_stopped = 11.0
+        assert not watch.due(14.5), "unknown words are not a goodbye"
+        assert watch.due(15.0)
+
+    def test_an_interrupted_goodbye_is_not_one(self):
+        watch = bot.ClosesAfterAnUnfinishedGoodbye(lambda reason: None)
+        watch.agent_said("Thanks for calling. Take care.", interrupted=True, now=10.0)
+        watch._agent_stopped = 10.0
+        assert not watch.due(60.0)
+
+    async def test_the_frames_of_a_goodbye_left_open_end_the_call_and_name_the_closer(self):
+        import asyncio
+
+        from pipecat.frames.frames import (
+            BotStartedSpeakingFrame, BotStoppedSpeakingFrame, CancelFrame, Frame, StartFrame,
+            TranscriptionFrame, VADUserStartedSpeakingFrame, VADUserStoppedSpeakingFrame,
+        )
+        from pipecat.pipeline.pipeline import Pipeline
+        from pipecat.pipeline.runner import PipelineRunner
+        from pipecat.pipeline.task import PipelineParams, PipelineTask
+        from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
+
+        hangup = bot.HangsUpOnceHeard()
+        hangup.QUIET_SECS = 0.05
+        watch = bot.ClosesAfterAnUnfinishedGoodbye(hangup.hang_up)
+        watch.REPLY_QUIET_SECS, watch.SILENCE_SECS, watch.POLL_SECS = 0.2, 5.0, 0.02
+        ended: list[str] = []
+
+        class Source(FrameProcessor):
+            async def process_frame(self, frame: Frame, direction: FrameDirection):
+                await super().process_frame(frame, direction)
+                if isinstance(frame, StartFrame):
+                    self.create_task(self._run())
+                await self.push_frame(frame, direction)
+
+            async def _run(self):
+                watch.start()
+                await self.push_frame(BotStartedSpeakingFrame())
+                watch.agent_said("Great. Thanks for calling. Take care.")
+                await self.push_frame(BotStoppedSpeakingFrame())
+                await asyncio.sleep(0.05)
+                await self.push_frame(VADUserStartedSpeakingFrame())
+                await asyncio.sleep(0.05)
+                await self.push_frame(VADUserStoppedSpeakingFrame())
+                await self.push_frame(make_frame(TranscriptionFrame, text="Bye", user_id="caller", timestamp="0"))
+
+        class Sink(FrameProcessor):
+            async def process_frame(self, frame: Frame, direction: FrameDirection):
+                await super().process_frame(frame, direction)
+                if isinstance(frame, CancelFrame):
+                    ended.append("cancel")
+                await self.push_frame(frame, direction)
+
+        task = PipelineTask(Pipeline([Source(), hangup, Sink()]), params=PipelineParams(), observers=[watch])
+        try:
+            await asyncio.wait_for(PipelineRunner(handle_sigint=False).run(task), timeout=3)
+        finally:
+            await watch.stop()
+        assert ended == ["cancel"], "the call left open must end"
+        assert watch.fired_at is not None and hangup.reason == "backstop"
+        assert hangup.closed_by == "harness"
+
+    def test_who_closed_the_call_is_on_the_record_and_disclosed_on_every_row(self):
+        import time
+
+        closed = bot.CallNarrator(hangup=SimpleNamespace(
+            hung_up_at=time.monotonic(), left_at=time.monotonic(), closed_by="harness"))
+        closed.caller_turns, closed.agent_turns = 4, 4
+        report = closed.integrity()
+        assert report["checks"] == ["ok"], "a call the backstop closed was still delivered as a call"
+        assert report["closed_by"] == "harness"
+        assert record_for("grok-realtime")["hangup_backstop"] == bot.HANGUP_BACKSTOP
+        tool_closed = bot.HangsUpOnceHeard()
+        tool_closed.reason = "end_call"
+        assert tool_closed.closed_by == "agent"
+
+
+
+class TestEveryRowIsToldTheSameThing:
+    """What the agent should do is said once, in the same words, to every row.
+    The one row with a section of its own is told only how to reach its tools."""
+
+    def test_the_shared_rules_follow_the_definition_prompt(self):
+        told = bot.agent_instructions("AGENT PROMPT")
+        assert told.startswith("AGENT PROMPT\n\n") and told.endswith(bot.SHARED_RULES)
+        assert "confirmation number" in bot.SHARED_RULES and "end the call" in bot.SHARED_RULES
+
+    def test_every_branch_sends_the_shared_rules_and_not_the_bare_definition(self):
+        import re
+
+        source = (AGENT_DIR / "bot.py").read_text()
+        assert "instructions = agent_instructions(server.system_prompt)" in source
+        assert "provider.build(credential, model, voice, instructions, settings)" in source
+        assert "build_cascade(cascade, credential, model, instructions, settings)" in source
+        assert not re.search(r"build(?:_cascade)?\([^)]*server\.system_prompt", source)
+
+    def test_the_live_row_gets_mechanics_not_extra_coaching(self):
+        # Result and goodbye behaviour belongs to the shared rules; repeating it
+        # here would tell one row something the others are not told.
+        section = bot.DELEGATION_PROMPT
+        assert "confirmation number" not in section
+        assert "Do not guess" not in section
+        assert "same turn" not in section
+
+    def test_both_kinds_of_row_carry_the_rules_digest(self):
+        native = record_for("openai-realtime")
+        assert native["shared_rules_sha256"] == bot._digest(bot.SHARED_RULES)
+        assert record_for("gpt-live")["shared_rules_sha256"] == native["shared_rules_sha256"]
+
+
 class TestAHangUpEndsTheCallOnceTheGoodbyeHasPlayed:
     """A hang-up has to reach the caller as a call that ended -- after the
     goodbye has been heard, and not long after.

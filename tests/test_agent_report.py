@@ -107,3 +107,10 @@ class TestEveryTurnIsWrittenOut:
             ("agent_reply_ms", 4.2, 850), ("agent_reply_ms", 11.0, 950), ("agent_endpointing_ms", 4.2, 40),
         ]
         assert {r["run_id"] for r in rows} == {0}
+
+    def test_who_closed_each_call_is_tallied(self):
+        by_agent = record(integrity={"checks": ["ok"], "hangup_tail_ms": 20, "closed_by": "agent"})
+        by_backstop = record(integrity={"checks": ["ok"], "hangup_tail_ms": 20, "closed_by": "harness"})
+        left_open = record(integrity={"checks": ["ok"]})
+        closers = summarize(runs(by_agent, by_backstop, left_open))["rows"][0]["integrity"]["closed_by"]
+        assert closers == {"agent": 1, "harness": 1, "caller_or_timeout": 1}

@@ -25,6 +25,9 @@ Rules, stated once:
   priced call minutes, so long calls weigh as much as they cost. A cost is
   publishable only when every run in the row was priced from verified rates;
   otherwise the row says how many were, and why the rest were not.
+* **Who closed the call is counted.** A call the agent said goodbye to and
+  left open is closed by the harness, the same way on every row; those runs
+  are tallied under ``closed_by`` so the model's miss stays visible.
 * **A flagged run is counted, not dropped.** Integrity checks name runs that
   need looking at before they are scored; the tally is published beside the
   score so an exclusion decided later is visible as one.
@@ -56,7 +59,7 @@ from pricing.cost import load_table, price_call
 CONFIGURATION_FIELDS = (
     "s2s_provider", "s2s_model", "s2s_voice", "stack", "turn_source", "pipeline_sample_rate",
     "agent_definition", "system_prompt_sha256", "first_message_sha256", "tools",
-    "pipecat_version", "cekura_version",
+    "pipecat_version", "cekura_version", "hangup_backstop", "shared_rules_sha256",
 )
 # What a provider row discloses beyond the common fields, by name. Read from the
 # record rather than listed here, because the agent decides what each row owes.
@@ -143,6 +146,7 @@ def _spread(values: Sequence[float]) -> dict[str, Any] | None:
 
 def integrity(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
     flagged = Counter()
+    closed_by = Counter()
     clean = 0
     missing = 0
     tails = []
@@ -154,11 +158,12 @@ def integrity(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
             clean += 1
         else:
             flagged.update(checks)
+        closed_by[(record.get("integrity") or {}).get("closed_by") or "caller_or_timeout"] += 1
         tail = (record.get("integrity") or {}).get("hangup_tail_ms")
         if tail is not None:
             tails.append(tail)
     return {"ok_runs": clean, "flagged_runs": len(records) - clean - missing, "flags": dict(flagged),
-            "runs_without_checks": missing, "hangup_tail_ms": _spread(tails)}
+            "runs_without_checks": missing, "hangup_tail_ms": _spread(tails), "closed_by": dict(closed_by)}
 
 
 def tools(records: Sequence[dict[str, Any]]) -> dict[str, Any]:

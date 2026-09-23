@@ -676,6 +676,11 @@ def _gpt_live(api_key: str, model: str, voice: str, instructions: str, settings:
 # asked, and the call is never ended -- the caller repeats goodbye until the
 # scenario gives up, and the row is charged for every unanswered turn.
 #
+# Only the mechanics live here: that tool steps are the backend's, and when to
+# hand one over. What the agent should *do* -- when to end the call, what not
+# to say before a result is back -- is in ``SHARED_RULES``, which every row
+# receives in the same words, so this row is told nothing the others are not.
+#
 # Tool-agnostic on purpose: it names the kinds of step the definitions ask for
 # rather than any one tool, so the same section serves every agent definition
 # and adds nothing a definition did not already require. It is disclosed on
@@ -708,9 +713,34 @@ Do not delegate to the backend when:
 - you need a brief clarification before you can tell what the caller wants;
 - a simple conversational reply is all the caller needs.
 
-Delegate before giving an answer that depends on backend work. Do not guess \
-the result while waiting.
+Delegate before giving an answer that depends on backend work.
 """
+
+
+# Appended to the agent definition's prompt on every row, native and cascade
+# alike, in the same words. Each rule is already implied by the definitions --
+# read back results, then sign off and end the call -- and models were seen to
+# break both: a booking announced with an invented confirmation number before
+# the tool was called, and a goodbye with no hang-up, leaving the caller in
+# silence. Stated once, for all rows, so a row that needs the reminder is not
+# the only one that gets it. "Ending the call" is a tool step, so a row that
+# reaches its tools through a backend reads it through the section above.
+SHARED_RULES = """\
+# Results and ending the call
+
+- Never say that something is booked, cancelled, saved or confirmed, and never \
+give a confirmation number, until the step that does it has returned its result.
+- Saying goodbye and ending the call are one step: whenever you give your \
+sign-off, end the call in the same turn (or transfer it, if a transfer has been \
+arranged and announced).
+- When the caller says "bye", "goodbye" or "that's all", end the call, even if \
+you have already said goodbye.
+"""
+
+
+def agent_instructions(prompt: str) -> str:
+    """What every row is told: the agent definition's prompt, then ``SHARED_RULES``."""
+    return f"{(prompt or '').rstrip()}\n\n{SHARED_RULES}"
 
 
 def live_instructions(instructions: str) -> str:
@@ -1268,7 +1298,17 @@ class HangsUpOnceHeard(FrameProcessor):
     def hang_up(self, reason: str) -> None:
         """Called by the tool that closes the call. A second close is the same close."""
         if self._task is None:
+            self.reason = reason
             self._task = self.create_task(self._once_quiet(reason))
+
+    reason: str | None = None
+
+    @property
+    def closed_by(self) -> str | None:
+        """Who ended the call: the agent through its own tool, or the backstop after its goodbye."""
+        if self.reason is None:
+            return None
+        return "agent" if self.reason in CALL_CONTROL else "harness"
 
     async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
         await super().process_frame(frame, direction)
@@ -1308,6 +1348,181 @@ class HangsUpOnceHeard(FrameProcessor):
         await super().cleanup()
         if self._task is not None and not self._task.done():
             await self.cancel_task(self._task)
+
+
+# A sign-off, read off the last sentence the agent said and nowhere else, so a
+# greeting that thanks the caller for calling and then asks what they need is
+# not one. "take care of" is a task, not a goodbye.
+_FAREWELL = re.compile(
+    r"\b(good\s?-?bye|bye(?:[\s-]bye|\s+now)?|take care(?!\s+of)|"
+    r"have an? (?:great|good|nice|wonderful|lovely|safe) (?:day|one|afternoon|evening|morning|weekend|night)|"
+    r"thanks?(?: you)? (?:so much )?for calling|enjoy (?:the rest of )?your (?:day|afternoon|evening|weekend))\b"
+)
+# What a caller says back to a goodbye: not a question, and made of closing
+# words -- short when it is only an acknowledgement ("great, thanks"), longer
+# when it says outright that the caller is done ("thank you, that's all I
+# needed"). Anything carrying one of the ``_MORE`` words is the caller starting
+# something new, and the agent owes it an answer.
+_DONE = re.compile(r"\b(bye|goodbye|that's all|that's it|that is all|nothing else|all set)\b")
+_CLOSING_WORDS = re.compile(
+    r"\b(bye|goodbye|thanks|thank you|okay|ok|alright|all right|got it|you too|great|perfect|"
+    r"sounds good|that's all|that's it|nope|no|cheers|take care|have a (?:good|great|nice) (?:day|one))\b"
+)
+_MORE = re.compile(r"\b(wait|actually|one more|also|question|but|another|what|when|where|how|why|can you|could you)\b")
+
+
+def _last_sentence(text: str) -> str:
+    parts = [part.strip() for part in re.split(r"(?<=[.!?])\s+", text.strip()) if part.strip()]
+    return parts[-1] if parts else ""
+
+
+def is_farewell(text: str) -> bool:
+    """The agent's turn ended on a sign-off rather than on a question."""
+    last = _last_sentence(text).lower()
+    return bool(last) and not last.endswith("?") and bool(_FAREWELL.search(last))
+
+
+def is_closing_reply(text: str) -> bool:
+    """The caller answered a goodbye with one, or with an acknowledgement."""
+    said = text.strip().lower().replace("\u2019", "'")
+    if not said or "?" in said or _MORE.search(said):
+        return False
+    words = len(re.findall(r"[a-z']+", said))
+    return (words <= 8 and bool(_CLOSING_WORDS.search(said))) or (words <= 16 and bool(_DONE.search(said)))
+
+
+# Disclosed on every row, because it is the same for every row and a reader has
+# to know the call can end without the model ending it.
+HANGUP_BACKSTOP = "after the agent's goodbye: 3 s after a closing reply from the caller, or 5 s of silence"
+
+
+class ClosesAfterAnUnfinishedGoodbye(BaseObserver):
+    """Ends a call the agent said goodbye to and then left open.
+
+    A goodbye and a hang-up are two decisions, and a model can make the first
+    without the second: it signs off, the caller says goodbye back, and the line
+    goes quiet with nobody left to close it. The caller then waits, asks whether
+    anyone is there, and the scorer counts the silence as an agent that stopped
+    answering -- a finding about dead air the agent's own goodbye had already
+    ended. On a row whose model reaches tools only through a second model, the
+    hang-up is three steps away from the goodbye and each step can be skipped.
+
+    So the call is closed here, the same way for every row, only in the one
+    state where closing it cannot cut anything short: the agent's last turn
+    ended on a sign-off; since then the caller has said nothing, or only
+    something that closes too; the agent is not speaking and no tool is running;
+    and the line has been quiet for ``REPLY_QUIET_SECS`` after the caller's reply
+    or ``SILENCE_SECS`` after the goodbye. Anything the caller says that is not a
+    goodbye, and anything the agent says after it, stands the backstop down --
+    a question after a goodbye is owed an answer, and a correction after one is
+    the agent still working. A delegation to a backend model after the goodbye
+    holds it off for ``DELEGATION_GRACE_SECS``, since that backend may be about to
+    close the call itself.
+
+    The call is closed through the same hang-up as ``end_call``, and the record
+    says who closed it, so a model that never ends its calls is still seen as
+    one: ``end_call`` stays absent from its tool trace.
+    """
+
+    REPLY_QUIET_SECS = 3.0
+    SILENCE_SECS = 5.0
+    DELEGATION_GRACE_SECS = 4.0
+    POLL_SECS = 0.2
+
+    def __init__(self, hang_up: Callable[[str], None]) -> None:
+        super().__init__()
+        self._hang_up = hang_up
+        self._armed = False
+        self._replied = False
+        self._agent_speaking = False
+        self._caller_speaking = False
+        self._agent_stopped: float | None = None
+        self._caller_stopped: float | None = None
+        self._delegated: float | None = None
+        self._tools: set[str] = set()
+        self._task: asyncio.Task | None = None
+        self.fired_at: float | None = None
+
+    # ── what the call reports ────────────────────────────────────────────
+    def agent_said(self, text: str, interrupted: bool = False, now: float | None = None) -> None:
+        now = time.monotonic() if now is None else now
+        farewell = not interrupted and is_farewell(text)
+        if farewell and not self._armed:
+            logger.debug("backstop: the agent signed off; watching for a hang-up")
+        self._armed, self._replied, self._delegated = farewell, False, None
+        self._agent_stopped = self._agent_stopped or now
+
+    def caller_said(self, text: str) -> None:
+        if not self._armed:
+            return
+        if is_closing_reply(text):
+            self._replied = True
+        else:
+            self._armed = False
+            logger.debug("backstop: the caller said more after the goodbye; standing down")
+
+    def delegated(self, now: float | None = None) -> None:
+        if self._armed:
+            self._delegated = time.monotonic() if now is None else now
+
+    async def on_push_frame(self, data: FramePushed) -> None:
+        frame, now = data.frame, time.monotonic()
+        if isinstance(frame, BotStartedSpeakingFrame):
+            self._agent_speaking = True
+        elif isinstance(frame, BotStoppedSpeakingFrame):
+            self._agent_speaking, self._agent_stopped = False, now
+        elif isinstance(frame, VADUserStartedSpeakingFrame):
+            self._caller_speaking = True
+        elif isinstance(frame, VADUserStoppedSpeakingFrame):
+            self._caller_speaking, self._caller_stopped = False, now
+        elif isinstance(frame, TranscriptionFrame):
+            self.caller_said(frame.text)
+        elif isinstance(frame, FunctionCallInProgressFrame):
+            self._tools.add(frame.tool_call_id)
+        elif isinstance(frame, (FunctionCallResultFrame, FunctionCallCancelFrame)):
+            self._tools.discard(frame.tool_call_id)
+
+    # ── the decision ─────────────────────────────────────────────────────
+    def due(self, now: float) -> bool:
+        if not self._armed or self._agent_speaking or self._caller_speaking or self._tools:
+            return False
+        if self._agent_stopped is None:
+            return False
+        deadline = self._agent_stopped + self.SILENCE_SECS
+        if self._caller_stopped is not None and self._caller_stopped > self._agent_stopped:
+            # The caller spoke after the goodbye: time from when they finished.
+            # Until their words arrive they are not known to be a goodbye, so a
+            # reply still in transcription waits out the silence rule instead.
+            quiet = self._caller_stopped + self.REPLY_QUIET_SECS
+            deadline = quiet if self._replied else max(deadline, quiet)
+        if self._delegated is not None:
+            deadline = max(deadline, self._delegated + self.DELEGATION_GRACE_SECS)
+        return now >= deadline
+
+    def start(self) -> None:
+        if self._task is None:
+            self._task = asyncio.get_running_loop().create_task(self._watch())
+
+    async def stop(self) -> None:
+        if self._task is not None and not self._task.done():
+            self._task.cancel()
+            try:
+                await self._task
+            except asyncio.CancelledError:
+                pass
+
+    async def _watch(self) -> None:
+        while True:
+            await asyncio.sleep(self.POLL_SECS)
+            now = time.monotonic()
+            if self.due(now):
+                self.fired_at = now
+                logger.info(
+                    "backstop: the agent said goodbye and left the call open; closing it {}",
+                    "after the caller's goodbye" if self._replied else "after the silence",
+                )
+                self._hang_up("backstop")
+                return
 
 
 def leaves_the_room(transport: BaseTransport) -> Callable[[], Awaitable[None]] | None:
@@ -1697,6 +1912,9 @@ class CallNarrator(BaseObserver):
             report["hangup_tail_ms"] = round(tail * 1000)
             if tail * 1000 > self.HELD_HANGUP_MS:
                 failed.append("hangup_held")
+            # Not a failed check: a call the backstop closed was delivered as a
+            # call. It is the model's miss, and it is named so it can be counted.
+            report["closed_by"] = getattr(self._hangup, "closed_by", None)
 
         # Named rather than counted, because the name is the whole finding: a
         # reader who sees one of these needs to know which invariant broke, and a
@@ -2114,6 +2332,12 @@ def _common_record(server: MockToolServer, settings: Settings) -> dict[str, Any]
         "config_source": settings.source("s2s_provider"),
         "worker_instance": INSTANCE,
         "worker_call": _calls_answered,
+        # The one way a call can end without the model ending it. The same on
+        # every row; see ``ClosesAfterAnUnfinishedGoodbye``.
+        "hangup_backstop": HANGUP_BACKSTOP,
+        # Appended to the definition's prompt for every row, so it is part of
+        # the job and hashed beside it.
+        "shared_rules_sha256": _digest(SHARED_RULES),
     }
 
 
@@ -2412,6 +2636,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
     trace = ToolTrace()
     restatements = RestatementIsNotSpeech()
     hangup = HangsUpOnceHeard(leave=leaves_the_room(transport))
+    instructions = agent_instructions(server.system_prompt)
     name = settings.get("s2s_provider", "openai-realtime")
     cascade = TEXT_MODELS.get(name)
 
@@ -2423,10 +2648,10 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         # line in the log after the thing it was building.
         logger.info("building {} on {}", name, model)
 
-        stt, llm, tts = build_cascade(cascade, credential, model, server.system_prompt, settings)
+        stt, llm, tts = build_cascade(cascade, credential, model, instructions, settings)
         register_tools(llm, server, trace, hangup.hang_up)
         context = LLMContext(
-            [{"role": "system", "content": server.system_prompt}, *opening_messages(server.first_message)],
+            [{"role": "system", "content": instructions}, *opening_messages(server.first_message)],
             tools=build_tools(server),
         )
         aggregators = BenchAggregators(
@@ -2454,7 +2679,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         # See the note in the cascade branch above.
         logger.info("building {} on {}", name, model)
 
-        llm = provider.build(credential, model, voice, server.system_prompt, settings)
+        llm = provider.build(credential, model, voice, instructions, settings)
         register_tools(llm, server, trace, hangup.hang_up)
         context = LLMContext(opening_messages(server.first_message), tools=build_tools(server))
         aggregators = BenchAggregators(
@@ -2487,7 +2712,12 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
     capture_live_audio(llm, meter)
     capture_speech_tokens(llm, meter)
     narrator = CallNarrator(AUDIO_CLOCK, hangup)
-    task, tracer = create_task(pipeline, context, params, runner_args, transport, record, [meter, narrator])
+    backstop = ClosesAfterAnUnfinishedGoodbye(hangup.hang_up)
+    if "on_delegation_created" in getattr(llm, "_event_handlers", {}):
+        # A backend asked for work after the goodbye may be about to hang up.
+        llm.add_event_handler("on_delegation_created", lambda *_: backstop.delegated())
+    observers = [meter, narrator, backstop]
+    task, tracer = create_task(pipeline, context, params, runner_args, transport, record, observers)
     if tracer is not None:
         call_log.hand_to(tracer)
         if realtime:
@@ -2506,6 +2736,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         logger.info(
             "agent said{}: {}", " (interrupted)" if message.interrupted else "", _short(message.content, 500)
         )
+        backstop.agent_said(str(message.content or ""), message.interrupted)
 
     def publish() -> None:
         """Rewrite the run's record with everything known so far.
@@ -2575,6 +2806,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         # Every call opens from the agent, and this first context frame is also
         # what installs the tools on the realtime session.
         logger.info("caller connected; opening the call")
+        backstop.start()
         await task.queue_frames([LLMRunFrame()])
 
     @transport.event_handler("on_client_disconnected")
@@ -2586,6 +2818,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
     try:
         await PipelineRunner(handle_sigint=False).run(task)
     finally:
+        await backstop.stop()
         if tracer is None:
             # Nobody shipped the log; say where the call ended up anyway.
             summarise()

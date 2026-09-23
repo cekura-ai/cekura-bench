@@ -1841,3 +1841,158 @@ class TestARowSaysWhereItDiffersFromTheOthers:
             ).user_turn_strategies
             declared = self._record(key)["divergences"]["interruptions"]
             assert strategies.enable_interruptions is (declared == "pipeline"), key
+
+
+class TestVendorDefaultsAreExplicitAndOnTheRecord:
+    """A setting the vendor applies when nothing is sent is still a setting.
+
+    Three rows were running on values nobody had written down: a reasoning
+    effort, a detector threshold, a pause before answering. Each is now sent
+    explicitly and disclosed, so a record says what was measured without a
+    reader having to know what the vendor's default was that month.
+    """
+
+    def test_no_default_model_is_an_alias(self):
+        for key, provider in bot.PROVIDERS.items():
+            assert "latest" not in provider.default_model, key
+
+    def test_grok_sends_its_reasoning_effort_and_detector_settings(self):
+        provider = bot.PROVIDERS["grok-realtime"]
+        service = provider.build("k", provider.default_model, provider.default_voice, "p", asked())
+        properties = service._settings.session_properties
+        assert properties.reasoning.effort == bot.GROK_REASONING
+        assert properties.turn_detection.type == "server_vad"
+        for name, value in bot.GROK_VAD.items():
+            assert getattr(properties.turn_detection, name) == value, name
+        record = bot.build_record(
+            "grok-realtime", provider, provider.default_model, provider.default_voice,
+            bot.load_agent(asked()), asked(),
+        )
+        assert record["grok_reasoning"] == bot.GROK_REASONING
+        assert "threshold 0.85" in record["grok_vad"]
+
+    def test_nova_sends_its_endpointing_sensitivity(self, monkeypatch):
+        monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "secretpart")
+        provider = bot.PROVIDERS["nova-sonic"]
+        service = provider.build("AKIAEXAMPLE", provider.default_model, provider.default_voice, "p", asked())
+        assert service._settings.endpointing_sensitivity == bot.NOVA_ENDPOINTING
+        record = bot.build_record(
+            "nova-sonic", provider, provider.default_model, provider.default_voice,
+            bot.load_agent(asked()), asked(),
+        )
+        assert record["nova_endpointing"] == bot.NOVA_ENDPOINTING
+
+    def test_the_live_model_is_told_when_to_delegate_and_the_backend_gets_the_prompt(self):
+        provider = bot.PROVIDERS["gpt-live"]
+        service = provider.build("k", provider.default_model, provider.default_voice, "AGENT PROMPT", asked())
+        live = service._settings.system_instruction
+        assert live.startswith("AGENT PROMPT\n\n")
+        assert live.endswith(bot.DELEGATION_PROMPT)
+        assert "ended" in bot.DELEGATION_PROMPT and "transfer" in bot.DELEGATION_PROMPT
+        backend = service._delegation.settings
+        assert backend.system_instruction == "AGENT PROMPT"
+        assert backend.model == bot.backend_model(asked())
+        record = bot.build_record(
+            "gpt-live", provider, provider.default_model, provider.default_voice,
+            bot.load_agent(asked()), asked(),
+        )
+        assert record["prompt_addendum"] == "gpt-live-delegation"
+
+    def test_every_other_row_gets_the_prompt_unchanged(self, monkeypatch):
+        monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "secretpart")
+        for key in ("openai-realtime", "gemini-live", "grok-realtime", "nova-sonic"):
+            provider = bot.PROVIDERS[key]
+            service = provider.build("AKIAEXAMPLE", provider.default_model, provider.default_voice, "AGENT PROMPT", asked())
+            assert service._settings.system_instruction == "AGENT PROMPT", key
+
+    def test_the_record_separates_who_ended_the_turn_from_who_decided_to_answer(self):
+        # Nova runs its own detector over the whole call and answers on it; the
+        # pipeline's local turn only feeds the context. Gemini, with its detector
+        # switched off, answers on the pipeline's word. Same turn_source, different
+        # endpointing -- and the difference is a second and a half of reply time.
+        server = bot.load_agent(asked())
+        nova = bot.build_record("nova-sonic", bot.PROVIDERS["nova-sonic"], "m", "v", server, asked())
+        gemini = bot.build_record("gemini-live", bot.PROVIDERS["gemini-live"], "m", "v", server, asked())
+        assert nova["turn_source"] == "local" and nova["divergences"]["endpointing"] == "provider"
+        assert gemini["turn_source"] == "local" and gemini["divergences"]["endpointing"] == "local"
+
+    def test_a_row_answers_locally_exactly_when_the_service_detector_is_off(self):
+        for key, provider in bot.PROVIDERS.items():
+            assert (provider.answers == "local") is (not provider.service_vad), key
+
+
+class TestAConfigurationReconnectOpensANewGeminiSession:
+    """A resumed session keeps the setup it was opened with, tools included.
+
+    The framework connects before the context carrying the tools arrives and
+    reconnects to apply them. If the server has already issued a resumption
+    handle by then, that reconnect resumes the tool-less session and the model
+    spends the call unable to call anything. The handle is dropped for that one
+    reconnect and kept for every later one.
+    """
+
+    @staticmethod
+    def _service(service_class):
+        return service_class(
+            api_key="k",
+            settings=service_class.Settings(model="models/gemini-3.8-live", system_instruction="p"),
+        )
+
+    def _first_context(self, service_class):
+        import asyncio
+
+        from pipecat.adapters.schemas.function_schema import FunctionSchema
+        from pipecat.adapters.schemas.tools_schema import ToolsSchema
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service = self._service(service_class)
+        service._session_resumption_handle = "handle-from-the-first-connection"
+        seen = {}
+
+        async def reconnect():
+            seen["handle_at_reconnect"] = service._session_resumption_handle
+
+        async def quiet(*_args, **_kwargs):
+            return None
+
+        service._reconnect = reconnect
+        service._process_completed_function_calls = quiet
+        service._create_initial_response = quiet
+        context = LLMContext(
+            [{"role": "assistant", "content": "hello"}],
+            tools=ToolsSchema(standard_tools=[FunctionSchema("t", "d", {}, [])]),
+        )
+        asyncio.run(service._handle_context(context))
+        return seen
+
+    def test_the_first_context_reconnects_without_the_handle(self):
+        seen = self._first_context(bot.gemini_service_class())
+        assert seen["handle_at_reconnect"] is None
+
+    def test_the_framework_still_resumes_there(self):
+        # Tripwire: the day the framework opens a new session for a
+        # configuration change, this override is redundant and should go.
+        from pipecat.services.google.gemini_live.llm import GeminiLiveLLMService
+        seen = self._first_context(GeminiLiveLLMService)
+        assert seen["handle_at_reconnect"] == "handle-from-the-first-connection"
+
+    def test_a_later_reconnect_still_resumes(self):
+        import asyncio
+
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service = self._service(bot.gemini_service_class())
+        service._context = LLMContext([])
+        service._session_resumption_handle = "h"
+        seen = {}
+
+        async def reconnect():
+            seen["handle"] = service._session_resumption_handle
+
+        async def quiet(*_args, **_kwargs):
+            return None
+
+        service._reconnect = reconnect
+        service._process_completed_function_calls = quiet
+        asyncio.run(service._handle_context(LLMContext([])))
+        assert service._session_resumption_handle == "h"

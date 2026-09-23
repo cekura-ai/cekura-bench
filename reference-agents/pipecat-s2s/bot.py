@@ -398,12 +398,31 @@ def gemini_service_class():
     placeholder name. Both are kept across a resume; a reconnect without a
     handle re-seeds the history itself and is left alone.
 
+    The second difference is at the start of the call. The framework opens
+    its connection before the context carrying the tools arrives, then
+    reconnects to apply them -- and reconnects *by resuming* whenever the
+    server has already issued a resumption handle. A resumed session keeps the
+    setup it was opened with, tools included, so the model runs the whole call
+    with no tools, cannot do what its instructions require, and tells the
+    caller the system is having trouble. Whether that happens depends on how
+    fast the server hands out its first handle: the preview model took longer
+    than the framework's start-up, the current one does not. A reconnect made
+    to change the configuration therefore opens a new session here.
+
     Imported lazily like the builders, so a row that never touches this
     provider does not load it.
     """
     from pipecat.services.google.gemini_live.llm import GeminiLiveLLMService
 
     class GeminiResumesQuietly(GeminiLiveLLMService):
+        async def _handle_context(self, context):
+            if not self._context:
+                # The first context is the one that carries the tools, and the
+                # reconnect it triggers exists to apply them. Resuming would
+                # keep the old setup, so the handle is dropped first.
+                self._session_resumption_handle = None
+            await super()._handle_context(context)
+
         async def _reconnect(self):
             resuming = bool(self._session_resumption_handle)
             delivered = set(self._completed_tool_calls)
@@ -455,7 +474,9 @@ def _grok(api_key: str, model: str, voice: str, instructions: str, settings: Set
         AudioConfiguration,
         AudioInput,
         InputAudioTranscription,
+        Reasoning,
         SessionProperties,
+        TurnDetection,
     )
     from pipecat.services.xai.realtime.llm import GrokRealtimeLLMService, GrokRealtimeLLMSettings
 
@@ -466,6 +487,13 @@ def _grok(api_key: str, model: str, voice: str, instructions: str, settings: Set
             system_instruction=instructions,
             session_properties=SessionProperties(
                 voice=voice,
+                # Both are the vendor's own defaults, sent explicitly so the
+                # record can name them. This model reasons before it speaks
+                # unless told not to, and that is a latency the row carries;
+                # the detector's threshold decides how loud the caller must be.
+                # Neither belongs to a default that can move between runs.
+                reasoning=Reasoning(effort=GROK_REASONING),
+                turn_detection=TurnDetection(type="server_vad", **GROK_VAD),
                 # Named rather than defaulted: this provider streams caller
                 # transcripts only under its own transcription model, and leaving
                 # the field unset yields a call with no caller text at all.
@@ -515,11 +543,70 @@ def _gpt_live(api_key: str, model: str, voice: str, instructions: str, settings:
 
     return OpenAILiveLLMService(
         api_key=api_key,
-        settings=OpenAILiveLLMSettings(model=model, system_instruction=instructions, voice=voice),
+        settings=OpenAILiveLLMSettings(
+            model=model, system_instruction=live_instructions(instructions), voice=voice
+        ),
         delegation=OpenAILiveLLMService.ResponsesDelegation(
-            settings=OpenAIResponsesLLMSettings(model=backend_model(settings)),
+            # The backend is the half that does the task, so it gets the
+            # agent's instructions whole. Left unset, it would work from the
+            # tool schemas and the transcript alone -- an agent that had never
+            # read its own prompt.
+            settings=OpenAIResponsesLLMSettings(
+                model=backend_model(settings), system_instruction=instructions
+            ),
         ),
     )
+
+
+# The live model cannot call a function itself; it hands work to the backend
+# when its prompt tells it to, and the vendor's prompting guide has it told in
+# this shape: the two policy lines it recommends verbatim, then what the
+# backend can do, when to hand over, when not to. The
+# agent definitions are written for a model that holds its own tools, so
+# without this section a farewell is just conversation, the backend is never
+# asked, and the call is never ended -- the caller repeats goodbye until the
+# scenario gives up, and the row is charged for every unanswered turn.
+#
+# Tool-agnostic on purpose: it names the kinds of step the definitions ask for
+# rather than any one tool, so the same section serves every agent definition
+# and adds nothing a definition did not already require. It is disclosed on
+# the record as ``prompt_addendum``, because a row whose prompt differs from
+# the others has to say so.
+DELEGATION_PROMPT = """\
+# Working with the backend
+
+Backchannel policy: Use moderate backchannels. Acknowledge naturally without \
+competing with the main response.
+
+Interruption policy: Stop speaking when the user interrupts. Listen to what \
+they say.
+
+You hold the conversation. A backend does every step the instructions above \
+assign to a tool: checking, saving, recording, routing, transferring, and \
+ending the call. You cannot do those yourself.
+
+Backend tools: every tool the instructions above name, plus ending the call \
+and transferring the call.
+
+Delegate to the backend when:
+- a step of the task needs something checked, saved, recorded or routed;
+- the caller confirms or corrects details that a pending step depends on;
+- the caller asks to be transferred, or a transfer has been arranged and announced;
+- the caller says goodbye, asks to hang up, or the conversation has reached \
+its natural end, so that the call can be ended.
+
+Do not delegate to the backend when:
+- you need a brief clarification before you can tell what the caller wants;
+- a simple conversational reply is all the caller needs.
+
+Delegate before giving an answer that depends on backend work. Do not guess \
+the result while waiting.
+"""
+
+
+def live_instructions(instructions: str) -> str:
+    """The agent's prompt as the live model receives it: unchanged, then the section above."""
+    return f"{instructions.rstrip()}\n\n{DELEGATION_PROMPT}"
 
 
 def _nova_sonic(credential: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
@@ -537,7 +624,13 @@ def _nova_sonic(credential: str, model: str, voice: str, instructions: str, sett
     """
     from pipecat.services.aws.nova_sonic.llm import AWSNovaSonicLLMService, AWSNovaSonicLLMSettings
 
-    nova_settings = AWSNovaSonicLLMSettings(model=model, system_instruction=instructions, voice=voice)
+    # The vendor's recommended default, sent explicitly so the record can name
+    # it: this is how long the service waits after the caller stops before it
+    # answers, and the row's reply time carries all of it.
+    nova_settings = AWSNovaSonicLLMSettings(
+        model=model, system_instruction=instructions, voice=voice,
+        endpointing_sensitivity=NOVA_ENDPOINTING,
+    )
     return AWSNovaSonicLLMService(
         access_key_id=credential,
         secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
@@ -580,9 +673,11 @@ def backend_model(settings: Settings) -> str:
 
     Pinned rather than left to the API's own default, for the same reason every
     other version here is pinned: a backend that changes underneath a run makes
-    two results incomparable without either of them looking wrong.
+    two results incomparable without either of them looking wrong. The default
+    is the model the vendor's own guide says to start from; a smaller backend
+    is a cost row and is named as such by the session.
     """
-    return settings.get("s2s_backend_model", "gpt-5.4-mini")
+    return settings.get("s2s_backend_model", "gpt-5.6-terra")
 
 
 def aws_region(settings: Settings) -> str:
@@ -630,6 +725,14 @@ class Provider:
     # and the record says so, because a row whose turns were decided locally is
     # not measuring the same thing as one whose were not.
     turns: str = "provider"
+    # Who decides *when the model answers*, which is not the same question. A
+    # service that runs its own detector over the audio answers when that
+    # detector says the caller has finished, whatever the pipeline decided
+    # about the turn -- so a row whose turns are local can still carry the
+    # provider's endpointing in its reply time, and the record has to say
+    # which. Only a service whose own detector is switched off answers on the
+    # pipeline's word.
+    answers: str = "provider"
     # Whether this service runs its own voice-activity detection on the audio it
     # is sent. Leaving it on means the whole call has to be streamed for it to
     # listen to, silences included; turning it off means the shared detector
@@ -672,6 +775,20 @@ class Provider:
 # a run can show resolved tools and still carry no speech.
 GROK_TRANSCRIBE_MODEL = "grok-transcribe"
 
+# Vendor defaults, made explicit. Each is a setting the vendor documents as
+# the one it applies when nothing is sent, so sending it changes nothing about
+# the call and everything about whether the record can say what was measured.
+#
+# Grok reasons before it speaks at effort ``high`` unless told ``none``; the
+# vendor says to turn it off when it is not needed, which is a judgement this
+# bench does not make for a vendor. Its detector fires at 0.85 and keeps 333 ms
+# before the onset. Nova Sonic waits 1.75 s of pause at ``MEDIUM`` before it
+# answers (``HIGH`` is 1.5 s, ``LOW`` about 2 s) and calls ``MEDIUM`` the
+# recommended default.
+GROK_REASONING = "high"
+GROK_VAD = {"threshold": 0.85, "prefix_padding_ms": 333}
+NOVA_ENDPOINTING = "MEDIUM"
+
 
 # ``input_rate`` is load-bearing, not a tuning knob. These services do not
 # resample: each base64-encodes the audio frame it is handed and declares a rate
@@ -684,21 +801,36 @@ PROVIDERS: dict[str, Provider] = {
         _openai, 24000, "gpt-realtime-2.1", "marin", ("OPENAI_API_KEY",),
         "pipecat.services.openai.realtime.llm",
     ),
+    # The vendor's current general-availability Live model. The preview it
+    # replaces is the one whose empty control-token turns and mid-call
+    # connection drops are on the vendor's own issue tracker.
     "gemini-live": Provider(
-        _gemini, 16000, "models/gemini-2.5-flash-native-audio-preview-12-2025", "Charon",
+        _gemini, 16000, "models/gemini-3.8-live", "Charon",
         ("GEMINI_API_KEY", "GEMINI_AUTHORIZATION"), "pipecat.services.google.gemini_live.llm",
-        turns="local", service_vad=False, caller_transcription="automatic",
+        turns="local", answers="local", service_vad=False, caller_transcription="automatic",
     ),
+    # Pinned to the versioned name the vendor's ``latest`` alias resolves to
+    # today: an alias is not a configuration. 24 kHz is the rate the vendor
+    # recommends for this service; it accepts 16 kHz too, and ran at it here
+    # until the recommendation was checked.
     "grok-realtime": Provider(
-        _grok, 16000, "grok-voice-latest", "eve", ("XAI_API_KEY",),
+        _grok, 24000, "grok-voice-think-fast-2.0", "eve", ("XAI_API_KEY",),
         "pipecat.services.xai.realtime.llm",
+        discloses=lambda settings: {
+            "grok_reasoning": GROK_REASONING,
+            "grok_vad": "server_vad, " + ", ".join(f"{k} {v}" for k, v in GROK_VAD.items())
+            + ", silence_duration_ms server default",
+        },
     ),
     # GPT-Live is the exception to the paragraph above: it resamples what it is
     # handed. The rate is still declared, so the record says what was sent.
     "gpt-live": Provider(
         _gpt_live, 24000, "gpt-live-1", "marin", ("OPENAI_API_KEY",),
         "pipecat.services.openai.live.llm",
-        discloses=lambda settings: {"s2s_backend_model": backend_model(settings)},
+        discloses=lambda settings: {
+            "s2s_backend_model": backend_model(settings),
+            "prompt_addendum": "gpt-live-delegation",
+        },
         interruptions=False, caller_transcription="automatic",
     ),
     # Nova Sonic listens at 16 kHz and speaks at 24 kHz. The pipeline runs at the
@@ -706,7 +838,10 @@ PROVIDERS: dict[str, Provider] = {
     "nova-sonic": Provider(
         _nova_sonic, 16000, "amazon.nova-2-sonic-v1:0", "matthew", ("AWS_ACCESS_KEY_ID",),
         "pipecat.services.aws.nova_sonic.llm",
-        discloses=lambda settings: {"aws_region": aws_region(settings)},
+        discloses=lambda settings: {
+            "aws_region": aws_region(settings),
+            "nova_endpointing": NOVA_ENDPOINTING,
+        },
         turns="local", caller_transcription="automatic",
     ),
     # Qwen listens at 16 kHz and speaks at 24 kHz, and no framework service
@@ -1581,9 +1716,11 @@ def build_record(provider_key: str, provider: "Provider", model: str, voice: str
         # makes the unit being compared "this service under this arrangement"
         # rather than an unqualified provider name.
         "divergences": {
-            # Whose detector decided the caller had finished, and so which
-            # service's endpointing the reply figure includes.
-            "endpointing": provider.turns,
+            # Whose detector decided the caller had finished *for the model*,
+            # and so whose endpointing the reply figure includes. Not the same
+            # as ``turn_source`` above: a service that runs its own detector
+            # answers on it even where the pipeline decided the turn.
+            "endpointing": provider.answers,
             # Whether the service ran its own detector over the audio as well.
             "service_vad": "on" if provider.service_vad else "off",
             # Who stops the agent when the caller talks over it.
@@ -2316,7 +2453,7 @@ def warm() -> None:
         try:
             importlib.import_module(module)
         except Exception as exc:  # noqa: BLE001 -- the builder will raise this again, in context
-            logger.warning("could not pre-import {} for {}: {}", module, name, exc)
+            logger.warning("could not pre-import {}: {}", module, exc)
 
     # The speech detector loads a model into an inference session the first time
     # one is constructed, and one is constructed per call. Building a throwaway

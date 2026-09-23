@@ -37,7 +37,7 @@ laptop work unchanged and lets a deployment carry a default:
 | `s2s_provider` | `openai-realtime` | native: also `gemini-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
 | `s2s_model` | provider default | pin it for a reproducible run |
 | `s2s_voice` | provider default | |
-| `s2s_backend_model` | `gpt-5.4-mini` | `gpt-live` only, see below |
+| `s2s_backend_model` | `gpt-5.6-terra` | `gpt-live` only, see below |
 | `aws_region` | `us-west-2` | `nova-sonic` only; must be a region serving the model *and* granted to the credentials |
 | `qwen_region` | `singapore` | `qwen-realtime` only; also `beijing` |
 | `qwen_workspace_id` | **required for `qwen-realtime`** | names the Alibaba workspace whose endpoint answers |
@@ -122,7 +122,41 @@ a backend rather than for anything about the model.
 
 So the backend is named, pinned, and written into every build record. Its row
 is not comparable with a single model's row without that name, and its cost is
-two models' cost rather than one.
+two models' cost rather than one. The default is the backend the vendor's own
+guide says to start from; a smaller one is a cost row, named by the session.
+
+The live model cannot call a function itself, and it hands work over only when
+its prompt says to. The agent definitions are written for a model that holds
+its own tools, so this row's prompt carries one extra section, in the shape the
+vendor's prompting guide prescribes: what the backend can do, when to delegate
+(a step needs a record checked or saved, a transfer, a goodbye so the call can
+be ended), and when not to. The backend receives the agent's instructions
+whole. The record names the addendum as `prompt_addendum`, because a row whose
+prompt differs from the others has to say so.
+
+## Three vendor defaults are sent explicitly
+
+A value the vendor applies when nothing is sent is still a configuration, and
+one that can change under a run. Grok's reasoning effort and detector settings,
+and Nova Sonic's endpointing sensitivity, are therefore sent as the values the
+vendor documents as its defaults and written to the record. Nova's `MEDIUM`
+waits 1.75 s of pause before answering; the record's `endpointing` field says
+`provider` for that row because that wait, not the pipeline's turn decision, is
+what its reply time carries.
+
+## A configuration reconnect opens a new Gemini session
+
+The framework connects to Gemini before the context carrying the tools
+arrives, then reconnects to apply them. Whenever the server has already issued
+a session-resumption handle, that reconnect *resumes* -- and a resumed session
+keeps the setup it was opened with, tools included. The model then runs the
+whole call unable to call anything, and, following its instructions for a
+failed tool, tells the caller the system is having trouble. Whether this
+happens depends on how quickly the server hands out its first handle: the
+preview model took longer than the framework's start-up, the current model does
+not, so moving to it exposed the hole on every call. A reconnect made to change
+the configuration therefore drops the handle and opens a new session here; a
+reconnect after a mid-call error still resumes, as before.
 
 ## Bedrock needs signed credentials, not an API key
 
@@ -166,8 +200,8 @@ wrong speed, which reads as a bad model.
 
 These realtime services **do not resample**. Each base64-encodes the audio frame
 it is handed and declares a rate separately, so the pipeline rate must match what
-the provider expects: 24 kHz for OpenAI Realtime, 16 kHz for Gemini Live and
-Grok. Open it at the wrong rate and the model hears the caller sped up or slowed
+the provider expects: 24 kHz for OpenAI Realtime and Grok (the rate each
+recommends), 16 kHz for Gemini Live and Nova Sonic. Open it at the wrong rate and the model hears the caller sped up or slowed
 down, transcribes the words badly, and the run looks like a model failure when it
 is a wiring failure.
 

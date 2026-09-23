@@ -1,0 +1,22 @@
+{
+  "repeats": 3,
+  "decisions": {
+    "build": "set by the user before launch",
+    "gptLiveReasoning": "set by the user before launch",
+    "rows": "set by the user before launch",
+    "toolCallSuccessMetric": "set by the user before launch"
+  },
+  "expectedRuns": {
+    "appointments\u0000openai-realtime": 177,
+    "medicare\u0000openai-realtime": 69
+  },
+  "models": {
+    "openai-realtime": {
+      "short": "GPT Realtime",
+      "name": "GPT Realtime",
+      "vendor": "OpenAI",
+      "setting": "As recorded"
+    }
+  },
+  "suites": []
+}

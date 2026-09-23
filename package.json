@@ -6,7 +6,10 @@
   "type": "module",
   "scripts": {
     "benchmark": "node bin/run-benchmark.mjs",
-    "validate": "node bin/run-benchmark.mjs --validate"
+    "validate": "node bin/run-benchmark.mjs --validate",
+    "export:s2s": "node bin/export-s2s-results.mjs",
+    "build:s2s": "node bin/build-s2s-benchmark.mjs",
+    "test:s2s-export": "node --test tests/test_s2s_export_contract.mjs"
   },
   "engines": {
     "node": ">=20"

@@ -267,7 +267,7 @@ class TestTools:
         server = bot.load_agent(asked())
         llm = StubLLM()
         trace = bot.ToolTrace()
-        bot.register_tools(llm, server, trace)
+        bot.register_tools(llm, server, trace, lambda _reason: None)
         assert set(llm.registered) == set(server.tool_names) | set(bot.CALL_CONTROL)
 
         call = a_call(arguments={"phone": "2025550188"})
@@ -278,7 +278,7 @@ class TestTools:
         server = bot.load_agent(asked())
         llm = StubLLM()
         trace = bot.ToolTrace()
-        bot.register_tools(llm, server, trace)
+        bot.register_tools(llm, server, trace, lambda _reason: None)
 
         call = a_call(arguments={"phone": "4045550000"})
         await llm.registered["lookup_patient"](call)
@@ -302,7 +302,7 @@ class TestTools:
         server = bot.MockToolServer(suite="appointments")
         llm = StubLLM()
         trace = bot.ToolTrace()
-        bot.register_tools(llm, server, trace)
+        bot.register_tools(llm, server, trace, lambda _reason: None)
         await llm.registered["lookup_patient"](a_call(arguments={"phone": "2025550188"}, llm=None))
         metadata = trace.as_metadata()
         assert metadata["tool_call_count"] == 1
@@ -910,7 +910,7 @@ class TestTheRecordDoesNotDependOnAGoodbye:
         trace = bot.ToolTrace()
         rewrites = []
         trace.on_change = lambda: rewrites.append(len(trace.as_metadata()["tool_calls"]))
-        bot.register_tools(llm, server, trace)
+        bot.register_tools(llm, server, trace, lambda _reason: None)
         await llm.registered["lookup_patient"](a_call(arguments={"phone": "2025550188"}))
         assert rewrites == [1], "the record must be rewritten as each call lands"
 
@@ -2157,76 +2157,235 @@ class TestAWithdrawnGeminiToolCallIsClosedAndMarked:
         assert trace.as_metadata()["tool_calls_cancelled"] == 0 and rewrites == []
 
 
-class TestAHangUpIsNotHeldOpenForHalfAMinute:
-    """A hang-up has to reach the caller as a call that ended.
+class TestAHangUpEndsTheCallOnceTheGoodbyeHasPlayed:
+    """A hang-up has to reach the caller as a call that ended -- after the
+    goodbye has been heard, and not long after.
 
-    The service holds the pipeline's end frame while the bot is still
-    responding. How long it holds it is this row's to set, and why is at the
-    constant these read.
-
-    They read the wait the deferral actually asks for rather than setting one
-    on the instance: an override that stopped reaching the timer would leave
-    every hang-up waiting out the framework's own half minute with a test that
-    patched the instance still passing.
+    Each runs the processor in a real pipeline whose only way to end is the
+    hang-up, so a cancel that is pushed and never acted on fails by not
+    finishing. The waits are shortened on the instance, which is where the
+    processor reads them.
     """
 
-    @staticmethod
-    async def _the_wait_a_held_hang_up_asks_for(service_class):
-        """Defer a real EndFrame in a real service, reading the wait it asks
-        for instead of serving it."""
+    QUIET = 0.05
+    MOST = 0.6
+
+    async def _call(self, script, leave=None, order=None):
+        """Run the script against a live pipeline; return what the hang-up did and when."""
         import asyncio
-        from unittest.mock import patch
+        import time
 
-        from pipecat.clocks.system_clock import SystemClock
-        from pipecat.frames.frames import EndFrame
-        from pipecat.processors.frame_processor import (
-            FrameDirection,
-            FrameProcessorSetup,
+        from pipecat.frames.frames import CancelFrame, EndFrame, Frame, StartFrame
+        from pipecat.pipeline.pipeline import Pipeline
+        from pipecat.pipeline.runner import PipelineRunner
+        from pipecat.pipeline.task import PipelineParams, PipelineTask
+        from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
+
+        hangup = bot.HangsUpOnceHeard(leave=leave)
+        hangup.QUIET_SECS, hangup.MAX_WAIT_SECS = self.QUIET, self.MOST
+        marks: dict[str, float] = {}
+        ended: list[str] = []
+
+        class Source(FrameProcessor):
+            async def process_frame(self, frame: Frame, direction: FrameDirection):
+                await super().process_frame(frame, direction)
+                if isinstance(frame, StartFrame):
+                    self.create_task(self._run())
+                await self.push_frame(frame, direction)
+
+            async def _run(self):
+                await asyncio.sleep(0.02)
+                await script(self, hangup, lambda name: marks.setdefault(name, time.monotonic()))
+
+        class Sink(FrameProcessor):
+            async def process_frame(self, frame: Frame, direction: FrameDirection):
+                await super().process_frame(frame, direction)
+                if isinstance(frame, (CancelFrame, EndFrame)):
+                    ended.append(type(frame).__name__)
+                    if order is not None:
+                        order.append(type(frame).__name__)
+                await self.push_frame(frame, direction)
+
+        task = PipelineTask(Pipeline([Source(), hangup, Sink()]), params=PipelineParams())
+        # Timed rather than trusted: when the wait below runs out, the runner
+        # swallows the cancellation and returns as if the call had ended.
+        await asyncio.wait_for(PipelineRunner(handle_sigint=False).run(task), timeout=5)
+        finished = time.monotonic()
+        assert hangup.hung_up_at is not None, "the call ended without the agent hanging up"
+        assert finished - hangup.hung_up_at < 0.5, "the hang-up was decided and the call stayed up"
+        assert ended == ["CancelFrame"], "the call must end by cancelling, not by draining"
+        marks["hung_up"] = hangup.hung_up_at
+        marks["left"] = hangup.left_at
+        return marks
+
+    async def test_a_goodbye_still_playing_is_heard_out(self):
+        import asyncio
+
+        from pipecat.frames.frames import BotStartedSpeakingFrame, BotStoppedSpeakingFrame
+
+        async def script(source, hangup, mark):
+            await source.push_frame(BotStartedSpeakingFrame())
+            hangup.hang_up("end_call")
+            await asyncio.sleep(0.2)
+            mark("stopped")
+            await source.push_frame(BotStoppedSpeakingFrame())
+
+        marks = await self._call(script)
+        waited = marks["hung_up"] - marks["stopped"]
+        assert self.QUIET <= waited < self.QUIET + 0.1, "hung up mid-goodbye, or sat on the line after it"
+
+    async def test_a_hang_up_after_the_goodbye_ends_the_call_at_once(self):
+        async def script(source, hangup, mark):
+            mark("asked")
+            hangup.hang_up("end_call")
+
+        marks = await self._call(script)
+        assert marks["hung_up"] - marks["asked"] < self.QUIET + 0.1
+
+    async def test_a_reply_that_starts_after_the_hang_up_is_heard_out(self):
+        # A model often answers its own tool's result: "done, goodbye".
+        import asyncio
+
+        from pipecat.frames.frames import BotStartedSpeakingFrame, BotStoppedSpeakingFrame
+
+        async def script(source, hangup, mark):
+            hangup.hang_up("end_call")
+            await asyncio.sleep(self.QUIET / 3)
+            await source.push_frame(BotStartedSpeakingFrame())
+            await asyncio.sleep(0.2)
+            mark("stopped")
+            await source.push_frame(BotStoppedSpeakingFrame())
+
+        marks = await self._call(script)
+        assert marks["hung_up"] >= marks["stopped"] + self.QUIET
+
+    async def test_a_goodbye_that_never_ends_does_not_hold_the_line(self):
+        from pipecat.frames.frames import BotStartedSpeakingFrame
+
+        async def script(source, hangup, mark):
+            await source.push_frame(BotStartedSpeakingFrame())
+            mark("asked")
+            hangup.hang_up("end_call")
+
+        marks = await self._call(script)
+        assert self.MOST <= marks["hung_up"] - marks["asked"] < self.MOST + 0.1
+
+    async def test_the_room_is_left_before_the_teardown_starts(self):
+        # The cancel reaches the transport only after the realtime service has
+        # closed its own connection, seconds on some rows; the caller should not
+        # wait for that.
+        order: list[str] = []
+
+        async def leave():
+            order.append("left")
+
+        async def script(source, hangup, mark):
+            hangup.hang_up("end_call")
+
+        marks = await self._call(script, leave=leave, order=order)
+        assert order == ["left", "CancelFrame"]
+        assert marks["left"] is not None and marks["left"] - marks["hung_up"] < 0.1
+
+    async def test_a_room_that_cannot_be_left_early_still_ends_the_call(self):
+        async def leave():
+            raise RuntimeError("the transport refused")
+
+        async def script(source, hangup, mark):
+            hangup.hang_up("end_call")
+
+        marks = await self._call(script, leave=leave)
+        assert marks["left"] is None, "a failed leave must not be reported as the caller let go"
+
+    def test_only_a_transport_whose_room_is_shared_is_left_early(self):
+        assert bot.leaves_the_room(SimpleNamespace(_client=SimpleNamespace(leave=None))) is None
+
+    def test_the_framework_leaves_a_shared_room_once_and_ignores_a_surplus_release(self):
+        """What leaving early depends on, asserted against the framework itself.
+
+        Both transport halves hold the room through one shared client, the room
+        is left when the second hold is released, and a release with nothing
+        held does nothing -- so the halves' own releases after an early leave
+        are harmless. If either stops being true, leaving early either leaves
+        nothing or leaves twice, and this should fail before a call does."""
+        import asyncio
+        import inspect
+
+        from pipecat.transports.daily import transport as daily
+        from pipecat.utils.shared import acquires, releases
+
+        source = inspect.getsource(daily.DailyTransportClient)
+        assert '@acquires("room")\n    async def join' in source
+        assert '@releases("room")\n    async def leave' in source
+
+        class Room:
+            def __init__(self):
+                self.left = 0
+
+            @acquires("room")
+            async def join(self):
+                pass
+
+            @releases("room")
+            async def leave(self):
+                self.left += 1
+
+        async def early_leave_then_both_halves():
+            room = Room()
+            await room.join()
+            await room.join()
+            await room.leave()
+            await room.leave()  # left here
+            await room.leave()  # the input half's own release
+            await room.leave()  # the output half's
+            return room.left
+
+        assert asyncio.run(early_leave_then_both_halves()) == 1
+
+    def test_the_waits_are_the_ones_a_caller_can_live_with(self):
+        # Long enough to ride out a pause inside a sentence; short enough that a
+        # caller does not hear a line that has gone quiet but not closed.
+        assert 0.5 <= bot.HangsUpOnceHeard.QUIET_SECS <= 1.5
+        assert bot.HangsUpOnceHeard.MAX_WAIT_SECS <= 10
+
+    async def test_both_closing_tools_hang_up_and_are_still_on_the_record(self):
+        server = bot.load_agent(asked())
+        llm = StubLLM()
+        trace = bot.ToolTrace()
+        closed: list[str] = []
+        bot.register_tools(llm, server, trace, closed.append)
+        await llm.registered["end_call"](a_call(function_name="end_call"))
+        await llm.registered["transfer_call"](a_call(function_name="transfer_call"))
+        assert closed == ["end_call", "transfer_call"]
+        assert [c["name"] for c in trace.as_metadata()["tool_calls"]] == ["end_call", "transfer_call"]
+
+    def test_it_sits_where_the_goodbye_is_played(self):
+        # Upstream of the output transport the processor would see the agent's
+        # audio before the caller does, and hang up on a goodbye still queued.
+        import re
+
+        source = (AGENT_DIR / "bot.py").read_text()
+        assert len(re.findall(r"transport\.output\(\),\s*hangup,", source)) == 2, "both rows' pipelines"
+
+    def test_a_hang_up_that_did_not_end_the_call_is_named(self):
+        import time
+
+        held = bot.CallNarrator(hangup=SimpleNamespace(hung_up_at=time.monotonic() - 5.0, left_at=None))
+        held.caller_turns, held.agent_turns = 4, 4
+        report = held.integrity()
+        assert "hangup_held" in report["checks"] and report["hangup_tail_ms"] >= 5000
+
+        prompt = bot.CallNarrator(hangup=SimpleNamespace(hung_up_at=time.monotonic(), left_at=None))
+        prompt.caller_turns, prompt.agent_turns = 4, 4
+        assert prompt.integrity()["checks"] == ["ok"]
+
+        # The caller is let go when the room is left, whatever the teardown does after.
+        left_early = bot.CallNarrator(
+            hangup=SimpleNamespace(hung_up_at=time.monotonic() - 5.0, left_at=time.monotonic() - 4.98)
         )
-        from pipecat.utils.asyncio.task_manager import TaskManager
+        left_early.caller_turns, left_early.agent_turns = 4, 4
+        report = left_early.integrity()
+        assert report["checks"] == ["ok"] and report["hangup_tail_ms"] < 100
 
-        service = gemini_service(service_class, _bot_is_responding=True)
-        await service.setup(FrameProcessorSetup(
-            clock=SystemClock(), task_manager=TaskManager(), pipeline_worker=None,
-        ))
-        released, asked_for = [], []
-
-        async def queue_frame(frame, *_args, **_kwargs):
-            released.append(type(frame).__name__)
-
-        service.queue_frame = queue_frame
-        yield_only = asyncio.sleep
-
-        async def record(seconds, *_args, **_kwargs):
-            asked_for.append(seconds)
-            await yield_only(0)
-
-        with patch("asyncio.sleep", record):
-            await service.process_frame(EndFrame(), FrameDirection.DOWNSTREAM)
-            held = not released
-            for _ in range(5):
-                await yield_only(0)
-        return held, asked_for, released
-
-    async def test_this_row_waits_seconds_where_the_framework_waits_half_a_minute(self):
-        service_class = bot.gemini_service_class()
-        held, asked_for, released = await self._the_wait_a_held_hang_up_asks_for(service_class)
-        assert held, "the end frame went straight through; there was nothing to hold"
-        assert asked_for == [service_class._END_FRAME_DEFERRAL_TIMEOUT_SECS], (
-            "the wait the row sets is not the wait the deferral asks for"
-        )
-        assert 0 < asked_for[0] <= 10, "longer than this and the caller hears a dead line"
-        assert released == ["EndFrame"], "the hang-up was held and never let go"
-
-    async def test_the_framework_still_holds_the_end_frame(self):
-        # The tripwire: if the service stops deferring, or learns that a turn
-        # ending in a tool call will never be reported complete, the row's
-        # shortened wait is dead weight and should go rather than sit there
-        # looking load-bearing.
-        from pipecat.services.google.gemini_live.llm import GeminiLiveLLMService
-
-        held, asked_for, released = await self._the_wait_a_held_hang_up_asks_for(
-            GeminiLiveLLMService
-        )
-        assert held and released == ["EndFrame"]
-        assert asked_for[0] > 10, "the framework's own wait no longer leaves anything to shorten"
+        no_hang_up = bot.CallNarrator(hangup=SimpleNamespace(hung_up_at=None, left_at=None))
+        no_hang_up.caller_turns, no_hang_up.agent_turns = 4, 4
+        assert "hangup_tail_ms" not in no_hang_up.integrity()

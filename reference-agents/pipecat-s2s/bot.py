@@ -37,6 +37,7 @@ Run it::
 
 from __future__ import annotations
 
+import asyncio
 import contextvars
 import hashlib
 import json
@@ -51,7 +52,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Awaitable, Callable
 
 from dotenv import load_dotenv
 from loguru import logger
@@ -63,8 +64,8 @@ from pipecat.frames.frames import (
     BotStartedSpeakingFrame,
     BotStoppedSpeakingFrame,
     CancelFrame,
+    CancelWorkerFrame,
     EndFrame,
-    EndWorkerFrame,
     ErrorFrame,
     Frame,
     FunctionCallCancelFrame,
@@ -419,27 +420,6 @@ def gemini_service_class():
     from pipecat.services.google.gemini_live.llm import GeminiLiveLLMService
 
     class GeminiResumesQuietly(GeminiLiveLLMService):
-        # How long a hang-up may be held back.
-        #
-        # The service defers the pipeline's end frame until its server reports
-        # the turn complete, and gives up after thirty seconds. A turn that
-        # ended in the tool call that closes the call is never reported
-        # complete -- the server is waiting on that very call's result -- so
-        # every hang-up the agent makes from inside a turn waited out the whole
-        # timeout: the agent silent, the line open, the caller still talking
-        # into it, which a transcript reads as an agent that stopped answering
-        # rather than one that hung up. It happened on four of the six calls
-        # measured here that reached a closing tool, three of them for the full
-        # thirty seconds.
-        #
-        # Five seconds is the wait worth keeping. What the deferral protects is
-        # the tail of a turn the server has not finished sending; audio already
-        # sent is queued in the transport downstream of here and drains whether
-        # this session is open or not. Pushing a cancel frame instead does not
-        # work: by then the worker's push queue is blocked behind the very end
-        # frame that is stuck, so the cancel is received and never acted on.
-        _END_FRAME_DEFERRAL_TIMEOUT_SECS = 5.0
-
         async def _handle_server_message(self, message):
             await super()._handle_server_message(message)
             cancellation = getattr(message, "tool_call_cancellation", None)
@@ -1200,6 +1180,117 @@ class DropControlTokens(FrameProcessor):
         await self.push_frame(frame, direction)
 
 
+class HangsUpOnceHeard(FrameProcessor):
+    """Ends the call as soon as the agent's goodbye has been heard.
+
+    A hang-up used to push an end frame, and an end frame closes a pipeline
+    only once every stage has finished its own work: a realtime session sending
+    what it still holds and closing its socket, a service holding the frame for
+    a turn it believes unfinished. On deployed calls that left the line open
+    with the agent deaf for three to four seconds after its goodbye had played,
+    and for thirty on Gemini -- time in which the caller is still talking and a
+    scorer counts every sentence that goes unanswered.
+
+    So a hang-up cancels instead: nothing waits to drain, and the caller sees
+    the agent go. What makes that safe is waiting for the goodbye first, which
+    is why this sits after the output transport, where the agent's audio is
+    actually played. It hangs up once the agent has been quiet for
+    ``QUIET_SECS`` -- long enough for a reply to the tool's own result to begin,
+    and to ride out a pause inside one sentence -- or after ``MAX_WAIT_SECS``
+    whatever the agent is still doing.
+
+    Where the transport allows it the room is left before the cancel is pushed
+    (see ``leaves_the_room``), because the cancel reaches the transport only
+    after the realtime service in front of it has closed its own connection.
+    """
+
+    QUIET_SECS = 1.0
+    MAX_WAIT_SECS = 10.0
+    LEAVE_SECS = 2.0
+
+    def __init__(self, leave: Callable[[], Awaitable[None]] | None = None) -> None:
+        super().__init__()
+        self._leave = leave
+        self._quiet = asyncio.Event()
+        self._quiet.set()
+        self._talking = asyncio.Event()
+        self._task: asyncio.Task | None = None
+        self.hung_up_at: float | None = None
+        self.left_at: float | None = None
+
+    def hang_up(self, reason: str) -> None:
+        """Called by the tool that closes the call. A second close is the same close."""
+        if self._task is None:
+            self._task = self.create_task(self._once_quiet(reason))
+
+    async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
+        await super().process_frame(frame, direction)
+        if isinstance(frame, BotStartedSpeakingFrame):
+            self._quiet.clear()
+            self._talking.set()
+        elif isinstance(frame, BotStoppedSpeakingFrame):
+            self._talking.clear()
+            self._quiet.set()
+        await self.push_frame(frame, direction)
+
+    async def _once_quiet(self, reason: str) -> None:
+        try:
+            async with asyncio.timeout(self.MAX_WAIT_SECS):
+                while True:
+                    await self._quiet.wait()
+                    try:
+                        async with asyncio.timeout(self.QUIET_SECS):
+                            await self._talking.wait()
+                    except TimeoutError:
+                        break
+            outcome = "the agent has finished speaking"
+        except TimeoutError:
+            outcome = f"the agent was still speaking {self.MAX_WAIT_SECS:.0f} s after {reason}"
+        self.hung_up_at = time.monotonic()
+        logger.info("hanging up: {}", outcome)
+        if self._leave is not None:
+            try:
+                async with asyncio.timeout(self.LEAVE_SECS):
+                    await self._leave()
+                self.left_at = time.monotonic()
+            except Exception as exc:  # noqa: BLE001 -- the cancel below still ends the call
+                logger.warning("could not leave the room ahead of the teardown: {!r}", exc)
+        await self.push_frame(CancelWorkerFrame(), FrameDirection.UPSTREAM)
+
+    async def cleanup(self) -> None:
+        await super().cleanup()
+        if self._task is not None and not self._task.done():
+            await self.cancel_task(self._task)
+
+
+def leaves_the_room(transport: BaseTransport) -> Callable[[], Awaitable[None]] | None:
+    """How to leave a call ahead of the pipeline's own teardown, where the transport allows it.
+
+    Both halves of a Daily transport hold the room, and it is left when the
+    second lets go. On a cancel that is the output half, which the cancel
+    reaches only after the realtime service in front of it has closed its own
+    socket: 2.3 to 2.5 s on the three rows that reach their service over a
+    websocket, measured, with the caller on a line the agent had already hung
+    up. So both holds are let go here, and the halves' own releases, when the
+    cancel reaches them, find nothing left to release.
+
+    Any other transport ends with the pipeline.
+    """
+    try:
+        from pipecat.transports.daily.transport import DailyTransport
+    except Exception:  # noqa: BLE001 -- no Daily, nothing to leave early
+        return None
+    if not isinstance(transport, DailyTransport):
+        return None
+    client = transport._client
+
+    async def let_go_of_both_halves() -> None:
+        await client.leave()  # the input half's hold
+        await client.leave()  # the output half's, the one that actually leaves
+
+    return let_go_of_both_halves
+
+
 class RestatementIsNotSpeech(FrameProcessor):
     """A final transcript that restates the turn so far is a restatement, not new speech.
 
@@ -1405,11 +1496,12 @@ class CallNarrator(BaseObserver):
     # holding every frame of a ten-minute call.
     MEMORY = 512
 
-    def __init__(self, clock: "AudioClock | None" = None) -> None:
+    def __init__(self, clock: "AudioClock | None" = None, hangup: HangsUpOnceHeard | None = None) -> None:
         super().__init__()
         # Handed in rather than reached for, so this narrator reports the call it
         # was built for and nothing a previous one left behind.
         self._clock = clock if clock is not None else AudioClock()
+        self._hangup = hangup
         self._seen: dict[int, None] = {}
         self.caller_turns = 0
         self.agent_turns = 0
@@ -1477,6 +1569,7 @@ class CallNarrator(BaseObserver):
     DRIFTING_REPLIES_MS = 2000
     STARVED_AUDIO_MS = 1000
     ANSWERED_SHARE = 0.6
+    HELD_HANGUP_MS = 2000
 
     def integrity(self) -> dict[str, Any]:
         """Whether this call was delivered and answered as a call, not just scored.
@@ -1493,7 +1586,11 @@ class CallNarrator(BaseObserver):
         pipeline received against the time it ran, which should be zero on a live
         call. ``answered`` is how many caller turns drew a reply: a call the agent
         is too far behind to answer still produces turns, and they score as
-        silence.
+        silence. ``hangup_tail_ms`` runs from the moment the agent's hang-up was
+        acted on to the moment the caller was let go: a hang-up that is decided
+        but does not end the call leaves the caller talking into a line nobody
+        is listening on, and the transcript reads that as an agent that stopped
+        answering.
         """
         report: dict[str, Any] = {}
         failed: list[str] = []
@@ -1520,6 +1617,14 @@ class CallNarrator(BaseObserver):
         elif self.agent_turns == 0:
             # Neither side said anything. The row exists and holds no call.
             failed.append("silent_call")
+
+        hung_up_at = self._hangup.hung_up_at if self._hangup is not None else None
+        if hung_up_at is not None:
+            # Until the caller is let go: the room left, or else the call over.
+            tail = (self._hangup.left_at or time.monotonic()) - hung_up_at
+            report["hangup_tail_ms"] = round(tail * 1000)
+            if tail * 1000 > self.HELD_HANGUP_MS:
+                failed.append("hangup_held")
 
         # Named rather than counted, because the name is the whole finding: a
         # reader who sees one of these needs to know which invariant broke, and a
@@ -1720,7 +1825,9 @@ class ToolTrace:
         }
 
 
-def register_tools(llm: LLMService, server: MockToolServer, trace: ToolTrace) -> None:
+def register_tools(
+    llm: LLMService, server: MockToolServer, trace: ToolTrace, hang_up: Callable[[str], None]
+) -> None:
     """Answer every declared tool from the contract's lookup table.
 
     An input the table does not know returns an explicit miss rather than an
@@ -1756,7 +1863,7 @@ def register_tools(llm: LLMService, server: MockToolServer, trace: ToolTrace) ->
         trace.record("end_call", params.arguments or {}, True, result, requested, "exact",
                      tool_call_id=params.tool_call_id)
         await params.result_callback(result)
-        await params.llm.push_frame(EndWorkerFrame())
+        hang_up("end_call")
 
     async def transfer_call(params: FunctionCallParams) -> None:
         requested = trace._offset()
@@ -1765,7 +1872,7 @@ def register_tools(llm: LLMService, server: MockToolServer, trace: ToolTrace) ->
         trace.record("transfer_call", params.arguments or {}, True, result, requested, "exact",
                      tool_call_id=params.tool_call_id)
         await params.result_callback(result)
-        await params.llm.push_frame(EndWorkerFrame())
+        hang_up("transfer_call")
 
     for name in server.tool_names:
         llm.register_function(name, handler)
@@ -2230,6 +2337,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
     server = load_agent(settings)
     trace = ToolTrace()
     restatements = RestatementIsNotSpeech()
+    hangup = HangsUpOnceHeard(leave=leaves_the_room(transport))
     name = settings.get("s2s_provider", "openai-realtime")
     cascade = TEXT_MODELS.get(name)
 
@@ -2242,7 +2350,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         logger.info("building {} on {}", name, model)
 
         stt, llm, tts = build_cascade(cascade, credential, model, server.system_prompt, settings)
-        register_tools(llm, server, trace)
+        register_tools(llm, server, trace, hangup.hang_up)
         context = LLMContext(
             [{"role": "system", "content": server.system_prompt}, *opening_messages(server.first_message)],
             tools=build_tools(server),
@@ -2257,7 +2365,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         # transcript travels *downstream*, so anything after the aggregator would
         # see it only once the aggregator had already appended it.
         stages = [transport.input(), stt, restatements, aggregators.user(), llm, tts, transport.output(),
-                  DropControlTokens(), aggregators.assistant()]
+                  hangup, DropControlTokens(), aggregators.assistant()]
         rate = CASCADE_RATE
         realtime = False
     else:
@@ -2273,7 +2381,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         logger.info("building {} on {}", name, model)
 
         llm = provider.build(credential, model, voice, server.system_prompt, settings)
-        register_tools(llm, server, trace)
+        register_tools(llm, server, trace, hangup.hang_up)
         context = LLMContext(opening_messages(server.first_message), tools=build_tools(server))
         aggregators = BenchAggregators(
             context,
@@ -2290,7 +2398,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         # transcript travels *upstream* from the realtime service, so it must be
         # trimmed on the service side to reach the filter before the aggregator.
         stages = [transport.input(), aggregators.user(), restatements, llm, transport.output(),
-                  DropControlTokens(), aggregators.assistant()]
+                  hangup, DropControlTokens(), aggregators.assistant()]
         rate = provider.input_rate
         realtime = True
 
@@ -2303,7 +2411,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
     )
     meter = UsageMeter()
     capture_live_audio(llm, meter)
-    narrator = CallNarrator(AUDIO_CLOCK)
+    narrator = CallNarrator(AUDIO_CLOCK, hangup)
     task, tracer = create_task(pipeline, context, params, runner_args, transport, record, [meter, narrator])
     if tracer is not None:
         call_log.hand_to(tracer)

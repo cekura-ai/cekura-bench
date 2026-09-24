@@ -977,12 +977,31 @@ PROVIDERS: dict[str, Provider] = {
         "pipecat.services.openai.realtime.llm",
         discloses=lambda settings: {"openai_reasoning": OPENAI_REASONING},
     ),
+    # The vendor's smaller tier, on the same service and settings. A row of its
+    # own rather than a model override on the one above, because the row is
+    # what the record, the report and the price table are keyed by: an override
+    # would be reported, and priced, as the larger model.
+    "openai-realtime-mini": Provider(
+        _openai, 24000, "gpt-realtime-2.1-mini", "marin", ("OPENAI_API_KEY",),
+        "pipecat.services.openai.realtime.llm",
+        discloses=lambda settings: {"openai_reasoning": OPENAI_REASONING},
+    ),
     # The vendor's current Live model in its extended-thinking form, which is a
     # separate model id rather than a setting: the plain model refuses a
     # thinking level at all. The preview before both is the one whose empty
     # control-token turns and mid-call drops are on the vendor's issue tracker.
     "gemini-live": Provider(
         _gemini, 16000, "models/gemini-3.8-live-extended-thinking", "Charon",
+        ("GEMINI_API_KEY", "GEMINI_AUTHORIZATION"), "pipecat.services.google.gemini_live.llm",
+        discloses=lambda settings: {"gemini_thinking_level": GEMINI_THINKING},
+        turns="local", results="immediate", service_vad=False,
+        caller_transcription="automatic",
+    ),
+    # The vendor's fast Live tier. Unlike the plain 3.8 model it takes a
+    # thinking level, so it runs at the same named level as the row above, on the
+    # same arrangement; a row of its own for the reason given at the mini row.
+    "gemini-flash-live": Provider(
+        _gemini, 16000, "models/gemini-3.1-flash-live-preview", "Charon",
         ("GEMINI_API_KEY", "GEMINI_AUTHORIZATION"), "pipecat.services.google.gemini_live.llm",
         discloses=lambda settings: {"gemini_thinking_level": GEMINI_THINKING},
         turns="local", results="immediate", service_vad=False,

@@ -35,6 +35,33 @@
         "Caller transcription is billed per minute and the framework drops its usage, so it is not in this figure."
       ]
     },
+    "openai-realtime-mini": {
+      "read_on": "2026-09-24",
+      "verified": true,
+      "source": "https://developers.openai.com/api/docs/pricing",
+      "reasoning_in_output": true,
+      "components": [
+        {
+          "name": "gpt-realtime-2.1-mini",
+          "basis": "per_million_tokens",
+          "requires": [
+            "input_audio_tokens",
+            "output_audio_tokens"
+          ],
+          "rates": {
+            "text_input": 0.6,
+            "text_input_cached": 0.06,
+            "audio_input": 10.0,
+            "audio_input_cached": 0.3,
+            "text_output": 2.4,
+            "audio_output": 20.0
+          }
+        }
+      ],
+      "unmetered": [
+        "Caller transcription is billed per minute and the framework drops its usage, so it is not in this figure."
+      ]
+    },
     "gpt-live": {
       "read_on": "2026-09-23",
       "verified": true,
@@ -72,6 +99,29 @@
       "components": [
         {
           "name": "gemini-3.8-live-extended-thinking",
+          "basis": "per_million_tokens",
+          "requires": [
+            "input_audio_tokens",
+            "output_audio_tokens"
+          ],
+          "rates": {
+            "text_input": 0.75,
+            "audio_input": 3.0,
+            "text_output": 4.5,
+            "audio_output": 12.0
+          }
+        }
+      ],
+      "note": "The vendor lists no cached-input rate for its Live models; a call reporting cached tokens is refused until one is read."
+    },
+    "gemini-flash-live": {
+      "read_on": "2026-09-24",
+      "verified": true,
+      "source": "https://ai.google.dev/gemini-api/docs/pricing",
+      "reasoning_in_output": false,
+      "components": [
+        {
+          "name": "gemini-3.1-flash-live-preview",
           "basis": "per_million_tokens",
           "requires": [
             "input_audio_tokens",

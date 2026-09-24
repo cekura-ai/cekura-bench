@@ -134,6 +134,18 @@ class TestPricingACall:
         assert price.usd == pytest.approx(expected)
         assert price.unmetered, "what the figure leaves out travels with it"
 
+    def test_a_smaller_tier_is_priced_at_its_own_rates(self):
+        # Same service, same usage fields: only the row tells the two apart, so
+        # the row has to carry the smaller model's rates, not the larger one's.
+        mini = price_call("openai-realtime-mini", OPENAI_CALL)
+        expected = (8_264 * 0.6 + 41_536 * 0.06 + 909 * 10 + 1_024 * 0.3 + 742 * 2.4 + 1_316 * 20) / 1e6
+        assert mini.usd == pytest.approx(expected)
+        assert mini.usd < price_call("openai-realtime", OPENAI_CALL).usd
+        # Each row names the model its rates were read for.
+        table = load_table()
+        for row in ("openai-realtime-mini", "gemini-flash-live"):
+            assert table["rows"][row]["components"][0]["name"] in bot.PROVIDERS[row].default_model
+
     def test_reasoning_reported_beside_the_output_is_billed_as_output(self):
         usage = {"usage_reports": 1, "prompt_tokens": 100, "input_audio_tokens": 100,
                  "completion_tokens": 50, "output_audio_tokens": 50, "reasoning_tokens": 30}

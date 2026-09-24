@@ -549,9 +549,12 @@ class TestCascadeCounterparts:
         Nova Sonic and GPT-Live are allowed to stand alone for now -- one is
         credential-blocked and the other delegates to a backend, so its fair
         pairing is a cascade on that same backend rather than a vendor default.
+        A vendor's smaller tier shares its vendor's counterpart: the question it
+        answers is "the cheaper model or the flagship", not "native or cascade".
         """
         paired = {c.counterpart_to for c in bot.TEXT_MODELS.values() if c.counterpart_to}
-        unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live"}
+        tiers = {"openai-realtime-mini", "gemini-flash-live"}
+        unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live"} - tiers
         assert not unpaired, f"native providers with no cascade counterpart: {sorted(unpaired)}"
 
     def test_a_counterpart_names_a_provider_that_exists(self):
@@ -937,7 +940,7 @@ class TestWhoDecidesTheCallersTurns:
     framework's own guidance prescribes for exactly this case.
     """
 
-    SILENT = ("gemini-live", "nova-sonic", "qwen-realtime")
+    SILENT = ("gemini-live", "gemini-flash-live", "nova-sonic", "qwen-realtime")
 
     def test_the_services_that_announce_nothing_are_marked(self):
         for name in self.SILENT:
@@ -2349,8 +2352,10 @@ class TestAResultIsDeliveredWhileTheAgentIsStillSpeaking:
         assert len(before) == 0 and len(after) == 1
 
     def test_the_rows_that_only_forward_a_result_are_the_immediate_ones(self):
-        assert {k for k, p in bot.PROVIDERS.items() if p.results == "immediate"} == {"gemini-live", "nova-sonic"}
-        for key in ("openai-realtime", "grok-realtime"):
+        assert {k for k, p in bot.PROVIDERS.items() if p.results == "immediate"} == {
+            "gemini-live", "gemini-flash-live", "nova-sonic",
+        }
+        for key in ("openai-realtime", "openai-realtime-mini", "grok-realtime"):
             assert bot.PROVIDERS[key].results == "after_speech", key
 
 

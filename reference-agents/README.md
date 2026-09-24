@@ -6,7 +6,7 @@ and run rather than a private deployment.
 
 | Agent | Status |
 |---|---|
-| [`pipecat-s2s/`](pipecat-s2s/) | speech-to-speech over Pipecat — OpenAI Realtime, Gemini Live, Grok |
+| [`pipecat-s2s/`](pipecat-s2s/) | speech-to-speech over Pipecat: OpenAI Realtime (and Mini), GPT-Live, Gemini Live (and Flash), Grok, Nova Sonic, Qwen, plus cascade rows |
 | LiveKit | planned |
 | OpenAI Realtime (SIP/sideband) | planned |
 

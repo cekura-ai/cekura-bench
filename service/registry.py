@@ -69,14 +69,5 @@ PROVIDERS: dict[str, ProviderEntry] = {
     ),
 }
 
-# Verified unavailable or not yet adapted, kept here so a gap is explicit rather
-# than looking like an oversight:
-#   gpt-live-1      -- refused on /v1/realtime; separate product at /v1/live/sessions
-#                      with a delegated backend text model. Needs its own adapter
-#                      and its row must disclose backend cost.
-#   qwen-omni       -- needs a DashScope key. Fireworks cannot serve it as S2S:
-#                      audio inference is deprecated there, Qwen3-Omni is served
-#                      through Chat Completions, and their websocket audio is ASR
-#                      only, which would make it a cascade, not an S2S row.
-#   nova-sonic      -- needs AWS credentials and Bedrock model access.
-PENDING = ("gpt-live-1", "qwen-omni", "nova-sonic")
+# Not adapted here yet: gpt-live-1 (a separate /v1/live product with a delegated
+# backend), qwen-omni (needs a DashScope key) and nova-sonic (needs Bedrock).

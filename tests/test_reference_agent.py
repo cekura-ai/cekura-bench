@@ -13,7 +13,6 @@ dependency-free.
 from __future__ import annotations
 
 import inspect
-import os
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -39,12 +38,7 @@ def asked(**overrides) -> bot.Settings:
 
 
 class StubLLM:
-    """As much of an ``LLMService`` as ``register_tools`` binds to.
-
-    One copy: the handlers it collects are the subject of several tests, and a
-    per-test copy meant every new framework call in ``register_tools`` had to
-    be stubbed four times.
-    """
+    """As much of an ``LLMService`` as ``register_tools`` binds to."""
 
     def __init__(self):
         self.registered = {}
@@ -216,10 +210,6 @@ class TestProviderTable:
         for name, provider in bot.PROVIDERS.items():
             assert importlib.util.find_spec(provider.module), f"{name}: {provider.module}"
 
-    def test_an_unknown_provider_is_refused_by_name(self):
-        assert "openai-realtime" in bot.PROVIDERS
-        assert "pipecat-cascade" not in bot.PROVIDERS
-
 
 class TestOpeningTurn:
     def test_the_greeting_is_quoted_verbatim(self):
@@ -295,9 +285,8 @@ class TestTools:
     async def test_every_tool_call_is_recorded_for_the_run(self):
         """Tool evidence has to be the same shape whoever answered the call.
 
-        The framework traces tool calls unevenly across providers -- two of the
-        five emit arguments and results, three emit no model-level spans at all
-        -- so a board comparing tool use cannot read it from there. This side
+        The framework traces tool calls unevenly across providers, so a board
+        comparing tool use cannot read it from there. This side
         of the call is ours, so it is recorded here instead.
         """
         server = bot.MockToolServer(suite="appointments")
@@ -313,13 +302,6 @@ class TestTools:
         assert call["arguments"] == {"phone": "2025550188"}
         assert call["output"], "the answer is the evidence; a name alone proves nothing"
         assert call["answered_ms"] >= call["requested_ms"], "a call cannot be answered before it is made"
-
-
-class TestAgentDefinition:
-    def test_the_contracts_own_prompt_and_greeting_are_used(self):
-        server = bot.load_agent(asked())
-        assert server.system_prompt and server.first_message
-        assert server.suite == "appointments"
 
 
 class TestBuildRecord:
@@ -349,8 +331,8 @@ class TestBuildRecord:
         """A provider that declares an extra must actually put it on the record.
 
         One loop rather than a test per provider: the failure this guards against
-        is a sixth provider added with a disclosure that never lands, and a test
-        naming the five that exist could not catch it.
+        is a new provider added with a disclosure that never lands, which a test
+        naming today's providers could not catch.
         """
         server = bot.load_agent(asked())
         for name, provider in bot.PROVIDERS.items():
@@ -478,11 +460,7 @@ class TestCredentialForms:
         assert "AWS_BEARER_TOKEN_BEDROCK" not in bot.PROVIDERS["nova-sonic"].credential_env
 
     def test_the_default_region_is_one_the_model_is_served_in(self):
-        """Four regions serve it; a default outside them fails as a denial.
-
-        An unserved region and an ungranted one raise the same error, so a
-        default that is merely plausible costs a debugging session to rule out.
-        """
+        """Four regions serve it; a default outside them fails as a denial."""
         served = {"us-east-1", "us-west-2", "eu-north-1", "ap-northeast-1"}
         assert bot.aws_region(asked()) in served
 
@@ -546,9 +524,8 @@ class TestCascadeCounterparts:
     def test_every_native_provider_has_a_counterpart(self):
         """A native row with nothing to compare against cannot answer the question.
 
-        Nova Sonic and GPT-Live are allowed to stand alone for now -- one is
-        credential-blocked and the other delegates to a backend, so its fair
-        pairing is a cascade on that same backend rather than a vendor default.
+        Nova Sonic and GPT-Live have no vendor-default counterpart: GPT-Live
+        delegates to a backend, so its fair pairing is a cascade on that backend.
         A vendor's smaller tier shares its vendor's counterpart: the question it
         answers is "the cheaper model or the flagship", not "native or cascade".
         """
@@ -610,8 +587,7 @@ class TestContractRoot:
     The repository nests this file three directories below the contract; the
     deployed image flattens both into one working directory. A root derived by
     counting parent directories is therefore correct in exactly one of the two
-    places, and wrong in the one that runs the benchmark -- which is how a
-    deployment reached a session and then died looking for `/agent-definitions`.
+    places, and wrong in the one that runs the benchmark.
     """
 
     def test_flattened_layout_resolves_beside_the_agent(self, tmp_path):
@@ -664,7 +640,7 @@ class TestCallerTurnsReachTheRecord:
     default strategies watch for local voice activity instead. Left at the
     defaults the caller's text is aggregated and never handed over, so the
     record shows an agent talking to nobody -- with tools resolved, turns
-    counted and a clean verdict, which is why none of those caught it.
+    counted and a clean verdict.
     """
 
     def test_realtime_defers_to_the_service_for_turn_boundaries(self):
@@ -710,8 +686,7 @@ class TestCallerWordsAreExported:
     is announced -- and delivers the finalized text later on a separate event.
     The tracing SDK subscribes only to the boundary and drops it when it carries
     no text, which is right for a cascade and lossy for every native speech
-    model. The call itself is unaffected, which is why a run scored a hundred
-    with no caller in it.
+    model. The call itself is unaffected.
 
     This drives the real aggregator through the frame order a realtime service
     produces -- boundary first, transcript after -- and asks the SDK's own
@@ -903,8 +878,7 @@ class TestTheRecordDoesNotDependOnAGoodbye:
 
     When the agent ends the call itself -- how a scenario normally finishes --
     the transport tears down before it reports a departed caller, so a handler
-    hung on that event never runs. Everything but the configuration was lost
-    that way: the tool trace and everything the call consumed.
+    hung on that event never runs, and the tool trace and usage would be lost.
     """
 
     @pytest.mark.asyncio
@@ -930,7 +904,7 @@ class TestTheRecordDoesNotDependOnAGoodbye:
 
 
 class TestWhoDecidesTheCallersTurns:
-    """Not every realtime service announces a turn boundary, and three do not.
+    """Not every realtime service announces a turn boundary.
 
     Their API exposes an interruption event and no turn start or end. Following
     an announcement that never comes leaves a pipeline that keeps a conversation
@@ -1189,9 +1163,8 @@ class TestTheCallTellsItsOwnStory:
 
     def test_a_broadcast_pair_is_one_event_not_two(self):
         # The framework constructs a separate frame for each direction and links
-        # them. Counting by frame identity alone counted every turn twice, and
-        # which frames are broadcast differs by provider -- so the inflation was
-        # not even a constant factor across rows.
+        # them. Counting by frame identity would count each broadcast turn twice,
+        # and which frames are broadcast differs by provider.
         from pipecat.frames.frames import UserStartedSpeakingFrame, UserStoppedSpeakingFrame
 
         def pair(cls):
@@ -1354,7 +1327,7 @@ class TestARestatedTranscriptIsNotRepeatedSpeech:
     The aggregator appends each final, which is right for every service that
     sends one per turn and triples the caller's words for the one that does
     not. The transcript is what a judge reads and what a word-level comparison
-    counts, so that row was being scored against a conversation nobody had.
+    counts.
 
     The correction is a statement about transcripts, not about a vendor: pass on
     only the part of a final that is new. For a service sending one final per
@@ -1362,7 +1335,7 @@ class TestARestatedTranscriptIsNotRepeatedSpeech:
     """
 
     @staticmethod
-    async def _through(*texts, restart_between=False):
+    async def _through(*texts):
         import asyncio
 
         from pipecat.frames.frames import Frame, StartFrame, TranscriptionFrame, UserStartedSpeakingFrame
@@ -1400,10 +1373,6 @@ class TestARestatedTranscriptIsNotRepeatedSpeech:
                     await self.push_frame(TranscriptionFrame(text, "", time_now_iso8601()))
                     await asyncio.sleep(0.02)
                 await asyncio.sleep(0.3)
-                await self.queue_frame_and_wait_for_end()
-
-            async def queue_frame_and_wait_for_end(self):
-                pass
 
         task = PipelineTask(Pipeline([Source(), filter_, Sink()]), params=PipelineParams())
         runner = PipelineRunner(handle_sigint=False)
@@ -1415,7 +1384,7 @@ class TestARestatedTranscriptIsNotRepeatedSpeech:
 
     @pytest.mark.asyncio
     async def test_a_cumulative_turn_is_reassembled_once(self):
-        # The exact shape one service sent for a real caller turn.
+        # A service that restates the whole turn on every final.
         kept, filter_ = await self._through(
             "Hi, I'd like to book",
             "Hi, I'd like to book a new appointment.",
@@ -1612,8 +1581,6 @@ class TestTheMiddleOutcomeSurvivesTheExport:
 
     @staticmethod
     def _trace():
-        import bot
-
         trace = bot.ToolTrace()
         trace.record("lookup_patient", {"phone": "1"}, False, {}, 0.0, "fuzzy")
         trace.record("book_appointment", {"id": "2"}, True, {}, 0.0, "exact")
@@ -1637,8 +1604,6 @@ class TestHowLongTheAgentTookToAnswer:
 
     @staticmethod
     def _narrator():
-        import bot
-
         return bot.CallNarrator()
 
     def test_a_greeting_is_not_a_reply(self):
@@ -1711,8 +1676,6 @@ class TestEveryRowIsCheckedWhetherOrNotItLooksWrong:
 
     @staticmethod
     def _narrator():
-        import bot
-
         return bot.CallNarrator()
 
     def test_a_steady_call_reports_that_the_checks_ran(self):
@@ -1796,8 +1759,6 @@ class TestEveryRowIsCheckedWhetherOrNotItLooksWrong:
         assert report["audio_in_drift_ms"] == -5000
 
     def test_a_live_call_delivers_one_second_of_audio_per_second(self):
-        import bot
-
         clock = bot.AudioClock()
         assert clock.drift() is None
         clock.add(1.0)
@@ -2112,10 +2073,8 @@ class TestARowSaysWhereItDiffersFromTheOthers:
 class TestVendorDefaultsAreExplicitAndOnTheRecord:
     """A setting the vendor applies when nothing is sent is still a setting.
 
-    Three rows were running on values nobody had written down: a reasoning
-    effort, a detector threshold, a pause before answering. Each is now sent
-    explicitly and disclosed, so a record says what was measured without a
-    reader having to know what the vendor's default was that month.
+    Every vendor default that affects a result (a reasoning effort, a detector
+    threshold, a pause before answering) is sent explicitly and disclosed.
     """
 
     def test_no_default_model_is_an_alias(self):

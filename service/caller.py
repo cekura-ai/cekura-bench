@@ -2,8 +2,7 @@
 
 This is a *caller technology*, not a lane. The same state machine drives a
 provider websocket directly (the service bench) or a phone call (the agent bench); determinism of
-the caller and realism of the transport are independent axes, and conflating
-them is what made the earlier design look twice as expensive as it is.
+the caller and realism of the transport are independent axes.
 
 Why not a fixed tape with absolute offsets. For isolated stimulus-response
 probes a tape is fine and we still use one. For anything interactive it is
@@ -26,12 +25,12 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import time
-from dataclasses import dataclass, field
-from typing import Any, Callable, Sequence
+from dataclasses import dataclass
+from typing import Any
 
 from service import events as ev
 from service.adapters.base import SessionClosed, RealtimeAdapter
-from service.audio import SAMPLE_WIDTH, iter_chunks, resample, silence
+from service.audio import SAMPLE_WIDTH, resample
 from service.detector import speech_bounds
 
 CHUNK_MS = 20.0          # pacing granularity, kept well inside detector error
@@ -97,64 +96,6 @@ class Utterance:
             "t_start": None if self.t_start is None else round(self.t_start, 6),
             "t_end": None if self.t_end is None else round(self.t_end, 6),
         }
-
-
-@dataclass(frozen=True)
-class Anchor:
-    """When a turn starts. ``kind`` names the event it hangs off."""
-
-    kind: str = "immediate"          # immediate | agent_quiet | agent_onset | tool_call
-    delay_ms: float = 0.0            # extra wait after the anchor fires
-    gap_ms: float = 300.0            # agent_quiet: how much silence counts as "stopped"
-    tool: str | None = None
-    timeout_s: float = 30.0
-
-    @staticmethod
-    def now(delay_ms: float = 0.0) -> "Anchor":
-        return Anchor("immediate", delay_ms=delay_ms)
-
-    @staticmethod
-    def after_agent(gap_ms: float = 300.0, delay_ms: float = 0.0, timeout_s: float = 30.0) -> "Anchor":
-        """Wait for the agent to finish, the way a polite caller would."""
-        return Anchor("agent_quiet", delay_ms=delay_ms, gap_ms=gap_ms, timeout_s=timeout_s)
-
-    @staticmethod
-    def over_agent(delay_ms: float = 700.0, timeout_s: float = 30.0) -> "Anchor":
-        """Barge in ``delay_ms`` after the agent starts speaking."""
-        return Anchor("agent_onset", delay_ms=delay_ms, timeout_s=timeout_s)
-
-    @staticmethod
-    def after_tool(name: str, delay_ms: float = 0.0, timeout_s: float = 30.0) -> "Anchor":
-        return Anchor("tool_call", delay_ms=delay_ms, tool=name, timeout_s=timeout_s)
-
-
-@dataclass(frozen=True)
-class Turn:
-    """One caller action: wait for the anchor, then play the clip."""
-
-    clip: Clip | None
-    anchor: Anchor = field(default_factory=Anchor)
-    commit: bool = False             # manual mode: declare the boundary at the last sample
-    label: str = ""
-    # Branch on what the agent has done so far; returns extra turns to splice in.
-    branch: Callable[["CallerState"], Sequence["Turn"]] | None = None
-
-
-@dataclass
-class CallerState:
-    """What the caller can see. Passed to branch functions."""
-
-    agent_text: list[str]
-    caller_text: list[str]
-    tool_calls: list[dict[str, Any]]
-    turns_taken: int
-
-    def said(self, *needles: str) -> bool:
-        joined = " ".join(self.agent_text).lower()
-        return any(needle.lower() in joined for needle in needles)
-
-    def called(self, name: str) -> bool:
-        return any(call["name"] == name for call in self.tool_calls)
 
 
 # ── the caller ───────────────────────────────────────────────────────────────
@@ -427,57 +368,3 @@ class BranchingCaller:
                 return False
             await asyncio.sleep(POLL_S)
         return False
-
-    async def wait_tool_call(self, name: str, timeout_s: float) -> bool:
-        deadline = time.monotonic() + timeout_s
-        while time.monotonic() < deadline:
-            if any(call["name"] == name for call in self.adapter.tool_calls):
-                return True
-            await asyncio.sleep(POLL_S)
-        return False
-
-    async def _await_anchor(self, anchor: Anchor) -> bool:
-        fired = True
-        if anchor.kind == "agent_quiet":
-            fired = await self.wait_agent_quiet(anchor.gap_ms, anchor.timeout_s)
-        elif anchor.kind == "agent_onset":
-            fired = await self.wait_agent_onset(anchor.timeout_s)
-        elif anchor.kind == "tool_call" and anchor.tool:
-            fired = await self.wait_tool_call(anchor.tool, anchor.timeout_s)
-        if anchor.delay_ms:
-            await self.wait(anchor.delay_ms)
-        return fired
-
-    # -- running a scenario ----------------------------------------------
-
-    def state(self) -> CallerState:
-        return CallerState(
-            agent_text=list(self.adapter.agent_text),
-            caller_text=list(self.adapter.caller_text),
-            tool_calls=list(self.adapter.tool_calls),
-            turns_taken=len(self.utterances),
-        )
-
-    async def run(self, turns: Sequence[Turn]) -> None:
-        self.start()
-        pending = list(turns)
-        index = 0
-        while pending:
-            turn = pending.pop(0)
-            label = turn.label or (turn.clip.name if turn.clip else "wait")
-            self.log.emit(ev.STEP_START, step=index, label=label, anchor=turn.anchor.kind)
-            fired = await self._await_anchor(turn.anchor)
-            if not fired:
-                self.log.emit(ev.STEP_END, step=index, label=label, anchor_timeout=True)
-                index += 1
-                continue
-            if turn.clip is not None:
-                await self.play(turn.clip, trim_tail=turn.commit)
-            if turn.commit:
-                await self.adapter.commit()
-            if turn.branch is not None:
-                extra = list(turn.branch(self.state()))
-                if extra:
-                    pending = extra + pending
-            self.log.emit(ev.STEP_END, step=index, label=label)
-            index += 1

@@ -22,10 +22,8 @@ caller understood them.
 
 from __future__ import annotations
 
-import json
 import re
-from dataclasses import asdict, dataclass, field
-from pathlib import Path
+from dataclasses import asdict, dataclass
 from typing import Any, Sequence
 
 from mock_tools.verifier import ExpectedCall
@@ -116,15 +114,10 @@ class ScenarioSpec:
         )
 
 
-def load(path: str | Path) -> list[ScenarioSpec]:
-    """Scenarios from a JSON file: a list of ``ScenarioSpec.as_json`` documents."""
-    return [ScenarioSpec.from_json(item) for item in json.loads(Path(path).read_text())]
-
-
 # ── the public v1 set ────────────────────────────────────────────────────────
 #
 # The appointments contract has one patient with no upcoming appointment (James
-# Carter), one with one (Maria Gomez, Wei Chen), one with three (Robert Lane),
+# Carter), two with one (Maria Gomez, Wei Chen), one with three (Robert Lane),
 # one unknown number, and one number whose lookup fails. Each scenario picks the
 # record that makes its expected trace unambiguous.
 
@@ -383,9 +376,6 @@ SCENARIOS: tuple[ScenarioSpec, ...] = (
         note="an existing-member service question routes without any qualification",
     ),
 )
-
-# The clip the "date is full" scenario needs for its first, fully-booked ask.
-FULL_DAY_CLIP = "task.date.july10"
 
 
 def by_id(scenario_id: str, scenarios: Sequence[ScenarioSpec] = SCENARIOS) -> ScenarioSpec:

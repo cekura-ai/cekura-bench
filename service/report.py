@@ -115,7 +115,7 @@ def rate_summary(passes: Sequence[bool]) -> dict[str, Any]:
         "n": len(flags),
         "passed": int(sum(flags)),
         "rate": round(sum(flags) / len(flags), 4),
-        "rate_ci95": None if ci is None else (round(ci[0] / 100.0 if ci[0] > 1 else ci[0], 4), round(ci[1] / 100.0 if ci[1] > 1 else ci[1], 4)),
+        "rate_ci95": None if ci is None else (round(ci[0], 4), round(ci[1], 4)),
     }
 
 

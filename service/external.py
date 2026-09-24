@@ -10,12 +10,11 @@ well than it does.
 So the instrument is checked against a public set with ground-truth answers:
 
     Big Bench Audio -- 1,000 spoken reasoning questions adapted from BIG-bench
-    Hard, MIT licensed, audio included.
-    https://huggingface.co/datasets/ArtificialAnalysis/big_bench_audio
+    Hard, MIT licensed, audio included, hosted on Hugging Face (``DATASET``).
 
 This is **never a published ranking of ours**. It is a single-turn reasoning
-quiz with no interaction in it, and it is the most widely circulated audio set in
-the field, so it is also the most likely to have been trained on.
+quiz with no interaction in it, and, being public, it may already have been
+trained on.
 
 Its value here is that the answers are known and guessing is cheap to price.
 Three of the four categories are binary and the fourth is a count, so an
@@ -181,10 +180,8 @@ class SpokenQuestion:
 
     async def run(self, ctx: ProbeContext) -> ProbeResult:
         await ctx.caller.play(self.clip)
-        # Settle on the response completing, not merely on the audio going quiet.
-        # The transcript this is graded from arrives with the response, which can
-        # be after the last audio chunk -- waiting on silence alone read a
-        # perfectly good answer as having no text in it.
+        # Settle on the response completing, not on the audio going quiet: the
+        # graded transcript can arrive after the last audio chunk.
         if not await ctx.wait_reply(self.settle_ms, timeout_s=self.timeout_s):
             return ProbeResult(self.name, void="agent never finished a reply")
 

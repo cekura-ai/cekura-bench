@@ -52,7 +52,6 @@ class FakeAdapter(RealtimeAdapter):
         self._last_caller_speech: float | None = None
         self._speaker: asyncio.Task | None = None
         self._watchdog: asyncio.Task | None = None
-        self._responses = 0
 
     async def connect(self) -> None:
         self.log.emit(ev.SESSION_OPEN, session_id="fake", model=self.model)
@@ -87,7 +86,6 @@ class FakeAdapter(RealtimeAdapter):
     def _start_reply(self) -> None:
         if self._speaker and not self._speaker.done():
             return
-        self._responses += 1
         self._speaker = asyncio.create_task(self._speak(), name="fake-speak")
 
     async def _endpointer(self) -> None:

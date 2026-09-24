@@ -2,8 +2,8 @@
 
 This module exists to make the central claim checkable rather than merely
 asserted. It imports nothing from the runner, opens no socket, and reads only the
-four files a cell ships: the agent audio, the caller and agent timelines, and the
-event log. If it disagrees with the published number, the published number is
+three files a cell ships: the agent audio, the caller and agent timelines, and
+the event log. If it disagrees with the published number, the published number is
 wrong.
 
     python -m service.recompute data/service/<run>/response_latency-open.book/<config>/<voice>/clean/r1

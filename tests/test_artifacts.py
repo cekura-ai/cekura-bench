@@ -2,9 +2,8 @@
 
 This is the claim the lane rests on: not "trust our harness" but "here is the
 audio, here is when each sample became audible, recompute it yourself". A test
-that only checked the in-memory result would pass happily while the artifacts
-were missing the one thing that makes them measurable, which is exactly what
-happened before per-chunk timestamps were written to disk.
+that only checked the in-memory result would pass while the artifacts were
+missing the one thing that makes them measurable.
 
 Runs against the scripted agent, so it needs no API key and no network.
 """
@@ -96,8 +95,8 @@ class TestTheRecordIsComplete:
 
     A provider run cannot be reproduced later -- the model behind the endpoint
     changes -- so anything missing from the record is not merely inconvenient,
-    it is unrecoverable. These tests pin down the fields that were learned the
-    hard way rather than the whole schema.
+    it is unrecoverable. These tests pin the fields a later reproduction cannot
+    recover rather than the whole schema.
     """
 
     async def test_the_cell_says_what_was_measured_without_the_run_root(self, tmp_path):
@@ -124,7 +123,7 @@ class TestTheRecordIsComplete:
             # its first character means the record is naming files that do not
             # exist -- which reads as clean-ish when it is not.
             assert all(Path(name).name for name in harness["dirty_files"])
-            assert not any(name.startswith(("ane_", "ests/", "in/")) for name in harness["dirty_files"])
+            assert not any(name.startswith(("ervice/", "ests/", "in/")) for name in harness["dirty_files"])
         if (root / "harness.patch").exists():
             assert (root / "harness.patch").read_text().strip(), "an empty patch discloses nothing"
 
@@ -175,7 +174,6 @@ class TestTheRecordStaysARecord:
         provenance, the plan and every cell by megabytes each -- while telling a
         reader nothing the checksum does not.
         """
-        import json
         from dataclasses import dataclass
 
         from service.provenance import describe

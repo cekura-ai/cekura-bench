@@ -37,8 +37,8 @@ laptop work unchanged and lets a deployment carry a default:
 | `s2s_provider` | `openai-realtime` | native: also `openai-realtime-mini`, `gemini-live`, `gemini-flash-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
 | `s2s_model` | provider default | pin it for a reproducible run |
 | `s2s_voice` | provider default | |
-| `s2s_backend_model` | `gpt-5.6-terra` | `gpt-live` only, see below |
-| `aws_region` | `us-west-2` | `nova-sonic` only; must be a region serving the model *and* granted to the credentials |
+| `s2s_backend_model` | `gpt-6-sol` | `gpt-live` only, see below |
+| `aws_region` | `us-west-2` | `nova-sonic` only; must be a region serving the model and granted to the credentials |
 | `qwen_region` | `singapore` | `qwen-realtime` only; also `beijing` |
 | `qwen_workspace_id` | **required for `qwen-realtime`** | names the Alibaba workspace whose endpoint answers |
 | `cascade_tts_voice` | fixed voice id | cascade rows only |
@@ -89,9 +89,8 @@ column that includes it is not defensible.
 
 ## The cascade, for comparison
 
-"Is a native speech model better than the pipeline it replaces?" is the one
-question a mixed board can answer and nothing else can. It is only answerable if
-the two sides differ in one thing, so the cascade is **this same file** — same
+"Is a native speech model better than the pipeline it replaces?" is only
+answerable if the two sides differ in one thing, so the cascade is **this same file** — same
 prompt, same tools, same transport, same greeting — with the speech path
 swapped: speech-to-text, a text model, text-to-speech, in place of one model
 doing all three.
@@ -109,9 +108,9 @@ are like this". All three services are named in every record, because a row
 naming only its text model would hide the two components doing most of what a
 latency column measures.
 
-Two native rows have no counterpart yet. Nova Sonic is credential-blocked, and
-`gpt-live-1` delegates its reasoning to a separate text model, so a fair pairing
-for it is a cascade on *that* model rather than a vendor default.
+Rows without a cascade counterpart: `openai-realtime-mini`, `gemini-flash-live`,
+`gpt-live` and `nova-sonic`. `gpt-live-1` delegates its reasoning to a separate
+text model, so a fair pairing for it is a cascade on *that* model.
 
 ## One provider does not do its own reasoning
 
@@ -154,10 +153,7 @@ arrives, then reconnects to apply them. Whenever the server has already issued
 a session-resumption handle, that reconnect *resumes* -- and a resumed session
 keeps the setup it was opened with, tools included. The model then runs the
 whole call unable to call anything, and, following its instructions for a
-failed tool, tells the caller the system is having trouble. Whether this
-happens depends on how quickly the server hands out its first handle: the
-preview model took longer than the framework's start-up, the current model does
-not, so moving to it exposed the hole on every call. A reconnect made to change
+failed tool, tells the caller the system is having trouble. A reconnect made to change
 the configuration therefore drops the handle and opens a new session here; a
 reconnect after a mid-call error still resumes, as before. The handle is
 dropped inside the reconnect rather than when the context arrives, because the
@@ -236,7 +232,8 @@ wrong speed, which reads as a bad model.
 These realtime services **do not resample**. Each base64-encodes the audio frame
 it is handed and declares a rate separately, so the pipeline rate must match what
 the provider expects: 24 kHz for OpenAI Realtime and Grok (the rate each
-recommends), 16 kHz for Gemini Live and Nova Sonic. Open it at the wrong rate and the model hears the caller sped up or slowed
+recommends), 16 kHz for Gemini Live, Nova Sonic and Qwen (the last two reply at
+24 kHz). GPT-Live is the exception: it resamples what it is given. Open it at the wrong rate and the model hears the caller sped up or slowed
 down, transcribes the words badly, and the run looks like a model failure when it
 is a wiring failure.
 
@@ -300,9 +297,11 @@ caller did, or the pipeline stopped — so it is whole however the call ended:
 | `s2s_provider`, `s2s_model`, `s2s_voice` | what was measured |
 | `pipeline_sample_rate` | these services do not resample; a wrong rate makes the model hear the caller at the wrong speed, which reads as a bad model rather than bad wiring |
 | `agent_definition`, `system_prompt_sha256`, `first_message_sha256`, `tools` | the task, the prompt and the contract the model was given |
-| `tool_calls`, `tool_call_count`, `tool_calls_matched` | what the agent asked of its tools, with arguments, answers and ordering; recorded here rather than read from the framework's spans, which two of the five providers emit and three do not |
+| `tool_calls`, `tool_call_count`, `tool_calls_matched` | what the agent asked of its tools, with arguments, answers and ordering; recorded here rather than read from the framework's spans, which only some providers emit, truncated |
 | `config_source` | whether the session or the image decided the configuration — one deployment answers for every row, so a row that does not say which is a row nobody can place |
 | `worker_instance`, `worker_call` | which worker answered and how many calls it had already answered; the first call on a worker carries any start-up cost the warm-up did not remove |
+| `stack`, `turn_source`, `divergences`, `hangup_backstop`, `shared_rules_sha256`, provider disclosures | how this row is arranged differently from the others |
+| `timing`, `integrity` (with `closed_by`) | reply and endpointing times from the shared detector, and the per-call health checks |
 | `usage` | what the call consumed: tokens split by audio, text and cache, or audio seconds and characters for a cascade, plus the call's length |
 
 A phone call cannot be replayed and the provider endpoint moves underneath us, so
@@ -386,9 +385,8 @@ python local.py inspect ../../data/local-runs/<file>.json  # read it the way the
 `call` prints the room and a second token before it answers: join the room from
 a browser to be the caller, or hand the room and that token to a simulated
 caller. It mints the room itself rather than going through Pipecat's
-development runner, which always names the room it creates — a HIPAA-enabled
-Daily domain refuses a named room, so that runner cannot create one there at
-all. `inspect` checks what a scored run
+development runner, which always names the room it creates, and some Daily
+domains refuse a named room. `inspect` checks what a scored run
 depends on — caller turns present, agent words present, no control tokens,
 tool rows in the transcript matching the record, the record finished, usage
 reported, every log line on the call clock with the framework's DEBUG lines in
@@ -414,10 +412,8 @@ image or the session. Create it once with `pipecat cloud secrets set
 cekura-s2s-secrets --file <env file>` holding the variables in the table above;
 add `CEKURA_API_KEY` and one `CEKURA_AGENT_ID_<DEFINITION>` per platform agent.
 
-## Verified
+## Tests
 
-Driven end to end against OpenAI Realtime with caller audio from the service bench
-corpus: it spoke the contract's greeting verbatim, called `lookup_patient` with
-the caller's number and `check_availability` with the requested date, and both
-hit the published table. Offline tests cover the provider table, the opening
-turn, the tool schema and the handler's answers.
+Offline tests cover the provider table, the opening turn, the tool schema and
+the handler's answers, plus timed pipelines for tool results, reconnects and
+hang-ups.

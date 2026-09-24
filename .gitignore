@@ -3,10 +3,6 @@ node_modules/
 benchmark.config.json
 data/
 *.log
-
-
-# the service bench run artifacts (audio + raw provider frames); releases are published separately.
-data/service/
 .venv/
 __pycache__/
 *.pyc

@@ -1,10 +1,8 @@
 """What a call consumed, and what that costs.
 
-Cost is one of the few columns a benchmark is read for and the only one that
-cannot be recovered afterwards: consumption is reported during the call and then
-it is gone. It does reach the trace store, but that empties after thirty days
-and a board is questioned months later. So it is recorded on the run, and priced
-here, later, from a table that can be corrected without re-running anything.
+Consumption is reported during the call and then it is gone, so it is recorded
+on the run and priced here, later, from a table that can be corrected without
+re-running anything.
 """
 
 from __future__ import annotations

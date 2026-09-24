@@ -353,10 +353,8 @@ class BackchannelTolerance:
 
     The failure this catches is the one every voice agent has: a listener noise
     read as a turn, so the agent stops and answers it. Scored from the *shape of
-    the agent's speech*, not from provider cancellation events -- a cancel that
-    arrives after a reply has already finished is a no-op, and an earlier version
-    of this probe scored one as a failure, which is the sort of thing that turns
-    an instrument artefact into a published ranking.
+    the agent's speech*, not from provider cancellation events: a cancel that
+    arrives after a reply has already finished is a no-op.
 
     Three outcomes, and the void matters as much as the other two: if the agent's
     reply ended before the provider ever registered the backchannel, nothing was

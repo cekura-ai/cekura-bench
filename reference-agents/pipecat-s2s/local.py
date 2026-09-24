@@ -85,9 +85,8 @@ def _room(api_key: str, minutes: int) -> tuple[str, str, str]:
     """A fresh room and two tokens: one for the agent, one for whoever calls it.
 
     The room is created here rather than by Pipecat's development runner, which
-    always names the room it creates. A HIPAA-enabled Daily domain refuses a
-    named room outright, so that runner cannot create one at all on such a
-    domain. Everything else is what it does: an expiring room, an owner token
+    always names the room it creates, and some Daily domains refuse a named
+    room. Everything else is what it does: an expiring room, an owner token
     each side, and the same ``DailyRunnerArguments`` handed to the same
     ``bot()`` the deployment runs.
     """
@@ -230,8 +229,7 @@ def checks_for(payload: dict) -> tuple[list[tuple[str, bool, str]], dict, list, 
 
     users = [row for row in transcript if row.get("role") == "user"]
     # A caller row that opens by repeating its own first words is the mark of a
-    # service that restates the whole turn on every final. It tripled one row's
-    # caller text while the others were clean.
+    # service that restates the whole turn on every final.
     restated = 0
     for row in users:
         words = str(row.get("content") or "").split()
@@ -239,9 +237,7 @@ def checks_for(payload: dict) -> tuple[list[tuple[str, bool, str]], dict, list, 
             restated += 1
     agent_text = [row for row in transcript if row.get("role") == "assistant" and row.get("content")]
     requests = [row for row in transcript if row.get("role") == "assistant" and row.get("tool_calls")]
-    answers = [row for row in transcript if row.get("role") == "tool"]
     requested = [call.get("function", {}).get("name") for row in requests for call in row["tool_calls"]]
-    misses = sum(1 for row in answers if "no_match" in json.dumps(row.get("content", "")))
     control = sum(1 for row in transcript if CONTROL_TOKEN.search(json.dumps(row.get("content") or "")))
     recorded = meta.get("tool_calls") or []
     usage = meta.get("usage") or {}

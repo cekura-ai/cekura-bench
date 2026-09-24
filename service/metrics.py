@@ -13,7 +13,7 @@ single detector error, about +-10 ms on clean audio, rather than one at each end
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Sequence
+from typing import Any
 
 from service import events as ev
 from service.adapters.base import RealtimeAdapter
@@ -90,20 +90,6 @@ def speech_runs(adapter: RealtimeAdapter, gap_ms: float = 250.0) -> list[tuple[f
         else:
             runs.append((start, end))
     return runs
-
-
-def agent_audio_ends_at(adapter: RealtimeAdapter, after_t: float, gap_ms: float = 250.0) -> float | None:
-    """When the stretch of speech that was under way at ``after_t`` finishes.
-
-    Not "the last chunk after ``after_t``": once a caller barges in, the provider
-    usually endpoints them and begins a *fresh* reply a few hundred milliseconds
-    later. Counting that second reply as the tail of the first reports a provider
-    that yielded the floor instantly as one that talked over the caller for the
-    better part of a second -- which is exactly the direction a benchmark must
-    not get wrong, since it turns a good behaviour into a bad score.
-    """
-    runs = [run for run in speech_runs(adapter, gap_ms) if run[0] <= after_t]
-    return runs[-1][1] if runs else None
 
 
 @dataclass(frozen=True)
@@ -213,11 +199,6 @@ def spoke_between(adapter: RealtimeAdapter, start_t: float, end_t: float) -> boo
     return any(start_t < c.t_wall <= end_t for c in adapter.agent_timeline.chunks)
 
 
-def false_triggers(adapter: RealtimeAdapter, start_t: float, end_t: float) -> int:
-    """Responses started while the caller was silent."""
-    return sum(1 for e in adapter.log.events if e.kind == ev.AGENT_AUDIO_START and start_t < e.t <= end_t)
-
-
 def _flatten_usage(payload: dict[str, Any], prefix: str = "") -> dict[str, int]:
     """Every count the provider reports, including the nested breakdowns.
 
@@ -244,13 +225,3 @@ def usage(adapter: RealtimeAdapter) -> dict[str, Any]:
         for key, value in _flatten_usage(event.data.get("usage") or {}).items():
             totals[key] = totals.get(key, 0) + value
     return totals
-
-
-def percentiles(values: Sequence[float], points: Sequence[int] = (50, 90)) -> dict[str, float]:
-    """P50/P90 only until a declared minimum n; tails need samples we do not have yet."""
-    import numpy as np
-
-    clean = [v for v in values if v is not None]
-    if not clean:
-        return {}
-    return {f"p{p}": round(float(np.percentile(clean, p)), 1) for p in points}

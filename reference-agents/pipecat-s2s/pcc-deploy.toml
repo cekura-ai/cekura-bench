@@ -6,13 +6,8 @@
 # run against this service at the same time. What answered a given call is on
 # that call's build record rather than implied by which service it reached.
 #
-# `image` is overridden on the command line, so this file holds only what the
-# deployment itself declares. See README.md.
-#
-#     pcc deploy --agent-name cekura-s2s --image <registry>/cekura-s2s:<tag>
-#
-# The image reference is deliberately not in this file. It names a private
-# registry, and this repository is public.
+# Deployed by deploy.sh as a Pipecat Cloud build from the repository; this file
+# holds only what the deployment itself declares. See README.md.
 
 agent_name = "cekura-s2s"
 secret_set = "cekura-s2s-secrets"

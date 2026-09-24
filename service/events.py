@@ -44,9 +44,6 @@ VAD_SPEECH_END = "vad.speech.end"
 
 CARRIER_MARK = "carrier.mark"                   # a phone leg reached a point we marked in our own audio
 
-STEP_START = "step.start"
-STEP_END = "step.end"
-
 TOOL_CALL = "tool.call"
 TOOL_RESULT = "tool.result"
 RESPONSE_DONE = "response.done"

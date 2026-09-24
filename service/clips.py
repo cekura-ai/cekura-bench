@@ -2,22 +2,19 @@
 
 The caller content is written here because no public dataset can supply it: these
 clips are replies to *our* agent, in *our* scenarios, and a corpus of unrelated
-recordings cannot answer a question the agent has just asked. Public audio is used
-where it genuinely fits and nowhere else -- content-free interaction tokens
-(backchannels, hesitations) where human prosody matters and the words carry no
-meaning, and noise beds.
+recordings cannot answer a question the agent has just asked. Nothing here is
+sampled from public recordings: interaction tokens are rendered like every other
+line, and noise beds are synthesized (``service/audio.py``).
 
 Provenance travels with every clip and therefore with every published cell:
 ``tts:<vendor>/<voice>`` or ``human:<speaker>``. v1 may publish on TTS audio so
 labelled; the human re-record of the same script is the first sensitivity release
-after it. If re-recording moves a ranking, that is a finding worth the delay --
-gating v1 on studio time would not have been.
+after it. If re-recording moves a ranking, that is a finding.
 """
 
 from __future__ import annotations
 
 import json
-import os
 import urllib.error
 import urllib.request
 from dataclasses import asdict, dataclass

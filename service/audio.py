@@ -111,19 +111,11 @@ class AudioTimeline:
             return None
         return chunk.t_wall + (index - chunk.first_sample) / self.rate
 
-    def time_of_ms(self, offset_ms: float) -> float | None:
-        return self.time_of_sample(int(round(offset_ms * self.rate / 1000.0)))
-
     # -- the realtime-player view -----------------------------------------
     #
-    # ``time_of_sample`` says when a sample *could* first be heard: it is the
-    # anchor for onset, where nothing is queued ahead of it. It is the wrong
-    # clock for when speech *ends*. Providers ship audio faster than realtime,
-    # so the last chunk of a reply can arrive seconds before a listener reaches
-    # it, and a reply's end measured from arrival would be credited too early --
-    # which would score a provider that dumps its whole reply in one burst as
-    # having yielded the floor before the listener heard it. The playout view
-    # follows a player that starts each chunk at its arrival or when the previous
+    # ``time_of_sample`` is when a sample could first be heard: the onset anchor.
+    # Providers ship audio faster than realtime, so the end of speech is taken
+    # from a player that starts each chunk at its arrival or when the previous
     # one drains, whichever is later.
 
     def playout_start(self, chunk_index: int) -> float:
@@ -155,12 +147,8 @@ class AudioTimeline:
 
     # -- persistence ------------------------------------------------------
     #
-    # Without this the published artifacts cannot reproduce a published number.
-    # The wav says what the audio was and the event log says what happened, but
-    # only the per-chunk timestamps say *when each sample became audible*, and
-    # every latency in this benchmark is a difference between two of those.
-    # Stored as plain arrays rather than objects: one row per chunk, four numbers,
-    # in the order below.
+    # Per-chunk timestamps are what make a published latency reproducible from
+    # the artifacts: one row per chunk, four numbers, in the order below.
 
     FIELDS = ("seq", "first_sample", "n_samples", "t_wall")
 
@@ -281,9 +269,7 @@ def ulaw_to_pcm(ulaw: bytes) -> bytes:
 # Synthesized rather than sampled, and that is the honest choice here: a noise
 # bed carries no content, so there is nothing a recording would supply that a
 # seeded generator does not, and a generator is reproducible by anyone who reads
-# the code. Recorded beds (cafe, car, street) come in alongside these for
-# realism, as published files with checksums -- they are not a substitute for
-# being able to regenerate the synthetic ones exactly.
+# the code.
 
 def pink_noise(rate: int, duration_ms: float, level_dbfs: float = -30.0, seed: int = 0) -> bytes:
     """1/f noise at a stated RMS level. Deterministic for a given seed."""

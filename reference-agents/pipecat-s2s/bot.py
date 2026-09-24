@@ -393,7 +393,7 @@ def _openai(api_key: str, model: str, voice: str, instructions: str, settings: S
                 reasoning=Reasoning(effort=OPENAI_REASONING),
                 audio=AudioConfiguration(
                     # Asked for, because this service transcribes the caller only
-                    # when told to. See ``CALLER_TRANSCRIPTION`` above the table.
+                    # when told to. See the caller-transcription note above the table.
                     input=AudioInput(transcription=InputAudioTranscription()),
                     output=AudioOutput(voice=voice),
                 ),
@@ -409,22 +409,16 @@ def gemini_service_class():
     The service drops its connection a few times an hour on a server-side
     error and resumes the same session from a handle, so the server keeps the
     conversation. Disconnecting also forgets which tool results have been
-    delivered, so the next context frame sends every result in the call again
-    -- five at a time by the third minute -- into a session that already holds
-    them, and a result still in flight across the gap goes out under a
-    placeholder name. Both are kept across a resume; a reconnect without a
-    handle re-seeds the history itself and is left alone.
+    delivered, so the next context frame would re-send every result into a
+    session that already holds them, and a result in flight across the gap
+    would go out under a placeholder name. Delivered ids and names are kept
+    across a resume; a reconnect without a handle re-seeds the history itself
+    and is left alone.
 
-    The second difference is at the start of the call. The framework opens
-    its connection before the context carrying the tools arrives, then
-    reconnects to apply them -- and reconnects *by resuming* whenever the
-    server has already issued a resumption handle. A resumed session keeps the
-    setup it was opened with, tools included, so the model runs the whole call
-    with no tools, cannot do what its instructions require, and tells the
-    caller the system is having trouble. Whether that happens depends on how
-    fast the server hands out its first handle: the preview model took longer
-    than the framework's start-up, the current one does not. A reconnect made
-    to change the configuration therefore opens a new session here.
+    The framework also connects before the tools arrive, then reconnects to
+    apply them, and resumes if the server has already issued a handle. A
+    resumed session keeps the setup it was opened with, tools included, so a
+    reconnect made to change the configuration opens a new session instead.
 
     Imported lazily like the builders, so a row that never touches this
     provider does not load it.
@@ -448,11 +442,8 @@ def gemini_service_class():
             ask for again. Each id is closed here so no result follows it, the
             pipeline is told the call was cancelled, and the trace marks it.
 
-            The message says only *that* the service withdrew the call. The
-            API reference says it follows a client interruption, but that is
-            the reference's account, not something this harness observed, so
-            nothing here states a cause -- a log a reader assigns fault from
-            must not put words in the service's mouth.
+            The message says only *that* the service withdrew the call, so the
+            log states no cause.
             """
             wanted = set(ids)
             cancelled = await self._cancel_function_call_tasks(
@@ -535,26 +526,12 @@ def _gemini(api_key: str, model: str, voice: str, instructions: str, settings: S
     from google.genai.types import ThinkingConfig
     from pipecat.services.google.gemini_live.llm import GeminiLiveLLMSettings, GeminiVADParams
 
-    # Turned off deliberately, and the reply times on this row depend on it.
-    #
-    # Left on, the service wants an uninterrupted stream to run its own detector
-    # over, so the whole call is sent -- every silence between turns included.
-    # This session falls behind that stream: it answers the first turn in about
-    # three seconds and each later turn several seconds further back, measured
-    # from the caller's speech ending, while the audio leaves here at exactly
-    # real time. The lag is cumulative and only an interruption clears it, so a
-    # late-call turn can be answered half a minute after it was spoken -- long
-    # enough that a scripted caller has moved on and the turn scores as silence.
-    #
-    # Turned off, the caller's turn is announced by the shared detector every
-    # row is measured against, and audio is sent only inside that turn -- with a
-    # short pre-roll the service keeps, so the onset is not clipped. What the
-    # session has to hold then is the speech alone, and the reply time stops
-    # growing: measured over eight turns, flat at one to three seconds.
-    #
-    # It is also what this row claims. ``turns="local"`` in the table below says
-    # the boundary belongs to the shared detector, which is only true with the
-    # service's own detector out of the way.
+    # Service VAD off. With it on, the whole call is streamed, silences
+    # included, and the session falls cumulatively behind: about 3 s on the
+    # first reply, up to half a minute late in a long call. Off, the shared
+    # detector sends audio only inside the caller's turn (the service keeps a
+    # short pre-roll) and replies stay at 1-3 s. It is also what
+    # ``turns="local"`` below claims.
     return gemini_service_class()(
         api_key=api_key,
         settings=GeminiLiveLLMSettings(
@@ -668,24 +645,12 @@ def _gpt_live(api_key: str, model: str, voice: str, instructions: str, settings:
 
 
 # The live model cannot call a function itself; it hands work to the backend
-# when its prompt tells it to, and the vendor's prompting guide has it told in
-# this shape: the two policy lines it recommends verbatim, then what the
-# backend can do, when to hand over, when not to. The
-# agent definitions are written for a model that holds its own tools, so
-# without this section a farewell is just conversation, the backend is never
-# asked, and the call is never ended -- the caller repeats goodbye until the
-# scenario gives up, and the row is charged for every unanswered turn.
-#
-# Only the mechanics live here: that tool steps are the backend's, and when to
-# hand one over. What the agent should *do* -- when to end the call, what not
-# to say before a result is back -- is in ``SHARED_RULES``, which every row
-# receives in the same words, so this row is told nothing the others are not.
-#
-# Tool-agnostic on purpose: it names the kinds of step the definitions ask for
-# rather than any one tool, so the same section serves every agent definition
-# and adds nothing a definition did not already require. It is disclosed on
-# the record as ``prompt_addendum``, because a row whose prompt differs from
-# the others has to say so.
+# when its prompt says to, in the shape the vendor's prompting guide gives.
+# Without this section a farewell is just conversation and the call is never
+# ended. Only the mechanics live here -- which steps go to the backend and when;
+# behaviour rules are in ``SHARED_RULES``, the same for every row. It names
+# kinds of step, not tools, so it serves every agent definition, and it is
+# disclosed on the record as ``prompt_addendum``.
 DELEGATION_PROMPT = """\
 # Working with the backend
 
@@ -718,13 +683,11 @@ Delegate before giving an answer that depends on backend work.
 
 
 # Appended to the agent definition's prompt on every row, native and cascade
-# alike, in the same words. Each rule is already implied by the definitions --
-# read back results, then sign off and end the call -- and models were seen to
-# break both: a booking announced with an invented confirmation number before
-# the tool was called, and a goodbye with no hang-up, leaving the caller in
-# silence. Stated once, for all rows, so a row that needs the reminder is not
-# the only one that gets it. "Ending the call" is a tool step, so a row that
-# reaches its tools through a backend reads it through the section above.
+# alike, in the same words. Each rule is already implied by the definitions
+# (report results only once a tool returns them; sign off, then end the call);
+# stating them once for all rows means no row is the only one reminded.
+# "Ending the call" is a tool step, so a row that reaches its tools through a
+# backend reads it through the section above.
 SHARED_RULES = """\
 # Results and ending the call
 
@@ -822,9 +785,8 @@ def backend_model(settings: Settings) -> str:
 def backend_reasoning(settings: Settings) -> str:
     """How hard that backend reasons.
 
-    The larger backend at medium stalled calls locally -- a reply twenty seconds
-    after a tool result, then a dropped connection -- so the row runs the
-    smaller backend at low until that is understood.
+    Low: a larger backend at medium stalled calls -- a reply twenty seconds
+    after a tool result, then a dropped connection.
     """
     return settings.get("s2s_backend_reasoning", "low")
 
@@ -836,10 +798,8 @@ def aws_region(settings: Settings) -> str:
     scoped by region and a model is served in some regions only, so a record
     naming a different region than the call used would describe a run nobody made.
 
-    The default is a region where the model is served *and* our credentials are
-    granted, verified by opening a real bidirectional stream: the two conditions
-    fail identically from the outside, so a plausible-looking default that
-    satisfies only one costs a debugging session per person who hits it.
+    The default is a region where the model is served. The credentials must
+    also be granted there, and the two failures look identical from outside.
     """
     return settings.get("aws_region", "us-west-2")
 
@@ -862,17 +822,15 @@ class Provider:
     # What this provider must put on the record beyond the common fields. A
     # provider that delegates part of the work, or that can run in more than one
     # place, is not comparable with one that does not unless it says so -- and
-    # declaring it here is what stops a sixth provider being added without it.
+    # declaring it here is what stops a new provider being added without it.
     discloses: Callable[["Settings"], dict[str, str]] = lambda _settings: {}
     # Where the caller's turn boundary comes from. Most of these services decide
     # it on their own server and announce it, and that announcement is what the
     # pipeline should follow -- provider endpointing is part of what a row
-    # measures. Three of them announce nothing at all: their API exposes an
-    # interruption event and no turn start or end, so a pipeline that keeps a
-    # conversation context has to find the boundary itself. Those rows run the
-    # framework's own recommended arrangement, a local detector deciding turns,
-    # and the record says so, because a row whose turns were decided locally is
-    # not measuring the same thing as one whose were not.
+    # measures. Rows marked local (both Gemini rows, with the service's
+    # detector off, Nova Sonic and Qwen) run the framework's recommended
+    # arrangement, a local detector deciding turns, and the record says so,
+    # because a row whose turns were decided locally measures something else.
     turns: str = "provider"
     # When a tool's result is handed to the model, of which there are three
     # cases and the difference between them is the row's behaviour under a
@@ -909,8 +867,8 @@ class Provider:
         about the turn -- so a row whose turns are local can still carry the
         provider's endpointing in its reply time, and the record has to say
         which. Only a service whose own detector is switched off answers on
-        the pipeline's word, which is what makes this derived rather than a
-        seventh thing to set correctly per row.
+        the pipeline's word, which is what makes this derived rather than
+        another thing to set correctly per row.
         """
         return "local" if not self.service_vad else "provider"
     # Whether a caller talking over the agent is this pipeline's business.
@@ -934,7 +892,7 @@ class Provider:
 #
 #   openai-realtime   asked for  -- an input transcription config, default model
 #   grok-realtime     asked for  -- same shape, but only under its own ASR model
-#   qwen-realtime     automatic  -- documented for the audio model; unconfirmed on a call
+#   qwen-realtime     automatic  -- documented for the audio model
 #   gemini-live       automatic  -- the service configures both directions itself
 #   gpt-live          automatic  -- the protocol is transcript-driven throughout
 #   nova-sonic        automatic  -- the service emits caller transcripts natively
@@ -1007,10 +965,8 @@ PROVIDERS: dict[str, Provider] = {
         turns="local", results="immediate", service_vad=False,
         caller_transcription="automatic",
     ),
-    # Pinned to the versioned name the vendor's ``latest`` alias resolves to
-    # today: an alias is not a configuration. 24 kHz is the rate the vendor
-    # recommends for this service; it accepts 16 kHz too, and ran at it here
-    # until the recommendation was checked.
+    # Pinned to the versioned name the vendor's ``latest`` alias resolves to:
+    # an alias is not a configuration. 24 kHz is the vendor's recommended rate.
     "grok-realtime": Provider(
         _grok, 24000, "grok-voice-think-fast-2.0", "eve", ("XAI_API_KEY",),
         "pipecat.services.xai.realtime.llm",
@@ -1049,8 +1005,8 @@ PROVIDERS: dict[str, Provider] = {
         turns="local", results="immediate", caller_transcription="automatic",
     ),
     # Qwen listens at 16 kHz and speaks at 24 kHz, and no framework service
-    # exists for it -- see ``qwen_realtime``. Its audio model transcribes the
-    # caller on its own, as documented; that has not yet been seen on a call.
+    # exists for it -- see ``qwen_realtime``. Its audio model is documented to
+    # transcribe the caller on its own; confirm on a call before publishing it.
     "qwen-realtime": Provider(
         _qwen_realtime, 16000, "qwen-audio-3.0-realtime-plus", "longanqian", ("DASHSCOPE_API_KEY",),
         "qwen_realtime",
@@ -1062,9 +1018,8 @@ PROVIDERS: dict[str, Provider] = {
 
 # ── the cascade, for comparison ──────────────────────────────────────────────
 #
-# "Is a native speech model better than the pipeline it replaces?" is the one
-# question a mixed board can answer and nothing else can. It is only answerable
-# if the two sides differ in one thing. So the cascade is this same file, this
+# "Is a native speech model better than the pipeline it replaces?" is only
+# answerable if the two sides differ in one thing. So the cascade is this same file, this
 # same prompt, these same tools and this same transport, with the speech path
 # swapped: speech-to-text, a text model, text-to-speech, instead of one model
 # doing all three.
@@ -1153,9 +1108,7 @@ TEXT_MODELS: dict[str, TextModel] = {
         _openai_text, "gpt-4.1", ("OPENAI_API_KEY",), "pipecat.services.openai.llm",
     ),
     # Each counterpart is the vendor's current text model at a named level. The
-    # OpenAI row runs the model and effort GPT-Live's backend runs: at high, its
-    # larger models took several seconds to say anything, before the speech path
-    # adds its own time.
+    # OpenAI row runs GPT-Live's backend model and effort (gpt-6-sol, low).
     "cascade-openai": TextModel(
         _openai_responses_text, "gpt-6-sol", ("OPENAI_API_KEY",), "pipecat.services.openai.responses.llm",
         counterpart_to="openai-realtime", reasoning="low",
@@ -1248,18 +1201,10 @@ def build_tools(server: MockToolServer) -> ToolsSchema:
     return ToolsSchema(standard_tools=published + control)
 
 
-# A control token is a tokenizer artifact, not speech. One of these services
-# streams them into the transcript of what it said -- a run of ``<ctrl46>`` and
-# the blank lines around them -- and they reach the record as though the agent
-# had uttered them. Left alone they are scored: a judge reads them as the agent
-# saying something incoherent, and any word-level comparison counts them as
-# words. Removing them takes nothing real away, because there is no audio behind
-# them; the model never said them.
-#
-# Narrow on purpose. Only the documented control-token shape goes, and nothing
-# else about the text is touched -- a filter on a benchmark's transcript is a
-# filter on its evidence, and the moment it starts tidying prose it is editing
-# what is being measured.
+# Tokenizer artifacts (a run of ``<ctrl46>`` and the blank lines around it)
+# that one service streams into its own transcript. No audio lies behind them,
+# but a judge would score them as speech. Only that exact shape is removed;
+# anything broader would be editing the evidence.
 CONTROL_TOKEN = re.compile(r"<ctrl\d+>")
 
 
@@ -1310,16 +1255,9 @@ class DropControlTokens(FrameProcessor):
 class HangsUpOnceHeard(FrameProcessor):
     """Ends the call as soon as the agent's goodbye has been heard.
 
-    A hang-up used to push an end frame, and an end frame closes a pipeline
-    only once every stage has finished its own work: a realtime session sending
-    what it still holds and closing its socket, a service holding the frame for
-    a turn it believes unfinished. On deployed calls that left the line open
-    with the agent deaf for three to four seconds after its goodbye had played,
-    and for thirty on Gemini -- time in which the caller is still talking and a
-    scorer counts every sentence that goes unanswered.
-
-    So a hang-up cancels instead: nothing waits to drain, and the caller sees
-    the agent go. What makes that safe is waiting for the goodbye first, which
+    A hang-up cancels rather than pushing an end frame: an end frame waits for
+    every stage to drain, which left the agent deaf for 3-4 s after its goodbye
+    (about 30 s on Gemini) while the caller was still talking. What makes that safe is waiting for the goodbye first, which
     is why this sits after the output transport, where the agent's audio is
     actually played. It hangs up once the agent has been quiet for
     ``QUIET_SECS`` -- long enough for a reply to the tool's own result to begin,
@@ -1576,8 +1514,7 @@ def leaves_the_room(transport: BaseTransport) -> Callable[[], Awaitable[None]] |
     Both halves of a Daily transport hold the room, and it is left when the
     second lets go. On a cancel that is the output half, which the cancel
     reaches only after the realtime service in front of it has closed its own
-    socket: 2.3 to 2.5 s on the three rows that reach their service over a
-    websocket, measured, with the caller on a line the agent had already hung
+    socket: 2.3 to 2.5 s on websocket services, measured, with the caller on a line the agent had already hung
     up. So both holds are let go here, and the halves' own releases, when the
     cancel reaches them, find nothing left to release.
 
@@ -1675,12 +1612,8 @@ class RestatementIsNotSpeech(FrameProcessor):
 class UsageMeter(BaseObserver):
     """Counts what a call consumed, so the row it produces can carry a price.
 
-    Cost is one of the few columns a benchmark is actually read for, and it is
-    the one that cannot be reconstructed after the fact: the framework reports
-    consumption per call and then the numbers are gone. They do reach the trace
-    store, but that empties after thirty days, and a board is questioned months
-    later -- so a figure that lives only there is a figure we cannot defend on
-    the day someone asks. This records it where the run record keeps it.
+    Recorded on the run because the framework reports consumption per call and
+    the trace store keeps it for thirty days; a board is read for longer.
 
     Consumption, not money. Prices change, differ by account and are a judgement
     about a vendor page on a date; a token count is a measurement. Keeping them
@@ -2209,11 +2142,9 @@ class CallNarrator(BaseObserver):
 class ToolTrace:
     """What the agent asked of its tools, recorded by us rather than the provider.
 
-    The framework already traces tool calls, and it traces them unevenly: two of
-    the providers on this board emit arguments and results on their spans, the
-    other three emit no model-level spans at all, and the two that do truncate
-    the fields. A board that compares tool use across providers cannot rest on
-    a record whose completeness depends on which provider produced it.
+    The framework's spans carry tool arguments and results for some providers
+    only, and truncate them, so a comparison across providers cannot rest on
+    them.
 
     This side of the call is ours. Every tool on the board is answered by the
     same server in this same process, so recording the call here produces one
@@ -2228,9 +2159,8 @@ class ToolTrace:
     def __init__(self) -> None:
         self._calls: list[dict[str, Any]] = []
         self._origin: float | None = None
-        # Called after every recorded call. The run's record is assembled from
-        # several pieces and there is no reliable last moment to assemble it in,
-        # so it is rewritten whenever a piece changes. See ``run_bot``.
+        # Called after every recorded call, so the record is rewritten whenever a
+        # piece changes; ``finish_record`` rewrites it once more at the end.
         self.on_change: Any = None
 
     def _offset(self) -> float:
@@ -2384,7 +2314,7 @@ def _commit() -> str:
 
     Cached because ``run_bot`` is per call, not per process: a fork+exec between
     the transport connecting and the greeting going out would land inside the
-    window the service bench is measuring.
+    window a first response is timed in.
 
     A deployed image carries no git history, so the build stamps the commit in
     instead. That value wins: it is what was actually built, whereas a checkout
@@ -2444,10 +2374,8 @@ def build_record(provider_key: str, provider: "Provider", model: str, voice: str
         # field that went unrecorded.
         **provider.discloses(settings),
         "pipeline_sample_rate": provider.input_rate,
-        # Who decided where the caller's turns ended. Three of these services
-        # announce no turn boundary at all, so those rows run a local detector
-        # instead -- a real configuration difference, and one a reader comparing
-        # two rows has to be able to see.
+        # Who decided where the caller's turns ended: the service, or the local
+        # detector -- a configuration difference a reader comparing rows must see.
         "turn_source": provider.turns,
         # Every place this row is not arranged like the others, in one block.
         #
@@ -3040,8 +2968,7 @@ def finish_record(tracer, context: LLMContext, publish: Callable[[], None], summ
     that ends a call -- the agent hanging up, the caller hanging up, the
     pipeline ending -- goes through that one method. So the snapshot is wrapped:
     first the rows still in the context are copied over, then the record is
-    rewritten, then the snapshot proceeds. That is the reliable last moment
-    this file previously said did not exist.
+    rewritten, then the snapshot proceeds.
     """
     capture = getattr(tracer, "_transcript_capture", None)
     if capture is None:
@@ -3289,7 +3216,6 @@ def warm() -> None:
     # warmed unconditionally rather than only when tracing is configured: a
     # warm-up that depends on a credential is a warm-up that silently stops
     # working the day a credential is missing.
-    #
     for module in [*modules, "cekura.pipecat"]:
         try:
             importlib.import_module(module)

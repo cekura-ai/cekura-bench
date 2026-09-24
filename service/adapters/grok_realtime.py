@@ -15,7 +15,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from service import events as ev
 from service.adapters.base import SessionConfig
 from service.adapters.openai_realtime import OpenAIRealtimeAdapter
 

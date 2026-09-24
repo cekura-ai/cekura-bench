@@ -4,7 +4,7 @@
     python bin/render-corpus.py [--overwrite] [--voice f-us]
     python bin/render-corpus.py --dir /path/to/holdout     # a corpus.json directory
 
-Needs ELEVENLABS_API_KEY in the environment or a .env beside this repo.
+Needs ELEVENLABS_API_KEY in the environment, or in the dotenv file named by --env.
 """
 from __future__ import annotations
 

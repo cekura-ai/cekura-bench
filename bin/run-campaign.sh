@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One full the service bench campaign against one provider: every suite, in sequence.
+# One full service-bench campaign against one provider: every suite, in sequence.
 #
 #   SERVICE_ENV=/path/to/.env bin/run-campaign.sh openai-realtime [out_dir]
 #

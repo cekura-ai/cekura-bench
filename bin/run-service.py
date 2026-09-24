@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import os
 import sys
 from pathlib import Path
@@ -42,8 +43,6 @@ from service.report import load_run, render_markdown, summarize_run  # noqa: E40
 from service.runner import DEFAULT_INSTRUCTIONS, RunSpec, Runner  # noqa: E402
 from service.scenarios import SCENARIOS  # noqa: E402
 from service.transforms import TRANSFORMS  # noqa: E402
-
-INSTRUCTIONS = DEFAULT_INSTRUCTIONS
 
 MANUAL = TurnDetection("manual")
 VAD500 = TurnDetection("server_vad", silence_duration_ms=500)
@@ -153,7 +152,7 @@ def main() -> int:
         model=args.model,
         # A tool suite uses the contract's own published system prompt, so the
         # model under test is given exactly what a third party would give it.
-        instructions="" if suite_tools else INSTRUCTIONS,
+        instructions="" if suite_tools else DEFAULT_INSTRUCTIONS,
         suite=suite_tools,
         modality="text" if args.suite in TEXT_SUITES else "audio",
         transforms=transforms,
@@ -183,8 +182,6 @@ def main() -> int:
 
     report = summarize_run(load_run(out))
     (out / "report.md").write_text(render_markdown(report))
-    import json
-
     (out / "report.json").write_text(json.dumps(report, indent=2) + "\n")
 
     # Audited here rather than on demand. A record gap found now costs one rerun;

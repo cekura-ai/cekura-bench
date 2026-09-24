@@ -2,7 +2,7 @@
 
 Every published latency is a difference between two of these decisions, so the
 detector's own error is a floor on what the benchmark can resolve. It therefore
-reports a confidence with every decision, and ``calibrate()`` measures the error
+reports a confidence with every decision, and ``tests/calibrate_detector.py`` measures the error
 against signals whose true boundaries are known by construction.
 
 Design notes, since the obvious implementation is wrong in ways that do not show

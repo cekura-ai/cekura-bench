@@ -32,7 +32,7 @@ servers disagreeing rather than anything about the agents.
 ## Detecting speech on a phone leg
 
 The service bench's detector thresholds frame energy against an estimated noise floor, and
-The service bench's own calibration says where that stops working: systematically late at
+its own calibration says where that stops working: systematically late at
 10 dB SNR, no reliable detection at 0 dB. A phone leg is permanently in that
 regime — comfort noise, mains hum and codec artifacts are on the channel whether
 or not anyone is speaking. The service bench's rule is therefore that its detector **may not
@@ -95,7 +95,7 @@ than publishing them.
 ### Not yet a licence to publish latency
 
 The calibration above is against constructed signals through a simulated phone
-path. It bounds the detector, not the transport. **No the agent bench latency may be
+path. It bounds the detector, not the transport. **No agent-bench latency may be
 published until an injected-tone round-trip has been measured on the actual
 carrier and transport in use** — a tone of known start time played into the call
 and recovered from the returned audio, which is the only thing that establishes
@@ -177,9 +177,9 @@ part that has to be measured.
 | phone leg as a service-bench adapter | built, tested against the carrier's message shapes |
 | media socket + loopback endpoint | built, tested locally end to end |
 | injected-tone instrument | built, calibrated offline |
-| tone measured on a real carrier | **blocked** — gates every agent-bench latency |
+| tone measured on a real carrier | not yet measured — gates every agent-bench latency |
 | caller conditions | not started |
-| deployment + a phone number | **blocked** on credentials |
+| deployment + a phone number | not yet deployed |
 
 Nothing in the agent bench may publish a latency until the tone has been measured on the
 carrier and transport actually in use.

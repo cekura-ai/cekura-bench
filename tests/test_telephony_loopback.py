@@ -14,7 +14,6 @@ import base64
 import json
 import socket
 
-import numpy as np
 import pytest
 from aiohttp import ClientSession
 

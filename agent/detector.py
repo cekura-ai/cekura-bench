@@ -7,7 +7,7 @@ not that channel. It carries comfort noise, line hum and codec artifacts
 continuously, and the caller's own audio arrives after μ-law at 8 kHz. The
 energy detector's measured behaviour under noise -- systematically late at 10 dB
 SNR, failing entirely at 0 dB -- is a statement about this channel, which is why
-The service bench's rule forbids pointing it at one.
+the service bench's rule forbids pointing it at one.
 
 What separates speech from line noise is not level, it is **periodicity**.
 Voiced speech repeats at the speaker's pitch, 70-400 Hz for adult voices; hum is

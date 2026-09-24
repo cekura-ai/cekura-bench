@@ -172,8 +172,7 @@ class TestResolvingACallToARecord:
     def medicare(self):
         return MockToolServer("medicare")
 
-    # The recorded call that failed a whole cohort of runs: every field the
-    # tool's schema requires, one optional field the caller never gave.
+    # Every field the tool's schema requires; the optional postcode left out.
     WITHOUT_THE_POSTCODE = {
         "callback_phone": "6025550155",
         "caller_name": "Linda Martinez",
@@ -228,10 +227,6 @@ class TestResolvingACallToARecord:
 class TestWhenSpeechBendsAnArgument:
     """A transcription error is not a task failure, and must not be scored as one."""
 
-    @pytest.fixture
-    def server(self):
-        return MockToolServer("appointments")
-
     def test_one_bent_digit_still_finds_the_record(self, server):
         answer = server.call("lookup_patient", {"phone": "2025550189"})  # 2025550188 misheard
         assert answer["patient_id"] == "p_1002"
@@ -264,7 +259,6 @@ class TestAnEnumWrittenTwoWaysIsOneCategory:
 
     @staticmethod
     def _qualified(coverage: str):
-        from mock_tools.server import MockToolServer
 
         server = MockToolServer(suite="medicare")
         consent = server.call("record_medicare_permissions", {
@@ -313,7 +307,6 @@ class TestTheOrderOfACategoryListSaysNothing:
     def _consent(scope):
         import json
 
-        from mock_tools.server import MockToolServer
 
         tools = {t["name"]: t for t in json.load(
             open("agent-definitions/medicare/mock-tools.json")
@@ -361,7 +354,6 @@ class TestOneSlotWrittenSeveralWays:
     def _book(change):
         import json
 
-        from mock_tools.server import MockToolServer
 
         tools = {t["name"]: t for t in json.load(
             open("agent-definitions/appointments/mock-tools.json")
@@ -566,9 +558,8 @@ class TestWhatIsMissingIsAFactAboutTheCall:
     """The one path this contract has for recovering has to be reachable.
 
     Saying what is absent is how an agent learns to go back and ask. Read off a
-    row, that message only ever fitted the call captured with it, so an agent
-    that left out something else was told nothing was missing -- and the harness
-    quietly finished the job the agent had not done.
+    row, that message would only fit the call captured with it, so the gap is
+    computed from the call, not copied from the row.
     """
 
     @pytest.fixture

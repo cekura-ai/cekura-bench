@@ -7,7 +7,7 @@ events and anything we send is played toward it. That is the same shape as a
 realtime provider's socket -- audio out, audio in, on a clock -- so it is
 implemented as a `RealtimeAdapter` rather than as a second harness. The caller,
 the probes, the scenarios and the record format then work over a phone call
-unchanged, and a service-bench/the agent bench difference is a difference in the channel rather
+unchanged, and a difference between the two benches is a difference in the channel rather
 than in two implementations of the same idea.
 
 What the phone does not have is declared rather than worked around:
@@ -24,7 +24,7 @@ What the phone does not have is declared rather than worked around:
 as well as our arrival time, and both are recorded. The carrier clock removes our
 receive jitter from the inbound direction; it does not remove carrier latency,
 and it shares no origin with our outbound clock. Neither is a substitute for the
-injected-tone round trip that gates publishing any the agent bench latency.
+injected-tone round trip that gates publishing any agent-bench latency.
 """
 
 from __future__ import annotations

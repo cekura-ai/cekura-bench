@@ -144,17 +144,12 @@ class PlannedCell:
         }
 
 
-def cell_id(probe: Probe, config: TurnDetection, voice: str, repeat: int, transform: str = "clean") -> str:
-    return PlannedCell(probe, config, voice, transform, repeat).cell_id
-
-
 class Runner:
     def __init__(self, spec: RunSpec, corpus: Corpus, api_key: str) -> None:
         self.spec = spec
         self.corpus = corpus
         self.api_key = api_key
         self.entry = PROVIDERS[spec.provider]
-        self.tools = MockToolServer(spec.suite) if spec.suite else None
         self.model = spec.model or self.entry.default_model
         started = datetime.now(timezone.utc)
         self.started_utc = started.isoformat()

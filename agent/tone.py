@@ -4,7 +4,7 @@ The agent bench's detector calibration bounds the *detector*. It says nothing ab
 transport: a phone call adds delay in the carrier, in the codec, and in whatever
 jitter buffer sits between, and it need not add the same amount in each
 direction. Until that is measured, an agent-bench latency is a number of unknown
-origin, so no the agent bench latency may be published before this has been run against
+origin, so no agent-bench latency may be published before this has been run against
 the carrier and transport actually in use.
 
 The method is the only one that does not assume what it is trying to establish:

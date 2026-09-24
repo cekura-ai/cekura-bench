@@ -93,7 +93,7 @@ class TestNoiseIsTheKnownFailureMode:
 
         The service bench is safe because noise sits on the caller channel we author while
         the provider's returned audio comes back clean. The agent bench's phone leg is not,
-        and needs harmonicity-based detection instead of broadband energy.
+        and uses ``agent.detector`` (periodicity) instead.
         """
         errors = []
         for seed in range(12):

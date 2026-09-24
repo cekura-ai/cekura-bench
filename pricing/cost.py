@@ -3,7 +3,7 @@
 This runs after the fact, over the ``usage`` the reference agent stamped on the
 run. Nothing here touches a call, which is the point: a price is a judgement
 about a vendor page on a date and will need correcting, and correcting it must
-never mean running 2,700 calls again.
+never mean re-running the calls.
 
 A row is priced only from what was measured. Where a rate is missing, or the
 provider reported no usage, the answer is an exclusion carrying its reason

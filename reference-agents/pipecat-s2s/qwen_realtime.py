@@ -14,9 +14,8 @@ serialisation, the event models and the tool encoding, which is most of the
 service, and it would break on the framework's next revision of a shape Qwen
 does not follow. The protocol is small enough to speak directly.
 
-*The sample rates are not symmetric.* Qwen takes 16 kHz and returns 24 kHz.
-Every other provider here is symmetric, so ``PROVIDERS[...].input_rate`` alone
-does not describe this one: the pipeline runs at 16 kHz and outbound frames
+*The sample rates are not symmetric.* Like Nova Sonic, Qwen takes 16 kHz and
+returns 24 kHz, so ``PROVIDERS[...].input_rate`` alone does not describe it: the pipeline runs at 16 kHz and outbound frames
 declare 24 kHz, which the output transport resamples. Declaring the wrong rate
 on those frames does not fail -- it plays the model's voice at the wrong speed,
 which reads as a bad model rather than bad wiring.
@@ -76,10 +75,9 @@ def _event_id() -> str:
 class QwenRealtimeLLMService(LLMService):
     """One Qwen realtime audio session, for the length of one call.
 
-    The session is opened on the first frame and closed with the pipeline. Turn
-    detection is the provider's own, which is the same choice every other native
-    row on this board makes: a benchmark that replaced each provider's
-    endpointer with a shared one would be measuring the shared endpointer.
+    The session is opened on the first frame and closed with the pipeline. The
+    service runs its own semantic VAD and answers on it; the pipeline's turns
+    are local.
     """
 
     def __init__(
@@ -104,10 +102,8 @@ class QwenRealtimeLLMService(LLMService):
         self._instructions = instructions
         self._tools = tools
         self._url = f"{ENDPOINTS[region].format(workspace=workspace_id)}?model={model}"
-        # semantic_vad is the vendor's own recommendation for this model family.
-        # It is recorded on the build record rather than tuned: an endpointer
-        # tuned per provider is a configuration difference masquerading as a
-        # model difference.
+        # semantic_vad at 800 ms, the vendor's recommendation for this model
+        # family; not tuned.
         self._turn_detection = turn_detection or {
             "type": "semantic_vad",
             "silence_duration_ms": 800,
@@ -202,8 +198,7 @@ class QwenRealtimeLLMService(LLMService):
         # No input-transcription field: the audio model documents the caller's
         # completed transcript as an event it sends on its own, with no setting
         # to ask for it, and a guessed field could fail the session. The event
-        # is handled below. Until a real call has shown caller text arriving,
-        # the row must not be published.
+        # is handled below.
         session: dict[str, Any] = {
             "modalities": ["text", "audio"],
             "voice": self._voice,

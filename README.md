@@ -354,7 +354,6 @@ The scenarios and their fixtures are not covered by it and are not published in
 this repository. Withholding them is deliberate: the exact dialogue, branching
 and assertions are what a system would optimise against if it could read them,
 and a benchmark whose answers are public stops measuring what it claims to.
-If they are published later they will carry their own terms, as benchmark
-datasets usually do.
+If they are published later they will carry their own terms.
 
 One file keeps a separate license, noted in `LICENSE` and in its own header.

@@ -16,7 +16,7 @@ corpus/
 google-*.json
 credentials.json
 
-# The other lane, its tests and its docs. The image holds the agent only.
+# Harness code, tests and docs: the image holds only the reference agent.
 service/
 agent/
 tests/

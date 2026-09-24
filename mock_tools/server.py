@@ -8,10 +8,9 @@ anything about the agents.
 
 The contract in ``agent-definitions/`` is tool schemas plus input-to-output
 lookup tables. It is published, so a third party can run the same scenarios
-against their own agent and be scored the same way -- but the repository ships no
-server for it, and scoring has until now happened inside a platform. This module
-is that missing piece, and it deliberately serves every lane: the direct provider
-websocket, the text control arm, and the reference agent.
+against their own agent and be scored the same way. This module serves it, for
+every lane: the direct provider websocket, the text control arm, and the
+reference agent.
 
 That matters more than it sounds. A control needs a treatment that differs from
 it in exactly one thing. Text arm to service-bench voice differs by *the speech pathway* alone;

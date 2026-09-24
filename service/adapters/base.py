@@ -4,15 +4,10 @@ An adapter connects to one realtime wire protocol and does four things: send
 realtime-paced PCM, receive audio and events, timestamp both, and normalize the
 events onto the vocabulary in ``service.events``. It does not play audio, does not
 resample on the fly, does not retry, and does not integrate with any
-observability system -- the JSONL log *is* the output. That is why a benchmark
-adapter is a few hundred lines where a production one is a few thousand.
+observability system -- the JSONL log *is* the output.
 
 Adapters are written per **wire protocol**, not per model: one OpenAI Realtime
-adapter serves every ``gpt-realtime-*``. They are validated against Pipecat's
-service classes on a shared probe -- if the provider's own transcripts and event
-ordering agree, ours is faithful -- but Pipecat is never in the measured path,
-because its per-provider integration maturity would be read as a provider
-difference.
+adapter serves every ``gpt-realtime-*``. No framework sits in the measured path.
 """
 
 from __future__ import annotations
@@ -24,7 +19,7 @@ from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
 from service import events as ev
-from service.audio import AudioTimeline, SAMPLE_WIDTH
+from service.audio import AudioTimeline
 from service.detector import speech_bounds as _clean_channel_bounds
 from mock_tools.spec import ToolSpec
 
@@ -65,10 +60,8 @@ class TurnDetection:
 class SessionConfig:
     instructions: str = ""
     # The agent's opening line, seeded into the conversation as already said.
-    # The published contracts open with the agent speaking, so a scenario that
-    # started cold would have the model greet the caller's first request instead
-    # of answering it -- which was observed, and scores the missing greeting
-    # rather than the agent.
+    # The published contracts open with the agent speaking; a cold start makes
+    # the model greet instead of answering the caller's first request.
     first_message: str | None = None
     voice: str | None = None
     tools: tuple[ToolSpec, ...] = ()
@@ -192,8 +185,8 @@ class RealtimeAdapter(ABC):
 
         A no-op for protocols that take a continuous stream. Protocols that
         need the client to bracket each turn explicitly open their window here,
-        immediately before the speech rather than at connect time -- opening it
-        early was measured to read as a barge-in the moment the model replied.
+        immediately before the speech: a window opened earlier reads as a
+        barge-in when the model replies.
         """
 
     async def commit(self) -> None:

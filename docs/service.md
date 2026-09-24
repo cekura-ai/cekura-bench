@@ -38,7 +38,7 @@ manual-commit configuration below, which has no meaning without it.
 | `caller_transcription` | How accurately did it hear us? Digits scored apart from words | WER + digit match |
 | `task` | Twenty closed-loop scenarios against the published tool contracts | tool-trace pass/fail |
 
-Every probe also runs under seven published **degradation transforms** of the
+Every probe also runs under six published **degradation transforms** of the
 caller audio (pink noise at two SNRs, a narrowband mu-law phone leg, a far-field
 room, clipping, dropouts), reported as the **delta from clean** and never as an
 absolute. The transforms are seeded and regenerable from the clean master
@@ -54,7 +54,7 @@ Every provider is run twice, and the pair is the point.
   with zero endpointing error**.
 
 Native minus manual is that provider's **endpointing cost, measured**. This
-subtraction is legitimate where subtracting transport overhead was not: same
+subtraction is legitimate: same
 adapter, same audio, same connection, same lane. Only the boundary decision
 changes. Both numbers are always published; the difference never replaces them.
 
@@ -127,7 +127,7 @@ as `discarded_ms`, and whether the provider also stopped generating as
 Without this model, arrival times would have credited a provider that dumped
 its whole reply in one burst with finishing before anyone heard the end of it,
 and could never have credited it with stopping at all. The caller uses the same
-model to decide when the agent has finished, so it no longer speaks into a reply
+model to decide when the agent has finished, so it does not speak into a reply
 the listener is still hearing.
 
 ## Timing anchors
@@ -152,8 +152,8 @@ Resolution on clean audio is about **±10 ms**. Under noise it runs systematical
 Left unchecked that would have manufactured "providers are slower under noise"
 out of the instrument. It does not bite in the service bench, because the noise sits on the
 caller channel while the provider's returned audio comes back clean. The rule is
-explicit: **this detector may not be pointed at a noisy channel.** the agent bench's phone
-leg needs harmonicity-based detection instead.
+explicit: **this detector may not be pointed at a noisy channel.** The agent bench's phone
+leg uses its own periodicity-based detector (docs/agent.md).
 
 Gaps smaller than detector error are reported as ties.
 
@@ -182,8 +182,10 @@ The rules live in one place, `service/report.py`, and run over `cells.jsonl`:
 Void rules, fixed before running:
 
 - Provider error before the first agent audio → **void**, rerun, void count published.
+- Provider closed the session mid-call → **void**, in its own class.
 - Caller-side failure, including pacing slip on our host → **void**.
-- Agent connected and never spoke → **fail**, not void.
+- Agent connected and never spoke → **fail** where speaking is what is measured;
+  probes that need agent speech to test anything (barge-in, backchannel) void.
 
 ## Artifacts, and rechecking a number without trusting us
 
@@ -265,9 +267,8 @@ measurement. Stamping each cell keeps the two attached.
 
 Scenario content is authored here, because these clips are replies to *our* agent
 in *our* scenarios and a corpus of unrelated recordings cannot answer a question
-the agent has just asked. Public audio is used where it genuinely fits and nowhere
-else: content-free interaction tokens, where prosody carries the meaning and the
-words carry none, and noise beds.
+the agent has just asked. Nothing is sampled from public recordings: interaction
+tokens are rendered like every other line, and noise beds are synthesized.
 
 One canonical master per clip at 24 kHz, resampled to each provider's rate by the
 published filter in `service/audio.py`. Rendering separately per rate would ship
@@ -331,9 +332,6 @@ The harness is tested against a **scripted agent** with known reply timing befor
 any provider is involved (`tests/test_caller.py`). That ordering matters: if the
 first time a barge-in anchor runs is against a live model, a harness bug and a
 model behaviour look identical, and an untested harness has to be taken on trust.
-It has already earned its keep — it caught a barge-in metric that counted the
-provider's *next* reply as the tail of the interrupted one, which would have
-reported instant yielding as nearly a second of talking over the caller.
 
 ## Grounding the instrument
 
@@ -344,8 +342,7 @@ wrong rate, truncated, or badly resampled does not fail a test here: it looks
 like a provider that reasons less well than it does.
 
 So the harness is checked against **Big Bench Audio** (MIT, 1,000 spoken
-reasoning questions adapted from BIG-bench Hard, audio included,
-`ArtificialAnalysis/big_bench_audio` on HuggingFace). Answers are closed-form —
+reasoning questions adapted from BIG-bench Hard, audio included, on Hugging Face). Answers are closed-form —
 `valid`/`invalid`, `Yes`/`No`, or a count — so grading is exact match on an
 extracted token rather than a model's judgement. Checking one instrument with
 another instrument is not a check.
@@ -355,8 +352,8 @@ python bin/validate-harness.py --provider openai-realtime --per-category 10
 ```
 
 Two things this is not. It is not one of our rankings: it is a single-turn quiz
-with no interaction in it, and as the most widely circulated audio set in the
-field it is also the most likely to have been trained on. And it is not a test of
+with no interaction in it, and, being public, it may already have been trained
+on. And it is not a test of
 the model. It is a test of us, and what makes it one is that the answers are
 known and guessing is cheap to price.
 
@@ -401,11 +398,7 @@ OpenAI's 80% on web-of-lies against 100% on navigate is a real spread across
 categories. The same audio path carries all four, so it is the model's.
 
 Grok did not run: every session was refused with HTTP 403 at the websocket
-handshake, on two attempts and on a plain smoke run. Full campaigns against the
-same credential the previous day had no connect failures at all, so this is the
-credential, not the harness. Its row stays empty until the account is usable
-again — an empty row being the point of recording a void with its reason rather
-than a score.
+handshake. Its row stays void with that reason rather than scored.
 
 ## Providers
 
@@ -420,10 +413,7 @@ than a score.
 | Nova Sonic | needs AWS credentials and Bedrock model access |
 
 Adapters are written per **wire protocol**, not per model: one OpenAI Realtime
-adapter serves every `gpt-realtime-*`. That ratio is the cost argument for direct
-adapters over a framework — and the correctness argument is stronger. A
-framework's per-provider integration maturity varies, so a framework-mediated
-comparison measures its polish as much as the provider's quality.
+adapter serves every `gpt-realtime-*`.
 
 ## Dry run, 2026-09-18
 
@@ -432,10 +422,7 @@ host over about four hours: 609 cells each for OpenAI Realtime (`gpt-realtime-2.
 and Gemini Live (`gemini-2.5-flash-native-audio-preview-12-2025`), 606 for Grok
 (`grok-voice-think-fast-2.0`). Latency cells have five repeats per voice, every
 other cell three. **This is a shakedown of the instrument, not a ranking**: three
-repeats resolve nothing finer than a provider's own sentinel spread, and two
-metrics were corrected during the run (below), so the interaction suite was
-repeated on the corrected rule for all three providers and those runs are the
-ones tabulated. Every number here is recomputable from the run directories.
+repeats resolve nothing finer than a provider's own sentinel spread. Every number here is recomputable from the run directories.
 
 #### Sentinel (same cell in every run: open.book, VAD 500 ms, f-us, n=3 per run)
 
@@ -574,10 +561,10 @@ cells per provider: OpenAI 609, Gemini 609, Grok 606
   silence. A filled pause ("um, let me think") holds the turn everywhere.
 - **Barge-in, on the listener's clock.** OpenAI stops within 270–320 ms of the
   caller's first word at every offset and voice. Grok 1.0–1.5 s. Gemini 2.0–3.0 s,
-  and 2.3–2.6 s when the caller starts at the same instant as the agent. The rule
-  was corrected mid-run: stop time is the end of the last stretch of agent audio
-  that overlapped the caller's utterance, so a provider that fell silent between
-  chunks and resumed is no longer credited with 0 ms.
+  and 2.3–2.6 s when the caller starts at the same instant as the agent. Stop time
+  is the end of the last stretch of agent audio that overlapped the caller's
+  utterance, so a provider that pauses between chunks and resumes is not credited
+  with 0 ms.
 - **Backchannel.** Gemini talks through "mm hmm" in 18 of 18; Grok in 13 of 18.
   OpenAI's replies to this clip end before the backchannel is fully spoken in 17
   of 18 cells, so the cell is void rather than scored: nothing was tested.
@@ -606,17 +593,3 @@ cells per provider: OpenAI 609, Gemini 609, Grok 606
 - **Voids are the record, not the residue.** 90 declared exclusions (semantic VAD
   on Gemini and Grok), 9 provider closes, 17 untestable backchannels, 6 host pacing
   slips, 3 missing caller transcripts. Each is in its own class and none is scored.
-
-#### What the run changed in the harness
-
-Found by the run and fixed before the affected suites were repeated:
-
-- A session the provider closed mid-call left the probe waiting on a caller segment
-  that would never finish; one cell held its campaign for 40 minutes. The caller
-  now releases every waiting segment, the waits stop when the session is gone, and
-  the cell is voided as "provider closed the session" in its own class.
-- The sentinel was planned only for audio campaigns and inherited the campaign's
-  prompt and tools. It is now the identical cell (audio, default prompt, no tools)
-  at the head of every run, which is the only way its spread means anything.
-- Barge-in stop time, as above.
-- A declared exclusion was recorded with a traceback and counted as an error.

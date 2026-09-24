@@ -28,7 +28,7 @@ test("builder keeps missing metrics separate and excludes raw values from public
   await writeFile(join(definitions, "medicare", "tool-definitions.json"), JSON.stringify([]));
   for (const [id, startedAt, expectedMetric] of [[2, "2026-01-01T00:00:02Z", true], [1, "2026-01-01T00:00:01Z", false]]) {
     const metadata = { config: "fixture-row", s2s_provider: "fixture-row", agent_definition: "appointments", agent_commit: "fixture", pipecat_version: "1", cekura_version: "1", integrity: { checks: ["ok"], closed_by: "agent" }, usage: {}, tool_calls: [{ name: "lookup", arguments: { marker: "fixture-only" }, resolution: "exact" }] };
-    const metrics = expectedMetric ? [{ name: "Expected Outcome", score: 5 }, { name: "Infrastructure Issues", score: 1 }, { name: "Latency (in ms)", score: 1000 }] : [{ name: "Infrastructure Issues", score: 1 }, { name: "Latency (in ms)", score: 2000 }];
+    const metrics = expectedMetric ? [{ name: "Expected Outcome", score: 5 }, { name: "Infrastructure Issues", score: 1 }, { name: "Latency (in ms)", score: 1000 }, { name: "Tool Call Accuracy", score: 5 }, { name: "Tool Call Accuracy (same record)", score: 5 }] : [{ name: "Infrastructure Issues", score: 1 }, { name: "Latency (in ms)", score: 2000 }, { name: "Tool Call Accuracy", score: 5 }, { name: "Tool Call Accuracy (same record)", score: 4 }];
     await writeFile(join(raw, "appointments", "runs", `${id}.json`), JSON.stringify({ source: { suite: "appointments", provider: "fixture-row", resultId: 9, run_id: id }, run: { id, scenario: 1, started_at: startedAt, success: true, evaluation: { metrics }, provider_call_details: id === 1 ? {} : { custom_metadata: metadata } } }));
   }
   const result = await build({ raw, definitions, output: out, root: process.cwd(), campaign: { repeats: 2, decisions: { build: "fixture" }, models: { "fixture-row": { vendor: "Fixture" } } } });
@@ -38,6 +38,8 @@ test("builder keeps missing metrics separate and excludes raw values from public
   assert.equal(result.website.results[0].costPublished, false);
   assert.deepEqual(result.manifest.results["appointments\u0000fixture-row"].resultIds, [9]);
   assert.equal(result.website.results[0].latencyP90Ms, 1900);
+  assert.equal(result.website.results[0].passAll.toolEquivalent, 0);
+  assert.deepEqual(result.website.results[0].toolEquivalentPlatformAgreement, { compared: 1, agreed: 1 });
   const publicText = await readFile(join(out, "s2s-benchmark.json"), "utf8");
   assert.equal(publicText.includes("fixture-only"), false);
   await assert.rejects(() => build({ raw, definitions, output: out, root: process.cwd(), campaign: { repeats: 2 } }), /Refusing to overwrite/);

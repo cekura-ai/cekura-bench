@@ -1,7 +1,7 @@
 # Cekura Benchmarks
 
-Run voice-agent and speech-to-text benchmarks from one repository. Each project
-keeps its own runtime, configuration, and results.
+Run voice-agent, speech-to-text and text-to-speech benchmarks from one
+repository. Each project keeps its own runtime, configuration, and results.
 
 ## Choose a benchmark
 
@@ -9,6 +9,7 @@ keeps its own runtime, configuration, and results.
 | --- | --- | --- |
 | Voice agents | Complete Appointment and Medicare workflows against a Cekura-connected agent | Repository root; Node.js 20+ |
 | [Speech-to-text](stt-bench/README.md) | Streaming transcription accuracy, text availability, completion, and reliability | `stt-bench/`; Python 3.12 or 3.13 and `uv` |
+| [Text-to-speech](tts-bench/README.md) | A TTS service at its own interface: time to first audio, playout continuity, cancel, continuation, and round-trip accuracy | `tts-bench/`; Python 3.12 or 3.13 and `uv` |
 
 For speech-to-text setup and a local model listing (no provider requests):
 
@@ -25,6 +26,19 @@ lockfile there. Voice-agent users do not need the Python dependencies.
 See the [STT guide](stt-bench/README.md) for dataset preparation, provider
 credentials, live benchmarks, and offline scoring. See the
 [integration notes](docs/stt-integration.md) for project layout and local files.
+
+Text-to-speech runs the same way from its own directory. The tests and a local
+run against the scripted provider make no provider requests:
+
+```sh
+cd tts-bench
+uv sync --locked
+uv run --locked pytest
+uv run --locked bin/run-tts.py --provider fake --suite smoke
+```
+
+See the [TTS guide](tts-bench/README.md) for the metrics, the corpus, provider
+credentials, and offline scoring.
 
 The rest of this page describes the existing voice-agent runner. Run its `npm`
 commands from the repository root. Its commands and configuration are unchanged.

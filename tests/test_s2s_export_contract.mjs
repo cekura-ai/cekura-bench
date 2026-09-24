@@ -46,3 +46,18 @@ test("builder keeps missing metrics separate and excludes raw values from public
   assert.equal(publicText.includes("fixture-only"), false);
   await assert.rejects(() => build({ raw, definitions, output: out, root: process.cwd(), campaign: { repeats: 2 } }), /Refusing to overwrite/);
 });
+
+test("new native rows have export metadata without a campaign override", async () => {
+  const root = await mkdtemp(join(tmpdir(), "s2s-export-new-row-"));
+  const raw = join(root, "raw"), definitions = join(root, "definitions"), out = join(root, "out");
+  await Promise.all([mkdir(join(raw, "appointments", "runs"), { recursive: true }), mkdir(join(definitions, "appointments"), { recursive: true }), mkdir(join(definitions, "medicare"), { recursive: true })]);
+  await writeFile(join(definitions, "appointments", "expected-tool-calls.json"), JSON.stringify({ 1: [{ name: "lookup", arguments: {} }] }));
+  await writeFile(join(definitions, "appointments", "tool-definitions.json"), JSON.stringify([{ name: "lookup", parameters: { properties: {} } }]));
+  await writeFile(join(definitions, "medicare", "expected-tool-calls.json"), JSON.stringify({}));
+  await writeFile(join(definitions, "medicare", "tool-definitions.json"), JSON.stringify([]));
+  const metadata = { config: "openai-realtime-mini", agent_definition: "appointments", agent_commit: "fixture", pipecat_version: "1", cekura_version: "1", integrity: { checks: ["ok"] }, usage: {}, tool_calls: [{ name: "lookup", arguments: {}, resolution: "exact" }] };
+  const metrics = [{ name: "Tool Call Accuracy", score: 5 }, { name: "Tool Call Accuracy (same record)", score: 5 }];
+  await writeFile(join(raw, "appointments", "runs", "1.json"), JSON.stringify({ source: { suite: "appointments", provider: "openai-realtime-mini", resultId: 9, run_id: 1 }, run: { id: 1, scenario: 1, started_at: "2026-01-01T00:00:00Z", evaluation: { metrics }, provider_call_details: { custom_metadata: metadata } } }));
+  const result = await build({ raw, definitions, output: out, root: process.cwd(), campaign: { repeats: 1 } });
+  assert.deepEqual(result.website.models, [{ id: "openai-realtime-mini", short: "Realtime Mini", name: "GPT Realtime 2.1 Mini", vendor: "OpenAI", modelId: "gpt-realtime-2.1-mini", voice: "marin", setting: "openai_reasoning: high", sampleRateHz: 24000, turns: "provider" }]);
+});

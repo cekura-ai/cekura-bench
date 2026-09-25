@@ -182,6 +182,24 @@
       "verified": false,
       "source": null,
       "components": []
+    },
+    "phonic": {
+      "read_on": "2026-09-25",
+      "verified": true,
+      "source": "https://phonic.ai/pricing",
+      "components": [
+        {
+          "name": "phonic_v1",
+          "basis": "per_minute",
+          "measure": "call_seconds",
+          "rates": {
+            "minute": 0.14
+          }
+        }
+      ],
+      "unmetered": [
+        "The Starter plan's rate; the Pro plan lists $0.12 a minute against a monthly fee."
+      ]
     }
   },
   "cascade_speech_path": {

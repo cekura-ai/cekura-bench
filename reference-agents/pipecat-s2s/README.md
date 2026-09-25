@@ -34,7 +34,7 @@ laptop work unchanged and lets a deployment carry a default:
 
 | Key | Default | Notes |
 |---|---|---|
-| `s2s_provider` | `openai-realtime` | native: also `openai-realtime-mini`, `gemini-live`, `gemini-flash-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
+| `s2s_provider` | `openai-realtime` | native: also `openai-realtime-mini`, `gemini-live`, `gemini-flash-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`, `phonic`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
 | `s2s_model` | provider default | pin it for a reproducible run |
 | `s2s_voice` | provider default | |
 | `s2s_backend_model` | `gpt-6-sol` | `gpt-live` only, see below |
@@ -56,7 +56,7 @@ quotes the body.
 
 | Variable | Notes |
 |---|---|
-| provider key | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, `DASHSCOPE_API_KEY`, or for Bedrock `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`); see below for why an API key cannot work |
+| provider key | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, `DASHSCOPE_API_KEY`, `PHONIC_API_KEY`, or for Bedrock `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`); see below for why an API key cannot work |
 | `DEEPGRAM_API_KEY`, `ELEVENLABS_API_KEY` | cascade rows only |
 | `CEKURA_API_KEY`, `CEKURA_AGENT_ID_<DEFINITION>` | tracing is off without both; one platform agent per agent definition (`CEKURA_AGENT_ID_APPOINTMENTS`, `CEKURA_AGENT_ID_MEDICARE`), with `CEKURA_AGENT_ID` for a deployment that serves one |
 | `AGENT_COMMIT` | stamped by the build; names what was actually deployed |
@@ -208,10 +208,15 @@ are granted in some subset of those. Both failures are the same
 `AccessDeniedException` from the outside, which is why the region is recorded
 with every run.
 
-## One provider has no framework service
+## Two providers have no framework service
 
 Pipecat ships a realtime service for every other model on this board and none
-for Qwen, so `qwen_realtime.py` speaks that protocol directly. It is not a
+for Qwen or Phonic, so `qwen_realtime.py` and `phonic_realtime.py` speak those
+protocols directly.
+
+### Qwen
+
+`qwen_realtime.py` speaks Qwen's protocol directly. It is not a
 subclass of the OpenAI Realtime service: Qwen follows the earlier shape of that
 protocol, where modalities, audio formats and turn detection sit at the top
 level of the session rather than inside a nested audio object, and Pipecat's
@@ -227,13 +232,30 @@ rejected, so the model fails a scenario for having no tools. And it listens at
 the transport resamples; declaring one rate for both plays the voice at the
 wrong speed, which reads as a bad model.
 
+### Phonic
+
+Three details decide how `phonic_realtime.py` is written, and each is silent
+when wrong. The service streams audio without a break, silence included, so
+speech is taken from its own started- and finished-speaking events and only the
+audio between them is played; forwarding everything leaves an agent that never
+stops talking. The service decides for itself when the caller has interrupted
+it (after one word, by default), so the row asks the pipeline not to cut the
+agent off at the first sound and passes the service's interruption on instead.
+And its tools must be strict: every parameter required, so an optional one is
+declared nullable and the `null`s the model sends for fields it leaves out are
+dropped before the call reaches the mock tools.
+
+The model is named on every call. Left unnamed, the service answers with an
+older model than the newest one the account is served, and nothing in the
+reply says so.
+
 ## The sample rate is not a tuning knob
 
 These realtime services **do not resample**. Each base64-encodes the audio frame
 it is handed and declares a rate separately, so the pipeline rate must match what
 the provider expects: 24 kHz for OpenAI Realtime and Grok (the rate each
-recommends), 16 kHz for Gemini Live, Nova Sonic and Qwen (the last two reply at
-24 kHz). GPT-Live is the exception: it resamples what it is given. Open it at the wrong rate and the model hears the caller sped up or slowed
+recommends), 16 kHz for Gemini Live, Nova Sonic, Qwen and Phonic (Nova Sonic and Qwen
+reply at 24 kHz). GPT-Live is the exception: it resamples what it is given. Open it at the wrong rate and the model hears the caller sped up or slowed
 down, transcribes the words badly, and the run looks like a model failure when it
 is a wiring failure.
 

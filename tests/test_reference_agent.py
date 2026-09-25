@@ -518,20 +518,228 @@ class TestQwenRealtime:
             bot.qwen_workspace(asked())
 
 
+class TestPhonicRealtime:
+    """The second provider whose protocol we speak ourselves."""
+
+    @staticmethod
+    def _service(**overrides):
+        from phonic_realtime import PhonicRealtimeLLMService
+
+        provider = bot.PROVIDERS["phonic"]
+        service = provider.build("k", provider.default_model, provider.default_voice, "prompt", asked())
+        for key, value in overrides.items():
+            setattr(service, key, value)
+        seen = {"pushed": [], "broadcast": [], "sent": [], "interruptions": 0}
+
+        async def push(frame, direction=None):
+            seen["pushed"].append((type(frame).__name__, direction, frame))
+
+        async def broadcast(frame_cls, **_kwargs):
+            seen["broadcast"].append(frame_cls.__name__)
+
+        async def interrupt():
+            seen["interruptions"] += 1
+
+        async def send(message):
+            seen["sent"].append(message)
+
+        async def noop(*_args, **_kwargs):
+            return None
+
+        service.push_frame = push
+        service.broadcast_frame = broadcast
+        service.broadcast_interruption = interrupt
+        service._send = send
+        for name in ("start_ttfb_metrics", "stop_ttfb_metrics", "start_processing_metrics", "stop_all_metrics"):
+            setattr(service, name, noop)
+        assert isinstance(service, PhonicRealtimeLLMService)
+        return service, seen
+
+    @staticmethod
+    def _audio(text="", silent=False):
+        import base64
+
+        return {"type": "audio_chunk", "text": text,
+                "audio": base64.b64encode((b"\0\0" if silent else b"\1\0") * 320).decode()}
+
+    def test_the_configuration_names_every_setting_the_row_depends_on(self):
+        """Left unnamed, the model falls back to an older one without saying so."""
+        service, _ = self._service()
+        config = service.config()
+        assert config["phonic_model"] == "phonic_v1"
+        assert config["intelligence_level"] == bot.PHONIC_INTELLIGENCE
+        assert config["input_format"] == config["output_format"] == "pcm_16000"
+        for key, value in bot.PHONIC_TURNS.items():
+            assert config[key] == value, key
+
+    def test_the_frameworks_settings_are_complete_and_left_in_place(self):
+        """The framework keeps its own settings object on the service and checks it at start.
+
+        Replacing it fails the first frame; leaving fields unset logs an error on every call.
+        """
+        from dataclasses import fields
+
+        from pipecat.services.settings import LLMSettings
+        from pipecat.utils.types import is_given
+
+        service, _ = self._service()
+        assert isinstance(service._settings, LLMSettings)
+        assert service._settings.model == "phonic_v1"
+        unset = [f.name for f in fields(service._settings) if f.name != "extra"
+                 and not is_given(getattr(service._settings, f.name))]
+        assert not unset
+
+    async def test_only_a_close_from_the_far_end_is_an_error(self):
+        errors = []
+
+        class Closed:
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                raise StopAsyncIteration
+
+        for closing, expected in ((True, 0), (False, 1)):
+            service, _ = self._service()
+
+            async def push_error(error_msg, **_kwargs):
+                errors.append(error_msg)
+
+            service.push_error = push_error
+            service._websocket, service._closing = Closed(), closing
+            before = len(errors)
+            await service._receive()
+            assert len(errors) - before == expected, closing
+
+    def test_one_rate_each_way_matches_the_pipeline(self):
+        import phonic_realtime
+
+        assert phonic_realtime.SAMPLE_RATE == bot.PROVIDERS["phonic"].input_rate
+
+    def test_tools_are_strict_and_optional_fields_stay_optional(self):
+        """Every field required and every object closed; the optional ones accept null."""
+        server = bot.MockToolServer(suite="medicare")
+        service, _ = self._service(_tools=bot.build_tools(server))
+        encoded = {t["tool_schema"]["function"]["name"]: t for t in service._encoded_tools()}
+        specs = {spec.name: spec.parameters for spec in server.tool_specs()}
+        assert set(specs) <= set(encoded)
+        for name, published in specs.items():
+            function = encoded[name]["tool_schema"]["function"]
+            parameters = function["parameters"]
+            assert function["strict"] is True
+            assert parameters["additionalProperties"] is False
+            assert set(parameters["required"]) == set(published["properties"])
+            for field, prop in parameters["properties"].items():
+                optional = field not in published.get("required", [])
+                assert ("null" in prop["type"]) == optional, (name, field)
+                if "enum" in prop:
+                    assert (None in prop["enum"]) == optional, (name, field)
+
+    async def test_the_nulls_a_strict_model_sends_are_not_arguments(self):
+        service, _ = self._service()
+        calls = []
+
+        async def run(function_calls):
+            calls.extend(function_calls)
+
+        service.run_function_calls = run
+        await service._dispatch({"type": "tool_call", "tool_call_id": "t1", "tool_name": "route_medicare_call",
+                                 "parameters": {"route_reason": "shopping", "lead_id": None}})
+        assert [(c.function_name, c.arguments) for c in calls] == [("route_medicare_call", {"route_reason": "shopping"})]
+
+    async def test_the_silence_between_replies_is_not_played(self):
+        """The stream never stops; only what lies inside a reply is the agent speaking."""
+        service, seen = self._service()
+        await service._dispatch(self._audio(silent=True))
+        assert seen["pushed"] == []
+        await service._dispatch({"type": "assistant_started_speaking"})
+        await service._dispatch(self._audio("Hello "))
+        await service._dispatch(self._audio(silent=True))
+        await service._dispatch({"type": "assistant_finished_speaking"})
+        await service._dispatch(self._audio(silent=True))
+        names = [name for name, _, _ in seen["pushed"]]
+        assert names.count("TTSAudioRawFrame") == 2, "a pause inside a reply is part of it"
+        assert names[:2] == ["LLMFullResponseStartFrame", "TTSStartedFrame"]
+        assert names[-2:] == ["TTSStoppedFrame", "LLMFullResponseEndFrame"]
+
+    async def test_speech_that_arrives_before_its_start_event_opens_the_reply(self):
+        service, seen = self._service()
+        await service._dispatch(self._audio("Thanks "))
+        names = [name for name, _, _ in seen["pushed"]]
+        assert names[:3] == ["LLMFullResponseStartFrame", "TTSStartedFrame", "TTSAudioRawFrame"]
+
+    async def test_being_talked_over_is_the_services_call(self):
+        """The caller starting to speak proposes a turn; only the service's word interrupts."""
+        service, seen = self._service()
+        await service._dispatch({"type": "assistant_started_speaking"})
+        await service._dispatch({"type": "user_started_speaking"})
+        assert seen["broadcast"] == ["ProposedUserStartedSpeakingFrame"] and seen["interruptions"] == 0
+        await service._dispatch({"type": "interrupted_response", "text": "I can"})
+        assert seen["interruptions"] == 1
+        assert [name for name, _, _ in seen["pushed"]][-2:] == ["TTSStoppedFrame", "LLMFullResponseEndFrame"]
+        assert not bot.PROVIDERS["phonic"].interruptions
+
+    async def test_the_callers_words_travel_upstream_to_the_context(self):
+        from pipecat.processors.frame_processor import FrameDirection
+
+        service, seen = self._service()
+        await service._dispatch({"type": "input_text", "language": "en", "text": "I need to reschedule."})
+        [(name, direction, frame)] = seen["pushed"]
+        assert name == "TranscriptionFrame" and direction is FrameDirection.UPSTREAM
+        assert frame.text == "I need to reschedule."
+
+    async def test_a_tool_result_is_sent_once_and_never_for_a_withdrawn_call(self):
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service, seen = self._service()
+        service._context = LLMContext([])
+        context = LLMContext([
+            {"role": "tool", "tool_call_id": "t1", "content": '{"patient_id": "p_1"}'},
+            {"role": "tool", "tool_call_id": "t2", "content": "IN_PROGRESS"},
+            {"role": "tool", "tool_call_id": "t3", "content": '{"ok": true}'},
+        ])
+        await service._dispatch({"type": "tool_call_interrupted", "tool_call_id": "t3", "tool_name": "x"})
+        await service._handle_context(context)
+        await service._handle_context(context)
+        assert seen["sent"] == [{"type": "tool_call_output", "tool_call_id": "t1", "output": {"patient_id": "p_1"}}]
+
+    async def test_the_call_opens_on_the_instruction_every_row_is_given(self):
+        """Configured first, then asked to reply to the same opening turn as the other rows."""
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service, seen = self._service()
+        service._ready.set()
+        opening = bot.opening_messages("Thank you for calling.")
+        await service._open(service._opening(LLMContext(opening)))
+        assert seen["sent"][0]["type"] == "config"
+        assert seen["sent"][1] == {"type": "generate_reply", "user_message": opening[0]["content"]}
+
+    async def test_audio_before_the_configuration_is_accepted_is_dropped(self):
+        from pipecat.frames.frames import InputAudioRawFrame
+
+        service, seen = self._service()
+        frame = InputAudioRawFrame(audio=b"\0\0" * 160, sample_rate=16000, num_channels=1)
+        await service._send_audio(frame)
+        service._ready.set()
+        await service._send_audio(frame)
+        assert [m["type"] for m in seen["sent"]] == ["audio_chunk"]
+
+
 class TestCascadeCounterparts:
     """The comparison the board exists to make: native against the pipeline it replaces."""
 
     def test_every_native_provider_has_a_counterpart(self):
         """A native row with nothing to compare against cannot answer the question.
 
-        Nova Sonic and GPT-Live have no vendor-default counterpart: GPT-Live
-        delegates to a backend, so its fair pairing is a cascade on that backend.
+        Nova Sonic, GPT-Live and Phonic have no vendor-default counterpart: GPT-Live
+        delegates to a backend, so its fair pairing is a cascade on that backend,
+        and Phonic offers no text model of its own.
         A vendor's smaller tier shares its vendor's counterpart: the question it
         answers is "the cheaper model or the flagship", not "native or cascade".
         """
         paired = {c.counterpart_to for c in bot.TEXT_MODELS.values() if c.counterpart_to}
         tiers = {"openai-realtime-mini", "gemini-flash-live"}
-        unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live"} - tiers
+        unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live", "phonic"} - tiers
         assert not unpaired, f"native providers with no cascade counterpart: {sorted(unpaired)}"
 
     def test_a_counterpart_names_a_provider_that_exists(self):
@@ -2312,7 +2520,7 @@ class TestAResultIsDeliveredWhileTheAgentIsStillSpeaking:
 
     def test_the_rows_that_only_forward_a_result_are_the_immediate_ones(self):
         assert {k for k, p in bot.PROVIDERS.items() if p.results == "immediate"} == {
-            "gemini-live", "gemini-flash-live", "nova-sonic",
+            "gemini-live", "gemini-flash-live", "nova-sonic", "phonic",
         }
         for key in ("openai-realtime", "openai-realtime-mini", "grok-realtime"):
             assert bot.PROVIDERS[key].results == "after_speech", key

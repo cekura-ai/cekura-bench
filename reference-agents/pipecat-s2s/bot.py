@@ -605,6 +605,24 @@ def _qwen_realtime(credential: str, model: str, voice: str, instructions: str, s
     )
 
 
+def _phonic(credential: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
+    """Phonic's speech-to-speech model, through the service in ``phonic_realtime``.
+
+    Pipecat has no service for this provider either. Every setting the row
+    depends on is sent, not left to the server: omit the model and this
+    account is served an older one, with nothing in the reply to say so.
+    """
+    from phonic_realtime import PhonicRealtimeLLMService
+
+    return PhonicRealtimeLLMService(
+        api_key=credential,
+        model=model,
+        voice=voice,
+        instructions=instructions,
+        settings={"intelligence_level": PHONIC_INTELLIGENCE, **PHONIC_TURNS},
+    )
+
+
 def _gpt_live(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
     """The live model plus the backend it hands reasoning to.
 
@@ -879,7 +897,9 @@ class Provider:
     # pipeline not to broadcast one either -- so a client-side interruption
     # there cuts work the model was going to carry on with, and the row would be
     # reporting this pipeline's barge-in rather than the service's. A service
-    # that asks for this is taken at its word.
+    # that asks for this is taken at its word. Another decides on its own side
+    # whether it was interrupted and reports it; that service broadcasts the
+    # interruption itself, when it happens.
     interruptions: bool = True
 
 
@@ -887,7 +907,7 @@ class Provider:
 # and it is not a detail: a scored run needs both halves of the conversation, and
 # a transcript holding only the agent reads as a caller who never spoke. Two of
 # these services transcribe the caller only when asked, and each asks
-# differently; four do it themselves. Nothing warns about the difference,
+# differently; five do it themselves. Nothing warns about the difference,
 # because a session without transcription is a working session.
 #
 #   openai-realtime   asked for  -- an input transcription config, default model
@@ -896,6 +916,7 @@ class Provider:
 #   gemini-live       automatic  -- the service configures both directions itself
 #   gpt-live          automatic  -- the protocol is transcript-driven throughout
 #   nova-sonic        automatic  -- the service emits caller transcripts natively
+#   phonic            automatic  -- the service sends each finished caller turn
 #
 # The tool calls travel separately, through the context aggregator, which is why
 # a run can show resolved tools and still carry no speech.
@@ -921,6 +942,17 @@ NOVA_ENDPOINTING = "MEDIUM"
 # faster, lower setting is a different configuration and gets its own row.
 OPENAI_REASONING = "high"
 GEMINI_THINKING = "HIGH"
+PHONIC_INTELLIGENCE = "high"
+
+# Phonic's documented defaults for its detector and for when a caller has
+# talked over the agent: 800 ms of silence ends a turn, and one word interrupts.
+PHONIC_TURNS = {
+    "vad_threshold": 0.38,
+    "vad_min_silence_duration_ms": 800,
+    "vad_min_speech_duration_ms": 50,
+    "vad_prebuffer_duration_ms": 500,
+    "min_words_to_interrupt": 1,
+}
 
 
 # ``input_rate`` is load-bearing, not a tuning knob. These services do not
@@ -1003,6 +1035,21 @@ PROVIDERS: dict[str, Provider] = {
             "nova_endpointing": NOVA_ENDPOINTING,
         },
         turns="local", results="immediate", caller_transcription="automatic",
+    ),
+    # Phonic takes and returns 16 kHz, and no framework service exists for it
+    # -- see ``phonic_realtime``. ``phonic_v1`` is the newest model this account
+    # is served; the next is enabled per account on request. The service decides
+    # when it has been talked over, and delivers a tool's result into the reply
+    # it is already speaking, so the result is sent as soon as it exists.
+    "phonic": Provider(
+        _phonic, 16000, "phonic_v1", "sabrina", ("PHONIC_API_KEY",),
+        "phonic_realtime",
+        discloses=lambda settings: {
+            "phonic_intelligence_level": PHONIC_INTELLIGENCE,
+            "phonic_turns": ", ".join(f"{k} {v}" for k, v in PHONIC_TURNS.items()),
+            "tool_schema": "strict; optional parameters nullable, null arguments dropped",
+        },
+        results="immediate", interruptions=False, caller_transcription="automatic",
     ),
     # Qwen listens at 16 kHz and speaks at 24 kHz, and no framework service
     # exists for it -- see ``qwen_realtime``. Its audio model is documented to

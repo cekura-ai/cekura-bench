@@ -185,6 +185,10 @@ class TestPricingACall:
                                                "input_audio_tokens": 50, "output_audio_tokens": 1})
         assert price.usd is None and "does not add up" in price.reason
 
+    def test_a_flat_rate_row_is_priced_by_the_minute_of_call(self):
+        price = price_call("phonic", {"call_seconds": 90})
+        assert price.usd == pytest.approx(0.14 * 1.5) and price.publishable
+
     def test_a_row_with_no_rate_yields_a_reason_not_a_zero(self):
         price = price_call("qwen-realtime", {"call_seconds": 60})
         assert price.usd is None and price.reason

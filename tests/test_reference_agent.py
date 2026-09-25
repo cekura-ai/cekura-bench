@@ -2191,6 +2191,72 @@ class TestAToolResultReachesTheModelThatAskedForIt:
         )
 
 
+class TestAResultThatLandsWhileTheCallerIsTalkingIsNotLost:
+    """The model calls a tool as the caller starts a new sentence, and the result
+    comes back before the caller has finished. The stock aggregator skips the
+    push then and remembers nothing, so a realtime model waits, asks for the
+    same tool again with the same arguments, and the call is scored with a
+    duplicate -- or it never hears the answer at all."""
+
+    @staticmethod
+    def _assistant(*, realtime: bool = True, deliver_immediately: bool = False, stock: bool = False):
+        from pipecat.processors.aggregators.llm_context import LLMContext
+        from pipecat.processors.aggregators.llm_response_universal import LLMContextAggregatorPair
+
+        pair = LLMContextAggregatorPair if stock else bot.BenchAggregators
+        kwargs = {} if stock else {"deliver_immediately": deliver_immediately}
+        return pair(LLMContext([]), realtime_service_mode=realtime, **kwargs).assistant()
+
+    @staticmethod
+    async def _result_during_the_callers_turn(assistant):
+        """Upstream pushes by the time the result lands, and once the caller stops."""
+        from pipecat.frames.frames import (
+            FunctionCallFromLLM,
+            FunctionCallInProgressFrame,
+            FunctionCallResultFrame,
+            FunctionCallsStartedFrame,
+            UserStartedSpeakingFrame,
+            UserStoppedSpeakingFrame,
+        )
+        from pipecat.processors.frame_processor import FrameDirection
+
+        pushes = spy_on_pushes(assistant)
+
+        def upstream():
+            return len([d for d in pushes if d is FrameDirection.UPSTREAM])
+
+        call = {"function_name": "lookup", "tool_call_id": "call-1", "arguments": {"id": 1}}
+        for frame in [
+            UserStartedSpeakingFrame(),
+            make_frame(FunctionCallsStartedFrame,
+                       function_calls=[make_frame(FunctionCallFromLLM, **call, context=None)]),
+            make_frame(FunctionCallInProgressFrame, **call, cancel_on_interruption=False),
+            make_frame(FunctionCallResultFrame, **call, result={"found": True}, run_llm=None, properties=None),
+        ]:
+            await assistant.process_frame(frame, FrameDirection.DOWNSTREAM)
+        at_result = upstream()
+        await assistant.process_frame(UserStoppedSpeakingFrame(), FrameDirection.DOWNSTREAM)
+        return at_result, upstream()
+
+    async def test_a_row_that_only_forwards_the_result_gets_it_at_once(self):
+        # Forwarding prompts nothing, so the caller is not talked over.
+        assert await self._result_during_the_callers_turn(self._assistant(deliver_immediately=True)) == (1, 1)
+
+    async def test_a_row_that_answers_on_a_result_gets_it_when_the_caller_stops(self):
+        # Delivering now would start a reply over the caller.
+        assert await self._result_during_the_callers_turn(self._assistant()) == (0, 1)
+
+    async def test_a_cascade_row_leaves_it_to_the_turn_end(self):
+        assert await self._result_during_the_callers_turn(self._assistant(realtime=False)) == (0, 0)
+
+    async def test_the_framework_still_drops_it(self):
+        """Fails when the framework starts delivering this itself; the override then pushes twice."""
+        assert await self._result_during_the_callers_turn(self._assistant(stock=True)) == (0, 0), (
+            "the framework now delivers a result that lands during the caller's turn; "
+            "delete the caller-speaking branch of DeliversToolResults"
+        )
+
+
 class TestAResumedGeminiSessionIsNotToldOldResultsAgain:
     """The service resumes a dropped connection from a handle the server gave
     it, so the server still holds every tool result already delivered. The

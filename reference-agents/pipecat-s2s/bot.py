@@ -2640,6 +2640,14 @@ class DeliversToolResults(LLMAssistantAggregator):
     survive a downstream push as well as a reset. It is delivered once the
     caller's turn is over.
 
+    A result can also land while the caller is talking and the agent is silent:
+    the model asked as the caller began a new sentence. The stock class skips
+    the push then and sets nothing, leaving it to the turn end -- which on a
+    realtime row pushes nothing either. The result waited for whichever push
+    came next, seconds or a minute later, and a model that gave up waiting
+    asked again. A row that only forwards a result gets it at once; one that
+    answers on it gets it when the caller stops, so it does not talk over them.
+
     Realtime rows only. On a cascade row the user half re-runs inference from
     the context at turn end, which carries the result anyway; a second push
     here would answer the same turn twice.
@@ -2648,8 +2656,29 @@ class DeliversToolResults(LLMAssistantAggregator):
     def __init__(self, context: LLMContext, *, deliver_immediately: bool = False, **kwargs) -> None:
         super().__init__(context, **kwargs)
         self._deliver_immediately = deliver_immediately
+        self._result_during_callers_turn = False
+
+    async def _handle_function_call_result(self, frame: FunctionCallResultFrame) -> None:
+        # The framework decides whether to push only when the caller is silent.
+        # Let it reach that decision regardless, and mark why it was reached.
+        if not (self._realtime_service_mode and self._user_speaking):
+            await super()._handle_function_call_result(frame)
+            return
+        self._user_speaking, self._result_during_callers_turn = False, True
+        try:
+            await super()._handle_function_call_result(frame)
+        finally:
+            self._user_speaking, self._result_during_callers_turn = True, False
 
     async def _maybe_push_context_after_function_result(self) -> None:
+        if self._result_during_callers_turn:
+            if self._deliver_immediately and not self.has_queued_frame(FunctionCallResultFrame):
+                logger.debug("tool result delivered while the caller is still talking")
+                await self.push_context_frame(FrameDirection.UPSTREAM)
+            else:
+                # Delivered by ``process_frame`` when the caller stops.
+                self._push_context_on_bot_stopped_speaking = True
+            return
         # Where the row allows it, a result the agent is still narrating over
         # is delivered now rather than after the narration: the service is
         # waiting for it, and the wait is the window in which a barge-in makes

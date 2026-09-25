@@ -1,0 +1,30 @@
+# The agent image is built from the repository root, because the agent answers
+# from the contract and the tool server that live there. Everything else in the
+# repository would otherwise be tarred and handed to the daemon on every build:
+# the run artifacts alone are gigabytes, and one image is built per model.
+#
+# Docker does not read .gitignore, so ignored files are in the build context
+# unless they are named here. That includes .env.
+
+# Run artifacts and the rendered corpus. Gigabytes, and nothing copies them.
+data/
+corpus/
+
+# Credentials must not be in a build context, copied or not.
+.env
+*-service-account.json
+google-*.json
+credentials.json
+
+# Harness code, tests and docs: the image holds only the reference agent.
+service/
+agent/
+tests/
+docs/
+bin/
+
+.git/
+node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/

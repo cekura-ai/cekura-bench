@@ -29,6 +29,46 @@ credentials, live benchmarks, and offline scoring. See the
 The rest of this page describes the existing voice-agent runner. Run its `npm`
 commands from the repository root. Its commands and configuration are unchanged.
 
+## Two things live here
+
+**The scenario runner** (below) launches Cekura's Appointment and Medicare suites
+against your own Cekura-connected agent.
+
+**The service bench** (`service/`, [docs/service.md](docs/service.md)) is a self-contained
+harness that measures a speech-to-speech provider directly over its own
+websocket, with no platform account and no orchestration framework in the
+measured path. It ships its own caller corpus, its own onset detector calibrated
+against known boundaries, and a server for the mock-tool contract in
+`agent-definitions/`. It needs only a provider API key:
+
+```bash
+python -m venv .venv && .venv/bin/pip install -r requirements-service.txt
+.venv/bin/python bin/render-corpus.py                      # needs ELEVENLABS_API_KEY
+.venv/bin/python bin/run-service.py --suite latency          # needs OPENAI_API_KEY
+.venv/bin/python bin/run-service.py --provider gemini-live --suite task   # GEMINI_AUTHORIZATION
+.venv/bin/python bin/run-service.py --provider grok-realtime --suite interaction   # XAI_API_KEY
+```
+
+Three providers are measured today over their own wire protocols: OpenAI
+Realtime, Gemini Live and xAI Grok.
+
+Every run writes the caller audio, the agent audio, the normalized event log and
+every raw provider frame, so a published number can be recomputed from the
+artifacts by someone who does not trust the people who published it.
+
+**The agent bench** (`agent/`, [docs/agent.md](docs/agent.md)) measures the
+other half: the same realtime models wired as a working agent — prompt, tools, a
+task to finish — on a real call, answering from the same mock-tool contract. The
+agent itself is one readable file in
+[reference-agents/pipecat-s2s](reference-agents/pipecat-s2s/README.md), so a
+provider who thinks their model was badly served has one file to argue with.
+
+The two are never ranked against each other. The service bench names a provider
+realtime service under a stated configuration; the agent bench names a whole
+configuration, framework and transport included. "The model is fast" and "the
+deployment is fast" are different claims, and one number that mixes them answers
+neither.
+
 ## What this runner does
 
 Given a Cekura API key and a local configuration, the runner:
@@ -97,6 +137,12 @@ npm run benchmark -- --config benchmark.config.json --execute
 `catalogAgentId` owns the canonical evaluator scenarios. `targetAgentId` is an
 optional existing Cekura agent. `suite` is required and must be either
 `appointments` or `medicare`; each launch runs only that suite.
+
+Add `"scenarios": ["AS1", "AS12", "AS37"]` to run a named subset instead of the
+whole suite — a shakedown launch that only has to prove every field a board is
+scored from arrives. Codes, not ids, so what a run covered stays readable in the
+launch record; a code the catalog does not hold is an error rather than a silent
+omission.
 
 ## Optional provider setup
 
@@ -177,6 +223,39 @@ These settings are sent directly when the runner creates the Cekura agent.
   }
 }
 ```
+
+## Launching against a Pipecat Cloud deployment
+
+A Pipecat Cloud agent is not reached by dialling it. Cekura starts a session on
+the deployment and both sides join the Daily room it returns, so there is no
+phone number in the path and none is required. Add a top-level `pipecat` block
+and the runner launches through that route instead:
+
+```json
+{
+  "projectId": 1234,
+  "catalogAgentId": 5678,
+  "targetAgentId": 9012,
+  "suite": "appointments",
+  "frequency": 3,
+  "pipecat": {
+    "agentName": "your-pipecat-agent",
+    "config": { "example_key": "example_value" }
+  }
+}
+```
+
+`pipecat.config` is the session body. Whatever it holds arrives in the agent's
+session as top-level keys, so one deployment can answer for several
+configurations and each launch states which one it ran. Keep credentials out of
+it: it is quoted in logs, traces and session records, and an agent should read
+its keys from its own environment.
+
+Two behaviours worth knowing before relying on it. The config **replaces** the
+one stored on the agent rather than merging over it, so send the whole
+configuration or send none and let the stored one stand. And a scenario's test
+profile is applied afterwards, so a profile variable sharing a name with a
+session key wins — worth a prefix if the two could ever collide.
 
 ## Reference implementations
 
@@ -292,3 +371,15 @@ scoring conditions, the affected scenario is rerun across every provider so
 the compared evidence uses the same evaluator version and context. This keeps
 the test harness fair while acknowledging that good voice-agent evaluation is
 an empirical test-design process, not a one-shot prompt.
+
+## License
+
+The code here is MIT licensed. See `LICENSE`.
+
+The scenarios and their fixtures are not covered by it and are not published in
+this repository. Withholding them is deliberate: the exact dialogue, branching
+and assertions are what a system would optimise against if it could read them,
+and a benchmark whose answers are public stops measuring what it claims to.
+If they are published later they will carry their own terms.
+
+One file keeps a separate license, noted in `LICENSE` and in its own header.

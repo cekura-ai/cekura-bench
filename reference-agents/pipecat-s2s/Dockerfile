@@ -1,0 +1,49 @@
+# The agent bench agent as Pipecat Cloud runs it.
+#
+# Deliberately plain. Tracing, transcripts, tool calls and logs all go through
+# the Cekura SDK the agent already imports, so there is no log shipper, no
+# sidecar and no agent-specific machinery in here. What the image contains is
+# the agent, the published contract it answers from, and the pinned versions
+# that make a result name a configuration.
+#
+# Built from the repository root, not from this directory, because the agent
+# reads the agent definitions and the mock-tool server from the repository:
+#
+#     docker build -f reference-agents/pipecat-s2s/Dockerfile .
+
+# Pinned by digest. The base image is the harness that runs the agent, so a
+# retag of a mutable tag would change the thing under test without changing
+# anything in this repository. Digest is 0.1.29-py3.12.
+FROM dailyco/pipecat-base:0.1.29-py3.12@sha256:c34a7c605b0f42d790a7593c9870417a098b0d6258b87119ebd6142d27c11e82
+
+# No pip upgrade: this file's whole purpose is that a result names a
+# configuration, and upgrading to whatever pip is newest at build time puts an
+# unpinned component into that configuration.
+# ``agent-commit*`` is a glob on purpose: a glob that matches nothing is fine
+# when another source in the same COPY does, so the file is optional. It exists
+# only in a context that ``deploy.sh`` prepared, for builders that take no
+# ``--build-arg`` (the cloud build does not).
+COPY reference-agents/pipecat-s2s/requirements.txt reference-agents/pipecat-s2s/agent-commit* ./
+RUN pip install --no-cache-dir --retries 3 --timeout 300 -r requirements.txt
+
+# The contract the agent answers from, and the server that serves it. Copied
+# rather than baked into the agent so that the image and the published repository
+# hold the same bytes, and a reader can diff them.
+COPY mock_tools ./mock_tools
+COPY agent-definitions ./agent-definitions
+
+# The provider services Pipecat does not ship, then the agent itself --
+# ``bot.py`` last, because it is what changes between builds.
+COPY reference-agents/pipecat-s2s/qwen_realtime.py ./qwen_realtime.py
+COPY reference-agents/pipecat-s2s/phonic_realtime.py ./phonic_realtime.py
+COPY reference-agents/pipecat-s2s/bot.py ./bot.py
+
+# The agent resolves its own commit to put on every call's build record, and
+# there is no git history in the image. Supplied at build time instead, either
+# as this argument or as the ``agent-commit`` file copied above:
+#
+#     docker build --build-arg AGENT_COMMIT="$(git rev-parse HEAD)" ...
+#
+# A build that has neither records "unknown", which is visible rather than wrong.
+ARG AGENT_COMMIT=unknown
+ENV AGENT_COMMIT=${AGENT_COMMIT}

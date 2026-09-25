@@ -25,12 +25,27 @@ if (!configPath || configPath.startsWith("--")) {
 
 const config = JSON.parse(await readFile(resolve(configPath), "utf8"));
 const watchResults = config.watchResults !== false;
-const required = ["projectId", "catalogAgentId", "agentNumber", "suite"];
+// A Pipecat Cloud run has the platform create a Daily room and start a session
+// in it, so there is no number to dial and none to require.
+const viaPipecat = Boolean(config.pipecat);
+const required = viaPipecat
+  ? ["projectId", "catalogAgentId", "suite"]
+  : ["projectId", "catalogAgentId", "agentNumber", "suite"];
 for (const key of required) {
   if (!config[key]) throw new Error(`Missing required config value: ${key}`);
 }
 if (!["appointments", "medicare"].includes(config.suite)) {
   throw new Error('suite must be either "appointments" or "medicare"');
+}
+const pipecatAgentName = config.pipecat?.agentName ?? config.agentSetup?.pipecat?.agentName;
+if (viaPipecat && !pipecatAgentName) {
+  throw new Error("pipecat.agentName is required to launch a Pipecat Cloud run");
+}
+// The session config replaces the agent's stored one rather than merging over
+// it, so a partial config silently drops the agent's defaults. Send the whole
+// configuration under test, or send none and let the agent's stored one stand.
+if (viaPipecat && config.pipecat.config && typeof config.pipecat.config !== "object") {
+  throw new Error("pipecat.config must be an object of session keys");
 }
 if (config.targetAgentId && config.agentSetup) {
   throw new Error("Use either targetAgentId or agentSetup, not both");
@@ -211,20 +226,57 @@ function scenarioCode(scenario) {
   return String(scenario.name ?? "").match(/^(AS|MS)\d+\s*-/)?.[0] ?? null;
 }
 
+function scenarioNumber(scenario) {
+  return String(scenario.name ?? "").match(/^(AS|MS)\d+/)?.[0] ?? "";
+}
+
 const listed = await api(API_BASE_V1, `/scenarios/?agent_id=${config.catalogAgentId}&page_size=100`);
 const scenarios = (listed.results ?? listed)
   .filter((scenario) => scenarioCode(scenario))
   .sort((left, right) => String(left.name).localeCompare(String(right.name), undefined, { numeric: true }));
 const suitePrefix = config.suite === "appointments" ? "AS" : "MS";
-const suiteScenarios = scenarios.filter((scenario) => scenario.name.startsWith(suitePrefix));
+let suiteScenarios = scenarios.filter((scenario) => scenario.name.startsWith(suitePrefix));
 if (!suiteScenarios.length) {
   throw new Error(`Catalog does not contain ${suitePrefix} scenarios for suite: ${config.suite}`);
+}
+// A named subset, for a shakedown launch that only has to prove the pipe carries
+// every field a board is scored from. Codes, not ids: a code is stable across
+// catalogs and readable in the launch record, so what a small run covered stays
+// legible after the run id has aged out.
+if (config.scenarios?.length) {
+  const wanted = new Set(config.scenarios.map((code) => String(code).trim().toUpperCase()));
+  suiteScenarios = suiteScenarios.filter((scenario) => wanted.has(scenarioNumber(scenario)));
+  const found = new Set(suiteScenarios.map((scenario) => scenarioNumber(scenario)));
+  const missing = [...wanted].filter((code) => !found.has(code));
+  if (missing.length) {
+    throw new Error(`Catalog has no ${missing.join(", ")} for suite: ${config.suite}`);
+  }
 }
 
 const setupPayload = config.targetAgentId ? null : managedSetupPayload(config.agentSetup);
 const provisioned = execute && setupPayload ? await provisionTargetAgent(setupPayload) : null;
 const targetAgentId = config.targetAgentId ?? provisioned?.agentId ?? null;
-const payload = {
+const runName = config.name ?? `Cekura ${config.suite} benchmark — ${new Date().toISOString().slice(0, 10)}`;
+// Two endpoints, because the transports differ in kind rather than in detail. A
+// phone run dials a number. A Pipecat Cloud run carries a session body instead,
+// which is where the configuration under test travels -- so one deployment can
+// answer for every configuration and a row says which one it was.
+const runPath = viaPipecat ? "/scenarios/run_scenarios_pipecat_v2/" : "/scenarios/run_scenarios/";
+const payload = viaPipecat ? {
+  agent: targetAgentId,
+  scenarios: suiteScenarios.map((scenario) => ({ scenario: scenario.id })),
+  frequency: config.frequency ?? 3,
+  concurrency_limit: config.concurrencyLimit ?? 5,
+  // Empty rather than omitted: omitting it mocks every tool configured on the
+  // agent, and this agent answers its own tools from the published contract.
+  mock_tool_names: [],
+  name: runName,
+  pipecat_data: {
+    pipecat_agent_name: pipecatAgentName,
+    ...(config.pipecat.config ? { config: config.pipecat.config } : {}),
+    ...(config.pipecat.roomProperties ? { room_properties: config.pipecat.roomProperties } : {}),
+  },
+} : {
   agent_id: targetAgentId,
   project_id: config.projectId,
   scenarios: suiteScenarios.map((scenario) => scenario.id),
@@ -233,7 +285,7 @@ const payload = {
   mode: config.numberMode ?? "different_numbers",
   mock_tool_names: [],
   agent_number: config.agentNumber,
-  name: config.name ?? `Cekura ${config.suite} benchmark — ${new Date().toISOString().slice(0, 10)}`,
+  name: runName,
 };
 const plan = {
   mode: validateOnly ? "validate" : execute ? "execute" : "dry-run",
@@ -241,14 +293,16 @@ const plan = {
   catalog_agent_id: config.catalogAgentId,
   target_agent_id: targetAgentId,
   suite: config.suite,
+  transport: viaPipecat ? "pipecat" : "telephony",
   suite_scenarios: suiteScenarios.length,
+  ...(config.scenarios?.length ? { scenario_subset: suiteScenarios.map(scenarioNumber) } : {}),
   ...(setupPayload ? { agent_setup: redact(setupPayload) } : {}),
   ...(provisioned ? { agent_setup_result: redact(provisioned.result) } : {}),
   payload,
 };
 
 if (!validateOnly && execute) {
-  const result = await api(API_BASE_V1, "/scenarios/run_scenarios/", {
+  const result = await api(API_BASE_V1, runPath, {
     method: "POST",
     body: JSON.stringify(payload),
   });

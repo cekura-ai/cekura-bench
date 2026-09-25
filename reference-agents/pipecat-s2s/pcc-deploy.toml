@@ -1,0 +1,36 @@
+# One deployment, every configuration.
+#
+# The provider, model, voice and agent definition are chosen per call by the
+# session that starts it, so one service answers for every row on the board. A
+# new model is a new run configuration, not a new deployment, and two models can
+# run against this service at the same time. What answered a given call is on
+# that call's build record rather than implied by which service it reached.
+#
+# Deployed by deploy.sh as a Pipecat Cloud build from the repository; this file
+# holds only what the deployment itself declares. See README.md.
+
+agent_name = "cekura-s2s"
+secret_set = "cekura-s2s-secrets"
+
+[scaling]
+    # Warm replicas, not zero. A cold start here is large -- every provider SDK is
+    # imported before a call arrives -- and it lands inside the window a first
+    # response is timed in, where it reads as a slow model rather than a cold
+    # container.
+    #
+    # The minimum below is the resting size, not the size a board is run at. Warm
+    # replicas cost whether or not a campaign is running, so a cohort raises the
+    # floor for its duration and hands it back afterwards:
+    #
+    #     deploy.sh --min-agents <cohort width>     # for the run
+    #     deploy.sh                                 # back to resting
+    #
+    # Raise it that way rather than in the dashboard: every value here is sent on
+    # each deploy, so a dashboard change is silently undone by the next one. With
+    # the floor matching the cohort's concurrency, every call in it is answered by
+    # an already-warm worker, and no cohort opens with a discarded warm-up call.
+    #
+    # The ceiling is not the concurrency knob -- the campaign sets that -- it is
+    # only headroom above it.
+    min_agents = 5
+    max_agents = 46

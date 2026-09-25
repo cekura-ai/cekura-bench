@@ -1,0 +1,441 @@
+# Pipecat speech-to-speech reference agent
+
+The agent bench agent under test: one realtime speech-to-speech model doing real work
+on a real phone call, with tools, a system prompt and a task to finish.
+
+The service bench measures a provider's realtime service on its own, over a direct
+websocket. This is the other half. The two are never ranked against each other —
+"the model is fast" and "the deployment is fast" are different claims, and one
+number that mixes them answers neither.
+
+## What is being measured
+
+The **whole configuration**: this file, the pinned Pipecat version, the
+transport, and the provider. Not "Pipecat", not the model alone. That is why it
+is a single readable file rather than a framework: anyone can read it, run it,
+and disagree with a choice in it.
+
+Deliberately absent: no cascade fallback, no barge-in tuning, no custom turn
+strategies, no retries. Each of those would make the agent better and the result
+harder to attribute. What gets measured should be the provider plus the plainest
+sensible wiring around it.
+
+## Configuration
+
+**One deployment answers for every row.** What is being measured — the provider,
+the model, the voice, the agent definition — is decided per call by the session
+that starts it, not baked into the image. A cohort is therefore a set of run
+configurations against one deployed agent, and a new model is a new row rather
+than a new deployment.
+
+These keys arrive in the session body (lowercase). The environment is the
+fallback, under the uppercase name, which is what makes `python bot.py` on a
+laptop work unchanged and lets a deployment carry a default:
+
+| Key | Default | Notes |
+|---|---|---|
+| `s2s_provider` | `openai-realtime` | native: also `openai-realtime-mini`, `gemini-live`, `gemini-flash-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`, `phonic`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
+| `s2s_model` | provider default | pin it for a reproducible run |
+| `s2s_voice` | provider default | |
+| `s2s_backend_model` | `gpt-6-sol` | `gpt-live` only, see below |
+| `aws_region` | `us-west-2` | `nova-sonic` only; must be a region serving the model and granted to the credentials |
+| `qwen_region` | `singapore` | `qwen-realtime` only; also `beijing` |
+| `qwen_workspace_id` | **required for `qwen-realtime`** | names the Alibaba workspace whose endpoint answers |
+| `cascade_tts_voice` | fixed voice id | cascade rows only |
+| `agent_dir` | **required** | a directory under `agent-definitions/`; no default on purpose |
+| `cekura_mode` | `track` | `observe` also uploads audio and starts evaluation |
+
+Only those keys are read from a session. The platform flattens a scenario's own
+variables into the same body, so an unfiltered read would let a fixture field
+decide the provider or the agent definition — a scored run against the wrong
+contract, with nothing in the record saying so.
+
+**Credentials are environment-only** and are never read from a session. A key
+sent with a request is copied into every log, trace and session record that
+quotes the body.
+
+| Variable | Notes |
+|---|---|
+| provider key | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, `DASHSCOPE_API_KEY`, `PHONIC_API_KEY`, or for Bedrock `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`); see below for why an API key cannot work |
+| `DEEPGRAM_API_KEY`, `ELEVENLABS_API_KEY` | cascade rows only |
+| `CEKURA_API_KEY`, `CEKURA_AGENT_ID_<DEFINITION>` | tracing is off without both; one platform agent per agent definition (`CEKURA_AGENT_ID_APPOINTMENTS`, `CEKURA_AGENT_ID_MEDICARE`), with `CEKURA_AGENT_ID` for a deployment that serves one |
+| `AGENT_COMMIT` | stamped by the build; names what was actually deployed |
+
+## Start-up
+
+Because the provider is unknown until a call arrives, the worker imports every
+provider SDK at start-up rather than the one it will use, along with the Cekura
+tracer that `create_task` would otherwise load inside the first call. Measured
+here: 1.8 s and ~160 MB at boot, against 0.2–0.6 s per provider SDK and ~0.1 s
+for the tracer — all of it moved out of the window a first response is timed in,
+where it would read as a slow model rather than a cold container.
+
+Nothing in the warm-up touches the network. Opening a throwaway connection per
+provider does not speed up the real first one — a TLS session does not resume
+across a separate context, and no DNS result is cached in-process — while every
+handshake delays the moment a worker can answer at all.
+
+A worker answers more than one call, so every record names the worker and how
+many calls it had already answered. The first call on a worker is the one that
+pays whatever start-up cost is left, and without that field it cannot be told
+apart from a slow model.
+
+The deployment therefore keeps warm replicas rather than scaling to zero, as
+many of them as a campaign places calls at once, so every call in a cohort is
+answered by a worker that is already up. Idle replicas cost money and measure
+nothing, which is the argument for zero; the argument against it is that the
+cold start lands inside the window a first response is timed in, and a latency
+column that includes it is not defensible.
+
+## The cascade, for comparison
+
+"Is a native speech model better than the pipeline it replaces?" is only
+answerable if the two sides differ in one thing, so the cascade is **this same file** — same
+prompt, same tools, same transport, same greeting — with the speech path
+swapped: speech-to-text, a text model, text-to-speech, in place of one model
+doing all three.
+
+Speech-to-text and text-to-speech are held fixed across every cascade row
+(`flux-general-en` and `eleven_flash_v2_5`) and only the text model changes.
+Each vendor's text model is the counterpart to its own speech model, and
+`cascade-baseline` belongs to no vendor.
+
+That fixed pipeline is also the limit of what a cascade row says. A cascade's
+latency is dominated by when its endpointer decides the caller stopped and how
+fast its voice starts, not by its text model. So a cascade row means "this
+vendor's intelligence, delivered through one named pipeline" — never "cascades
+are like this". All three services are named in every record, because a row
+naming only its text model would hide the two components doing most of what a
+latency column measures.
+
+Rows without a cascade counterpart: `openai-realtime-mini`, `gemini-flash-live`,
+`gpt-live` and `nova-sonic`. `gpt-live-1` delegates its reasoning to a separate
+text model, so a fair pairing for it is a cascade on *that* model.
+
+## One provider does not do its own reasoning
+
+`gpt-live-1` converses, and hands search, reasoning and tool work to a separate
+text model. Leaving that unconfigured is a supported mode and the wrong one
+here: delegated work is dropped, so a scenario needing a tool fails for want of
+a backend rather than for anything about the model.
+
+So the backend is named, pinned, and written into every build record. Its row
+is not comparable with a single model's row without that name, and its cost is
+two models' cost rather than one. The default is the backend the vendor's own
+guide says to start from; a smaller one is a cost row, named by the session.
+
+The live model cannot call a function itself, and it hands work over only when
+its prompt says to. The agent definitions are written for a model that holds
+its own tools, so this row's prompt carries one extra section, in the shape the
+vendor's prompting guide prescribes: what the backend can do, when to delegate
+(a step needs a record checked or saved, a transfer, a goodbye so the call can
+be ended), and when not to. The backend receives the agent's instructions
+whole. The record names the addendum as `prompt_addendum` and hashes it as
+`prompt_addendum_sha256`, because a row whose prompt differs from the others
+has to say so -- and the name alone would let the section be rewritten with
+every digest on the record unchanged, since `system_prompt_sha256` covers the
+agent prompt this row shares with the rest.
+
+## Three vendor defaults are sent explicitly
+
+A value the vendor applies when nothing is sent is still a configuration, and
+one that can change under a run. Grok's reasoning effort and detector settings,
+and Nova Sonic's endpointing sensitivity, are therefore sent as the values the
+vendor documents as its defaults and written to the record. Nova's `MEDIUM`
+waits 1.75 s of pause before answering; the record's `endpointing` field says
+`provider` for that row because that wait, not the pipeline's turn decision, is
+what its reply time carries.
+
+## A configuration reconnect opens a new Gemini session
+
+The framework connects to Gemini before the context carrying the tools
+arrives, then reconnects to apply them. Whenever the server has already issued
+a session-resumption handle, that reconnect *resumes* -- and a resumed session
+keeps the setup it was opened with, tools included. The model then runs the
+whole call unable to call anything, and, following its instructions for a
+failed tool, tells the caller the system is having trouble. A reconnect made to change
+the configuration therefore drops the handle and opens a new session here; a
+reconnect after a mid-call error still resumes, as before. The handle is
+dropped inside the reconnect rather than when the context arrives, because the
+framework reconnects on that first context only when there is something to
+apply: a handle discarded for a reconnect that never happens would leave a
+later mid-call error with nothing to resume from.
+
+## A tool result is delivered while the agent is still speaking, where the row allows it
+
+The framework hands a realtime model a tool's result only after the agent has
+stopped speaking. For a narrated tool that wait is exactly the window in which
+a caller talking over the agent makes Gemini withdraw the call
+(`toolCallCancellation`, sent when a client interrupts a server turn): the
+result then answers a call the model has abandoned, and the model asks again,
+so the row gains a duplicate for each barge-in. Gemini and Nova Sonic only
+forward a result when a context frame carries one and nothing prompts the model
+afterwards, so on those rows the result is delivered the moment it exists
+(`immediate`). OpenAI Realtime and Grok open a new response when a result
+lands, so a late result is not orphaned: their timing is left to the framework
+and their narration is not cut (`after_speech`). GPT-Live takes the result off
+the frame itself and never reads it out of the context, so this pipeline does
+not time its delivery at all (`service`). The record names the row's case as
+`result_delivery`.
+
+Measured, on the rows where it matters: Gemini delivers mid-narration and the
+duplicate is gone. Nova never reaches the state -- it ends its content block
+before calling a tool and waits silently, so a result has never once arrived
+while that row was speaking, and the setting stands on the structural argument
+rather than on an observation.
+
+The framework also has no branch for the withdrawal message. It is handled
+here: a withdrawn call gets no late result, the pipeline is told it was
+cancelled, and the trace marks it (`tool_calls_cancelled`), so a reader can
+tell a withdrawn call from a repeated one.
+
+## Bedrock needs signed credentials, not an API key
+
+Nova Sonic is reached only through `InvokeModelWithBidirectionalStream`, and AWS
+excludes that operation from Bedrock API-key (bearer) authentication. A bearer
+token therefore cannot open a Nova Sonic session in any region, however its
+policy is written. Set an access-key pair instead: `AWS_ACCESS_KEY_ID` and
+`AWS_SECRET_ACCESS_KEY`, plus `AWS_SESSION_TOKEN` if the credentials are
+temporary. The identity needs `bedrock:InvokeModel` and
+`bedrock:InvokeModelWithBidirectionalStream` on the model's foundation-model ARN.
+
+Prefer a long-lived key pair. Temporary credentials expire within twelve hours
+and nothing here refreshes them, so a campaign running past the expiry would
+fail partway through a cohort.
+
+Region matters twice over: the model is served in four regions, and credentials
+are granted in some subset of those. Both failures are the same
+`AccessDeniedException` from the outside, which is why the region is recorded
+with every run.
+
+## Two providers have no framework service
+
+Pipecat ships a realtime service for every other model on this board and none
+for Qwen or Phonic, so `qwen_realtime.py` and `phonic_realtime.py` speak those
+protocols directly.
+
+### Qwen
+
+`qwen_realtime.py` speaks Qwen's protocol directly. It is not a
+subclass of the OpenAI Realtime service: Qwen follows the earlier shape of that
+protocol, where modalities, audio formats and turn detection sit at the top
+level of the session rather than inside a nested audio object, and Pipecat's
+service now speaks the later one. Subclassing would mean replacing the session
+encoding, the event models and the tool encoding, and would break whenever the
+framework revises a shape Qwen does not follow.
+
+Two details there are easy to get wrong and silent when wrong. Qwen takes tools
+in the nested form chat completions uses rather than the flat form the realtime
+protocols use, and a tool sent in the wrong form is ignored rather than
+rejected, so the model fails a scenario for having no tools. And it listens at
+16 kHz while speaking at 24 kHz, so outbound frames declare the higher rate and
+the transport resamples; declaring one rate for both plays the voice at the
+wrong speed, which reads as a bad model.
+
+### Phonic
+
+Three details decide how `phonic_realtime.py` is written, and each is silent
+when wrong. The service streams audio without a break, silence included, so
+speech is taken from its own started- and finished-speaking events and only the
+audio between them is played; forwarding everything leaves an agent that never
+stops talking. The service decides for itself when the caller has interrupted
+it (after one word, by default), so the row asks the pipeline not to cut the
+agent off at the first sound and passes the service's interruption on instead.
+And its tools must be strict: every parameter required, so an optional one is
+declared nullable and the `null`s the model sends for fields it leaves out are
+dropped before the call reaches the mock tools.
+
+The model is named on every call. Left unnamed, the service answers with an
+older model than the newest one the account is served, and nothing in the
+reply says so.
+
+## The sample rate is not a tuning knob
+
+These realtime services **do not resample**. Each base64-encodes the audio frame
+it is handed and declares a rate separately, so the pipeline rate must match what
+the provider expects: 24 kHz for OpenAI Realtime and Grok (the rate each
+recommends), 16 kHz for Gemini Live, Nova Sonic, Qwen and Phonic (Nova Sonic and Qwen
+reply at 24 kHz). GPT-Live is the exception: it resamples what it is given. Open it at the wrong rate and the model hears the caller sped up or slowed
+down, transcribes the words badly, and the run looks like a model failure when it
+is a wiring failure.
+
+The telephony serializer resamples the 8 kHz phone leg to whatever the pipeline
+declares, so `PROVIDERS[...].input_rate` in `bot.py` is the only place this has
+to be right.
+
+## The opening turn
+
+A realtime model has no separate text-to-speech to hand a greeting to, so the
+greeting becomes an instruction in the opening turn and the model reads it back
+verbatim. Every call therefore opens from the agent, and that first context frame
+is also what installs the tools on the session.
+
+## Tools
+
+Answered from the published contract in `agent-definitions/<agent_dir>/`, served
+by `mock_tools/`, which is shared with the service bench rather than reimplemented here. Two
+implementations of one contract would drift, and a difference between lanes could
+then be our two servers disagreeing rather than anything about the agents.
+
+An input the table does not recognise returns an explicit miss rather than an
+invented record. Inventing one would let an agent that asked for the wrong thing
+score like an agent that asked for the right thing.
+
+Two tools are code-defined rather than looked up: `end_call` and
+`transfer_call`. Neither returns a record, so neither belongs in the published
+tables — but the prompt instructs the agent to end a call and to announce a
+transfer, and a scored call is judged on whether it terminated appropriately. An
+agent with no way to hang up fails that for a reason having nothing to do with
+the model. The transfer is a mock: a benchmark deployment has no second leg, so
+the call completes after the announced handover.
+
+`agent_dir` has no default. A call that ran the wrong agent definition would
+produce a plausible, scored, wrong result, with nothing in the transcript
+saying which contract it was answering.
+
+State is not modelled: the published tables are stateless, so a run is scored on
+the trace of tool calls. Booking, then cancelling, then verifying needs a store,
+and that is a change to the contract rather than something to fake in the agent.
+
+## Observability
+
+With `CEKURA_API_KEY` and the loaded definition's agent id set, the run is traced
+through the Cekura Pipecat SDK: transcripts, tool calls, logs and spans land against
+the run instead of in a container's stdout. The platform files a session under the
+agent id it was sent and a run looks only under its own agent, so each definition
+reports to its own platform agent, and the record names it (`cekura_agent_id`).
+`track` correlates a scenario run; `observe` additionally uploads the call audio
+and starts evaluation.
+
+Every call carries a **build record** as trace metadata, and it is also logged
+once at startup so the answer survives when only container logs do. The record is
+rewritten after every tool call and finished at the moment the SDK snapshots the
+run — the one point every ending passes through, whether the agent hung up, the
+caller did, or the pipeline stopped — so it is whole however the call ended:
+
+| Field | Why a call is not evidence without it |
+|---|---|
+| `agent_commit`, `pipecat_version`, `cekura_version` | the agent under test is this file *plus* the framework it runs on |
+| `s2s_provider`, `s2s_model`, `s2s_voice` | what was measured |
+| `pipeline_sample_rate` | these services do not resample; a wrong rate makes the model hear the caller at the wrong speed, which reads as a bad model rather than bad wiring |
+| `agent_definition`, `system_prompt_sha256`, `first_message_sha256`, `tools` | the task, the prompt and the contract the model was given |
+| `tool_calls`, `tool_call_count`, `tool_calls_matched` | what the agent asked of its tools, with arguments, answers and ordering; recorded here rather than read from the framework's spans, which only some providers emit, truncated |
+| `config_source` | whether the session or the image decided the configuration — one deployment answers for every row, so a row that does not say which is a row nobody can place |
+| `worker_instance`, `worker_call` | which worker answered and how many calls it had already answered; the first call on a worker carries any start-up cost the warm-up did not remove |
+| `stack`, `turn_source`, `divergences`, `hangup_backstop`, `shared_rules_sha256`, provider disclosures | how this row is arranged differently from the others |
+| `timing`, `integrity` (with `closed_by`) | reply and endpointing times from the shared detector, and the per-call health checks |
+| `usage` | what the call consumed: tokens split by audio, text and cache, or audio seconds and characters for a cascade, plus the call's length |
+
+A phone call cannot be replayed and the provider endpoint moves underneath us, so
+a recording whose configuration is unknown is not evidence of anything.
+
+`usage` is recorded and not priced. Consumption is measured during the call and
+is gone afterwards; a price is a judgement about a vendor page on a date, and it
+will need correcting. Keeping them apart means a published cost can be revised,
+or disputed by the vendor, without running a single call again. The rates and
+the arithmetic live in `pricing/`, outside the image, because nothing about
+money belongs inside the thing being measured. The framework also writes these
+counts onto its trace spans, but that store empties after thirty days and a
+result outlives it.
+
+The splits are the measurement, not a nicety: audio tokens cost a multiple of
+text and cached input a fraction of fresh, so a single total cannot be priced at
+all. A provider that reports nothing contributes nothing and the record says so
+— `usage_reports` distinguishes a provider that does not report from a call that
+never reached a model, which are opposite findings, and neither is zero cost.
+
+Without credentials the agent still runs and still answers the phone. A missing
+key must never be the reason a benchmark call fails.
+
+### The call's log
+
+A run is debugged from its log, and the log has to answer "what happened around
+the caller's second turn" — so every line is stamped `[MM:SS]` from the moment
+the call was answered, the same shape the platform's own testing agent uses,
+and the two sides of a call read on one clock.
+
+The SDK ships the log with the run. Left to itself it keeps INFO and above from
+the moment the task is created, which loses the framework's account of each
+turn (all at DEBUG) and everything logged while the pipeline was being built.
+The agent therefore collects from the call's first line at DEBUG and hands that
+collection to the SDK in place of its own, so the record carries it with no
+second exporter. `BENCH_LOG_LEVEL` turns the volume down for a campaign that has
+stopped being debugged; `BENCH_LOG_MAX_LINES` bounds the payload, and the log
+says where it stopped.
+
+On top of the framework's lines, the call is narrated at INFO: each caller turn
+starting and ending, the detector's own speech boundaries (the gap between the
+two is the endpointing delay), what each side said, each tool as the model
+requested it and as it was answered, interruptions, errors, and how the
+pipeline ended. The last line of a call is a one-line summary; read it first.
+
+### Tool rows after the last turn
+
+The SDK copies the context into the exported transcript when an assistant turn
+ends. `end_call` and `transfer_call` are always the last thing the agent does,
+after its last turn, so they reached the context and never the transcript — and
+a scenario is scored on whether they were made. The rows still in the context
+are swept into the export inside the SDK's own snapshot, on every ending.
+
+## Running it
+
+```bash
+python -m venv .venv && .venv/bin/pip install -r requirements.txt
+export OPENAI_API_KEY=... S2S_PROVIDER=openai-realtime AGENT_DIR=appointments
+.venv/bin/python bot.py          # local dev runner
+```
+
+For a phone call, deploy it and point a Twilio or Telnyx number at the runner;
+`create_transport` selects the transport from the runner arguments, so the same
+file serves local WebRTC, Daily and both telephony providers unchanged.
+
+### Locally, the way the platform runs it
+
+The platform starts a Pipecat Cloud session with a body and gets back a Daily
+room; the simulated caller joins the room. `local.py` does the same on one
+machine with `bot.py` unchanged — the same session body, the same `bot()` entry
+point through the same runner arguments, the same SDK, and the same payload at
+the end, posted to a local receiver instead of the platform where it can be
+read:
+
+```bash
+python local.py receive                                    # stand-in for the platform: keeps every payload
+python local.py call --provider gemini-live --agent-dir medicare   # a room, and the agent answering in it
+python local.py inspect ../../data/local-runs/<file>.json  # read it the way the score will
+```
+
+`call` prints the room and a second token before it answers: join the room from
+a browser to be the caller, or hand the room and that token to a simulated
+caller. It mints the room itself rather than going through Pipecat's
+development runner, which always names the room it creates, and some Daily
+domains refuse a named room. `inspect` checks what a scored run
+depends on — caller turns present, agent words present, no control tokens,
+tool rows in the transcript matching the record, the record finished, usage
+reported, every log line on the call clock with the framework's DEBUG lines in
+it — and prints the tools, their resolutions and the usage. A FAIL there is a
+harness fault to fix before any cohort runs; a clean sheet says the harness is
+not what a strange score is measuring.
+
+## Deploying it
+
+```bash
+pipecat cloud auth login                 # once per machine
+reference-agents/pipecat-s2s/deploy.sh   # cloud build; agent and secret set from pcc-deploy.toml
+```
+
+The build runs on Pipecat Cloud from the repository as a context, so no
+registry is needed. `.dockerignore` decides what leaves the machine: the run
+artifacts and the credentials file do not. The script refuses a dirty tree and
+writes the commit into the context, because the cloud build takes no build
+arguments and a record that cannot name the code it ran is not a record.
+
+Credentials live in the secret set named in `pcc-deploy.toml`, never in the
+image or the session. Create it once with `pipecat cloud secrets set
+cekura-s2s-secrets --file <env file>` holding the variables in the table above;
+add `CEKURA_API_KEY` and one `CEKURA_AGENT_ID_<DEFINITION>` per platform agent.
+
+## Tests
+
+Offline tests cover the provider table, the opening turn, the tool schema and
+the handler's answers, plus timed pipelines for tool results, reconnects and
+hang-ups.

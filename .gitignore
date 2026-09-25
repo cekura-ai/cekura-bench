@@ -3,4 +3,16 @@ node_modules/
 benchmark.config.json
 data/
 *.log
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
 
+# Credentials. A service-account JSON is a private key in a file that looks like
+# configuration, which is how one reaches a public repository by accident.
+*-service-account.json
+google-*.json
+credentials.json
+
+# Written by reference-agents/pipecat-s2s/deploy.sh for builders that take no build args.
+reference-agents/pipecat-s2s/agent-commit

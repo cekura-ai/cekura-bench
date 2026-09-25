@@ -634,13 +634,34 @@ def _gpt_live(api_key: str, model: str, voice: str, instructions: str, settings:
     explicitly, pinned, and written into the build record, because a row that
     does not disclose it is not comparable with one model's row.
     """
+    from pipecat.adapters.services.open_ai_live_adapter import OpenAILiveLLMAdapter
     from pipecat.services.openai.live.llm import OpenAILiveLLMService, OpenAILiveLLMSettings
     from pipecat.services.openai.responses.llm import (
         OpenAIResponsesLLMSettings,
         OpenAIResponsesReasoningConfig,
     )
 
-    return OpenAILiveLLMService(
+    class OptionalStaysOptional(OpenAILiveLLMAdapter):
+        """The backend's tools, sent with ``strict: false``.
+
+        The framework drops ``strict`` from every tool, and the Responses API
+        reads a missing ``strict`` as true: every optional parameter becomes
+        required, and the backend fills each one it does not know with an empty
+        string or a guess. Every other row's tools leave optional parameters
+        optional, so this one is told so explicitly. The Live session accepts
+        the field.
+        """
+
+        def to_provider_tools_format(self, tools_schema):
+            return [
+                {**tool, "strict": False} if tool.get("type") == "function" else tool
+                for tool in super().to_provider_tools_format(tools_schema)
+            ]
+
+    class GPTLive(OpenAILiveLLMService):
+        adapter_class = OptionalStaysOptional
+
+    return GPTLive(
         api_key=api_key,
         settings=OpenAILiveLLMSettings(
             model=model, system_instruction=live_instructions(instructions), voice=voice

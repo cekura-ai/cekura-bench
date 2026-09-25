@@ -2392,6 +2392,18 @@ class TestVendorDefaultsAreExplicitAndOnTheRecord:
         record = record_for("gpt-live")
         assert (record["s2s_backend_model"], record["s2s_backend_reasoning"]) == ("gpt-6-sol", "low")
 
+    def test_the_live_backend_keeps_optional_arguments_optional(self):
+        # A tool without ``strict`` is strict to the Responses API, which makes
+        # every optional parameter required; the framework drops the field.
+        provider = bot.PROVIDERS["gpt-live"]
+        service = provider.build("k", provider.default_model, provider.default_voice, "p", asked())
+        schema = bot.ToolsSchema(standard_tools=[
+            bot.FunctionSchema(name="save", description="d", properties={"name": {"type": "string"}, "zip": {"type": "string"}}, required=["name"]),
+        ])
+        (tool,) = service.get_llm_adapter().to_provider_tools_format(schema)
+        assert tool["strict"] is False
+        assert tool["parameters"]["required"] == ["name"]
+
     @pytest.mark.parametrize("key", ["cascade-openai", "cascade-google", "cascade-grok"])
     def test_a_cascade_counterpart_sends_its_level_and_says_so(self, key):
         text = bot.TEXT_MODELS[key]

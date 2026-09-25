@@ -1,0 +1,32 @@
+{
+  "model_id": "google-chirp-2",
+  "provider": "google",
+  "model": "chirp_2",
+  "version": "unversioned-alias",
+  "identity_policy": "requested_model_rpc_succeeded",
+  "endpoint": "https://us-central1-speech.googleapis.com",
+  "project_id": "gen-lang-client-0085530523",
+  "location": "us-central1",
+  "language": "en-US",
+  "sample_rate": 16000,
+  "encoding": "pcm_s16le",
+  "channels": 1,
+  "frame_ms": 20,
+  "ready_timeout_seconds": 15,
+  "finalize_timeout_seconds": 5,
+  "close_timeout_seconds": 10,
+  "finalization": "stream_end_after_tail",
+  "completion_basis": "grpc_ok_after_half_close_after_tail",
+  "model_source": "https://docs.cloud.google.com/speech-to-text/docs/models/chirp-2",
+  "checked_on": "2026-09-13",
+  "pricing": {
+    "usd_per_minute": null,
+    "source": "https://cloud.google.com/speech-to-text/pricing",
+    "status": "account_rate_unverified",
+    "billing_basis": "submitted audio including silence and retries; estimate, not invoice"
+  },
+  "measurement_profile": "private-turns-controlled-v1",
+  "profile_version": "private-turns-v1",
+  "turn_finalization_class": "provider_exception",
+  "base_config": "config/models/google-chirp-2.json"
+}

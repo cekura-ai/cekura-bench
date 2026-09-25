@@ -142,9 +142,10 @@ class Runner:
         self.api_key = api_key
         self.echo = echo
         self.allow_harness_change = allow_harness_change
+        model = spec.model or self.entry.default_model
         self.config = TTSConfig(
-            model=spec.model or self.entry.default_model,
-            voice=spec.voice or self.entry.default_voice,
+            model=model,
+            voice=spec.voice or self.entry.voice_for(model),
             sample_rate=spec.sample_rate,
             options=tuple(spec.options),
         )
@@ -159,7 +160,7 @@ class Runner:
         else:
             self.started = datetime.now(timezone.utc)
             base = Path(spec.store) if spec.store else store.default_store()
-            self.root = base / f"{self.started.strftime('%Y%m%dT%H%M%SZ')}-{spec.provider}-{spec.label}"
+            self.root = base / f"{self.started.strftime('%Y%m%dT%H%M%SZ')}-{spec.provider}-{self.config.model}-{spec.label}"
         self.session = 1
         self._latest: dict[str, dict[str, Any]] = {}
         self._attempts: dict[str, int] = {}

@@ -61,6 +61,7 @@ def main() -> int:
     parser.add_argument("--suite", default="smoke", choices=sorted(SUITES))
     parser.add_argument("--probe", action="append", choices=sorted(PROBES), help="run these probes instead of a suite")
     parser.add_argument("--model")
+    parser.add_argument("--all-models", action="store_true", help="one run per model in the provider's lineup, in order")
     parser.add_argument("--voice")
     parser.add_argument("--rate", type=int, default=24000)
     parser.add_argument("--option", action="append", default=[], help="adapter option key=value; repeatable, recorded per cell")
@@ -89,15 +90,25 @@ def main() -> int:
         if not items:
             print("no corpus items selected", file=sys.stderr)
             return 2
-        probes = [PROBES[name]() for name in args.probe] if args.probe else SUITES[args.suite]()
-        spec = RunSpec(
-            provider=args.provider, probes=probes, items=items, repeats=args.repeats,
-            model=args.model, voice=args.voice, sample_rate=args.rate, sentinel=not args.no_sentinel,
+        models = [m.model for m in PROVIDERS[args.provider].models] if args.all_models else [args.model]
+        specs = [RunSpec(
+            provider=args.provider, probes=[PROBES[name]() for name in args.probe] if args.probe else SUITES[args.suite](),
+            items=items, repeats=args.repeats,
+            model=model, voice=args.voice, sample_rate=args.rate, sentinel=not args.no_sentinel,
             options=tuple(tuple(opt.split("=", 1)) for opt in args.option),
             corpus_version=version, store=args.store,
             label=args.label or ("-".join(args.probe) if args.probe else args.suite),
-        )
+        ) for model in models]
+        status = 0
+        for spec in specs:
+            status = run_one(spec, None, args) or status
+            if status == 130:                    # interrupted: stop, do not start the next model
+                break
+        return status
+    return run_one(spec, run_dir, args)
 
+
+def run_one(spec: RunSpec, run_dir: Path | None, args: argparse.Namespace) -> int:
     key = credential(spec.provider, args.env)
     if key is None:
         print(f"{PROVIDERS[spec.provider].credential_env} is not set", file=sys.stderr)

@@ -49,8 +49,8 @@ detector is run on the same audio and published beside it as a second opinion
 Starting it at the request would count generation latency as underrun, which
 TTFA already reports.
 
-**One connection per cell, warmed before t0.** No cell's number depends on what
-the previous cell did to the socket. The `repeat` probe measures the warm
+**A new connection per cell, opened before t0.** The handshake is never in a
+timing, and no cell's number depends on what the previous cell did to the socket. The `repeat` probe measures the warm
 second synthesis explicitly.
 
 **Exclusions are declared, not discovered.** A probe names the features it
@@ -98,16 +98,21 @@ vendored):
 
 ## Providers
 
-| key | protocol | streamed input | cancel | continuation | native 8 kHz mu-law | notes |
-|---|---|---|---|---|---|---|
-| `elevenlabs` | websocket, multi-context | yes | `close_context` | yes | yes | option `auto_mode=true|false` (default false: generate on flush) |
-| `cartesia` | websocket, `context_id` | yes | `cancel` | yes | yes | |
-| `deepgram` | websocket, one utterance at a time | yes | `Clear` | yes | yes | the voice is the model string |
-| `openai` | HTTP streaming | no | no | no | no | whole text per request |
-| `gemini` | HTTP server-sent events | no | no | no | no | whole text per request; audio arrives in one or a few parts |
+| key | models (lineup) | protocol | streamed input | cancel | continuation | native 8 kHz mu-law | notes |
+|---|---|---|---|---|---|---|---|
+| `cartesia` | `sonic-3.6`, `sonic-3.5` | websocket, `context_id` | yes | `cancel` | yes | yes | |
+| `elevenlabs` | `eleven_flash_v2_5` | websocket, multi-context | yes | `close_context` | yes | yes | option `auto_mode=true\|false` (default false: generate on flush) |
+| `elevenlabs-dialogue` | `eleven_v3_conversational` | websocket, text-to-dialogue | no | no | no | no | whole text in one flushed frame; the endpoint rejects partial text once it starts generating on its own |
+| `deepgram` | `aura-2-thalia-en` | websocket `/v1/speak`, one utterance at a time | yes | `Clear` | yes | yes | the voice is the model string |
+| `deepgram-flux` | `flux-haley-en` | websocket `/v2/speak`, one utterance at a time | yes | `Interrupt` | yes | yes | `SpeechMetadata` ends a turn; the early `Flushed` does not |
+| `openai` | `gpt-4o-mini-tts` | HTTP streaming | no | no | no | no | whole text per request |
+| `gemini` | `gemini-3.8-flash-tts`, `gemini-3.8-flash-lite-tts`, `gemini-3.1-flash-tts-preview` | HTTP server-sent events | no | no | no | no | whole text per request; audio arrives in parts |
 
-Adapters are keyed by wire protocol: adding a model on a known protocol is a
-registry entry. Pending protocols are listed in `tts_bench/registry.PENDING`.
+Each model runs with one fixed voice, set in the registry: a female US English
+stock voice from that provider. `--all-models` runs the whole lineup of a
+provider, one run per model. Adapters are keyed by wire protocol, so adding a
+model on a known protocol is a registry entry. Pending protocols are listed in
+`tts_bench/registry.PENDING`.
 
 ## Running
 
@@ -120,6 +125,7 @@ uv sync --locked
 uv run --locked bin/run-tts.py --provider elevenlabs --suite latency --repeats 3     # ELEVENLABS_API_KEY
 uv run --locked bin/run-tts.py --provider cartesia --suite streaming --cohort phone   # CARTESIA_API_KEY
 uv run --locked bin/run-tts.py --provider deepgram --probe cancel --probe concurrency
+uv run --locked bin/run-tts.py --provider gemini --all-models --suite latency         # one run per lineup model
 uv run --locked bin/run-tts.py --provider elevenlabs --probe streamed_input --option auto_mode=true
 uv run --locked bin/score-tts.py <run> --instrument deepgram --instrument openai-whisper
 uv run --locked python -m tts_bench.report <run>

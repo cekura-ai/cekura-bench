@@ -284,3 +284,13 @@ class Concurrency(Probe):
         }
         verdict = "pass" if len(ttfas) == self.streams else "fail"
         return ProbeResult(self.name, verdict, values=values, syntheses=list(results))
+
+
+PROBES: dict[str, type[Probe]] = {
+    probe.name: probe for probe in (OneShot, StreamedInput, Cancel, Continuation, Repeat, Concurrency)
+}
+
+
+def probe_from_json(entry: dict[str, Any]) -> Probe:
+    """The probe a run recorded, rebuilt from its name and parameters, so a stored run can resume itself."""
+    return PROBES[entry["name"]](**entry.get("params", {}))

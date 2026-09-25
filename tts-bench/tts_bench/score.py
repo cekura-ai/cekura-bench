@@ -32,6 +32,7 @@ from typing import Any, Sequence
 import aiohttp
 
 from tts_bench.common.transcript import edit_distance, normalize as _fallback_normalize
+from tts_bench.store import cell_dir, latest_cells, write_manifest
 
 DISAGREE_WER = 0.10   # two instruments further apart than this on one row => row flagged
 
@@ -198,20 +199,19 @@ def _write_scores(run_dir: Path, rows: list[dict[str, Any]]) -> None:
     with open(run_dir / "scores-all.jsonl", "w", encoding="utf-8") as handle:
         for row in rows:
             handle.write(json.dumps(row) + "\n")
+    write_manifest(run_dir)              # the run changed on purpose; the manifest follows it
 
 
 def _targets(run_dir: Path) -> list[dict[str, Any]]:
     """Every (cell, audio file) pair that has text to score against."""
     out = []
-    for line in (run_dir / "cells.jsonl").read_text().splitlines():
-        if not line.strip():
-            continue
-        cell = json.loads(line)
+    for cell in latest_cells(run_dir):
         if cell.get("void") or cell.get("probe") == "cancel":
             continue                         # a cancelled utterance is partial by design; its transcript scores nothing
-        directory = Path(cell["artifacts"]["dir"])
+        directory = cell_dir(run_dir, cell)
         record = json.loads((directory / "cell.json").read_text())
-        for wav in sorted(directory.glob("audio-*.wav")):
+        # Audio is WAV as recorded, or FLAC once the run is archived; the samples are the same.
+        for wav in sorted([*directory.glob("audio-*.wav"), *directory.glob("audio-*.flac")]):
             out.append({"cell_id": cell["artifacts"]["slug"], "context": wav.stem.split("-", 1)[1], "wav": wav,
                         "text": record["text"]["sent"], "spoken_reference": record["text"]["spoken_reference"],
                         "cohort": cell["cohort"], "probe": cell["probe"]})

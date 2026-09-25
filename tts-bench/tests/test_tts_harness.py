@@ -17,7 +17,7 @@ ITEMS = [corpus.by_id()["prose.greet"], corpus.by_id()["long.prep"], corpus.by_i
 
 
 async def run(tmp_path: Path, probes, **kwargs) -> Runner:
-    spec = RunSpec(provider="fake", probes=probes, items=ITEMS, repeats=1, sentinel=False, out_root=str(tmp_path), **kwargs)
+    spec = RunSpec(provider="fake", probes=probes, items=ITEMS, repeats=1, sentinel=False, store=str(tmp_path), **kwargs)
     runner = Runner(spec, api_key="unused")
     await runner.run()
     return runner
@@ -55,19 +55,19 @@ class TestProbes:
         rep = next(c for c in runner.cells if c.probe == "repeat" and c.item == "prose.greet")
         assert cont.values["frames"] >= 3 and cont.values["duration_delta_ms"] == 0.0
         assert rep.values["identical_pcm"] is True and rep.values["duration_delta_ms"] == 0.0
-        assert len(list(Path(cont.artifacts["dir"]).glob("audio-*.wav"))) == 2
+        assert len(list((runner.root / cont.artifacts["slug"]).glob("audio-*.wav"))) == 2
 
     async def test_concurrency_opens_a_connection_per_stream(self, tmp_path):
         runner = await run(tmp_path, [Concurrency(streams=3)])
         cell = next(c for c in runner.cells if c.item == "prose.greet")
         assert cell.values["streams_with_audio"] == 3 and len(cell.values["per_stream"]) == 3
-        assert len(list(Path(cell.artifacts["dir"]).glob("audio-stream*.wav"))) == 3
+        assert len(list((runner.root / cell.artifacts["slug"]).glob("audio-stream*.wav"))) == 3
 
 
 class TestRecord:
     async def test_a_cell_ships_everything_needed_to_recompute_it(self, tmp_path):
         runner = await run(tmp_path, [OneShot()])
-        directory = Path(runner.cells[0].artifacts["dir"])
+        directory = runner.root / runner.cells[0].artifacts["slug"]
         for name in ("audio-main.wav", "events.jsonl", "raw.jsonl", "syntheses.json", "cell.json"):
             assert (directory / name).exists(), name
         record = json.loads((directory / "cell.json").read_text())
@@ -79,7 +79,7 @@ class TestRecord:
             assert (runner.root / name).exists(), name
 
     async def test_the_sentinel_leads_the_plan(self, tmp_path):
-        spec = RunSpec(provider="fake", probes=[OneShot()], items=ITEMS, repeats=1, out_root=str(tmp_path))
+        spec = RunSpec(provider="fake", probes=[OneShot()], items=ITEMS, repeats=1, store=str(tmp_path))
         runner = Runner(spec, api_key="unused")
         assert [c.sentinel for c in runner.planned[:3]] == [True, True, True]
         assert runner.planned[0].cell_id == "sentinel/prose.greet/r1"

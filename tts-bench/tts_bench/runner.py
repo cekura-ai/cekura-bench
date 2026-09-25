@@ -1,17 +1,21 @@
 """Runs TTS probes and writes what a published number can be recomputed from.
 
-A run is a directory, the plan lands before the first
-connection, each cell's record lands as it finishes, and an interrupted run is a
-partial result rather than a lost one. One connection per cell, warmed before
-t0, so no cell's number depends on what the previous cell did to the socket.
+A run is a directory in the store (``tts_bench.store``). The plan, the corpus and
+the provenance land before the first connection; each cell lands whole as it
+finishes; an interrupted run is a partial result that ``resume`` completes
+rather than a lost one. One connection per cell, opened before t0, so no cell's
+number depends on what the previous cell did to the socket.
 """
 
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
+import os
+import shutil
 import traceback
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Sequence
@@ -21,9 +25,11 @@ from tts_bench.common.audio import write_wav
 from tts_bench.common.events import Clock, EventLog
 
 from tts_bench import METHODOLOGY_VERSION
+from tts_bench import corpus as corpus_mod
+from tts_bench import store
 from tts_bench.adapters.base import AdapterError, TTSAdapter, TTSConfig
 from tts_bench.corpus import CORPUS_VERSION, ITEMS, SENTINEL_ITEM, Item
-from tts_bench.probes import OneShot, Probe, ProbeContext, ProbeResult
+from tts_bench.probes import OneShot, Probe, ProbeContext, ProbeResult, probe_from_json
 from tts_bench.registry import PROVIDERS
 
 # The sentinel: one fixed cell -- one-shot, one prose item -- at the head of
@@ -32,6 +38,11 @@ from tts_bench.registry import PROVIDERS
 # is not a ranking. Published beside the results, never folded into them.
 SENTINEL_PROBE = OneShot()
 SENTINEL_REPEATS = 3
+HEARTBEAT_S = 60.0
+
+
+class ResumeRefused(RuntimeError):
+    """The run on disk and the one asked for are not the same measurement."""
 
 
 @dataclass
@@ -46,9 +57,23 @@ class RunSpec:
     options: tuple[tuple[str, str], ...] = ()
     sentinel: bool = True
     corpus_version: str = CORPUS_VERSION
-    out_root: str = "data/tts"
+    store: str | None = None          # default: tts_bench.store.default_store()
     label: str = "run"
     wait_between_cells_s: float = 0.0
+
+    @classmethod
+    def from_run(cls, run_dir: Path) -> "RunSpec":
+        """The spec a stored run was started with, so resuming needs nothing but the directory."""
+        provenance = json.loads((run_dir / "provenance.json").read_text())
+        version, items = corpus_mod.load(run_dir / "corpus.json")
+        config = provenance["config"]
+        return cls(
+            provider=provenance["provider"], probes=[probe_from_json(p) for p in provenance["probes"]],
+            items=items, repeats=provenance["repeats"], model=config["model"], voice=config["voice"],
+            sample_rate=config["sample_rate"], options=tuple(config["options"].items()),
+            sentinel=provenance["sentinel"], corpus_version=version, store=str(run_dir.parent),
+            label=provenance.get("label", "run"),
+        )
 
 
 @dataclass(frozen=True)
@@ -86,20 +111,37 @@ class Cell:
     verdict: str | None
     void: str | None
     values: dict[str, Any]
-    artifacts: dict[str, str]
+    artifacts: dict[str, str]         # "slug": the cell's directory, relative to the run directory
     started_utc: str
     duration_s: float
     error: str | None = None
+    attempt: int = 1
+    session: int = 1
 
     def as_json(self) -> dict[str, Any]:
         return asdict(self)
 
 
+def _headline(values: dict[str, Any]) -> str:
+    """The one number a person watching the log wants for this kind of cell."""
+    for name in ("ttfa_ms", "cancel_to_last_chunk_ms", "duration_delta_ms", "ttfa_max_ms"):
+        if values.get(name) is not None:
+            return f"{name}={values[name]}"
+    return ""
+
+
+def _is_exclusion(void: str | None) -> bool:
+    return bool(void) and void.startswith("configuration not supported")
+
+
 class Runner:
-    def __init__(self, spec: RunSpec, api_key: str) -> None:
+    def __init__(self, spec: RunSpec, api_key: str, resume: str | Path | None = None,
+                 allow_harness_change: bool = False, echo: bool = False) -> None:
         self.spec = spec
         self.entry = PROVIDERS[spec.provider]
         self.api_key = api_key
+        self.echo = echo
+        self.allow_harness_change = allow_harness_change
         self.config = TTSConfig(
             model=spec.model or self.entry.default_model,
             voice=spec.voice or self.entry.default_voice,
@@ -107,12 +149,24 @@ class Runner:
             options=tuple(spec.options),
         )
         self.planned = self.plan()
-        self.cells: list[Cell] = []
-        self.started = datetime.now(timezone.utc)
-        self.root = Path(spec.out_root) / f"{self.started.strftime('%Y%m%dT%H%M%SZ')}-{spec.provider}-{spec.label}"
+        self.cells: list[Cell] = []                    # the cells run in this session
         self.harness = prov.harness_state()
         self.environment = prov.environment()
+        self.resuming = resume is not None
+        if resume is not None:
+            self.root = Path(resume)
+            self.started = datetime.fromisoformat(json.loads((self.root / "provenance.json").read_text())["started_utc"])
+        else:
+            self.started = datetime.now(timezone.utc)
+            base = Path(spec.store) if spec.store else store.default_store()
+            self.root = base / f"{self.started.strftime('%Y%m%dT%H%M%SZ')}-{spec.provider}-{spec.label}"
+        self.session = 1
+        self._latest: dict[str, dict[str, Any]] = {}
+        self._attempts: dict[str, int] = {}
+        self._todo: list[PlannedCell] = []
         self._cells_file = None
+        self.log: store.RunLog | None = None
+        self._current: str | None = None
 
     # -- planning -----------------------------------------------------------
 
@@ -134,6 +188,29 @@ class Runner:
             if item.id == item_id:
                 return item
         raise KeyError(f"probe needs corpus item {item_id!r}, which this corpus lacks")
+
+    def fingerprint(self) -> str:
+        """Everything that decides what a cell measures. A resume must match it exactly."""
+        payload = {
+            "methodology": METHODOLOGY_VERSION, "provider": self.spec.provider, "adapter": self.entry.adapter.name,
+            "config": self.config.as_json(), "corpus_version": self.spec.corpus_version,
+            "cells": [[c.cell_id, c.probe.params(), c.item.text, c.item.spoken_reference] for c in self.planned],
+        }
+        return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+
+    def pending(self) -> list[PlannedCell]:
+        """Cells with no usable record: never run, or void for a reason other than a declared exclusion.
+
+        A fail verdict is a measurement and is kept. A provider refusal or a
+        harness error measured nothing, so it runs again; the earlier attempt
+        stays on disk under ``superseded/``.
+        """
+        out = []
+        for planned in self.planned:
+            row = self._latest.get(planned.cell_id)
+            if row is None or (row.get("void") and not _is_exclusion(row["void"])):
+                out.append(planned)
+        return out
 
     # -- the run ------------------------------------------------------------
 
@@ -160,35 +237,105 @@ class Runner:
             "items": len(self.spec.items),
             "repeats": self.spec.repeats,
             "sentinel": self.spec.sentinel,
+            "label": self.spec.label,
+            "fingerprint": self.fingerprint(),
             "probes": [{"name": p.name, "variant": p.slug, "params": p.params(), "needs": list(p.needs)} for p in self.spec.probes],
             "started_utc": self.started.isoformat(),
             "harness": self.harness,
             "environment": self.environment,
         }
 
+    def _patch_sha256(self) -> str | None:
+        patch = prov.harness_patch() if self.harness.get("dirty") else ""
+        return hashlib.sha256(patch.encode()).hexdigest() if patch else None
+
     def open_run(self) -> None:
-        self.root.mkdir(parents=True, exist_ok=False)
-        prov.write_json(self.root / "provenance.json", self._provenance())
-        prov.write_json(self.root / "plan.json", {"run_id": self.root.name, "cells": [c.as_json() for c in self.planned]})
-        if self.harness.get("dirty"):
-            patch = prov.harness_patch()
-            if patch:
-                (self.root / "harness.patch").write_text(patch)
+        if self.resuming:
+            self._check_resume()
+        else:
+            self.root.mkdir(parents=True, exist_ok=False)
+            prov.write_json(self.root / "provenance.json", self._provenance())
+            prov.write_json(self.root / "plan.json", {"run_id": self.root.name, "fingerprint": self.fingerprint(),
+                                                      "cells": [c.as_json() for c in self.planned]})
+            prov.write_json(self.root / "corpus.json", corpus_mod.as_json(self.spec.items, self.spec.corpus_version))
+            if self.harness.get("dirty"):
+                patch = prov.harness_patch()
+                if patch:
+                    (self.root / "harness.patch").write_text(patch)
+        self.session = len(store.read_jsonl(self.root / "sessions.jsonl")) + 1
+        for row in store.read_jsonl(self.root / "cells.jsonl"):
+            slug = row["artifacts"]["slug"]
+            self._latest[slug] = row
+            self._attempts[slug] = self._attempts.get(slug, 0) + 1
+        self._todo = self.pending()
+        kept = len(self.planned) - len(self._todo)
+        with open(self.root / "sessions.jsonl", "a", encoding="utf-8") as handle:
+            store.append_line(handle, {
+                "session": self.session, "started_utc": datetime.now(timezone.utc).isoformat(),
+                "resumed": self.resuming, "harness": self.harness, "patch_sha256": self._patch_sha256(),
+                "harness_change_allowed": self.allow_harness_change,
+                "planned": len(self.planned), "kept": kept, "to_run": len(self._todo), "pid": os.getpid(),
+            })
+        shutil.rmtree(self.root / store.PARTIAL, ignore_errors=True)     # a cell killed mid-write measured nothing
         self._cells_file = open(self.root / "cells.jsonl", "a", encoding="utf-8")
+        self.log = store.RunLog(self.root, planned=len(self.planned), echo=self.echo)
+        self.log.done = kept
+        commit = self.harness.get("commit", "")[:9] + (" dirty" if self.harness.get("dirty") else "")
+        self.log.event("resume" if self.resuming else "run_start",
+                       f"{self.root.name} session {self.session}: {len(self._todo)} to run, {kept} kept of "
+                       f"{len(self.planned)} · harness {commit}",
+                       session=self.session, to_run=len(self._todo), kept=kept, planned=len(self.planned), harness=self.harness)
+
+    def _check_resume(self) -> None:
+        plan = json.loads((self.root / "plan.json").read_text())
+        if plan.get("fingerprint") != self.fingerprint():
+            raise ResumeRefused(f"{self.root.name}: the plan on disk does not match this configuration")
+        first = store.read_jsonl(self.root / "sessions.jsonl")[:1]
+        started = first[0] if first else {"harness": json.loads((self.root / "provenance.json").read_text())["harness"]}
+        same = (started["harness"].get("commit") == self.harness.get("commit")
+                and started.get("patch_sha256") == self._patch_sha256())
+        if not same and not self.allow_harness_change:
+            was, now = started["harness"].get("commit", ""), self.harness.get("commit", "")
+            change = (f"harness {was[:9]}, now {now[:9]}" if was != now
+                      else f"harness {now[:9]} with different uncommitted changes")
+            raise ResumeRefused(f"{self.root.name}: started at {change}; a run measured by two versions of the code "
+                                "is two runs (allow_harness_change overrides, and is recorded)")
+
+    async def _heartbeat(self) -> None:
+        while True:
+            await asyncio.sleep(HEARTBEAT_S)
+            if self.log:
+                self.log.heartbeat(self._current)
 
     async def run(self, on_cell: Callable[[Cell], None] | None = None) -> Path:
         self.open_run()
+        beat = asyncio.create_task(self._heartbeat())
+        completed = False
         try:
-            for planned in self.planned:
+            for planned in self._todo:
                 cell = await self.run_cell(planned)
                 if on_cell:
                     on_cell(cell)
                 if self.spec.wait_between_cells_s:
                     await asyncio.sleep(self.spec.wait_between_cells_s)
+            completed = True
+        except BaseException as exc:
+            if self.log:
+                self.log.event("interrupted", f"stopped in {self._current}: {type(exc).__name__}",
+                               cell_id=self._current, error_class=type(exc).__name__)
+            raise
         finally:
-            self._write_summary(finished=True)
+            beat.cancel()
+            self._write_summary()
             if self._cells_file:
                 self._cells_file.close()
+            if self.log:
+                if completed:
+                    c = self.log.counts()
+                    self.log.event("run_end", f"{self.root.name} session {self.session} done: {c['done']}/{c['planned']} "
+                                   f"cells, voids {c['voids']}, errors {c['errors']}", **c)
+                self.log.close()
+            store.write_manifest(self.root)          # last, so it covers the logs' final lines
         return self.root
 
     def _make_adapter(self, log: EventLog, clock: Clock) -> TTSAdapter:
@@ -196,8 +343,14 @@ class Runner:
 
     async def run_cell(self, planned: PlannedCell) -> Cell:
         probe, item = planned.probe, planned.item
-        directory = self.root / planned.cell_id
-        directory.mkdir(parents=True, exist_ok=True)
+        slug = planned.cell_id
+        self._current = slug
+        attempt = self._attempts.get(slug, 0) + 1
+        directory = self.root / store.PARTIAL / slug
+        shutil.rmtree(directory, ignore_errors=True)
+        directory.mkdir(parents=True)
+        if self.log:
+            self.log.event("cell_start", f"{slug} attempt {attempt}", cell_id=slug, attempt=attempt)
         clock = Clock()
         log = EventLog(clock, directory / "events.jsonl", directory / "raw.jsonl")
         started_utc = datetime.now(timezone.utc).isoformat()
@@ -236,15 +389,18 @@ class Runner:
             sample_rate=self.config.sample_rate, probe=probe.name, variant=probe.slug,
             item=item.id, cohort=item.cohort, repeat=planned.repeat, sentinel=planned.sentinel,
             verdict=result.verdict, void=result.void, values=result.values,
-            artifacts={"dir": str(directory), "slug": planned.cell_id},
+            artifacts={"slug": slug},
             started_utc=started_utc, duration_s=round(clock.now(), 3),
             error=None if failure is None else f"{failure['type']}: {failure['message']}",
+            attempt=attempt, session=self.session,
         )
         prov.write_json(directory / "cell.json", {
             "schema": "tts-bench/cell/1",
             "methodology_version": METHODOLOGY_VERSION,
             "run_id": self.root.name,
-            "cell_id": planned.cell_id,
+            "cell_id": slug,
+            "attempt": attempt,
+            "session": self.session,
             "identity": {
                 "provider": self.spec.provider, "model": self.config.model, "voice": self.config.voice,
                 "sample_rate": self.config.sample_rate, "config": self.config.as_json(), "adapter": self.entry.adapter.name,
@@ -262,18 +418,39 @@ class Runner:
             "environment": self.environment,
             "artifacts": prov.file_inventory(directory),
         })
+        final = self._land(directory, slug, attempt)
         self.cells.append(cell)
+        self._latest[slug] = cell.as_json()
+        self._attempts[slug] = attempt
         if self._cells_file:
-            self._cells_file.write(json.dumps(cell.as_json()) + "\n")
-            self._cells_file.flush()
-        self._write_summary(finished=False)
+            store.append_line(self._cells_file, cell.as_json())
+        if self.log:
+            excluded_cell = _is_exclusion(cell.void)
+            status = "excluded" if excluded_cell else ("void" if cell.void else (cell.verdict or "measured"))
+            self.log.cell_finished(slug, status, cell.duration_s, None if excluded_cell else cell.void,
+                                   failure, store.raw_tail(final / "raw.jsonl") if failure else None, _headline(cell.values))
+        self._write_summary()
+        self._current = None
         return cell
 
-    def _write_summary(self, finished: bool) -> None:
+    def _land(self, partial: Path, slug: str, attempt: int) -> Path:
+        """Move a finished cell into place; an earlier attempt moves aside and is never overwritten."""
+        final = self.root / slug
+        if final.exists():
+            aside = self.root / store.SUPERSEDED / slug / f"attempt-{attempt - 1}"
+            aside.parent.mkdir(parents=True, exist_ok=True)
+            os.replace(final, aside)
+        final.parent.mkdir(parents=True, exist_ok=True)
+        os.replace(partial, final)
+        shutil.rmtree(self.root / store.PARTIAL, ignore_errors=True)    # one cell in flight at a time
+        return final
+
+    def _write_summary(self) -> None:
+        cells = list(self._latest.values())
         prov.write_json(self.root / "summary.json", {
-            "run_id": self.root.name, "finished": finished,
-            "planned": len(self.planned), "completed": len(self.cells),
-            "voids": sum(1 for c in self.cells if c.void), "errors": sum(1 for c in self.cells if c.error),
-            "passed": sum(1 for c in self.cells if c.verdict == "pass"),
-            "failed": sum(1 for c in self.cells if c.verdict == "fail"),
+            "run_id": self.root.name, "finished": len(cells) >= len(self.planned),
+            "planned": len(self.planned), "completed": len(cells), "sessions": self.session,
+            "voids": sum(1 for c in cells if c.get("void")), "errors": sum(1 for c in cells if c.get("error")),
+            "passed": sum(1 for c in cells if c.get("verdict") == "pass"),
+            "failed": sum(1 for c in cells if c.get("verdict") == "fail"),
         })

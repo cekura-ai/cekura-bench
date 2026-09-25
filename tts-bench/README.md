@@ -121,8 +121,9 @@ uv run --locked bin/run-tts.py --provider elevenlabs --suite latency --repeats 3
 uv run --locked bin/run-tts.py --provider cartesia --suite streaming --cohort phone   # CARTESIA_API_KEY
 uv run --locked bin/run-tts.py --provider deepgram --probe cancel --probe concurrency
 uv run --locked bin/run-tts.py --provider elevenlabs --probe streamed_input --option auto_mode=true
-uv run --locked bin/score-tts.py data/tts/<run> --instrument deepgram --instrument openai-whisper
-uv run --locked python -m tts_bench.report data/tts/<run>
+uv run --locked bin/score-tts.py <run> --instrument deepgram --instrument openai-whisper
+uv run --locked python -m tts_bench.report <run>
+uv run --locked bin/run-tts.py --resume <run> --env .env                               # finish an interrupted run
 uv run --locked pytest                                                                # no provider requests
 ```
 
@@ -132,18 +133,51 @@ Suites: `smoke`, `latency` (one_shot, repeat), `streaming` (streamed_input at
 one-shots of one fixed prose item, published beside the results and never
 folded in. Its spread across runs is the noise a ranking gap has to exceed.
 
+## Where runs live
+
+Runs are written to one store: the directory in `TTS_BENCH_STORE`, or
+`data/runs/` in this subproject when it is unset. Point the variable outside
+any checkout, so deleting a working copy never deletes a measurement.
+
+- **Resume.** Each cell is written under `.partial/` and moved into place only
+  when complete, then appended to `cells.jsonl`. A killed run keeps every
+  finished cell. `--resume <run>` rebuilds the run's own plan, corpus and
+  configuration and runs only what has no usable record: missing cells, and
+  voids other than declared exclusions. A fail verdict is a measurement and is
+  kept. A re-run cell's earlier attempt moves to `superseded/`. A resume on
+  different code is refused unless `--allow-harness-change` is given, and each
+  session's code is recorded in `sessions.jsonl`.
+- **Moving a run.** Every recorded path is relative to the run directory, so a
+  run can be copied anywhere and still reported and rescored.
+- **Integrity.** `MANIFEST.sha256` (in `sha256sum -c` format) covers every file
+  and is rewritten by each tool that changes the run on purpose.
+
+```bash
+uv run --locked bin/tts-store.py list                # every run in the store, finished or not
+uv run --locked bin/tts-store.py verify <run>        # recheck the manifest; non-zero exit on any problem
+uv run --locked bin/tts-store.py archive <run>       # WAV to FLAC, kept only if the samples are identical
+uv run --locked bin/tts-store.py index <run>         # a markdown row for a run index kept elsewhere
+```
+
 ## What a run writes
 
 ```
-data/tts/<run>/
+<store>/<run>/
   provenance.json         provider, model, voice, options, capabilities, corpus and methodology versions, harness commit
-  plan.json               every planned cell, sentinel first
-  cells.jsonl             one line per finished cell (appended as it happens)
+  plan.json               every planned cell, sentinel first, and the fingerprint a resume must match
+  corpus.json             the items this run was planned from
+  sessions.jsonl          one line per session: code, patch hash, cells kept and to run
+  cells.jsonl             one line per finished cell attempt (appended as it happens; the last attempt wins)
   summary.json            counts, rewritten after every cell
+  run.log                 one line per cell start and end with its headline number, plus a heartbeat every minute
+  progress.jsonl          the same as data: status, error class, the provider frames before a failure, counts, ETA
+  MANIFEST.sha256         a checksum of every file
+  archive.json            after archiving: each FLAC's original WAV hash and sample hash
+  superseded/             earlier attempts of re-run cells
   scores.jsonl            offline transcription scores, one per cell (after bin/score-tts.py)
   report.md / report.json
   <probe>/<item>/rN/
-    audio-<context>.wav   every synthesised utterance, at the provider's native rate
+    audio-<context>.wav   every synthesised utterance, at the provider's native rate (.flac once archived)
     syntheses.json        per context: t0, every text frame, first/last chunk, cancel, done, and the per-chunk arrival timeline
     events.jsonl          the normalised event log
     raw.jsonl             every provider frame, audio payloads elided to their size

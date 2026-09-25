@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from tts_bench.common.stats import BOOTSTRAP_DRAWS, BOOTSTRAP_SEED, MIN_TAIL_N, latency_summary, rate_summary
+from tts_bench.store import latest_cells, write_manifest
 
 LATENCY_FIELDS = (
     "ttfa_ms", "roundtrip_ms", "leading_silence_ms", "ttfa_from_input_done_ms",
@@ -27,7 +28,7 @@ FLAG_FIELDS = ("identical_pcm", "started_before_input_done")
 
 def load_run(run_dir: str | Path) -> dict[str, Any]:
     root = Path(run_dir)
-    cells = [json.loads(line) for line in (root / "cells.jsonl").read_text().splitlines() if line.strip()]
+    cells = latest_cells(root)
     provenance = json.loads((root / "provenance.json").read_text()) if (root / "provenance.json").exists() else {}
     plan = json.loads((root / "plan.json").read_text())["cells"] if (root / "plan.json").exists() else []
     scores = {}
@@ -219,6 +220,7 @@ def main(argv: Sequence[str]) -> int:
         report = summarize_run(load_run(run_dir))
         (Path(run_dir) / "report.json").write_text(json.dumps(report, indent=2) + "\n")
         (Path(run_dir) / "report.md").write_text(render_markdown(report))
+        write_manifest(Path(run_dir))
         print(f"{run_dir}: report.md written ({report['counts']})")
     return 0
 

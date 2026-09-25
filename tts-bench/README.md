@@ -107,6 +107,11 @@ vendored):
 | `deepgram-flux` | `flux-haley-en` | websocket `/v2/speak`, one utterance at a time | yes | `Interrupt` | yes | yes | `SpeechMetadata` ends a turn; the early `Flushed` does not |
 | `openai` | `gpt-4o-mini-tts` | HTTP streaming | no | no | no | no | whole text per request |
 | `gemini` | `gemini-3.8-flash-tts`, `gemini-3.8-flash-lite-tts`, `gemini-3.1-flash-tts-preview` | HTTP server-sent events | no | no | no | no | whole text per request; audio arrives in parts |
+| `inworld` | `inworld-tts-2-flash` | websocket, `contextId` | yes | no | yes | yes | `close_context` speaks what was already sent before closing, so it is not a cancel |
+| `xai` | `grok-tts` | websocket, one utterance at a time | yes | `text.clear` | yes | yes | voice fixed per socket; the API has no model parameter |
+| `smallest` | `lightning_v3.1_pro` | websocket, `context_id` continuation | yes | no | yes | no | no end-of-utterance message: a context ends when its stream goes quiet; `cancel_request` drops only unreleased text |
+| `soniox` | `tts-rt-v2` | websocket, one stream per context | yes | `cancel` | yes | yes | |
+| `deepinfra` | `Qwen/Qwen3-TTS` | HTTP streaming (OpenAI-compatible) | no | no | no | no | whole text per request; any model DeepInfra hosts on this endpoint is a lineup entry |
 
 Each model runs with one fixed voice, set in the registry: a female US English
 stock voice from that provider. `--all-models` runs the whole lineup of a

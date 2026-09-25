@@ -19,11 +19,16 @@ from tts_bench.adapters.base import TTSAdapter
 from tts_bench.adapters.cartesia import CartesiaAdapter
 from tts_bench.adapters.deepgram import DeepgramSpeakAdapter
 from tts_bench.adapters.deepgram_flux import DeepgramFluxAdapter
+from tts_bench.adapters.deepinfra import DeepInfraTTSAdapter
 from tts_bench.adapters.elevenlabs import ElevenLabsAdapter
 from tts_bench.adapters.elevenlabs_dialogue import ElevenLabsDialogueAdapter
 from tts_bench.adapters.fake import FakeTTSAdapter
 from tts_bench.adapters.gemini_tts import GeminiTTSAdapter
+from tts_bench.adapters.inworld import InworldAdapter
 from tts_bench.adapters.openai_tts import OpenAITTSAdapter
+from tts_bench.adapters.smallest import SmallestAdapter
+from tts_bench.adapters.soniox import SonioxAdapter
+from tts_bench.adapters.xai import XaiTTSAdapter
 
 
 @dataclass(frozen=True)
@@ -92,10 +97,35 @@ PROVIDERS: dict[str, ProviderEntry] = {
          Model("gemini-3.1-flash-tts-preview", "Kore")),
         notes="HTTP streamGenerateContent; audio in parts; whole text per request",
     ),
+    "inworld": ProviderEntry(
+        "inworld", InworldAdapter, "INWORLD_API_KEY",
+        (Model("inworld-tts-2-flash", "Brooke"),),
+        notes="bidirectional websocket, contexts by contextId; raw PCM; no cancel (close_context flushes first)",
+    ),
+    "xai": ProviderEntry(
+        "xai", XaiTTSAdapter, "XAI_API_KEY",
+        (Model("grok-tts", "carina"),),
+        notes="websocket, voice fixed per socket in the URL; text.delta / text.done; text.clear is the cancel; no model parameter",
+    ),
+    "smallest": ProviderEntry(
+        "smallest", SmallestAdapter, "SMALLEST_API_KEY",
+        (Model("lightning_v3.1_pro", "kelsey"),),
+        notes="websocket in continuation mode (context_id, continue); ends on quiet; no cancel",
+    ),
+    "soniox": ProviderEntry(
+        "soniox", SonioxAdapter, "SONIOX_API_KEY",
+        (Model("tts-rt-v2", "Emma"),),
+        notes="websocket, one stream per context; text_end ends input; cancel answered by terminated",
+    ),
+    "deepinfra": ProviderEntry(
+        "deepinfra", DeepInfraTTSAdapter, "DEEPINFRA_API_KEY",
+        (Model("Qwen/Qwen3-TTS", "Vivian"),),
+        notes="OpenAI-compatible HTTP streaming, raw PCM; whole text per request; any hosted model is a lineup entry",
+    ),
 }
 
 # Protocols not yet spoken. Listed so the gap is a fact, not an oversight.
-PENDING = ("inworld", "xai", "smallest", "soniox", "deepinfra", "qwen-audio", "speechify", "rime", "minimax",
+PENDING = ("qwen-audio", "speechify", "rime", "minimax",
            "murf", "fish-audio", "hume", "lmnt", "azure-speech", "google-cloud-tts", "polly")
 
 

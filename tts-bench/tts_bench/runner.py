@@ -13,6 +13,7 @@ import asyncio
 import hashlib
 import json
 import os
+import re
 import shutil
 import traceback
 from dataclasses import asdict, dataclass
@@ -160,7 +161,9 @@ class Runner:
         else:
             self.started = datetime.now(timezone.utc)
             base = Path(spec.store) if spec.store else store.default_store()
-            self.root = base / f"{self.started.strftime('%Y%m%dT%H%M%SZ')}-{spec.provider}-{self.config.model}-{spec.label}"
+            # A hosted model's id can carry an owner prefix ("owner/model"); a run id is one path segment.
+            model = re.sub(r"[^A-Za-z0-9._-]+", "_", self.config.model)
+            self.root = base / f"{self.started.strftime('%Y%m%dT%H%M%SZ')}-{spec.provider}-{model}-{spec.label}"
         self.session = 1
         self._latest: dict[str, dict[str, Any]] = {}
         self._attempts: dict[str, int] = {}

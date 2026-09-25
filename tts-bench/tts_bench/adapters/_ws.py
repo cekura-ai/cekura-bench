@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any
+from typing import Any, ClassVar
 
 import websockets
 
@@ -38,8 +38,12 @@ class WebSocketAdapter(TTSAdapter):
     async def _send_json(self, payload: dict[str, Any]) -> None:
         if self._ws is None:
             raise AdapterError(f"{self.name} not connected")
-        self.log.raw(payload, direction="out")
+        self.log.raw(self._logged(payload), direction="out")
         await self._ws.send(json.dumps(payload))
+
+    def _logged(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """What the raw log records of an outgoing frame; a protocol that sends a credential in a frame redacts it here."""
+        return payload
 
     async def _receive_loop(self) -> None:
         assert self._ws is not None
@@ -63,13 +67,17 @@ class WebSocketAdapter(TTSAdapter):
         except Exception as exc:  # noqa: BLE001
             self._on_error(None, f"receive loop: {exc!r}")
 
-    @staticmethod
-    def _without_audio(message: dict[str, Any]) -> dict[str, Any]:
-        out = dict(message)
-        for key in ("audio", "data"):
-            if isinstance(out.get(key), str) and len(out[key]) > 64:
-                out[key] = f"<{len(out[key])} b64 chars>"
-        return out
+    AUDIO_KEYS: ClassVar[frozenset[str]] = frozenset({"audio", "data", "delta", "audioContent"})
+
+    @classmethod
+    def _without_audio(cls, message: Any) -> Any:
+        """The frame with every audio payload replaced by its size, however deeply the protocol nests it."""
+        if isinstance(message, dict):
+            return {key: (f"<{len(value)} b64 chars>" if key in cls.AUDIO_KEYS and isinstance(value, str) and len(value) > 64
+                          else cls._without_audio(value)) for key, value in message.items()}
+        if isinstance(message, list):
+            return [cls._without_audio(value) for value in message]
+        return message
 
     def _on_binary(self, data: bytes) -> None:
         pass

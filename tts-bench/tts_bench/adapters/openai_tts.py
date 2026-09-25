@@ -26,6 +26,10 @@ class OpenAITTSAdapter(TTSAdapter):
     native_rates: ClassVar[tuple[int, ...]] = (RATE,)
     setup_excluded: ClassVar[str] = "TCP, TLS (session pre-warmed with one request)"
     base = "https://api.openai.com"
+    speech_path = "/v1/audio/speech"
+
+    def _prewarm_url(self) -> str:
+        return f"{self.base}/v1/models/{self.config.model}"
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -36,12 +40,12 @@ class OpenAITTSAdapter(TTSAdapter):
     async def _connect(self) -> None:
         self._session = aiohttp.ClientSession(headers={"Authorization": f"Bearer {self.api_key}"})
         try:
-            async with self._session.get(f"{self.base}/v1/models/{self.config.model}") as response:
+            async with self._session.get(self._prewarm_url()) as response:
                 self.log.raw({"prewarm_status": response.status}, direction="in")
-                if response.status == 401:
-                    raise AdapterError("openai rejected the key")
+                if response.status in (401, 403):
+                    raise AdapterError(f"{self.name} rejected the key")
         except aiohttp.ClientError as exc:
-            raise AdapterError(f"openai prewarm failed: {exc}") from exc
+            raise AdapterError(f"{self.name} prewarm failed: {exc}") from exc
 
     async def _close(self) -> None:
         for task in self._tasks.values():
@@ -62,7 +66,7 @@ class OpenAITTSAdapter(TTSAdapter):
             payload["speed"] = self.config.speed
         self.log.raw({**payload, "input": f"<{len(text)} chars>"}, direction="out")
         try:
-            async with self._session.post(f"{self.base}/v1/audio/speech", json=payload) as response:
+            async with self._session.post(f"{self.base}{self.speech_path}", json=payload) as response:
                 if response.status != 200:
                     body = await response.text()
                     self._on_error(context_id, f"HTTP {response.status}: {body[:300]}")

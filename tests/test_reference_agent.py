@@ -635,6 +635,30 @@ class TestPhonicRealtime:
                 if "enum" in prop:
                     assert (None in prop["enum"]) == optional, (name, field)
 
+    def test_the_tool_text_says_what_omitting_means_under_strict(self):
+        """The shared tool text says to omit optional fields and never send null.
+
+        A strict model must send every field, so read literally it fills the
+        field it was told to omit. Here null is how a field is left out.
+        """
+        import phonic_realtime
+
+        server = bot.MockToolServer(suite="medicare")
+        service, _ = self._service(_tools=bot.build_tools(server))
+        specs = {spec.name: spec for spec in server.tool_specs()}
+        for tool in service._encoded_tools():
+            function = tool["tool_schema"]["function"]
+            assert phonic_realtime._NEVER_NULL not in function["description"], function["name"]
+            assert function["description"].endswith(phonic_realtime.NULL_MEANS_OMITTED)
+            spec = specs.get(function["name"])
+            if spec is None:
+                continue  # the agent's own hang-up tools, which take no optional fields
+            required = set(spec.parameters.get("required", []))
+            for field, prop in function["parameters"]["properties"].items():
+                assert ("send null to leave it out" in prop.get("description", "")) == (field not in required), field
+        # The shared definitions every other row reads are untouched.
+        assert any(phonic_realtime._NEVER_NULL in spec.description for spec in specs.values())
+
     async def test_the_nulls_a_strict_model_sends_are_not_arguments(self):
         service, _ = self._service()
         calls = []
@@ -646,6 +670,32 @@ class TestPhonicRealtime:
         await service._dispatch({"type": "tool_call", "tool_call_id": "t1", "tool_name": "route_medicare_call",
                                  "parameters": {"route_reason": "shopping", "lead_id": None}})
         assert [(c.function_name, c.arguments) for c in calls] == [("route_medicare_call", {"route_reason": "shopping"})]
+
+    async def test_the_string_null_on_an_optional_field_is_a_field_left_out(self):
+        """The service writes a strict null as the string "null", never as JSON null.
+
+        Passed on, it reaches the tools as a value -- a ZIP code of "null" -- and
+        a scorer reads it as a wrong one. On a required field it is kept: that is
+        what the model said.
+        """
+        server = bot.MockToolServer(suite="medicare")
+        service, _ = self._service(_tools=bot.build_tools(server))
+        service._encoded_tools()
+        route = next(spec.parameters for spec in server.tool_specs() if spec.name == "route_medicare_call")
+        required = set(route["required"])
+        optional = sorted(set(route["properties"]) - required)
+        assert optional, "route_medicare_call has optional fields to test with"
+        calls = []
+
+        async def run(function_calls):
+            calls.extend(function_calls)
+
+        service.run_function_calls = run
+        field_required = sorted(required)[0]
+        await service._dispatch({"type": "tool_call", "tool_call_id": "t1", "tool_name": "route_medicare_call",
+                                 "parameters": {field_required: "null", optional[0]: "null", optional[-1]: None}})
+        [call] = calls
+        assert call.arguments == {field_required: "null"}
 
     async def test_the_silence_between_replies_is_not_played(self):
         """The stream never stops; only what lies inside a reply is the agent speaking."""

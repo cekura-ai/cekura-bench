@@ -24,7 +24,12 @@ the provider reports it.
 *Inline tools must be strict.* Every parameter is required, so an optional one
 has to be declared nullable, and the model then sends ``null`` for a field it
 leaves out. Those nulls are removed before the call reaches the tools, so the
-trace records the same arguments another row's would.
+trace records the same arguments another row's would. The tool text is written
+for rows that can leave a field out ("omit it", "never send null"), which a
+strict model cannot do, so it is told what omitting means here: send ``null``.
+Left as written, the model fills a field it was told to omit. The model writes
+that null as the string ``"null"``, never as JSON null, so on an optional field
+that string is treated as the field left out.
 
 Protocol: https://docs.phonic.co/api-reference/conversations/conversations
 """
@@ -99,11 +104,30 @@ def strict_parameters(schema: dict[str, Any]) -> dict[str, Any]:
             properties[name] = strict_parameters(prop)
             if name not in required:
                 _allow_null(properties[name])
+                properties[name]["description"] = _optional(properties[name].get("description", ""))
         schema["required"] = list(properties)
         schema["additionalProperties"] = False
     elif schema.get("type") == "array" and isinstance(schema.get("items"), dict):
         schema["items"] = strict_parameters(schema["items"])
     return schema
+
+
+# What "leave it out" means when every field must be sent.
+NULL_MEANS_OMITTED = (
+    "Every argument must be sent: for an optional argument with no real, relevant value, "
+    "send null, which leaves it out."
+)
+_NEVER_NULL = "Never send null for an optional argument."
+
+
+def strict_description(text: str) -> str:
+    """A tool's description with its rule for optional arguments restated for strict mode."""
+    text = text.replace(_NEVER_NULL, "").rstrip()
+    return f"{text} {NULL_MEANS_OMITTED}".strip()
+
+
+def _optional(text: str) -> str:
+    return f"{text.rstrip()} Optional: send null to leave it out.".strip()
 
 
 def _allow_null(prop: dict[str, Any]) -> None:
@@ -120,9 +144,17 @@ def _spoken(text: str) -> str:
     return " ".join(text.split())
 
 
-def without_nulls(arguments: dict[str, Any]) -> dict[str, Any]:
-    """The arguments a model left out, left out: strict mode sends them as ``null``."""
-    return {key: value for key, value in arguments.items() if value is not None}
+def without_nulls(arguments: dict[str, Any], optional: frozenset[str] | set[str] = frozenset()) -> dict[str, Any]:
+    """The arguments a model left out, left out.
+
+    Strict mode makes it send every field, and it writes a left-out one as
+    ``null`` or, on this service, as the string ``"null"``. The string counts as
+    left out only on an optional field; on a required one it is what the model said.
+    """
+    return {
+        key: value for key, value in arguments.items()
+        if value is not None and not (key in optional and value == "null")
+    }
 
 
 class PhonicRealtimeLLMService(LLMService):
@@ -158,6 +190,8 @@ class PhonicRealtimeLLMService(LLMService):
         # setting it depends on rather than leaving it to a server default.
         self._options = dict(settings or {})
         self._tools = tools
+        # Each tool's optional fields, by tool name, filled when the tools are encoded.
+        self._optional: dict[str, frozenset[str]] = {}
         self._websocket = None
         self._closing = False
         self._receive_task = None
@@ -232,6 +266,10 @@ class PhonicRealtimeLLMService(LLMService):
         for tool in standard:
             schema = tool.to_default_dict() if hasattr(tool, "to_default_dict") else dict(tool)
             function = schema.get("function", schema)
+            parameters = function.get("parameters") or {"type": "object", "properties": {}}
+            self._optional[function["name"]] = frozenset(
+                set(parameters.get("properties", {})) - set(parameters.get("required") or ())
+            )
             encoded.append(
                 {
                     "type": "custom_websocket",
@@ -240,7 +278,7 @@ class PhonicRealtimeLLMService(LLMService):
                         "type": "function",
                         "function": {
                             "name": function["name"],
-                            "description": function.get("description", ""),
+                            "description": strict_description(function.get("description", "")),
                             "parameters": strict_parameters(
                                 function.get("parameters") or {"type": "object", "properties": {}}
                             ),
@@ -471,7 +509,7 @@ class PhonicRealtimeLLMService(LLMService):
                     context=self._context,
                     tool_call_id=tool_call_id,
                     function_name=name,
-                    arguments=without_nulls(event.get("parameters") or {}),
+                    arguments=without_nulls(event.get("parameters") or {}, self._optional.get(name, frozenset())),
                 )
             ]
         )

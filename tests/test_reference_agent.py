@@ -688,6 +688,25 @@ class TestPhonicRealtime:
         assert name == "TranscriptionFrame" and direction is FrameDirection.UPSTREAM
         assert frame.text == "I need to reschedule."
 
+    async def test_the_opening_instruction_is_not_the_callers_speech(self):
+        """The service echoes the opening user message back as caller transcription.
+
+        Forwarded, it becomes a caller turn the caller never said, at the start of
+        every call, overlapping the greeting it asked for.
+        """
+        service, seen = self._service()
+        service._ready.set()
+        opening = 'Open the call by saying exactly this, word for word, and nothing else: "Hello."'
+        await service._open(opening)
+        assert seen["sent"][-1] == {"type": "generate_reply", "user_message": opening}
+        await service._dispatch({"type": "input_text", "language": "en", "text": opening + " "})
+        assert seen["pushed"] == []
+        # Only the echo is dropped: the caller saying anything, even those words, is speech.
+        for text in ("I need to reschedule.", opening):
+            await service._dispatch({"type": "input_text", "language": "en", "text": text})
+        assert [frame.text for name, _, frame in seen["pushed"] if name == "TranscriptionFrame"] == [
+            "I need to reschedule.", opening]
+
     async def test_a_tool_result_is_sent_once_and_never_for_a_withdrawn_call(self):
         from pipecat.processors.aggregators.llm_context import LLMContext
 

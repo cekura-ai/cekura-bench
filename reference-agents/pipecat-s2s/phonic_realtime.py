@@ -116,6 +116,10 @@ def _allow_null(prop: dict[str, Any]) -> None:
         prop["enum"] = [*prop["enum"], None]
 
 
+def _spoken(text: str) -> str:
+    return " ".join(text.split())
+
+
 def without_nulls(arguments: dict[str, Any]) -> dict[str, Any]:
     """The arguments a model left out, left out: strict mode sends them as ``null``."""
     return {key: value for key, value in arguments.items() if value is not None}
@@ -162,6 +166,10 @@ class PhonicRealtimeLLMService(LLMService):
         self._context = None
         self._speaking = False
         self._conversation_id: str | None = None
+        # The opening instruction, until the service echoes it back. It is sent
+        # as a user message, and the service reports it as ``input_text`` as if
+        # the caller had said it.
+        self._opening_echo: str | None = None
         # Results already handed over, and calls the service withdrew: a result
         # for a withdrawn call has nobody waiting for it.
         self._delivered: set[str] = set()
@@ -331,6 +339,7 @@ class PhonicRealtimeLLMService(LLMService):
         except asyncio.TimeoutError:
             await self.push_error(error_msg=f"Phonic did not accept the configuration in {READY_TIMEOUT_S:.0f}s")
             return
+        self._opening_echo = _spoken(opening) if opening else None
         await self._send({"type": "generate_reply", **({"user_message": opening} if opening else {})})
 
     async def _end_reply(self):
@@ -386,6 +395,11 @@ class PhonicRealtimeLLMService(LLMService):
             await self.broadcast_frame(ProposedUserStoppedSpeakingFrame)
 
         elif kind == "input_text":
+            if self._opening_echo is not None and _spoken(event.get("text", "")) == self._opening_echo:
+                # Our own opening instruction, not the caller: kept out of the transcript.
+                self._opening_echo = None
+                logger.debug(f"{self} dropped the echo of the opening instruction")
+                return
             # Upstream: the context's user half sits before this service.
             await self.push_frame(
                 TranscriptionFrame(event.get("text", ""), "", time_now_iso8601(), result=event),

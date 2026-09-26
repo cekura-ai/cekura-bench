@@ -207,3 +207,60 @@ class TestRecords:
         assert end["done"] == 3 and end["errors"] == 0
         assert store.verify(first.root) == []                                    # the manifest covers the final log lines
         assert (first.root / "run.log").read_text().count("cell_end") == 3
+
+
+def finish_failing_with(monkeypatch, message: str) -> None:
+    async def refuse(self, context_id):
+        self._on_error(context_id, message)
+
+    monkeypatch.setattr(FakeTTSAdapter, "_finish", refuse)
+
+
+class TestAccountRefusals:
+    async def test_a_balance_or_rate_limit_error_is_a_void_that_a_resume_retries(self, tmp_path, monkeypatch):
+        finish_failing_with(monkeypatch, "organization_balance_exhausted: Organization balance exhausted")
+        first = Runner(spec(tmp_path), "unused")
+        await first.run()
+        assert all(c.void.startswith("provider refused: organization_balance_exhausted") and c.verdict is None
+                   for c in first.cells)
+        monkeypatch.undo()
+        second = await resume(first.root)
+        assert len(second.cells) == 3 and all(c.verdict == "pass" for c in second.cells)
+
+    async def test_a_service_error_on_an_allowed_request_stays_a_failure(self, tmp_path, monkeypatch):
+        finish_failing_with(monkeypatch, "synthesis failed: internal error")
+        runner = Runner(spec(tmp_path), "unused")
+        await runner.run()
+        assert all(c.verdict == "fail" and c.void is None for c in runner.cells)
+        assert runner.pending() == []
+
+    def test_the_messages_that_mean_the_account_not_the_voice(self):
+        from tts_bench.adapters.base import is_refusal
+
+        for message in ("HTTP 429: Too Many Requests", "HTTP 402: payment required", "HTTP 401: {}", "quota exceeded",
+                        "Invalid API key", "rate_limit_exceeded", "insufficient credits"):
+            assert is_refusal(message), message
+        for message in ("HTTP 500: internal", "invalid_argument: text too long", "receive loop: ConnectionClosed()", None):
+            assert not is_refusal(message), message
+
+
+class TestPlanAndSite:
+    def test_cancel_runs_every_long_item_five_times_and_continuation_every_long_item(self, tmp_path):
+        from tts_bench.probes import Continuation
+
+        runner = Runner(RunSpec(provider="fake", probes=[Cancel(), Continuation()], repeats=3, sentinel=False,
+                                store=str(tmp_path)), "unused")
+        counts = {}
+        for cell in runner.planned:
+            counts[cell.probe.name] = counts.get(cell.probe.name, 0) + 1
+            assert cell.item.cohort == "long"
+        assert counts == {"cancel": 20, "continuation": 12}
+
+    async def test_each_session_records_where_it_ran_and_a_resume_rebuilds_the_cancel_repeats(self, tmp_path, monkeypatch):
+        runner = Runner(spec(tmp_path, probes=[Cancel(repeats=2)]), "unused", site="lab-a")
+        await runner.run()
+        provenance = json.loads((runner.root / "provenance.json").read_text())
+        assert provenance["client"]["site"] == "lab-a"
+        again = await resume(runner.root, site="lab-b")
+        assert len(again.planned) == len(runner.planned) == 4          # the run's two long items, twice each
+        assert [s["client"]["site"] for s in store.read_jsonl(runner.root / "sessions.jsonl")] == ["lab-a", "lab-b"]

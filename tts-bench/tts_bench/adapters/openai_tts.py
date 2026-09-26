@@ -67,12 +67,13 @@ class OpenAITTSAdapter(TTSAdapter):
         self.log.raw({**payload, "input": f"<{len(text)} chars>"}, direction="out")
         try:
             async with self._session.post(f"{self.base}{self.speech_path}", json=payload) as response:
+                self._on_response(context_id, response.status, response.headers)
                 if response.status != 200:
                     body = await response.text()
                     self._on_error(context_id, f"HTTP {response.status}: {body[:300]}")
                     return
                 async for chunk in response.content.iter_any():
                     self._on_audio(context_id, chunk)
-            self._on_done(context_id, http_status=200)
+            self._on_done(context_id)
         except Exception as exc:  # noqa: BLE001 -- anything that stops the stream is the cell's error, never a silent timeout
             self._on_error(context_id, f"http: {exc!r}")

@@ -71,6 +71,7 @@ class GeminiTTSAdapter(TTSAdapter):
         url = f"{self.base}/models/{self.config.model}:streamGenerateContent?alt=sse"
         try:
             async with self._session.post(url, json=payload) as response:
+                self._on_response(context_id, response.status, response.headers)
                 if response.status != 200:
                     body = await response.text()
                     self._on_error(context_id, f"HTTP {response.status}: {body[:300]}")
@@ -85,7 +86,7 @@ class GeminiTTSAdapter(TTSAdapter):
                         line, buffer = buffer.split(b"\n", 1)
                         self._line(context_id, line)
                 self._line(context_id, buffer)
-            self._on_done(context_id, http_status=200)
+            self._on_done(context_id)
         except Exception as exc:  # noqa: BLE001 -- anything that stops the stream is the cell's error, never a silent timeout
             self._on_error(context_id, f"http: {exc!r}")
 

@@ -133,6 +133,11 @@ def summarize(synthesis: Synthesis) -> dict[str, Any]:
         "input_duration_ms": _ms(synthesis.t_input_done, synthesis.t0),
         "completion_ms": _ms(synthesis.t_done, synthesis.t0),
         "last_chunk_ms": _ms(synthesis.t_last_chunk, synthesis.t0),
+        # HTTP only: the server's time before it streamed anything.
+        "headers_ms": _ms(synthesis.meta.get("t_headers"), synthesis.t0),
+        # Throughput as characters over the time to receive the whole utterance.
+        "chars_per_s": None if not synthesis.chars_sent or not (v := _ms(synthesis.t_last_chunk, synthesis.t0))
+        else round(synthesis.chars_sent / (v / 1000.0), 1),
         # Delivery speed relative to realtime: 0.25 = the whole utterance was
         # delivered in a quarter of its own duration.
         "generation_over_realtime": None if generation_s is None or audio_s <= 0 else round(generation_s / audio_s, 3),

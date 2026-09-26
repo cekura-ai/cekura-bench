@@ -13,10 +13,14 @@ from __future__ import annotations
 import hashlib
 import json
 import platform
+import socket
+import statistics
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from tts_bench.common import detector
 
@@ -113,3 +117,38 @@ def file_inventory(directory: Path) -> dict[str, dict[str, Any]]:
 
 def write_json(path: Path, payload: Any, indent: int | None = 2) -> None:
     path.write_text(json.dumps(payload, indent=indent) + "\n", encoding="utf-8")
+
+
+def client_network(site: str | None, endpoint: str | None, samples: int = 5) -> dict[str, Any]:
+    """Where the client measured from, and how far away the provider's front door was.
+
+    Every first-audio number contains one network round trip, so a row is only
+    comparable with rows measured from the same place. ``site`` is the
+    operator's label for that place (a cloud region, an office); the endpoint's
+    resolved addresses and the TCP connect time to it show which of the
+    provider's points of presence answered and how far it was. Only the host is
+    recorded: some endpoints carry a key in the query string.
+    """
+    out: dict[str, Any] = {"site": site, "host": None, "addresses": [], "tcp_connect_ms": [], "tcp_connect_median_ms": None}
+    if not endpoint:
+        return out
+    parts = urlsplit(endpoint)
+    host, port = parts.hostname, parts.port or (80 if parts.scheme in ("ws", "http") else 443)
+    out["host"] = host
+    try:
+        infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+    except OSError as exc:
+        out["error"] = f"resolve: {exc}"
+        return out
+    out["addresses"] = sorted({info[4][0] for info in infos})
+    for _ in range(samples):
+        started = time.perf_counter()
+        try:
+            with socket.create_connection((host, port), timeout=5):
+                out["tcp_connect_ms"].append(round((time.perf_counter() - started) * 1000, 1))
+        except OSError as exc:
+            out["error"] = f"connect: {exc}"
+            break
+    if out["tcp_connect_ms"]:
+        out["tcp_connect_median_ms"] = statistics.median(out["tcp_connect_ms"])
+    return out

@@ -32,6 +32,8 @@ from tts_bench.report import load_run, render_markdown, summarize_run  # noqa: E
 from tts_bench.runner import ResumeRefused, RunSpec, Runner  # noqa: E402
 from tts_bench.store import STORE_ENV, write_manifest  # noqa: E402
 
+SITE_ENV = "TTS_BENCH_SITE"
+
 SUITES = {
     "smoke": lambda: [OneShot()],
     "latency": lambda: [OneShot(), Repeat()],
@@ -74,6 +76,8 @@ def main() -> int:
     parser.add_argument("--store", help=f"directory runs are written to (default ${STORE_ENV}, else data/runs)")
     parser.add_argument("--label")
     parser.add_argument("--resume", help="a run directory to complete; its own plan, corpus and configuration are used")
+    parser.add_argument("--site", default=os.environ.get(SITE_ENV),
+                        help=f"where this client runs, e.g. aws-us-east-1 (default ${SITE_ENV}); required for a real provider")
     parser.add_argument("--allow-harness-change", action="store_true",
                         help="resume although the code differs from the run's first session (recorded in sessions.jsonl)")
     args = parser.parse_args()
@@ -109,12 +113,15 @@ def main() -> int:
 
 
 def run_one(spec: RunSpec, run_dir: Path | None, args: argparse.Namespace) -> int:
+    if spec.provider != "fake" and not args.site:
+        print(f"--site (or ${SITE_ENV}) is required: every latency includes the network from here to the provider", file=sys.stderr)
+        return 2
     key = credential(spec.provider, args.env)
     if key is None:
         print(f"{PROVIDERS[spec.provider].credential_env} is not set", file=sys.stderr)
         return 2
 
-    runner = Runner(spec, key, resume=run_dir, allow_harness_change=args.allow_harness_change, echo=True)
+    runner = Runner(spec, key, resume=run_dir, allow_harness_change=args.allow_harness_change, echo=True, site=args.site)
     print(f"tts bench: {spec.provider} {runner.config.label} cells={len(runner.planned)} -> {runner.root}")
     try:
         out = asyncio.run(runner.run())

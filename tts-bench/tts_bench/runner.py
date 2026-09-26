@@ -28,7 +28,7 @@ from tts_bench.common.events import Clock, EventLog
 from tts_bench import METHODOLOGY_VERSION
 from tts_bench import corpus as corpus_mod
 from tts_bench import store
-from tts_bench.adapters.base import AdapterError, TTSAdapter, TTSConfig
+from tts_bench.adapters.base import AdapterError, TTSAdapter, TTSConfig, is_refusal
 from tts_bench.corpus import CORPUS_VERSION, ITEMS, SENTINEL_ITEM, Item
 from tts_bench.probes import OneShot, Probe, ProbeContext, ProbeResult, probe_from_json
 from tts_bench.registry import PROVIDERS
@@ -135,10 +135,21 @@ def _is_exclusion(void: str | None) -> bool:
     return bool(void) and void.startswith("configuration not supported")
 
 
+def _refused(result: ProbeResult) -> ProbeResult:
+    """A failure the account caused, recorded as the void it is, so a resume retries it."""
+    if result.void or result.verdict != "fail":
+        return result
+    message = next((s.error for s in result.syntheses if is_refusal(s.error)), None)
+    if message is None:
+        return result
+    return ProbeResult(result.name, void=f"provider refused: {message}", values=result.values, syntheses=result.syntheses)
+
+
 class Runner:
     def __init__(self, spec: RunSpec, api_key: str, resume: str | Path | None = None,
-                 allow_harness_change: bool = False, echo: bool = False) -> None:
+                 allow_harness_change: bool = False, echo: bool = False, site: str | None = None) -> None:
         self.spec = spec
+        self.site = site
         self.entry = PROVIDERS[spec.provider]
         self.api_key = api_key
         self.echo = echo
@@ -180,18 +191,18 @@ class Runner:
         if self.spec.sentinel:
             cells += [PlannedCell(SENTINEL_PROBE, by_id[SENTINEL_ITEM], r, sentinel=True) for r in range(1, SENTINEL_REPEATS + 1)]
         for probe in self.spec.probes:
-            # A probe with a fixed item runs on that item alone; content is not what it measures.
-            items = [by_id.get(probe.fixed_item) or self._find(probe.fixed_item)] if probe.fixed_item else list(self.spec.items)
+            # A probe with its own cohort runs on that cohort whatever the run selected; content is not what it measures.
+            items = self._cohort(probe.cohort) if probe.cohort else list(self.spec.items)
             for item in items:
-                for repeat in range(1, self.spec.repeats + 1):
+                for repeat in range(1, (probe.repeats or self.spec.repeats) + 1):
                     cells.append(PlannedCell(probe, item, repeat))
         return cells
 
-    def _find(self, item_id: str | None) -> Item:
-        for item in self.spec.items:
-            if item.id == item_id:
-                return item
-        raise KeyError(f"probe needs corpus item {item_id!r}, which this corpus lacks")
+    def _cohort(self, cohort: str) -> list[Item]:
+        items = [i for i in self.spec.items if i.cohort == cohort] or [i for i in ITEMS if i.cohort == cohort]
+        if not items:
+            raise KeyError(f"probe needs corpus cohort {cohort!r}, which this corpus lacks")
+        return items
 
     def fingerprint(self) -> str:
         """Everything that decides what a cell measures. A resume must match it exactly."""
@@ -247,13 +258,20 @@ class Runner:
             "started_utc": self.started.isoformat(),
             "harness": self.harness,
             "environment": self.environment,
+            "client": self.client,
         }
+
+    def _endpoint(self) -> str | None:
+        adapter = self._make_adapter(EventLog(Clock()), Clock())
+        return getattr(adapter, "url", None) or getattr(adapter, "base", None)
 
     def _patch_sha256(self) -> str | None:
         patch = prov.harness_patch() if self.harness.get("dirty") else ""
         return hashlib.sha256(patch.encode()).hexdigest() if patch else None
 
     def open_run(self) -> None:
+        # Measured each session: a resumed run may be finished from somewhere else, and the rows must say so.
+        self.client = prov.client_network(self.site, self._endpoint())
         if self.resuming:
             self._check_resume()
         else:
@@ -279,6 +297,7 @@ class Runner:
                 "resumed": self.resuming, "harness": self.harness, "patch_sha256": self._patch_sha256(),
                 "harness_change_allowed": self.allow_harness_change,
                 "planned": len(self.planned), "kept": kept, "to_run": len(self._todo), "pid": os.getpid(),
+                "client": self.client,
             })
         shutil.rmtree(self.root / store.PARTIAL, ignore_errors=True)     # a cell killed mid-write measured nothing
         self._cells_file = open(self.root / "cells.jsonl", "a", encoding="utf-8")
@@ -287,7 +306,8 @@ class Runner:
         commit = self.harness.get("commit", "")[:9] + (" dirty" if self.harness.get("dirty") else "")
         self.log.event("resume" if self.resuming else "run_start",
                        f"{self.root.name} session {self.session}: {len(self._todo)} to run, {kept} kept of "
-                       f"{len(self.planned)} · harness {commit}",
+                       f"{len(self.planned)} · harness {commit} · site {self.site or 'unlabelled'}, "
+                       f"{self.client['host']} {self.client['tcp_connect_median_ms']} ms",
                        session=self.session, to_run=len(self._todo), kept=kept, planned=len(self.planned), harness=self.harness)
 
     def _check_resume(self) -> None:
@@ -369,7 +389,8 @@ class Runner:
                 async with adapter:
                     async def new_adapter() -> TTSAdapter:
                         return self._make_adapter(log, clock)
-                    result = await probe.run(ProbeContext(adapter=adapter, item=item, clock=clock, log=log, new_adapter=new_adapter))
+                    result = _refused(await probe.run(ProbeContext(adapter=adapter, item=item, clock=clock, log=log,
+                                                                    new_adapter=new_adapter)))
         except AdapterError as exc:
             failure = {"type": type(exc).__name__, "message": str(exc), "traceback": traceback.format_exc()}
             result = ProbeResult(probe.name, void=f"provider refused: {exc}")

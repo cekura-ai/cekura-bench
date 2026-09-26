@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import abc
 import asyncio
+import re
 from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
@@ -33,6 +34,22 @@ from tts_bench import events as ev
 
 class AdapterError(RuntimeError):
     """The provider refused or the protocol broke; the cell is void, not scored."""
+
+
+# An error that says the account, not the service, stopped the request: a key,
+# a balance, a quota or a rate limit. Such a cell measured nothing about the
+# voice, so it is void and a resume runs it again; any other provider error on
+# a request the account was allowed to make is a failure of the service.
+_REFUSAL = re.compile(
+    r"\b(?:HTTP )?(?:401|402|403|429)\b|unauthori[sz]ed|forbidden|invalid.{0,12}(?:api.?key|token|credential)"
+    r"|quota|rate.?limit|too many (?:requests|concurrent)|concurren\w* (?:limit|requests? exceeded)"
+    r"|balance|credits?\b|insufficient|billing|payment|exhausted|permission denied",
+    re.IGNORECASE,
+)
+
+
+def is_refusal(message: str | None) -> bool:
+    return bool(message) and _REFUSAL.search(message) is not None
 
 
 @dataclass(frozen=True)
@@ -279,6 +296,25 @@ class TTSAdapter(abc.ABC):
             return
         synthesis.t_cancel_ack = self.clock.now()
         self.log.emit(ev.CANCEL_ACK, at=synthesis.t_cancel_ack, context_id=context_id, **meta)
+
+    # Headers that identify a session or carry a credential stay out of the record.
+    _PRIVATE_HEADERS = frozenset({"set-cookie", "cookie", "authorization", "x-api-key", "x-goog-api-key"})
+
+    def _on_response(self, context_id: str, status: int, headers: Any) -> None:
+        """An HTTP response's status line arrived: when, and what the server said about the request.
+
+        The gap from t0 to the headers is the server's time before it streamed
+        anything; request ids, processing times and usage headers are what a
+        cost or a server-side latency is later read from.
+        """
+        at = self.clock.now()
+        kept = {k.lower(): v for k, v in headers.items() if k.lower() not in self._PRIVATE_HEADERS}
+        synthesis = self.contexts.get(context_id)
+        if synthesis is not None:
+            synthesis.meta["http_status"] = status
+            synthesis.meta["t_headers"] = at
+            synthesis.meta["headers"] = kept
+        self.log.raw({"http_status": status, "headers": kept}, direction="in")
 
     def _on_error(self, context_id: str | None, message: str) -> None:
         self.log.emit(ev.PROVIDER_ERROR, context_id=context_id, message=message)

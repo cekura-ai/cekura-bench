@@ -46,8 +46,11 @@ class ProbeContext:
 class Probe:
     name = "probe"
     needs: tuple[str, ...] = ()
-    # Which corpus item this probe runs on when it is not the item under test.
-    fixed_item: str | None = None
+    # A probe that needs a particular kind of text (something long enough to
+    # cancel) runs on every item of this cohort instead of the items under test.
+    cohort: str | None = None
+    # Cells per item, when the run's repeat count gives too few for this probe.
+    repeats: int | None = None
 
     @property
     def slug(self) -> str:
@@ -130,25 +133,28 @@ class StreamedInput(Probe):
 class Cancel(Probe):
     """How long after we say stop does the audio actually stop.
 
-    Runs on the long item so there is something left to cancel. The cancel is
+    Runs on the long items so there is something left to cancel. The cancel is
     sent a fixed interval after the first chunk arrives; what is measured is
     how much audio the provider still delivered after that instant and when its
-    last byte landed. This is what barge-in responsiveness is made of.
+    last byte landed. This is what barge-in responsiveness is made of. It runs
+    five times per item, not the run's three: four items at three repeats is
+    too few cells for a tail.
     """
 
     name = "cancel"
     needs = ("cancel",)
-    fixed_item = "long.prep"
+    cohort = "long"
 
-    def __init__(self, after_first_audio_ms: float = 300.0) -> None:
+    def __init__(self, after_first_audio_ms: float = 300.0, repeats: int = 5) -> None:
         self.after_first_audio_ms = after_first_audio_ms
+        self.repeats = repeats
 
     @property
     def slug(self) -> str:
         return f"{self.name}-{self.after_first_audio_ms:g}ms"
 
     def params(self) -> dict[str, Any]:
-        return {"after_first_audio_ms": self.after_first_audio_ms}
+        return {"after_first_audio_ms": self.after_first_audio_ms, "repeats": self.repeats}
 
     async def run(self, ctx: ProbeContext) -> ProbeResult:
         adapter = ctx.adapter
@@ -182,7 +188,7 @@ class Continuation(Probe):
 
     name = "continuation"
     needs = ("continuation",)
-    fixed_item = "long.summary"
+    cohort = "long"
 
     def __init__(self, frame_gap_ms: float = 300.0) -> None:
         self.frame_gap_ms = frame_gap_ms

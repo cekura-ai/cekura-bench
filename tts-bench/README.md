@@ -21,7 +21,7 @@ measures the things an agent depends on:
 | 1 | **TTFA** | how long a listener waits for the first *audible* sample: round-trip to the first chunk plus the silence inside the stream before speech |
 | 2 | **streamed-input TTFA** | with words arriving at an LLM's cadence, how long from the first word, and how long from the last one; whether speech began before the text ended |
 | 3 | **playout margin / underruns / stall** | once speech starts, does the stream keep up with a player consuming at exactly realtime |
-| 4 | **cancel latency** | after a stop request, when the last chunk lands and how much audio arrived after the request |
+| 4 | **cancel latency** | after a stop request, when the last chunk lands and how much audio arrived after the request; on each long item, five times |
 | 5 | **continuation consistency** | one utterance sent whole versus as sentence frames with pauses: duration and onset deltas, both recordings kept for transcript comparison |
 | 6 | **determinism** | the same text twice: byte-identical or not, duration and TTFA deltas |
 | 7 | **tail under load** | N concurrent one-shots on N connections under one key |
@@ -48,6 +48,17 @@ detector is run on the same audio and published beside it as a second opinion
 **The playout clock starts at the first audible sample**, not at the request.
 Starting it at the request would count generation latency as underrun, which
 TTFA already reports.
+
+**Every run names where it ran from.** Each first-audio number contains one
+network round trip, so rows compare only when measured from the same place. A
+real provider needs `--site` (or `TTS_BENCH_SITE`), a label such as
+`aws-us-east-1`; each session also records the provider endpoint's resolved
+addresses and the TCP connect time to it.
+
+**An account refusal measures nothing.** An error that names a key, a
+balance, a quota or a rate limit voids the cell rather than failing it, so a
+resume runs it again once the account is fixed. Any other error on a request
+the account was allowed to make is a failure of the service.
 
 **A new connection per cell, opened before t0.** The handshake is never in a
 timing, and no cell's number depends on what the previous cell did to the socket. The `repeat` probe measures the warm
@@ -127,6 +138,7 @@ read from the environment or from a dotenv file passed with `--env`; see
 
 ```bash
 uv sync --locked
+export TTS_BENCH_SITE=aws-us-east-1                                                  # where this client runs
 uv run --locked bin/run-tts.py --provider elevenlabs --suite latency --repeats 3     # ELEVENLABS_API_KEY
 uv run --locked bin/run-tts.py --provider cartesia --suite streaming --cohort phone   # CARTESIA_API_KEY
 uv run --locked bin/run-tts.py --provider deepgram --probe cancel --probe concurrency
@@ -154,7 +166,7 @@ any checkout, so deleting a working copy never deletes a measurement.
   when complete, then appended to `cells.jsonl`. A killed run keeps every
   finished cell. `--resume <run>` rebuilds the run's own plan, corpus and
   configuration and runs only what has no usable record: missing cells, and
-  voids other than declared exclusions. A fail verdict is a measurement and is
+  voids other than declared exclusions (a provider refusal, a harness error). A fail verdict is a measurement and is
   kept. A re-run cell's earlier attempt moves to `superseded/`. A resume on
   different code is refused unless `--allow-harness-change` is given, and each
   session's code is recorded in `sessions.jsonl`.
@@ -177,7 +189,7 @@ uv run --locked bin/tts-store.py index <run>         # a markdown row for a run 
   provenance.json         provider, model, voice, options, capabilities, corpus and methodology versions, harness commit
   plan.json               every planned cell, sentinel first, and the fingerprint a resume must match
   corpus.json             the items this run was planned from
-  sessions.jsonl          one line per session: code, patch hash, cells kept and to run
+  sessions.jsonl          one line per session: code, patch hash, site and endpoint distance, cells kept and to run
   cells.jsonl             one line per finished cell attempt (appended as it happens; the last attempt wins)
   summary.json            counts, rewritten after every cell
   run.log                 one line per cell start and end with its headline number, plus a heartbeat every minute

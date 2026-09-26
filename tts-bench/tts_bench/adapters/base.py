@@ -297,8 +297,9 @@ class TTSAdapter(abc.ABC):
         synthesis.t_cancel_ack = self.clock.now()
         self.log.emit(ev.CANCEL_ACK, at=synthesis.t_cancel_ack, context_id=context_id, **meta)
 
-    # Headers that identify a session or carry a credential stay out of the record.
-    _PRIVATE_HEADERS = frozenset({"set-cookie", "cookie", "authorization", "x-api-key", "x-goog-api-key"})
+    # Headers that carry a credential or name the account stay out of the record.
+    _PRIVATE_HEADERS = frozenset({"set-cookie", "cookie", "authorization", "x-api-key", "x-goog-api-key",
+                                  "openai-organization", "openai-project"})
 
     def _on_response(self, context_id: str, status: int, headers: Any) -> None:
         """An HTTP response's status line arrived: when, and what the server said about the request.

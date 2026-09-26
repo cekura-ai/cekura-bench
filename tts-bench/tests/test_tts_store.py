@@ -264,3 +264,28 @@ class TestPlanAndSite:
         again = await resume(runner.root, site="lab-b")
         assert len(again.planned) == len(runner.planned) == 4          # the run's two long items, twice each
         assert [s["client"]["site"] for s in store.read_jsonl(runner.root / "sessions.jsonl")] == ["lab-a", "lab-b"]
+
+
+class TestScoringJournal:
+    async def test_a_scoring_pass_that_dies_keeps_its_transcripts_and_the_next_asks_only_for_the_rest(self, tmp_path):
+        runner = Runner(spec(tmp_path), "unused")
+        await runner.run()
+        texts = {i.id: i.text for i in ITEMS}
+        asked: list[str] = []
+
+        class Dies(_Echo):
+            async def transcribe(self, session, wav_path):
+                asked.append(wav_path.parent.parent.name)
+                if len(asked) == 3:
+                    raise Killed()
+                return await super().transcribe(session, wav_path)
+
+        with pytest.raises(Killed):
+            await score_run(runner.root, [Dies(texts)], concurrency=1)
+        assert len(store.read_jsonl(runner.root / "transcripts.jsonl")) == 2      # paid for, kept
+
+        asked.clear()
+        assert await score_run(runner.root, [_Echo(texts)], concurrency=1) == 3
+        rows = store.read_jsonl(runner.root / "scores.jsonl")
+        assert len(rows) == 3 and all(r["instruments"]["echo"]["best"]["wer"] == 0 for r in rows)
+        assert len(store.read_jsonl(runner.root / "transcripts.jsonl")) == 3      # only the missing one was asked for

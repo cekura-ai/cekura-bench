@@ -32,7 +32,7 @@ from typing import Any, Sequence
 import aiohttp
 
 from tts_bench.common.transcript import edit_distance, normalize as _fallback_normalize
-from tts_bench.store import cell_dir, latest_cells, write_manifest
+from tts_bench.store import append_line, cell_dir, latest_cells, read_jsonl, write_manifest
 
 DISAGREE_WER = 0.10   # two instruments further apart than this on one row => row flagged
 
@@ -218,32 +218,72 @@ def _targets(run_dir: Path) -> list[dict[str, Any]]:
     return out
 
 
+JOURNAL = "transcripts.jsonl"
+
+
+def _journal_from_scores(run_dir: Path, journal_path: Path) -> None:
+    with open(journal_path, "w", encoding="utf-8") as journal:
+        for row in read_jsonl(run_dir / "scores-all.jsonl"):
+            for name, score in row["instruments"].items():
+                entry = {"cell_id": row["cell_id"], "context": row["context"], "instrument": name, "model": score["model"]}
+                entry.update({"hypothesis": score["hypothesis"]} if "hypothesis" in score else {"error": score.get("error", "")})
+                journal.write(json.dumps(entry) + "\n")
+
+
 async def score_run(run_dir: Path, instruments: Sequence[Instrument], concurrency: int = 4) -> int:
+    """Transcribe every recording once per instrument, journalling each transcript as it arrives.
+
+    A transcript is paid for, so it is appended to ``transcripts.jsonl`` the
+    moment it returns; a scoring pass that dies keeps every transcript it got,
+    and the next pass asks only for the ones still missing. An instrument
+    error is journalled too and retried by the next pass.
+    """
     targets = _targets(run_dir)
+    journal_path = run_dir / JOURNAL
+    if not journal_path.exists() and (run_dir / "scores-all.jsonl").exists():
+        _journal_from_scores(run_dir, journal_path)      # a run scored before the journal existed keeps what it paid for
+    have = {(r["cell_id"], r["context"], r["instrument"]) for r in read_jsonl(journal_path) if "hypothesis" in r}
     semaphore = asyncio.Semaphore(concurrency)
-    rows: list[dict[str, Any]] = []
+    journal = open(journal_path, "a", encoding="utf-8")
 
     async def one(session: aiohttp.ClientSession, target: dict[str, Any]) -> None:
         async with semaphore:
-            results: dict[str, Any] = {}
             for instrument in instruments:
+                if (target["cell_id"], target["context"], instrument.name) in have:
+                    continue
+                entry: dict[str, Any] = {"cell_id": target["cell_id"], "context": target["context"],
+                                         "instrument": instrument.name, "model": instrument.model}
                 try:
-                    hypothesis = await instrument.transcribe(session, target["wav"])
-                    results[instrument.name] = {"model": instrument.model, **score_transcript(target["text"], target["spoken_reference"], hypothesis)}
+                    entry["hypothesis"] = await instrument.transcribe(session, target["wav"])
                 except Exception as exc:  # noqa: BLE001 -- the instrument failed, the provider did not
-                    results[instrument.name] = {"model": instrument.model, "error": repr(exc)}
-            wers = [r["best"]["wer"] for r in results.values() if "best" in r]
-            rows.append({
-                "cell_id": target["cell_id"], "context": target["context"], "cohort": target["cohort"], "probe": target["probe"],
-                "audio": str(target["wav"].relative_to(run_dir)),
-                "normalizer": {"name": NORMALIZER_NAME, "version": NORMALIZER_VERSION},
-                "instruments": results,
-                "instruments_disagree": len(wers) >= 2 and (max(wers) - min(wers)) > DISAGREE_WER,
-            })
+                    entry["error"] = repr(exc)
+                append_line(journal, entry)
 
-    async with aiohttp.ClientSession() as session:
-        await asyncio.gather(*(one(session, t) for t in targets))
+    try:
+        async with aiohttp.ClientSession() as session:
+            await asyncio.gather(*(one(session, t) for t in targets))
+    finally:
+        journal.close()
 
+    latest: dict[tuple[str, str], dict[str, dict[str, Any]]] = {}
+    for entry in read_jsonl(journal_path):          # the last entry per instrument wins
+        latest.setdefault((entry["cell_id"], entry["context"]), {})[entry["instrument"]] = entry
+    rows: list[dict[str, Any]] = []
+    for target in targets:
+        results: dict[str, Any] = {}
+        for name, entry in latest.get((target["cell_id"], target["context"]), {}).items():
+            if "hypothesis" in entry:
+                results[name] = {"model": entry["model"], **score_transcript(target["text"], target["spoken_reference"], entry["hypothesis"])}
+            else:
+                results[name] = {"model": entry["model"], "error": entry["error"]}
+        wers = [r["best"]["wer"] for r in results.values() if "best" in r]
+        rows.append({
+            "cell_id": target["cell_id"], "context": target["context"], "cohort": target["cohort"], "probe": target["probe"],
+            "audio": str(target["wav"].relative_to(run_dir)),
+            "normalizer": {"name": NORMALIZER_NAME, "version": NORMALIZER_VERSION},
+            "instruments": results,
+            "instruments_disagree": len(wers) >= 2 and (max(wers) - min(wers)) > DISAGREE_WER,
+        })
     _write_scores(run_dir, rows)   # scores.jsonl holds one row per cell (the main context); scores-all.jsonl everything
     return len(rows)
 

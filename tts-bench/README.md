@@ -197,6 +197,7 @@ uv run --locked bin/tts-store.py index <run>         # a markdown row for a run 
   MANIFEST.sha256         a checksum of every file
   archive.json            after archiving: each FLAC's original WAV hash and sample hash
   superseded/             earlier attempts of re-run cells
+  transcripts.jsonl       every transcript as it returned, per instrument; a scoring pass asks only for what is missing
   scores.jsonl            offline transcription scores, one per cell (after bin/score-tts.py)
   report.md / report.json
   <probe>/<item>/rN/

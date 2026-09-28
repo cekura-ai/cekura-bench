@@ -152,8 +152,8 @@ Resolution on clean audio is about **±10 ms**. Under noise it runs systematical
 Left unchecked that would have manufactured "providers are slower under noise"
 out of the instrument. It does not bite in the service bench, because the noise sits on the
 caller channel while the provider's returned audio comes back clean. The rule is
-explicit: **this detector may not be pointed at a noisy channel.** The agent bench's phone
-leg uses its own periodicity-based detector (docs/agent.md).
+explicit: **this detector may not be pointed at a noisy channel.** A phone line
+needs a detector keyed on periodicity rather than energy.
 
 Gaps smaller than detector error are reported as ties.
 

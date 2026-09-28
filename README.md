@@ -57,9 +57,10 @@ Every run writes the caller audio, the agent audio, the normalized event log and
 every raw provider frame, so a published number can be recomputed from the
 artifacts by someone who does not trust the people who published it.
 
-**The agent bench** (`agent/`, [docs/agent.md](docs/agent.md)) measures the
-other half: the same realtime models wired as a working agent — prompt, tools, a
-task to finish — on a real call, answering from the same mock-tool contract. The
+**The agent bench** (`reference-agents/pipecat-s2s`, `agent/report.py`) measures
+the other half: the same realtime models wired as a working agent — prompt, tools,
+a task to finish — on live calls scored by the Cekura platform, answering from the
+same mock-tool contract. The
 agent itself is one readable file in
 [reference-agents/pipecat-s2s](reference-agents/pipecat-s2s/README.md), so a
 provider who thinks their model was badly served has one file to argue with.

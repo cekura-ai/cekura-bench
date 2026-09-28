@@ -92,8 +92,8 @@ class TestNoiseIsTheKnownFailureMode:
         """Documented limit: this detector may not be pointed at a noisy channel.
 
         The service bench is safe because noise sits on the caller channel we author while
-        the provider's returned audio comes back clean. The agent bench's phone leg is not,
-        and uses ``agent.detector`` (periodicity) instead.
+        the provider's returned audio comes back clean. A phone line is not, and needs a
+        detector keyed on periodicity instead.
         """
         errors = []
         for seed in range(12):

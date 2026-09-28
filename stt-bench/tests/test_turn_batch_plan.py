@@ -24,6 +24,7 @@ def test_selected_models_are_the_only_planned_models(frozen):
     assert plan['models'] == ['soniox-stt-rt-v5', 'inworld-stt-1']
     assert set(plan['configs']) == set(plan['config_hashes']) == set(plan['models'])
     assert plan['planned_sessions'] == 6 and 'soniox-stt-rt-v5, inworld-stt-1' in plan['authorization']
+    assert plan['preparation_name'] == 'vocera-plan-a-base' and plan['worker_prefix'] == 'vocera-plan-a'
 
 
 def test_default_plan_keeps_all_profiles_and_unknown_models_fail(frozen):

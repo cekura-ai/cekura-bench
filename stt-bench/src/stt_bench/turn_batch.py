@@ -46,7 +46,10 @@ def prepare(root,models=None):
     # Offline tests reference small frozen FLEURS fixtures; include only these.
     files += [p for p in Path('datasets/fleurs-en-us-smoke-v1').rglob('*') if p.is_file()]
     files=sorted(set(files))
+    # Sandbox names are account-wide and persist after a run; derive them from
+    # the run so a new plan never reuses an earlier run's preparation or workers.
     plan=dict(schema_version=1,run_id=root.name,kind='private_turns',manifest=MANIFEST,
+        preparation_name=f'vocera-{root.name}-base',worker_prefix=f'vocera-{root.name}',
         manifest_sha256=sha256(Path(MANIFEST)),configs=configs,
         config_hashes={p.stem:sha256(p) for p in paths if p.stem in configs},
         models=list(configs),smoke_ids=smoke_selection(m),clip_ids=[c['clip_id'] for c in m['clips']],

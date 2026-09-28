@@ -170,6 +170,34 @@ Suites: `smoke`, `latency` (one_shot, repeat), `streaming` (streamed_input at
 one-shots of one fixed prose item, published beside the results and never
 folded in. Its spread across runs is the noise a ranking gap has to exceed.
 
+## Running a campaign on Vercel Sandbox
+
+A campaign is measured from one place: every provider's sandbox runs in the
+configured region (`config/sandbox.json`, iad1), and each run records it as
+its site. The launcher needs an installed `@vercel/sandbox` package
+(`VERCEL_SANDBOX_SDK_DIR`) and a Vercel CLI login.
+
+```bash
+node scripts/sandbox.mjs plan --label campaign-a                              # groups, models, hosts; no remote calls
+node scripts/sandbox.mjs prepare --live                                       # snapshot this pushed commit after its tests pass there
+node scripts/sandbox.mjs launch --live --label campaign-a --env <dotenv>      # every group in parallel
+node scripts/sandbox.mjs status --label campaign-a
+```
+
+- **One sandbox per account.** Protocols that share a key (a provider's second
+  endpoint) share its rate limits, so their models run in sequence in one
+  sandbox; different accounts run in parallel.
+- **Nothing but the provider.** A sandbox reaches only its provider's hosts and
+  the two transcribers. Keys travel in the per-command environment, never in a
+  file or an argument. The allow-list proxy answers the TCP connection itself,
+  so a run's recorded connect time there is the proxy's; the first-chunk round
+  trip was unchanged with and without it.
+- **Repeatable.** Each model runs through `bin/campaign-model.py`, which
+  resumes the model's run if it exists, retries account refusals once, scores,
+  archives to FLAC, verifies and packs. Re-running `launch` re-attaches to a
+  command still running or dispatches it again. A run is marked collected only
+  after its archive checksum and its manifest verify locally.
+
 ## Where runs live
 
 Runs are written to one store: the directory in `TTS_BENCH_STORE`, or

@@ -1,0 +1,16 @@
+{
+  "teamId": "team_SdgWXgzsHiOVCMWaLtz3x9jk",
+  "projectId": "prj_Z60Kx7xGbKpvWiRs7wjEIEACHb5J",
+  "region": "iad1",
+  "vcpus": 2,
+  "runtime": "python3.13",
+  "timeoutMs": 43200000,
+  "repo": "https://github.com/cekura-ai/cekura-bench.git",
+  "site": "vercel-iad1-allowlist",
+  "suite": "full",
+  "repeats": 3,
+  "parallel": 12,
+  "scoringKeys": ["DEEPGRAM_API_KEY", "OPENAI_API_KEY"],
+  "scoringHosts": ["api.deepgram.com", "api.openai.com"],
+  "setupDomains": ["pypi.org", "files.pythonhosted.org", "github.com", "*.githubusercontent.com"]
+}

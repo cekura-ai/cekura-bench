@@ -8,17 +8,17 @@ under data/tts-grounding/ (git-ignored):
   (LibriSpeech test-clean, CC BY 4.0). Transcribing it with the same instruments
   and normaliser used on synthesised audio gives the instrument's own error
   floor, so a TTS word error rate can be read relative to what the instrument
-  gets wrong on a human. This is the calibration every round-trip WER needs
-  and few publish.
-* ``external-corpus/`` -- text prompts from a published TTS evaluation set
-  (EmergentTTS-Eval, Apache-2.0), the "Complex Pronunciation" and "Questions"
-  categories, written in this bench's corpus shape so the identical probes run
-  on them. Cross-checking our cohort results against an independently authored
+  gets wrong on a human. This is the calibration every round-trip WER needs.
+* ``external-corpus/`` -- text prompts from an independently authored,
+  openly licensed TTS evaluation set on Hugging Face, named with
+  ``--external-dataset`` (rows carrying ``language``, ``category``,
+  ``evolution_depth`` and ``text_to_synthesize``), written in this bench's
+  corpus shape so the identical probes run on them. Cross-checking our cohort results against an independently authored
   hard-case set is how the corpus itself is grounded. Their spoken_reference is
   the text itself: the set ships none, so digits and symbols are scored against
   the written form only.
 
-    python bin/fetch-tts-grounding.py --floor 50 --external 60
+    python bin/fetch-tts-grounding.py --floor 50 --external 60 --external-dataset <hf-dataset-id>
 """
 from __future__ import annotations
 
@@ -66,13 +66,13 @@ def fetch_floor(out: Path, n: int) -> None:
     print(f"instrument floor: {len(manifest)} recordings -> {out}")
 
 
-def fetch_external(out: Path, n: int, categories: tuple[str, ...]) -> None:
+def fetch_external(out: Path, n: int, categories: tuple[str, ...], dataset: str) -> None:
     out.mkdir(parents=True, exist_ok=True)
     items: list[dict] = []
     offset = 0
     seen = 0
     while len(items) < n and offset < 2000:
-        page = rows("bosonai/EmergentTTS-Eval", "default", "train", offset, 100)
+        page = rows(dataset, "default", "train", offset, 100)
         got = page.get("rows") or []
         if not got:
             break
@@ -91,8 +91,8 @@ def fetch_external(out: Path, n: int, categories: tuple[str, ...]) -> None:
                 break
         offset += len(got)
     (out / "corpus.json").write_text(json.dumps({
-        "version": "external-emergenttts-eval-seed",
-        "source": "bosonai/EmergentTTS-Eval (Apache-2.0), evolution_depth 0, English",
+        "version": "external-seed",
+        "source": f"{dataset}, evolution_depth 0, English",
         "cohorts": {f"external.{c.lower().replace(' ', '_')}": f"external set, category {c}" for c in categories},
         "items": items}, indent=2))
     print(f"external corpus: {len(items)} items from {categories} -> {out / 'corpus.json'}")
@@ -103,13 +103,17 @@ def main() -> int:
     parser.add_argument("--out", default="data/tts-grounding")
     parser.add_argument("--floor", type=int, default=50, help="human recordings for the instrument floor (0 to skip)")
     parser.add_argument("--external", type=int, default=60, help="external hard-case prompts (0 to skip)")
+    parser.add_argument("--external-dataset", help="Hugging Face id of the external hard-case set")
     parser.add_argument("--category", action="append", default=None)
     args = parser.parse_args()
     out = Path(args.out)
     if args.floor:
         fetch_floor(out / "instrument-floor", args.floor)
-    if args.external:
-        fetch_external(out / "external-corpus", args.external, tuple(args.category or ("Complex Pronunciation", "Questions")))
+    if args.external and not args.external_dataset:
+        print("external hard cases skipped: pass --external-dataset", file=sys.stderr)
+    elif args.external:
+        categories = tuple(args.category or ("Complex Pronunciation", "Questions"))
+        fetch_external(out / "external-corpus", args.external, categories, args.external_dataset)
     return 0
 
 

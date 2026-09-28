@@ -12,9 +12,9 @@ Methodology version: `tts/0.1`. Corpus version: `0.1.0`.
 
 A voice agent feeds the service text as an LLM produces it, plays the audio the
 instant it arrives, cuts it off when the caller interrupts, and has to say
-phone numbers, confirmation codes and dollar amounts correctly. A first-byte
-latency for a whole sentence on a warm socket answers none of that. This bench
-measures the things an agent depends on:
+phone numbers, confirmation codes and dollar amounts correctly. One latency
+figure for a whole sentence answers none of that. This bench measures the
+things an agent depends on:
 
 | # | metric | what it answers |
 |---|---|---|
@@ -114,9 +114,10 @@ vendored):
   (LibriSpeech test-clean, CC BY 4.0). Scored with `bin/score-tts.py --floor`,
   it gives each transcription instrument's own error rate under the same
   normaliser. A TTS WER is read relative to this.
-- **External hard cases**: English seed prompts from a published TTS
-  evaluation set's "Complex Pronunciation" and "Questions" categories
-  (EmergentTTS-Eval, Apache-2.0), written in this bench's corpus shape. Running
+- **External hard cases**: English seed prompts from an independently authored,
+  openly licensed TTS evaluation set (`--external-dataset`), its "Complex
+  Pronunciation" and "Questions" categories, written in this bench's corpus
+  shape. Running
   the identical probes on an independently authored set is how the in-house
   cohorts are checked for authoring bias.
 
@@ -231,7 +232,7 @@ digit-match rate beside it. No composite score, no cross-cohort mean.
 
 ## Not in this bench
 
-A naturalness rating: a small-N preference board would be noise wearing a
-number, and if naturalness is wanted later the honest form is an expert-rated
+A naturalness rating: at a small sample, a preference score would be noise,
+and if naturalness is wanted later the honest form is an expert-rated
 pass on this corpus reported as a cohort pass rate with the rater count. A
 single "best TTS" score. Anything below the service interface.

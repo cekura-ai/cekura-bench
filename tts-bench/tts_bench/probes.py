@@ -84,7 +84,7 @@ def _verdict(synthesis: Synthesis) -> str:
 
 
 class OneShot(Probe):
-    """The whole text in one frame: the number every other benchmark publishes, plus playout."""
+    """The whole text in one frame: first-byte latency on a whole sentence, plus playout."""
 
     name = "one_shot"
 

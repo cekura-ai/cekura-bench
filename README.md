@@ -304,10 +304,15 @@ response to its benchmark results. Reference configurations are available in
 ### Test cases
 
 The suite contains 82 caller situations: 59 Appointment scenarios and 23
-Medicare scenarios. The public scenario coverage summary describes their
-intent at a high level. We do not publish the exact evaluator dialogue,
-conditional logic, fixtures, or assertions because systems could then optimize
-for the test rather than general voice-agent behavior.
+Medicare scenarios. Every case is published in the [Hugging Face
+dataset][hf-dataset]:
+- the simulated caller's script and profile;
+- the outcome the call should reach;
+- the tool calls the agent should make;
+- a copy of the agent definitions from this repository.
+
+A published test can be tuned against. The dataset therefore carries a canary
+string and is versioned. A version is never edited after release.
 
 Appointment coverage includes:
 
@@ -409,13 +414,14 @@ priced dollars over total priced minutes, from verified public list prices, and
 is shown only when every call in the row could be priced. Anything a vendor does not
 meter per call is named next to the figure.
 
-**What is not in this repository.** The evaluator definitions and
-configurations behind each check are not published here: the instructions each
-evaluator scores against, the rubric thresholds, and which checks apply to
-which scenario. They are to be published as a Hugging Face dataset. This
-repository holds the agent under test, the mock-tool contract it answers from,
-and the service bench, whose scoring is in the code (see
-[docs/service.md](docs/service.md)).
+**Where the rest lives.** The test cases are in the [Hugging Face
+dataset][hf-dataset], not here, together with the Tool Call Accuracy metric as
+it runs on the platform, so the board's tool-call score can be recomputed from a
+call's tool calls. The Expected Outcome judge's prompt is not published, and
+neither are the platform's rubrics for the other checks. Those scores can be
+re-run with another judge, but not reproduced exactly. This repository holds
+the agent under test, the mock-tool contract it answers from, and the service
+bench, whose scoring is in the code (see [docs/service.md](docs/service.md)).
 
 ### Evaluator refinement and fairness
 
@@ -446,10 +452,9 @@ an empirical test-design process, not a one-shot prompt.
 
 The code here is MIT licensed. See `LICENSE`.
 
-The scenarios and their fixtures are not covered by it and are not published in
-this repository. Withholding them is deliberate: the exact dialogue, branching
-and assertions are what a system would optimise against if it could read them,
-and a benchmark whose answers are public stops measuring what it claims to.
-If they are published later they will carry their own terms.
+The test cases are not covered by it. They are published separately in the
+[Hugging Face dataset][hf-dataset], under CC BY 4.0.
 
 One file keeps a separate license, noted in `LICENSE` and in its own header.
+
+[hf-dataset]: https://huggingface.co/datasets/cekura/s2s-agent-bench

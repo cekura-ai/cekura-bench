@@ -25,9 +25,8 @@ SOFTWARE.
 
 This license covers the source code in this repository.
 
-Test scenarios and their fixtures are not covered by it. They are not published
-here, and if they are published later they will carry their own terms, as
-benchmark datasets usually do.
+Test scenarios and their fixtures are not covered by it. They are published
+separately as a Hugging Face dataset under CC BY 4.0.
 
 One file is not ours and keeps its own license:
 

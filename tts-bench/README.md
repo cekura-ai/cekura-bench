@@ -167,7 +167,8 @@ uv run --locked pytest                                                          
 
 Suites: `smoke`, `latency` (one_shot, repeat), `streaming` (streamed_input at
 30 and 10 words/s, continuation), `interaction` (cancel at 300 and 1000 ms),
-`load` (concurrency 8), `full`. Every run starts with the **sentinel**: three
+`load` (concurrency 8), `full` (every probe except `load`: concurrency measured the
+account's limits more than the model, and was 65% of a run's requests). Every run starts with the **sentinel**: three
 one-shots of one fixed prose item, published beside the results and never
 folded in. Its spread across runs is the noise a ranking gap has to exceed.
 

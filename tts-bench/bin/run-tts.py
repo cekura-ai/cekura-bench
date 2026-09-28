@@ -40,8 +40,12 @@ SUITES = {
     "streaming": lambda: [StreamedInput(words_per_s=30.0), StreamedInput(words_per_s=10.0), Continuation()],
     "interaction": lambda: [Cancel(after_first_audio_ms=300.0), Cancel(after_first_audio_ms=1000.0)],
     "load": lambda: [Concurrency(streams=8)],
+    # Eight requests at once left each stream's median first audio where it was
+    # alone (within 20 ms on 13 of 14 models), and the slowest of eight is just
+    # the single-request tail; what load does beyond that is the account's
+    # concurrency limit, not the model. So it runs on its own, as "load".
     "full": lambda: [OneShot(), Repeat(), StreamedInput(words_per_s=30.0), Continuation(),
-                     Cancel(after_first_audio_ms=300.0), Concurrency(streams=8)],
+                     Cancel(after_first_audio_ms=300.0)],
 }
 
 

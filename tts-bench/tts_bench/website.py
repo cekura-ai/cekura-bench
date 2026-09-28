@@ -116,11 +116,12 @@ def summarize(run_dir: str | Path) -> dict[str, Any]:
     for cell in one:
         by_cohort[cell["cohort"]].append(cell)
 
-    # Every single synthesis a cell recorded, with its item, for reliability and runaway checks.
+    # Every single synthesis a cell recorded, with its item, for reliability and runaway checks. The load
+    # probe's streams are left out: a stall there reflects the account's concurrency limit, not the model,
+    # and counting them would make a run with the probe look less reliable than the same model without it.
     singles: list[tuple[str, dict[str, Any]]] = [(c["item"], c["values"]) for c in one + streamed + cancel]
     singles += [(c["item"], c["values"][k]) for c in rep for k in ("first", "second") if isinstance(c["values"].get(k), dict)]
     singles += [(c["item"], c["values"][k]) for c in cont for k in ("whole", "framed") if isinstance(c["values"].get(k), dict)]
-    singles += [(c["item"], s) for c in load for s in c["values"].get("per_stream") or ()]
     lengths: dict[str, list[float]] = defaultdict(list)
     for item, s in singles:
         if s.get("audio_ms") and s.get("cancel_at_ms") is None:

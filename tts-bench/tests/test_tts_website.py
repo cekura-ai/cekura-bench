@@ -20,6 +20,7 @@ async def test_a_run_reduces_to_published_numbers_and_joins_the_site_file(tmp_pa
     assert summary["underLoad"]["perStreamTtfa"]["n"] == 6
     assert summary["throughput"]["charsPerSecondParagraph"]["n"] == 1
     assert summary["reliability"]["runaways"] == 0 and summary["accuracy"] == {}
+    assert summary["reliability"]["syntheses"] == 3 + 2 * 3 + 1   # one-shots, repeat pairs, the cancel; not load streams
     assert len(json.dumps(summary)) < 20000                   # numbers only: no audio, no transcripts
 
     models = {"campaign": "t", "models": {

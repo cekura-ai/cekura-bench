@@ -20,13 +20,16 @@ from .full_benchmark import classify
 MANIFEST='datasets/private-turns-v1/automatic-v1/manifest.json'
 
 
-def prepare(root):
+def prepare(root,models=None):
     root=Path(root);root.mkdir(parents=True,exist_ok=True)
     require(not (root/'plan.json').exists(),'Frozen plan already exists')
     m=verify_turn_manifest(Path(MANIFEST))
     paths=sorted(Path('config/profiles/private-turns-v1').glob('*.json'))
     configs={p.stem:validate_profile(json.loads(p.read_text())) for p in paths if '3.8' not in p.stem}
     require(len(configs)==23,'Expected the 23 non-Gemini-3.8 profiles')
+    if models:
+        require(len(set(models))==len(models) and set(models)<=set(configs),'Unknown or repeated turn profile')
+        configs={name:configs[name] for name in models}
     # Known account limits win over general defaults. Unknown ceilings ramp under
     # a bounded worker budget and permanently reduce after a rate-limit response.
     limits={'deepgram':150,'openai':50,'google':20,'speechmatics':2,'assemblyai':20,
@@ -47,7 +50,8 @@ def prepare(root):
         provider_limits=limits,max_workers=128,max_workers_per_model=32,
         assemblyai_new_sessions_per_minute=5,attempts_per_turn=1,
         planned_sessions=len(configs)*len(m['clips']),audio_seconds_per_model=sum(c['submitted_seconds'] for c in m['clips']),
-        authorization='User explicitly authorized all remaining models on the automatic turn dataset in Vercel; Gemini 3.8 excluded.',
+        authorization=('User explicitly authorized all remaining models on the automatic turn dataset in Vercel; Gemini 3.8 excluded.' if not models
+            else 'User explicitly authorized '+', '.join(models)+' on the automatic turn dataset in Vercel.'),
         counts=m['counts'],hashes={str(p):sha256(p) for p in files})
     write_json(root/'plan.json',plan)
     with tarfile.open(root/'input.tar.gz','w:gz',compresslevel=1) as archive:
@@ -213,8 +217,9 @@ def main():
     p=argparse.ArgumentParser();p.add_argument('mode',choices=['prepare','verify','worker','unpack','report'])
     p.add_argument('--root',type=Path);p.add_argument('--plan',type=Path,default=Path('turn-input/plan.json'))
     p.add_argument('--plan-hash');p.add_argument('--assignment',type=Path);p.add_argument('--out',type=Path);p.add_argument('--batch')
+    p.add_argument('--models',nargs='+')
     a=p.parse_args()
-    if a.mode=='prepare':result=prepare(a.root)
+    if a.mode=='prepare':result=prepare(a.root,a.models)
     elif a.mode=='verify':verify(a.plan,a.plan_hash);result={'verified':True}
     elif a.mode=='worker':result=asyncio.run(worker(a.plan,a.plan_hash,a.assignment,a.out))
     elif a.mode=='unpack':result=unpack(a.root,a.batch);result={k:result[k] for k in ('status','error_type','error') if k in result}

@@ -142,8 +142,7 @@ def call(args: argparse.Namespace) -> int:
     # Printed and flushed before the agent starts, because whoever is going to
     # call has to be able to join before the agent gives up waiting.
     print(json.dumps({
-        "sessionId": session_id, "dailyRoom": room_url,
-        "dailyToken": agent_token, "callerToken": caller_token, "body": body,
+        "sessionId": session_id, "dailyRoom": room_url, "callerToken": caller_token, "body": body,
     }), flush=True)
     print(f"\njoin as the caller: {room_url}", file=sys.stderr, flush=True)
 
@@ -278,7 +277,7 @@ def checks_for(payload: dict) -> tuple[list[tuple[str, bool, str]], dict, list, 
 def report(payload: dict, path: Path | None = None) -> str:
     """One screen on a run: what reached the record, and what did not."""
     checks, meta, tools, usage = checks_for(payload)
-    recorded = (((payload.get("provider_data") or {}).get("custom_metadata")) or {}).get("tool_calls") or []
+    recorded = meta.get("tool_calls") or []
     requested = [] if recorded else tools
     misses = sum(
         1 for row in (payload.get("transcript") or [])
@@ -303,9 +302,8 @@ def report(payload: dict, path: Path | None = None) -> str:
         ))
     elif requested:
         lines.append("tools (transcript only): " + ", ".join(str(n) for n in requested))
-    if recorded or requested:
-        if misses:
-            lines.append(f"  {misses} tool answer(s) were no_match")
+    if (recorded or requested) and misses:
+        lines.append(f"  {misses} tool answer(s) were no_match")
     if usage:
         lines.append("usage: " + ", ".join(f"{k}={v}" for k, v in usage.items()))
     return "\n".join(lines)

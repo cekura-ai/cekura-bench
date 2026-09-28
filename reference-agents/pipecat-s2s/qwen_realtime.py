@@ -1,9 +1,7 @@
 """Qwen's realtime audio model, spoken directly rather than through a framework service.
 
-Pipecat ships a realtime service for every other provider on the board, and
-none for this one. It is written here, in the benchmark, for the same reason
-everything else here is one readable file: a row nobody can read is a row
-nobody can check.
+Pipecat ships no service for this provider, so the protocol is spoken here, in
+the benchmark: a row nobody can read is a row nobody can check.
 
 *Why not subclass the OpenAI Realtime service.* Qwen's wire protocol is
 OpenAI-Realtime-shaped but it is the **beta** shape -- ``modalities``,
@@ -97,7 +95,6 @@ class QwenRealtimeLLMService(LLMService):
         if region not in ENDPOINTS:
             raise ValueError(f"region must be one of {sorted(ENDPOINTS)}, not {region!r}")
         self._api_key = api_key
-        self._model = model
         self._voice = voice
         self._instructions = instructions
         self._tools = tools
@@ -109,6 +106,7 @@ class QwenRealtimeLLMService(LLMService):
             "silence_duration_ms": 800,
         }
         self._websocket = None
+        self._closing = False
         self._receive_task = None
         self._context = None
         self._session_ready = False
@@ -135,6 +133,7 @@ class QwenRealtimeLLMService(LLMService):
     async def _connect(self):
         if self._websocket:
             return
+        self._closing = False
         try:
             self._websocket = await websocket_connect(
                 uri=self._url,
@@ -147,6 +146,7 @@ class QwenRealtimeLLMService(LLMService):
             self._websocket = None
 
     async def _disconnect(self):
+        self._closing = True
         try:
             if self._websocket:
                 await self._websocket.close()
@@ -240,8 +240,6 @@ class QwenRealtimeLLMService(LLMService):
             await self._send_audio(frame)
         elif isinstance(frame, InterruptionFrame):
             await self._handle_interruption()
-        elif isinstance(frame, (UserStartedSpeakingFrame, UserStoppedSpeakingFrame)):
-            pass  # the provider's own turn detection owns these
 
         await self.push_frame(frame, direction)
 
@@ -275,8 +273,9 @@ class QwenRealtimeLLMService(LLMService):
     # -- receiving --------------------------------------------------------
 
     async def _receive(self):
-        assert self._websocket is not None
-        async for message in self._websocket:
+        ws = self._websocket
+        assert ws is not None
+        async for message in ws:
             try:
                 event = json.loads(message)
             except json.JSONDecodeError:
@@ -286,6 +285,11 @@ class QwenRealtimeLLMService(LLMService):
                 await self._dispatch(event)
             except Exception as exc:  # noqa: BLE001 -- one bad event must not end the call
                 logger.error(f"{self} failed on {event.get('type')}: {exc}")
+        if not self._closing:
+            logger.warning(
+                "{} Qwen closed the session (code {}, {!r})",
+                self, getattr(ws, "close_code", None), getattr(ws, "close_reason", None),
+            )
 
     async def _dispatch(self, event: dict[str, Any]):
         kind = event.get("type", "")

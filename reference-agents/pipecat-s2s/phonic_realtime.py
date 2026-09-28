@@ -66,8 +66,6 @@ from pipecat.frames.frames import (
     TTSStartedFrame,
     TTSStoppedFrame,
     TTSTextFrame,
-    UserStartedSpeakingFrame,
-    UserStoppedSpeakingFrame,
 )
 from pipecat.processors.aggregators.llm_context import LLMSpecificMessage
 from pipecat.processors.frame_processor import FrameDirection
@@ -279,9 +277,7 @@ class PhonicRealtimeLLMService(LLMService):
                         "function": {
                             "name": function["name"],
                             "description": strict_description(function.get("description", "")),
-                            "parameters": strict_parameters(
-                                function.get("parameters") or {"type": "object", "properties": {}}
-                            ),
+                            "parameters": strict_parameters(parameters),
                             "strict": True,
                         },
                     },
@@ -320,8 +316,6 @@ class PhonicRealtimeLLMService(LLMService):
             await self._send_audio(frame)
         elif isinstance(frame, InterruptionFrame):
             await self._end_reply()
-        elif isinstance(frame, (UserStartedSpeakingFrame, UserStoppedSpeakingFrame)):
-            pass  # the provider's own turn detection owns these
 
         await self.push_frame(frame, direction)
 
@@ -391,8 +385,9 @@ class PhonicRealtimeLLMService(LLMService):
     # -- receiving --------------------------------------------------------
 
     async def _receive(self):
-        assert self._websocket is not None
-        async for message in self._websocket:
+        ws = self._websocket
+        assert ws is not None
+        async for message in ws:
             try:
                 event = json.loads(message)
             except json.JSONDecodeError:
@@ -404,7 +399,10 @@ class PhonicRealtimeLLMService(LLMService):
                 logger.error(f"{self} failed on {event.get('type')}: {exc}")
         if not self._closing:
             # Closed from the far end while the call was still up.
-            await self.push_error(error_msg=f"Phonic closed the conversation {self._conversation_id}")
+            await self.push_error(
+                error_msg=f"Phonic closed the conversation {self._conversation_id} "
+                          f"(code {getattr(ws, 'close_code', None)}, {getattr(ws, 'close_reason', None)!r})"
+            )
 
     async def _dispatch(self, event: dict[str, Any]):
         kind = event.get("type", "")

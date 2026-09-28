@@ -13,7 +13,7 @@
 
 # Pinned by digest. The base image is the harness that runs the agent, so a
 # retag of a mutable tag would change the thing under test without changing
-# anything in this repository. Digest is 0.1.29-py3.12.
+# anything in this repository.
 FROM dailyco/pipecat-base:0.1.29-py3.12@sha256:c34a7c605b0f42d790a7593c9870417a098b0d6258b87119ebd6142d27c11e82
 
 # No pip upgrade: this file's whole purpose is that a result names a

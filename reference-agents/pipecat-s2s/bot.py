@@ -212,7 +212,7 @@ class _ToLoguru(logging.Handler):
     """
 
     def emit(self, record: logging.LogRecord) -> None:
-        level = logger.level(record.levelname).name if record.levelname in _LEVELS else "INFO"
+        level = record.levelname if record.levelname in _LEVELS else "INFO"
         logger.bind(std_logger=record.name).opt(depth=6, exception=record.exc_info).log(
             level, record.getMessage()
         )
@@ -404,7 +404,7 @@ def _openai(api_key: str, model: str, voice: str, instructions: str, settings: S
 
 @lru_cache(maxsize=None)
 def gemini_service_class():
-    """The framework's Gemini service, minus one replay after a reconnect.
+    """The framework's Gemini service, fixed for tool-call withdrawal, resumption replay, and late tools.
 
     The service drops its connection a few times an hour on a server-side
     error and resumes the same session from a handle, so the server keeps the
@@ -565,11 +565,8 @@ def _grok(api_key: str, model: str, voice: str, instructions: str, settings: Set
             system_instruction=instructions,
             session_properties=SessionProperties(
                 voice=voice,
-                # Both are the vendor's own defaults, sent explicitly so the
-                # record can name them. This model reasons before it speaks
-                # unless told not to, and that is a latency the row carries;
-                # the detector's threshold decides how loud the caller must be.
-                # Neither belongs to a default that can move between runs.
+                # Vendor defaults, sent so the record can name them; see
+                # ``GROK_REASONING`` and ``GROK_VAD`` below.
                 reasoning=Reasoning(effort=GROK_REASONING),
                 turn_detection=TurnDetection(type="server_vad", **GROK_VAD),
                 # Named rather than defaulted: this provider streams caller
@@ -588,10 +585,6 @@ def _qwen_realtime(credential: str, model: str, voice: str, instructions: str, s
 
     Pipecat has no service for this provider, so the protocol is spoken
     directly. See that module for why it is not a subclass of the OpenAI one.
-
-    A workspace id is part of the endpoint, not a credential: the same key
-    reaches a different workspace's models, so it is a run configuration and it
-    is disclosed with the row.
     """
     from qwen_realtime import QwenRealtimeLLMService
 
@@ -2147,7 +2140,7 @@ class CallNarrator(BaseObserver):
         elif isinstance(frame, TranscriptionFrame):
             # One transcript can cover several turns, so it settles all of them.
             self._untranscribed_turns.clear()
-            logger.info("caller transcript: {}", _short(frame.text))
+            logger.debug("caller transcript: {}", _short(frame.text))
         elif isinstance(frame, LLMFullResponseStartFrame):
             self.agent_turns += 1
             logger.info("agent response {} starts", self.agent_turns)
@@ -2312,11 +2305,7 @@ def register_tools(
         record = server.calls[-1]
         trace.record(params.function_name, arguments, record.matched, result, requested, record.resolution,
                      tool_call_id=params.tool_call_id)
-        # Three outcomes, not two: a row found outright, the nearest row found
-        # after speech bent an argument, and nothing found. Reading a call log
-        # afterwards, the middle one is the interesting case and a bare
-        # hit-or-miss hides it. The arguments and the answer are on the same
-        # line, because a miss is only explicable next to what was asked.
+        # The arguments and the answer on one line: a miss is only explicable next to what was asked.
         logger.info(
             "tool {} -> {} for {} => {}",
             params.function_name, record.resolution, _short(arguments), _short(result),
@@ -2421,7 +2410,7 @@ def build_record(provider_key: str, provider: "Provider", model: str, voice: str
 
     A phone call cannot be replayed and a provider endpoint moves underneath us,
     so a recording whose configuration is unknown is not evidence of anything.
-    This travels with the run as trace metadata and is logged once at startup, so
+    This travels with the run as trace metadata and is logged once per call, so
     the answer survives even when only the container logs do.
 
     The pipeline sample rate is in here for a specific reason: these realtime
@@ -2443,15 +2432,8 @@ def build_record(provider_key: str, provider: "Provider", model: str, voice: str
         # Who decided where the caller's turns ended: the service, or the local
         # detector -- a configuration difference a reader comparing rows must see.
         "turn_source": provider.turns,
-        # Every place this row is not arranged like the others, in one block.
-        #
-        # One pipeline answers every row, but the session opened at the top of it
-        # is not identical, because these services do not offer the same
-        # contract. Those differences are the part of a result that is ours
-        # rather than the model's, and a reader comparing two rows cannot weigh
-        # them without seeing them. Keeping them here, beside the score, is what
-        # makes the unit being compared "this service under this arrangement"
-        # rather than an unqualified provider name.
+        # Every place this row is not arranged like the others: the part of a
+        # result that is the pipeline's rather than the model's, kept beside the score.
         "divergences": {
             # Whose detector decided the caller had finished *for the model*,
             # and so whose endpointing the reply figure includes. Not the same
@@ -2467,9 +2449,6 @@ def build_record(provider_key: str, provider: "Provider", model: str, voice: str
             "interruptions": "pipeline" if provider.interruptions else "model",
             # Whether the caller's words had to be asked for.
             "caller_transcription": provider.caller_transcription,
-            # The rate the session was opened at. These services do not resample,
-            # so this is a requirement rather than a setting, but a wrong one
-            # reads exactly like a bad model and belongs on the record.
             "input_rate": provider.input_rate,
         },
         "config": provider_key,
@@ -2534,17 +2513,12 @@ def cascade_record(key: str, text: TextModel, model: str, server: MockToolServer
         "tts_voice": settings.get("cascade_tts_voice", CASCADE_TTS_VOICE),
         "counterpart_to": text.counterpart_to,
         "pipeline_sample_rate": CASCADE_RATE,
-        # Who decided where the caller's turns ended -- a third answer, and the
-        # reason this field is not just native/local. These rows follow the
-        # strategies the speech-to-text service recommends, so the endpointing
-        # figure beside their reply time belongs to that service, named above,
-        # and not to the text model the row is otherwise about.
+        # Who decided where the caller's turns ended -- a third answer beside
+        # provider and local: the speech-to-text service's recommended strategies,
+        # so the endpointing figure belongs to that service, not the text model.
         "turn_source": "stt",
-        # The same block a native row carries, answered for a cascade. These
-        # rows diverge in one direction only: the speech path is fixed and
-        # identical across all of them, so the row is the text model and nothing
-        # else. Saying that explicitly is what lets a cascade row sit on a board
-        # beside a native one without the two being read as the same measurement.
+        # The same block a native row carries. The speech path is identical
+        # across cascade rows, so the only divergence between them is the text model.
         "divergences": {
             "endpointing": "stt",
             "service_vad": "off",
@@ -2676,6 +2650,8 @@ class DeliversToolResults(LLMAssistantAggregator):
         super().__init__(context, **kwargs)
         self._deliver_immediately = deliver_immediately
         self._result_during_callers_turn = False
+        # When the oldest result still waiting for the caller to stop was held.
+        self._held_at: float | None = None
 
     async def _handle_function_call_result(self, frame: FunctionCallResultFrame) -> None:
         # The framework decides whether to push only when the caller is silent.
@@ -2697,6 +2673,9 @@ class DeliversToolResults(LLMAssistantAggregator):
             else:
                 # Delivered by ``process_frame`` when the caller stops.
                 self._push_context_on_bot_stopped_speaking = True
+                if self._held_at is None:
+                    self._held_at = time.monotonic()
+                logger.info("tool result held: the caller is still talking; it goes to the model when they stop")
             return
         # Where the row allows it, a result the agent is still narrating over
         # is delivered now rather than after the narration: the service is
@@ -2728,6 +2707,9 @@ class DeliversToolResults(LLMAssistantAggregator):
         await super().push_context_frame(direction)
         if direction is not FrameDirection.UPSTREAM and self._realtime_service_mode:
             self._push_context_on_bot_stopped_speaking = pending
+        elif direction is FrameDirection.UPSTREAM:
+            # Every upstream push delivers whatever was held, whichever path made it.
+            self._held_at = None
 
     async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
         await super().process_frame(frame, direction)
@@ -2736,9 +2718,10 @@ class DeliversToolResults(LLMAssistantAggregator):
             and self._realtime_service_mode
             and isinstance(frame, UserStoppedSpeakingFrame)
         ):
-            logger.debug(
-                "tool result outlived the turn it arrived in; delivering a context of "
-                "{} message(s) now the caller has stopped", len(self._context.get_messages())
+            logger.info(
+                "tool result delivered to the model now the caller has stopped ({}; context of {} message(s))",
+                f"held {(time.monotonic() - self._held_at) * 1000:.0f} ms" if self._held_at else "held from an earlier turn",
+                len(self._context.get_messages()),
             )
             await self.push_context_frame(FrameDirection.UPSTREAM)
 
@@ -2765,50 +2748,25 @@ def user_aggregator_params(
 ) -> LLMUserAggregatorParams:
     """Parameters for the half of the context that holds what the caller said.
 
-    Two separate things are being arranged here, and both were missing.
-
-    The first is who decides where a caller's turn ends. A realtime service
-    endpoints on its own server and announces the result as a *proposal*; a
-    proposal only becomes a turn if some strategy adopts it, and the default
-    strategies listen for local voice activity instead. With no local voice
-    activity to listen to, nothing ever adopted the proposals, so no turn ever
-    ended, so the caller's transcript was aggregated and never handed over --
-    which reads downstream as a caller who said nothing. Naming the external
-    strategies makes the service's own endpointing the authority, which is also
-    the only defensible arrangement for this bench: provider endpointing is part
-    of what a row is measuring, so it must not be replaced by ours.
-
-    The second is the speech clock. Turn frames say a turn happened; they do not
-    say when the caller fell silent, and the response-time figure is measured
-    from exactly that instant. Only a voice-activity detector marks it. So one
-    runs here purely as an instrument: no strategy consults it, it cannot end a
-    turn, and it changes nothing about the conversation -- it only timestamps
-    it. Without it every latency cell on the board is empty.
+    Two things are arranged here. Who ends a caller's turn: a realtime service's
+    endpointing arrives as a *proposal*, and the default strategies listen for
+    local voice activity instead, so a row that follows its provider names the
+    external strategies -- otherwise no turn ends and the caller's words never
+    leave the aggregator. And the speech clock: only a voice-activity detector
+    marks the instant the caller fell silent, which every reply figure is
+    measured from, so one runs on every row. Where the provider decides turns it
+    is purely an instrument; on local-turn rows the default strategies act on it.
     """
     return LLMUserAggregatorParams(
         # Same detector, same settings, every row: an instrument that varied by
         # provider would put its own variance into the column it is measuring.
         vad_analyzer=BenchVAD(),
-        # Three cases, not two.
-        #
-        # A realtime service that announces its turn boundary: follow it, so the
-        # provider's own endpointing is the authority, which is what the row is
-        # measuring.
-        #
-        # A realtime service that announces nothing -- its API has an
-        # interruption event and no turn start or end -- cannot be followed. The
-        # framework's own guidance for a pipeline like this one, which keeps a
-        # conversation context, is a local detector driving the default
-        # strategies, so that is what those rows run. It is a real difference
-        # between rows and the record names it rather than hiding it.
-        #
-        # Cascade rows leave this unset on purpose. Their speech-to-text service
-        # recommends its own strategies when it announces itself, and naming
-        # strategies here would override that recommendation.
-        # Naming strategies here discards whatever the service recommends, so
-        # what it recommends has to be carried rather than lost: a service that
-        # handles being talked over inside the model asks for no interruption to
-        # be broadcast, and gets that here.
+        # Provider rows follow the service's announced boundary, and keep what it
+        # asks for about interruptions (a service that handles barge-in inside the
+        # model asks for none to be broadcast). A service that announces no
+        # boundary gets the framework's default local strategies, and the record
+        # names it. Cascade rows leave this unset, so the speech-to-text service's
+        # own recommended strategies apply.
         user_turn_strategies=(
             None if not realtime
             else ExternalUserTurnStrategies(enable_interruptions=interruptions)
@@ -2819,8 +2777,6 @@ def user_aggregator_params(
 
 
 async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> None:
-    # What is being measured is decided here, by the session that started this
-    # call, and not by the image -- one deployment answers for every row.
     global _calls_answered
     _calls_answered += 1
     # The log starts here, on this call's clock, before anything else is done:
@@ -2960,7 +2916,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
                 "integrity": narrator.integrity(),
             })
         except Exception as exc:  # noqa: BLE001 -- never fail a call over a record
-            logger.warning("could not update the run record: {}", exc)
+            logger.warning("could not update the run record: {!r}", exc)
 
     trace.on_change = publish
 
@@ -3076,7 +3032,7 @@ def finish_record(tracer, context: LLMContext, publish: Callable[[], None], summ
             publish()
             summarise()
         except Exception as exc:  # noqa: BLE001 -- never lose the snapshot over its trimmings
-            logger.warning("could not finish the record: {}", exc)
+            logger.warning("could not finish the record: {!r}", exc)
         return original()
 
     capture.to_dict = to_dict

@@ -517,6 +517,67 @@ class TestQwenRealtime:
         with pytest.raises(ValueError):
             bot.qwen_workspace(asked())
 
+    def _recording(self):
+        service = self._service()
+        seen = {"sent": [], "pushed": []}
+
+        async def send(event):
+            seen["sent"].append(event)
+
+        async def push(frame, direction=None):
+            seen["pushed"].append((type(frame).__name__, direction, frame))
+
+        service._send = send
+        service.push_frame = push
+        return service, seen
+
+    async def test_a_tool_result_reaches_the_model_once_and_asks_for_the_reply(self):
+        """The result arrives in a later context; without it the model waits forever.
+
+        Each result is sent once, however many contexts carry it, and one reply
+        is asked for after the results a context brought.
+        """
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service, seen = self._recording()
+        await service._handle_context(LLMContext([]))
+        assert [e["type"] for e in seen["sent"]] == ["response.create"]
+        seen["sent"].clear()
+
+        context = LLMContext([
+            {"role": "tool", "tool_call_id": "t1", "content": '{"patient_id": "p_1"}'},
+            {"role": "tool", "tool_call_id": "t2", "content": "IN_PROGRESS"},
+        ])
+        await service._handle_context(context)
+        await service._handle_context(context)
+        [item, reply] = seen["sent"]
+        assert item["type"] == "conversation.item.create"
+        assert item["item"]["type"] == "function_call_output"
+        assert (item["item"]["call_id"], item["item"]["output"]) == ("t1", '{"patient_id": "p_1"}')
+        assert reply["type"] == "response.create"
+
+    async def test_a_result_already_in_the_opening_context_is_not_sent_again(self):
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service, seen = self._recording()
+        context = LLMContext([{"role": "tool", "tool_call_id": "t0", "content": "{}"}])
+        await service._handle_context(context)
+        await service._handle_context(context)
+        assert [e["type"] for e in seen["sent"]] == ["response.create"]
+
+    async def test_the_callers_words_travel_upstream_to_the_context(self):
+        """The user context aggregator sits before this service, so downstream never reaches it."""
+        from pipecat.processors.frame_processor import FrameDirection
+
+        service, seen = self._recording()
+        await service._dispatch({
+            "type": "conversation.item.input_audio_transcription.completed",
+            "transcript": "I need to reschedule.",
+        })
+        [(name, direction, frame)] = seen["pushed"]
+        assert name == "TranscriptionFrame" and direction is FrameDirection.UPSTREAM
+        assert frame.text == "I need to reschedule."
+
 
 class TestPhonicRealtime:
     """The second provider whose protocol we speak ourselves."""

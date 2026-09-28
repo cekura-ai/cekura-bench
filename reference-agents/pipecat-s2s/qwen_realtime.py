@@ -50,6 +50,7 @@ from pipecat.frames.frames import (
     UserStartedSpeakingFrame,
     UserStoppedSpeakingFrame,
 )
+from pipecat.processors.aggregators.llm_context import LLMSpecificMessage
 from pipecat.processors.frame_processor import FrameDirection
 from pipecat.services.llm_service import FunctionCallFromLLM, LLMService
 from pipecat.utils.time import time_now_iso8601
@@ -115,6 +116,8 @@ class QwenRealtimeLLMService(LLMService):
         # call_id -> name, populated as the server streams a function call and
         # read when its arguments complete.
         self._pending_calls: dict[str, str] = {}
+        # Tool results already sent, or already in the context the call opened with.
+        self._delivered: set[str] = set()
 
     # -- lifecycle --------------------------------------------------------
 
@@ -244,12 +247,17 @@ class QwenRealtimeLLMService(LLMService):
         await self.push_frame(frame, direction)
 
     async def _handle_context(self, context):
-        """The first context frame carries the tools and opens the call.
+        """The first context frame carries the tools and opens the call; every
+        later one may carry tool results.
 
         A realtime session is configured once and then runs, so the tools have
         to reach it before the first response rather than with each turn. The
         greeting is an instruction in this same first context, which is what
         makes every call on this board open from the agent with the same words.
+
+        A tool result reaches the service only through a later context: the
+        framework writes it there and pushes the context, and nothing else
+        carries it. Each result is sent once.
         """
         first = self._context is None
         self._context = context
@@ -258,7 +266,34 @@ class QwenRealtimeLLMService(LLMService):
             if tools:
                 self._tools = tools
                 await self._send_session_update()
+            self._delivered.update(self._results(context))
             await self._create_response()
+            return
+        sent = False
+        for tool_call_id, output in self._results(context).items():
+            if tool_call_id in self._delivered:
+                continue
+            self._delivered.add(tool_call_id)
+            await self._send_tool_result(tool_call_id, output)
+            sent = True
+        if sent:
+            # Qwen does not resume on its own after a tool result, unlike the
+            # providers whose turn detection restarts the response: without this
+            # the call stalls silently after a lookup succeeds.
+            await self._create_response()
+
+    @staticmethod
+    def _results(context) -> dict[str, str]:
+        """Completed tool results in the context, by call id, as the text Qwen takes."""
+        results = {}
+        for message in context.get_messages():
+            if isinstance(message, LLMSpecificMessage) or message.get("role") != "tool":
+                continue
+            tool_call_id, content = message.get("tool_call_id"), message.get("content")
+            if not tool_call_id or content == "IN_PROGRESS":
+                continue
+            results[tool_call_id] = content if isinstance(content, str) else json.dumps(content)
+        return results
 
     async def _handle_interruption(self):
         await self._send({"type": "response.cancel"})
@@ -334,10 +369,12 @@ class QwenRealtimeLLMService(LLMService):
             await self.push_frame(LLMTextFrame(event.get("delta", "")))
 
         elif kind == "conversation.item.input_audio_transcription.completed":
+            # Upstream, to the user context aggregator that sits before this service.
             await self.push_frame(
                 TranscriptionFrame(
                     event.get("transcript", ""), "", time_now_iso8601(), result=event
-                )
+                ),
+                FrameDirection.UPSTREAM,
             )
 
         elif kind == "input_audio_buffer.speech_started":
@@ -383,13 +420,7 @@ class QwenRealtimeLLMService(LLMService):
         )
 
     async def _send_tool_result(self, tool_call_id: str, result: str | None):
-        """Return one tool result and ask for the reply it feeds.
-
-        Qwen does not resume on its own after a tool result, unlike the
-        providers whose turn detection restarts the response: the explicit
-        ``response.create`` is what keeps the call from stalling silently after
-        a lookup succeeds.
-        """
+        """Return one tool result; ``_handle_context`` asks for the reply it feeds."""
         await self._send(
             {
                 "type": "conversation.item.create",
@@ -401,4 +432,3 @@ class QwenRealtimeLLMService(LLMService):
                 },
             }
         )
-        await self._create_response()

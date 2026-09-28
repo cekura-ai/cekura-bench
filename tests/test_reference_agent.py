@@ -2522,6 +2522,16 @@ class TestVendorDefaultsAreExplicitAndOnTheRecord:
         record = record_for("gpt-live")
         assert (record["s2s_backend_model"], record["s2s_backend_reasoning"]) == ("gpt-6-sol", "low")
 
+    def test_the_session_names_the_backends_effort(self):
+        # Without it in the accepted keys the session's value was dropped and
+        # the call ran at the default, with the record saying so and nothing
+        # saying it was not what was asked for.
+        provider = bot.PROVIDERS["gpt-live"]
+        settings = asked(s2s_backend_reasoning="high")
+        service = provider.build("k", provider.default_model, provider.default_voice, "p", settings)
+        assert service._delegation.settings.reasoning.effort == "high"
+        assert record_for("gpt-live", s2s_backend_reasoning="high")["s2s_backend_reasoning"] == "high"
+
     def test_the_live_backend_keeps_optional_arguments_optional(self):
         # A tool without ``strict`` is strict to the Responses API, which makes
         # every optional parameter required; the framework drops the field.

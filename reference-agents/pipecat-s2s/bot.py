@@ -340,6 +340,7 @@ class Settings:
         "s2s_voice",
         "agent_dir",
         "s2s_backend_model",
+        "s2s_backend_reasoning",
         "aws_region",
         "qwen_region",
         "qwen_workspace_id",

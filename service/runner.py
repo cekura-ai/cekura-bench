@@ -371,13 +371,7 @@ class Runner:
         ended_utc: str,
     ) -> None:
         """One self-contained record per cell, written last so it can inventory the rest.
-
-        Each object describes itself -- the adapter its session, the caller its
-        utterances and pacing, the tool server its calls. Assembling those here
-        field by field would mean a new piece of state reaches the published cell
-        only if someone remembers to edit this function too, which is the exact
-        failure this record exists to prevent.
-        """
+        Each object describes itself (``adapter.state()``, ``caller.pacing()``, tool records)."""
         probe = planned.probe
         state = adapter.state()
         record = {

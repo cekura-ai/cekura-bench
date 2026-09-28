@@ -45,6 +45,7 @@ TIE_MS = FRAME_MS            # the detector's resolution on clean audio; see doc
 BOOTSTRAP_DRAWS = 2000
 BOOTSTRAP_SEED = 7
 LATENCY_FIELDS = ("latency_ms", "stop_ms")   # the value a probe publishes as a duration
+_EXCLUDED = "configuration not supported"
 
 GroupKey = tuple[str, str, str, str, str]    # probe, variant, config, voice, transform
 
@@ -186,17 +187,18 @@ def summarize_group(cells: Sequence[dict[str, Any]]) -> dict[str, Any]:
     if field:
         out["latency_field"] = field
         out["latency"] = latency_summary([c["values"].get(field) for c in scored])
-    if any(c.get("verdict") in ("pass", "fail") for c in scored):
-        out["success"] = rate_summary([c["verdict"] == "pass" for c in scored if c.get("verdict") in ("pass", "fail")])
+    graded = [c for c in scored if c.get("verdict") in ("pass", "fail")]
+    if graded:
+        out["success"] = rate_summary([c["verdict"] == "pass" for c in graded])
     return out
 
 
 def _is_exclusion(cell: dict[str, Any]) -> bool:
-    return str(cell.get("void") or "").startswith("configuration not supported")
+    return str(cell.get("void") or "").startswith(_EXCLUDED)
 
 
 def _void_class(reason: str) -> str:
-    if reason.startswith("configuration not supported"):
+    if reason.startswith(_EXCLUDED):
         return "excluded: " + reason.split(": ", 1)[1]
     if reason.startswith("provider refused"):
         return "provider refused the session"
@@ -327,7 +329,7 @@ def render_markdown(report: dict[str, Any]) -> str:
         lines += [f"**Sentinel** (fixed cell, n={lat['n']}): P50 {lat['p50']} ms{_fmt_ci(lat.get('p50_ci95'))}, spread {lat['min']}–{lat['max']} ms", ""]
     lines += ["| probe / variant | config | voice | transform | n | P50 ms | 95% CI | P90 ms | pass rate | voids |", "|---|---|---|---|---|---|---|---|---|---|"]
     for key, summary in report["groups"].items():
-        probe, variant, config, voice, transform = key.split("/")
+        _probe, variant, config, voice, transform = key.split("/")
         lat = summary.get("latency") or {}
         suc = summary.get("success") or {}
         lines.append(

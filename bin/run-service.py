@@ -136,9 +136,7 @@ def main() -> int:
         return 2
     probes, configs = table[args.suite]
     transforms = args.transform or ["clean"]
-    if transforms == ["all"]:
-        transforms = list(TRANSFORMS)
-    if args.suite == "robustness" and not args.transform:
+    if transforms == ["all"] or (args.suite == "robustness" and not args.transform):
         transforms = list(TRANSFORMS)
 
     suite_tools = TOOL_SUITES.get(args.suite)

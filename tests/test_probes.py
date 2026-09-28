@@ -13,12 +13,14 @@ import pytest
 from service.probes import (
     BackchannelTolerance,
     BargeIn,
-    BookingTask,
     EndpointingLadder,
     FalseTrigger,
     ResponseLatency,
-    route_booking_reply,
+    TaskScenario,
 )
+from service.scenarios import by_id
+
+route_booking_reply = by_id("book.morning").route
 
 
 class TestRouting:
@@ -65,5 +67,5 @@ class TestSlugs:
         assert ResponseLatency(clip_id="open.book").slug != ResponseLatency(clip_id="open.reschedule").slug
 
     def test_slugs_are_filesystem_safe(self):
-        for probe in (ResponseLatency(), EndpointingLadder(800), BargeIn(), BookingTask(), FalseTrigger()):
+        for probe in (ResponseLatency(), EndpointingLadder(800), BargeIn(), TaskScenario(), FalseTrigger()):
             assert "/" not in probe.slug and " " not in probe.slug

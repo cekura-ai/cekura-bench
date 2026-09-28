@@ -48,12 +48,3 @@ def load_scenarios(directory: str | Path) -> list[ScenarioSpec]:
 def load_params(directory: str | Path) -> dict[str, Any]:
     path = Path(directory) / "params.json"
     return json.loads(path.read_text()) if path.exists() else {}
-
-
-def dump_corpus(corpus: Corpus) -> dict[str, Any]:
-    """The public corpus in the file shape, for authoring a holdout beside it."""
-    return {
-        "version": corpus.version,
-        "voices": {label: {"vendor": v.vendor, "voice_id": v.voice_id, "model": v.model} for label, v in corpus.voices.items()},
-        "clips": [{"id": c.id, "text": c.text, "note": c.note} for c in corpus.specs.values()],
-    }

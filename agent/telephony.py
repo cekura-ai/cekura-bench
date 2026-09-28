@@ -28,7 +28,6 @@ runner that calls this.
 from __future__ import annotations
 
 import asyncio
-import base64
 import json
 from dataclasses import dataclass, field
 from typing import Any
@@ -39,6 +38,7 @@ from aiohttp import BasicAuth, ClientSession, web
 from agent.adapters.twilio_stream import WebsocketMediaStream
 
 TWILIO_API = "https://api.twilio.com/2010-04-01"
+HEARTBEAT_S = 20
 
 
 def connect_stream_twiml(stream_url: str) -> str:
@@ -89,7 +89,7 @@ class StreamServer:
         return web.Response(text=connect_stream_twiml(target), content_type="text/xml")
 
     async def _media(self, request: web.Request) -> web.WebSocketResponse:
-        socket = web.WebSocketResponse(heartbeat=20)
+        socket = web.WebSocketResponse(heartbeat=HEARTBEAT_S)
         await socket.prepare(request)
         done: asyncio.Future = asyncio.get_running_loop().create_future()
         await self._pending.put(_HandedOver(socket, done))
@@ -103,7 +103,7 @@ class StreamServer:
         resampled or re-encoded here would be measured as carrier latency and
         would inflate every transport correction taken from it.
         """
-        socket = web.WebSocketResponse(heartbeat=20)
+        socket = web.WebSocketResponse(heartbeat=HEARTBEAT_S)
         await socket.prepare(request)
         stream_sid: str | None = None
         async for message in socket:
@@ -163,8 +163,3 @@ async def hang_up(*, account_sid: str, auth_token: str, call_sid: str) -> None:
     url = f"{TWILIO_API}/Accounts/{quote(account_sid)}/Calls/{quote(call_sid)}.json"
     async with ClientSession(auth=BasicAuth(account_sid, auth_token)) as session:
         await session.post(url, data={"Status": "completed"})
-
-
-def silence_frame(ms: float = 20.0) -> str:
-    """A μ-law silence payload, for keeping a stream alive without speaking."""
-    return base64.b64encode(b"\xff" * int(8 * ms)).decode("ascii")

@@ -235,10 +235,7 @@ def summarize(cells: list[Any], dataset: str | None = None) -> dict[str, Any]:
         "scored": len(scored),
         "void": len(questions) - len(scored),
         "accuracy": round(sum(c.verdict == "pass" for c in scored) / len(scored), 4) if scored else None,
-        # The chance rate travels with the accuracy so the verdict this check
-        # exists for can be read off the numbers rather than reconstructed from
-        # prose: a category at or near chance means the audio did not arrive
-        # intact, whatever the model is capable of.
+        # Chance travels with accuracy: near chance means the audio did not arrive intact.
         "by_category": {
             name: {
                 "n": len(hits),

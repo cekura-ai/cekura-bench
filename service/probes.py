@@ -115,8 +115,9 @@ class ProbeContext:
 
     def _raise_if_closed(self) -> None:
         """A session the provider closed is a void, not a slow reply, and not a 45 s wait."""
-        if self.adapter.closed.is_set() or (self.caller is not None and self.caller.failed):
-            raise SessionClosed(self.caller.failed if self.caller is not None and self.caller.failed else "provider closed the session")
+        failed = self.caller.failed if self.caller is not None else None
+        if self.adapter.closed.is_set() or failed:
+            raise SessionClosed(failed or "provider closed the session")
 
     async def _settle(self, deadline: float, settle_ms: float) -> bool:
         loop = asyncio.get_running_loop()
@@ -587,7 +588,9 @@ class TaskScenario:
             await asyncio.sleep(1.0)  # let a trailing tool call land
         finally:
             stop.set()
-            await asyncio.gather(pump, return_exceptions=True)
+            (outcome,) = await asyncio.gather(pump, return_exceptions=True)
+            if isinstance(outcome, Exception):
+                ctx.log.emit(ev.SESSION_ERROR, error=repr(outcome), where="tool-pump")
 
         verdict = verify_trace(ctx.adapter.tool_calls, expected=self.spec.expected, forbidden=self.spec.forbidden)
         return ProbeResult(
@@ -609,16 +612,6 @@ class TaskScenario:
                 "usage": usage(ctx.adapter),
             },
         )
-
-
-def BookingTask(**kwargs: Any) -> TaskScenario:
-    """The baseline booking scenario, kept under its original name."""
-    return TaskScenario(spec=by_id("book.morning"), **kwargs)
-
-
-def route_booking_reply(text: str) -> str:
-    """The baseline scenario's routing, exposed for the routing tests."""
-    return by_id("book.morning").route(text)
 
 
 def task_probes(contract: str | None = None, scenarios: Sequence[ScenarioSpec] = SCENARIOS) -> list[TaskScenario]:

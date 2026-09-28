@@ -168,7 +168,7 @@ class GeminiLiveAdapter(RealtimeAdapter):
             await self._ws.close()
         self._flush_transcripts()
         self.closed.set()
-        self.log.emit(ev.SESSION_CLOSED)
+        self.log.emit(ev.SESSION_CLOSED, by="harness")
 
     # ── sending ──────────────────────────────────────────────────────────────
 
@@ -238,10 +238,9 @@ class GeminiLiveAdapter(RealtimeAdapter):
         try:
             async for message in self._ws:
                 self._handle(_decode(message))
-        except asyncio.CancelledError:
-            raise
-        except websockets.ConnectionClosed as exc:
-            self.log.emit(ev.SESSION_CLOSED, code=exc.code, reason=str(exc.reason))
+            self.log.emit(ev.SESSION_CLOSED, by="provider", code=self._ws.close_code, reason=self._ws.close_reason)
+        except websockets.ConnectionClosed:
+            self.log.emit(ev.SESSION_CLOSED, code=self._ws.close_code, reason=self._ws.close_reason)
             self.closed.set()
         except Exception as exc:  # noqa: BLE001
             self.log.emit(ev.SESSION_ERROR, error=repr(exc))
@@ -249,11 +248,11 @@ class GeminiLiveAdapter(RealtimeAdapter):
 
     def _handle(self, payload: dict[str, Any]) -> None:
         content = payload.get("serverContent") or {}
-        audio_parts = [p for p in (content.get("modelTurn") or {}).get("parts", []) if "inlineData" in p]
-        if not audio_parts or len(payload) > 1 or set(content) - {"modelTurn"}:
+        parts = (content.get("modelTurn") or {}).get("parts", [])
+        if not any("inlineData" in p for p in parts) or len(payload) > 1 or set(content) - {"modelTurn"}:
             self.log.raw(_without_audio(payload))  # audio bytes live in the wav, not the log
 
-        for part in (content.get("modelTurn") or {}).get("parts", []):
+        for part in parts:
             if "inlineData" in part:
                 self._on_agent_audio(base64.b64decode(part["inlineData"]["data"]))
             elif part.get("text"):

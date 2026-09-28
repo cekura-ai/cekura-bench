@@ -140,7 +140,7 @@ class OpenAIRealtimeAdapter(RealtimeAdapter):
         if self._ws:
             await self._ws.close()
         self.closed.set()
-        self.log.emit(ev.SESSION_CLOSED)
+        self.log.emit(ev.SESSION_CLOSED, by="harness")
 
     # ── sending ──────────────────────────────────────────────────────────────
 
@@ -193,10 +193,9 @@ class OpenAIRealtimeAdapter(RealtimeAdapter):
         try:
             async for message in self._ws:
                 self._handle(json.loads(message))
-        except asyncio.CancelledError:
-            raise
-        except websockets.ConnectionClosed as exc:
-            self.log.emit(ev.SESSION_CLOSED, code=exc.code, reason=str(exc.reason))
+            self.log.emit(ev.SESSION_CLOSED, by="provider", code=self._ws.close_code, reason=self._ws.close_reason)
+        except websockets.ConnectionClosed:
+            self.log.emit(ev.SESSION_CLOSED, code=self._ws.close_code, reason=self._ws.close_reason)
             self.closed.set()
         except Exception as exc:  # noqa: BLE001
             self.log.emit(ev.SESSION_ERROR, error=repr(exc))

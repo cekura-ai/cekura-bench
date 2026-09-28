@@ -20,11 +20,12 @@ What the phone does not have is declared rather than worked around:
 
 μ-law at 8 kHz in both directions, which is the call, not a setting.
 
-**Timing.** Every inbound frame carries the carrier's own millisecond timestamp
-as well as our arrival time, and both are recorded. The carrier clock removes our
-receive jitter from the inbound direction; it does not remove carrier latency,
-and it shares no origin with our outbound clock. Neither is a substitute for the
-injected-tone round trip that gates publishing any agent-bench latency.
+**Timing.** Every inbound frame carries the carrier's own millisecond timestamp;
+our arrival time goes on the timeline and the first carrier stamp is kept beside
+it. The carrier clock removes our receive jitter from the inbound direction; it
+does not remove carrier latency, and it shares no origin with our outbound
+clock. Neither is a substitute for the injected-tone round trip that gates
+publishing any agent-bench latency.
 """
 
 from __future__ import annotations
@@ -71,8 +72,7 @@ class TwilioStreamAdapter(RealtimeAdapter):
         self.stream_sid: str | None = None
         self.call_sid: str | None = None
         self.media_format: dict[str, Any] | None = None
-        # Frames the carrier says it sent vs frames we saw, so a gap in the
-        # record is visible as a gap rather than as a quiet agent.
+        # Frames we saw and the carrier's first timestamp, so a gap can be told from a quiet agent.
         self.inbound_frames = 0
         self.carrier_first_timestamp_ms: float | None = None
 
@@ -132,8 +132,8 @@ class TwilioStreamAdapter(RealtimeAdapter):
         try:
             async for message in self._stream:
                 self._handle(message)
-        except asyncio.CancelledError:
-            raise
+            if not self.closed.is_set():
+                self.log.emit(ev.SESSION_CLOSED, reason="media socket closed without a stop event")
         except Exception as exc:                     # noqa: BLE001 - recorded, not swallowed
             self.log.emit(ev.SESSION_ERROR, source=self.name, detail=repr(exc))
             self.closed.set()

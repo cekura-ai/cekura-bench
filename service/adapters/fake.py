@@ -107,11 +107,8 @@ class FakeAdapter(RealtimeAdapter):
         per_chunk = int(self.output_rate * self.chunk_ms / 1000.0)
         phase = np.arange(total) / self.output_rate
         tone = to_pcm(8000 * np.sin(2 * np.pi * 220.0 * phase))
-        try:
-            for start in range(0, total, per_chunk):
-                self._on_agent_audio(tone[start * SAMPLE_WIDTH : (start + per_chunk) * SAMPLE_WIDTH])
-                await asyncio.sleep(self.chunk_ms / 1000.0)
-            self._on_agent_audio_done()
-            self.log.emit(ev.RESPONSE_DONE, status="completed", usage={})
-        except asyncio.CancelledError:
-            raise
+        for start in range(0, total, per_chunk):
+            self._on_agent_audio(tone[start * SAMPLE_WIDTH : (start + per_chunk) * SAMPLE_WIDTH])
+            await asyncio.sleep(self.chunk_ms / 1000.0)
+        self._on_agent_audio_done()
+        self.log.emit(ev.RESPONSE_DONE, status="completed", usage={})

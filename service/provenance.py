@@ -23,6 +23,7 @@ import platform
 import subprocess
 import sys
 from dataclasses import fields, is_dataclass
+from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 
@@ -89,8 +90,6 @@ def environment() -> dict[str, Any]:
     packages: dict[str, str] = {}
     for name in _PACKAGES:
         try:
-            from importlib.metadata import version
-
             packages[name] = version(name)
         except Exception:  # noqa: BLE001 -- a missing optional package is not a failure
             packages[name] = "absent"

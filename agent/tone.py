@@ -101,8 +101,8 @@ def find(recording: bytes | np.ndarray, reference: bytes | np.ndarray,
     # energy of the window it actually overlaps.
     squares = np.concatenate([[0.0], np.cumsum(haystack**2)])
     window = squares[needle.size :] - squares[: -needle.size]
-    means = (np.concatenate([[0.0], np.cumsum(haystack)])[needle.size :] -
-             np.concatenate([[0.0], np.cumsum(haystack)])[: -needle.size]) / needle.size
+    sums = np.concatenate([[0.0], np.cumsum(haystack)])
+    means = (sums[needle.size :] - sums[: -needle.size]) / needle.size
     energy = np.sqrt(np.maximum(window - needle.size * means**2, 1e-12))
     scores = correlation / (energy * needle_norm)
 

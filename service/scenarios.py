@@ -108,8 +108,8 @@ class ScenarioSpec:
             forbidden=tuple(payload.get("forbidden", ())),
             done_when_called=payload.get("done_when_called"),
             done_when_said=tuple(payload.get("done_when_said", ())),
-            fallback=payload.get("fallback", "task.confirm"),
-            max_turns=int(payload.get("max_turns", 10)),
+            fallback=payload.get("fallback", cls.fallback),
+            max_turns=int(payload.get("max_turns", cls.max_turns)),
             note=payload.get("note", ""),
         )
 
@@ -122,7 +122,6 @@ class ScenarioSpec:
 # record that makes its expected trace unambiguous.
 
 JAMES = "task.identify"
-WITHOUT = ("book_appointment", "cancel_appointment")
 
 SCENARIOS: tuple[ScenarioSpec, ...] = (
     ScenarioSpec(

@@ -93,8 +93,8 @@ class Utterance:
             "last_sample": self.last_sample,
             "speech_start_sample": self.speech_start_sample,
             "speech_end_sample": self.speech_end_sample,
-            "t_start": None if self.t_start is None else round(self.t_start, 6),
-            "t_end": None if self.t_end is None else round(self.t_end, 6),
+            "t_start": round(self.t_start, 6),
+            "t_end": round(self.t_end, 6),
         }
 
 
@@ -330,14 +330,8 @@ class BranchingCaller:
     # -- observation ------------------------------------------------------
 
     def _agent_playout_end(self) -> float | None:
-        """When a listener stops hearing the agent, not when the bytes stopped arriving.
-
-        Providers deliver audio faster than realtime -- one ships close to a
-        second of speech in its first frame -- so the last chunk of a reply can
-        land seconds before the listener reaches it. A caller taking "no more
-        audio arriving" as its cue would talk over a reply that was still
-        playing, and the provider would correctly treat that as a barge-in.
-        """
+        """When a listener stops hearing the agent. Providers ship faster than realtime,
+        so the last arrival is too early a cue and would talk over a reply still playing."""
         return self.adapter.agent_timeline.playout_end()
 
     async def wait_agent_onset(self, timeout_s: float, since_sample: int | None = None) -> bool:

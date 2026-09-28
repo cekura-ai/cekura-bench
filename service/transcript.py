@@ -41,7 +41,7 @@ def normalize(text: str) -> list[str]:
             out.extend([_ONES[word]] * pending)
         elif word.isdigit():
             out.extend(list(word))
-        elif len(word) == 1 and out and out[-1].isalpha() and len(out[-1]) < 4 and not out[-1].isdigit():
+        elif len(word) == 1 and out and out[-1].isalpha() and len(out[-1]) < 4:
             out[-1] += word  # letters spelled out, "c w", join as one code the way "CW" is written
         else:
             out.append(word)

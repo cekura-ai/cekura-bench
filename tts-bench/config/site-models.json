@@ -1,0 +1,21 @@
+{
+  "campaign": "campaign-0928",
+  "priceNote": "price is null until a list price is sourced from the provider's pricing page, with the URL and date recorded here",
+  "models": {
+    "cartesia/sonic-3.6": {"id": "cartesia-sonic-3-6", "name": "Sonic 3.6", "vendor": "Cartesia", "modelId": "sonic-3.6", "voice": "Skylar", "price": null},
+    "cartesia/sonic-3.5": {"id": "cartesia-sonic-3-5", "name": "Sonic 3.5", "vendor": "Cartesia", "modelId": "sonic-3.5", "voice": "Skylar", "price": null},
+    "elevenlabs/eleven_flash_v2_5": {"id": "elevenlabs-flash-v2-5", "name": "Flash v2.5", "vendor": "ElevenLabs", "modelId": "eleven_flash_v2_5", "voice": "Rachel", "price": null},
+    "elevenlabs-dialogue/eleven_v3_conversational": {"id": "elevenlabs-v3-conversational", "name": "v3 Conversational", "vendor": "ElevenLabs", "modelId": "eleven_v3_conversational", "voice": "Rachel", "price": null},
+    "deepgram/aura-2-thalia-en": {"id": "deepgram-aura-2", "name": "Aura-2", "vendor": "Deepgram", "modelId": "aura-2-thalia-en", "voice": "Thalia", "price": null},
+    "deepgram-flux/flux-haley-en": {"id": "deepgram-flux", "name": "Flux", "vendor": "Deepgram", "modelId": "flux-haley-en", "voice": "Haley", "price": null},
+    "openai/gpt-4o-mini-tts": {"id": "openai-gpt-4o-mini-tts", "name": "gpt-4o-mini-tts", "vendor": "OpenAI", "modelId": "gpt-4o-mini-tts", "voice": "alloy", "price": null},
+    "gemini/gemini-3.8-flash-tts": {"id": "gemini-3-8-flash-tts", "name": "Gemini 3.8 Flash TTS", "vendor": "Google", "modelId": "gemini-3.8-flash-tts", "voice": "Kore", "price": null},
+    "gemini/gemini-3.8-flash-lite-tts": {"id": "gemini-3-8-flash-lite-tts", "name": "Gemini 3.8 Flash-Lite TTS", "vendor": "Google", "modelId": "gemini-3.8-flash-lite-tts", "voice": "Kore", "price": null},
+    "gemini/gemini-3.1-flash-tts-preview": {"id": "gemini-3-1-flash-tts", "name": "Gemini 3.1 Flash TTS (preview)", "vendor": "Google", "modelId": "gemini-3.1-flash-tts-preview", "voice": "Kore", "price": null},
+    "inworld/inworld-tts-2-flash": {"id": "inworld-tts-2-flash", "name": "TTS-2 Flash", "vendor": "Inworld", "modelId": "inworld-tts-2-flash", "voice": "Brooke", "price": null},
+    "xai/grok-tts": {"id": "xai-grok-tts", "name": "Grok TTS", "vendor": "xAI", "modelId": "grok-tts", "voice": "carina", "price": null},
+    "smallest/lightning_v3.1_pro": {"id": "smallest-lightning-v3-1-pro", "name": "Lightning v3.1 Pro", "vendor": "Smallest", "modelId": "lightning_v3.1_pro", "voice": "kelsey", "price": null},
+    "deepinfra/Qwen/Qwen3-TTS": {"id": "qwen3-tts-deepinfra", "name": "Qwen3-TTS", "vendor": "Alibaba Qwen (via DeepInfra)", "modelId": "Qwen/Qwen3-TTS", "voice": "Vivian", "price": null},
+    "soniox/tts-rt-v2": {"id": "soniox-tts-rt-v2", "name": "TTS RT v2", "vendor": "Soniox", "modelId": "tts-rt-v2", "voice": "Emma", "price": null}
+  }
+}

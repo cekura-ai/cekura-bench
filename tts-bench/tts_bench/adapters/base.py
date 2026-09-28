@@ -135,6 +135,11 @@ class TTSAdapter(abc.ABC):
     supports_continuation: ClassVar[bool] = True     # frames are one utterance, prosody carried across
     native_rates: ClassVar[tuple[int, ...]] = (24000,)
     native_mulaw_8k: ClassVar[bool] = False          # emits 8 kHz mu-law itself (capability metadata)
+    # The protocol has no end-of-utterance message, so a context is over when its
+    # stream goes quiet. Only such a protocol ends a wait on quiet: one that does
+    # say when it is done is waited for, since a pause mid-stream is a stall
+    # (the playout metrics count it) and stopping there would cut the recording.
+    ends_on_quiet: ClassVar[bool] = False
     setup_excluded: ClassVar[str] = "TCP, TLS, websocket upgrade"  # what happens before t0
 
     def __init__(self, config: TTSConfig, api_key: str, log: EventLog, clock: Clock) -> None:
@@ -235,11 +240,12 @@ class TTSAdapter(abc.ABC):
         self.log.emit(ev.CANCEL_SENT, at=synthesis.t_cancel, context_id=context_id)
 
     async def wait(self, context_id: str, timeout_s: float, quiet_s: float = 1.5) -> Synthesis:
-        """Until the provider says the context is done, or it has gone quiet.
+        """Until the provider says the context is done, or, where that is all there is, it has gone quiet.
 
-        A provider with no completion signal (or one that never sends it after a
-        cancel) is done when no chunk has arrived for ``quiet_s``. The record
-        says which of the two ended the wait.
+        A protocol with no completion signal (``ends_on_quiet``), or any context
+        after a cancel (a provider need not confirm one), is done when no chunk
+        has arrived for ``quiet_s``. Every other context waits for its done
+        signal, an error, or the timeout. The record says which ended the wait.
         """
         synthesis = self.contexts[context_id]
         deadline = self.clock.now() + timeout_s
@@ -257,6 +263,8 @@ class TTSAdapter(abc.ABC):
             if synthesis.error:
                 synthesis.meta["ended_by"] = "error"
                 return synthesis
+            if not (self.ends_on_quiet or synthesis.t_cancel is not None):
+                continue                    # the provider will say when it is done; a pause is not the end
             last = synthesis.t_last_chunk
             anchor = last if last is not None else (synthesis.t_cancel or synthesis.t_input_done)
             if anchor is not None and self.clock.now() - anchor > quiet_s and (last is not None or synthesis.t_cancel):

@@ -28,6 +28,7 @@ from tts_bench.adapters.base import TTSConfig
 
 class ElevenLabsAdapter(WebSocketAdapter):
     name: ClassVar[str] = "elevenlabs"
+    ends_on_quiet: ClassVar[bool] = True
     native_rates: ClassVar[tuple[int, ...]] = (8000, 16000, 22050, 24000, 44100)
     native_mulaw_8k: ClassVar[bool] = True     # output_format=ulaw_8000
     setup_excluded: ClassVar[str] = "TCP, TLS, websocket upgrade, per-context init frame"

@@ -193,3 +193,32 @@ class TestDeepInfra:
         deepinfra, _ = adapter(DeepInfraTTSAdapter, "Qwen/Qwen3-TTS", "Vivian")
         assert f"{deepinfra.base}{deepinfra.speech_path}" == "https://api.deepinfra.com/v1/openai/audio/speech"
         assert deepinfra._prewarm_url() == "https://api.deepinfra.com/models/Qwen/Qwen3-TTS"
+
+
+class TestEndOfUtterance:
+    async def test_a_pause_does_not_end_a_protocol_that_says_when_it_is_done(self):
+        import asyncio
+
+        from tts_bench.adapters.openai_tts import OpenAITTSAdapter
+
+        openai, _ = adapter(OpenAITTSAdapter, "gpt-4o-mini-tts", "alloy")
+        synthesis = await openai.open_context("main")
+        synthesis.t_first_text = synthesis.t_input_done = openai.clock.now()
+        openai._on_audio("main", b"\x01\x00" * 480)
+        waiting = asyncio.create_task(openai.wait("main", 5.0, quiet_s=0.1))
+        await asyncio.sleep(0.4)                                   # a stall four times the quiet window
+        assert not waiting.done()
+        openai._on_audio("main", b"\x01\x00" * 480)
+        openai._on_done("main")
+        finished = await waiting
+        assert finished.meta["ended_by"] == "provider" and len(finished.pcm) == 1920
+
+    async def test_a_protocol_without_a_done_message_still_ends_on_quiet(self):
+        from tts_bench.adapters.smallest import SmallestAdapter
+
+        smallest, _ = adapter(SmallestAdapter, "lightning_v3.1_pro", "kelsey")
+        synthesis = await smallest.open_context("main")
+        synthesis.t_first_text = synthesis.t_input_done = smallest.clock.now()
+        smallest._on_audio("main", b"\x01\x00" * 480)
+        finished = await smallest.wait("main", 5.0, quiet_s=0.1)
+        assert finished.meta["ended_by"] == "quiet"

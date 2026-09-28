@@ -28,6 +28,7 @@ from tts_bench.adapters._ws import WebSocketAdapter
 
 class SmallestAdapter(WebSocketAdapter):
     name: ClassVar[str] = "smallest-lightning"
+    ends_on_quiet: ClassVar[bool] = True
     supports_cancel: ClassVar[bool] = False
     native_rates: ClassVar[tuple[int, ...]] = (8000, 16000, 24000, 44100)
     url = "wss://api.smallest.ai/waves/v1/tts/live"

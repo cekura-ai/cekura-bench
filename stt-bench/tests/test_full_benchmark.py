@@ -88,11 +88,12 @@ def test_public_only_plan_accepts_model_without_private_recordings(tmp_path,mode
     data['private_manifest_sha256']='hash';p.write_text(json.dumps(data))
     with pytest.raises(ValueError,match='private'):load_plan(p)
 
-def test_soniox_still_requires_public_only_scope(tmp_path):
+def test_soniox_full_plan_keeps_legacy_plans_exact(tmp_path):
     p=tmp_path/'plan.json'
-    data=dict(version=2,models=['soniox-stt-rt-v5'],max_attempts=2,workers_per_model=12,
+    data=dict(version=2,models=['soniox-stt-rt-v5','inworld-stt-1'],max_attempts=2,workers_per_model=12,
         items=[dict(clip_id=str(i),cohort='public' if i<1000 else 'private') for i in range(1008)])
-    p.write_text(json.dumps(data))
+    p.write_text(json.dumps(data));assert len(load_plan(p)['items'])==1008
+    data.update(version=1,models=[*MODELS,'soniox-stt-rt-v5'],workers_per_model=10);p.write_text(json.dumps(data))
     with pytest.raises(ValueError,match='scope'):load_plan(p)
 
 def test_unverified_results_never_enter_report():

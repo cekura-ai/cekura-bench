@@ -128,6 +128,7 @@ vendored):
 | `cartesia` | `sonic-3.6`, `sonic-3.5` | websocket, `context_id` | yes | `cancel` | yes | yes | |
 | `elevenlabs` | `eleven_flash_v2_5` | websocket, multi-context | yes | `close_context` | yes | yes | option `auto_mode=true\|false` (default false: generate on flush) |
 | `elevenlabs-dialogue` | `eleven_v3_conversational` | websocket, text-to-dialogue | no | no | no | no | whole text in one flushed frame; the endpoint rejects partial text once it starts generating on its own |
+| `elevenlabs-dialogue-multi` | `eleven_v4_turbo`, `eleven_v4` | websocket, multi-context text-to-dialogue | yes | `close_context` | yes | no | v4 is served only on the text-to-dialogue endpoints; `close_context` flushes before closing, so the cancel probe measures the audio that still arrives |
 | `deepgram` | `aura-2-thalia-en` | websocket `/v1/speak`, one utterance at a time | yes | `Clear` | yes | yes | the voice is the model string |
 | `deepgram-flux` | `flux-haley-en` | websocket `/v2/speak`, one utterance at a time | yes | `Interrupt` | yes | yes | `SpeechMetadata` ends a turn; the early `Flushed` does not |
 | `openai` | `gpt-4o-mini-tts` | HTTP streaming | no | no | no | no | whole text per request |

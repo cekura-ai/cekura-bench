@@ -22,6 +22,7 @@ from tts_bench.adapters.deepgram_flux import DeepgramFluxAdapter
 from tts_bench.adapters.deepinfra import DeepInfraTTSAdapter
 from tts_bench.adapters.elevenlabs import ElevenLabsAdapter
 from tts_bench.adapters.elevenlabs_dialogue import ElevenLabsDialogueAdapter
+from tts_bench.adapters.elevenlabs_dialogue_multi import ElevenLabsDialogueMultiAdapter
 from tts_bench.adapters.fake import FakeTTSAdapter
 from tts_bench.adapters.gemini_tts import GeminiTTSAdapter
 from tts_bench.adapters.inworld import InworldAdapter
@@ -75,6 +76,12 @@ PROVIDERS: dict[str, ProviderEntry] = {
         "elevenlabs-dialogue", ElevenLabsDialogueAdapter, "ELEVENLABS_API_KEY",
         (Model("eleven_v3_conversational", RACHEL),),
         notes="text-to-dialogue websocket; whole text per utterance; no streamed input, continuation or cancel",
+    ),
+    "elevenlabs-dialogue-multi": ProviderEntry(
+        "elevenlabs-dialogue-multi", ElevenLabsDialogueMultiAdapter, "ELEVENLABS_API_KEY",
+        (Model("eleven_v4_turbo", RACHEL), Model("eleven_v4", RACHEL)),
+        notes="multi-context text-to-dialogue websocket (v4 is served only there); text in pieces per context; "
+              "close_context flushes, so the cancel is measured, not assumed",
     ),
     "deepgram": ProviderEntry(
         "deepgram", DeepgramSpeakAdapter, "DEEPGRAM_API_KEY",

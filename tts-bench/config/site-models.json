@@ -6,6 +6,8 @@
     "cartesia/sonic-3.5": {"id": "cartesia-sonic-3-5", "name": "Sonic 3.5", "vendor": "Cartesia", "modelId": "sonic-3.5", "voice": "Skylar", "price": null},
     "elevenlabs/eleven_flash_v2_5": {"id": "elevenlabs-flash-v2-5", "name": "Flash v2.5", "vendor": "ElevenLabs", "modelId": "eleven_flash_v2_5", "voice": "Rachel", "price": null},
     "elevenlabs-dialogue/eleven_v3_conversational": {"id": "elevenlabs-v3-conversational", "name": "v3 Conversational", "vendor": "ElevenLabs", "modelId": "eleven_v3_conversational", "voice": "Rachel", "price": null},
+    "elevenlabs-dialogue-multi/eleven_v4_turbo": {"id": "elevenlabs-v4-turbo", "name": "v4 Turbo", "vendor": "ElevenLabs", "modelId": "eleven_v4_turbo", "voice": "Rachel", "price": null},
+    "elevenlabs-dialogue-multi/eleven_v4": {"id": "elevenlabs-v4", "name": "v4", "vendor": "ElevenLabs", "modelId": "eleven_v4", "voice": "Rachel", "price": null},
     "deepgram/aura-2-thalia-en": {"id": "deepgram-aura-2", "name": "Aura-2", "vendor": "Deepgram", "modelId": "aura-2-thalia-en", "voice": "Thalia", "price": null},
     "deepgram-flux/flux-haley-en": {"id": "deepgram-flux", "name": "Flux", "vendor": "Deepgram", "modelId": "flux-haley-en", "voice": "Haley", "price": null},
     "openai/gpt-4o-mini-tts": {"id": "openai-gpt-4o-mini-tts", "name": "gpt-4o-mini-tts", "vendor": "OpenAI", "modelId": "gpt-4o-mini-tts", "voice": "alloy", "price": null},

@@ -5,6 +5,7 @@ from __future__ import annotations
 from tts_bench.adapters.base import TTSConfig
 from tts_bench.adapters.deepgram_flux import DeepgramFluxAdapter
 from tts_bench.adapters.elevenlabs_dialogue import ElevenLabsDialogueAdapter
+from tts_bench.adapters.elevenlabs_dialogue_multi import ElevenLabsDialogueMultiAdapter
 from tts_bench.common.events import Clock, EventLog
 from tts_bench.registry import PROVIDERS, lineup
 from tts_bench.runner import RunSpec, Runner
@@ -74,6 +75,45 @@ class TestElevenLabsDialogue:
         assert not ElevenLabsDialogueAdapter.supports_cancel and not ElevenLabsDialogueAdapter.supports_continuation
 
 
+class TestElevenLabsDialogueMulti:
+    async def test_text_goes_in_pieces_per_context_and_the_flush_ends_input(self):
+        multi, sent = adapter(ElevenLabsDialogueMultiAdapter, "eleven_v4_turbo", "v")
+        await multi.open_context("a")
+        await multi.send("a", "Thanks for ")
+        await multi.send("a", "calling.")
+        await multi.finish("a")
+        assert sent == [
+            {"context_id": "a", "voices": ["v"]},
+            {"context_id": "a", "inputs": [{"text": "Thanks for ", "voice_id": "v"}]},
+            {"context_id": "a", "inputs": [{"text": "calling.", "voice_id": "v"}]},
+            {"context_id": "a", "flush": True},
+        ]
+
+    async def test_audio_and_the_end_of_turn_are_routed_by_context(self):
+        multi, _ = adapter(ElevenLabsDialogueMultiAdapter, "eleven_v4_turbo", "v")
+        a = await multi.open_context("a")
+        b = await multi.open_context("b")
+        multi._on_message({"audio": "AAAA", "context_id": "b"})
+        multi._on_message({"is_final_audio_for_turn": True, "context_id": "b"})
+        assert b.done.is_set() and b.pcm and not a.done.is_set() and not a.pcm
+
+    async def test_close_context_is_the_cancel_and_its_final_acknowledges_it(self):
+        multi, sent = adapter(ElevenLabsDialogueMultiAdapter, "eleven_v4_turbo", "v")
+        synthesis = await multi.open_context("a")
+        await multi.send("a", "A long answer.")
+        await multi.finish("a")
+        await multi.cancel("a")
+        assert sent[-1] == {"context_id": "a", "close_context": True}
+        multi._on_message({"is_final_audio_for_turn": True, "context_id": "a"})
+        assert synthesis.t_cancel_ack is not None and synthesis.done.is_set()
+
+    def test_v4_is_on_the_dialogue_endpoint_and_waits_for_its_done_signal(self):
+        multi, _ = adapter(ElevenLabsDialogueMultiAdapter, "eleven_v4", "v")
+        assert multi.url == "wss://api.elevenlabs.io/v1/text-to-dialogue/multi-stream-input?model_id=eleven_v4&output_format=pcm_24000"
+        assert not ElevenLabsDialogueMultiAdapter.ends_on_quiet
+        assert ElevenLabsDialogueMultiAdapter.unsupported_reason(TTSConfig("eleven_v4", "v"), ("streamed_input", "cancel", "continuation")) is None
+
+
 class TestLineup:
     def test_each_model_runs_with_its_own_voice_and_names_its_run(self, tmp_path):
         spec = RunSpec(provider="gemini", probes=[OneShot()], model="gemini-3.8-flash-lite-tts", store=str(tmp_path))
@@ -86,6 +126,7 @@ class TestLineup:
         pairs = [(key, m.model) for key, m in lineup()]
         assert len(pairs) == len(set(pairs)) and all(m.voice for _, m in lineup())
         assert ("elevenlabs-dialogue", "eleven_v3_conversational") in pairs and ("deepgram-flux", "flux-haley-en") in pairs
+        assert ("elevenlabs-dialogue-multi", "eleven_v4_turbo") in pairs and ("elevenlabs-dialogue-multi", "eleven_v4") in pairs
 
 
 class TestInworld:

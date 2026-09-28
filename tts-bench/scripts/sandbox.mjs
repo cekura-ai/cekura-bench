@@ -32,6 +32,7 @@ const REMOTE = '/vercel/sandbox/tts-bench';
 const REMOTE_STORE = '/vercel/sandbox/runs';
 const REMOTE_OUT = '/vercel/sandbox/out';
 const PY = join(HERE, '.venv/bin/python');
+const REFRESH_MARGIN_MS = 4 * 3600 * 1000;
 
 // ── local facts ──────────────────────────────────────────────────────────────
 
@@ -123,9 +124,19 @@ async function sdk(config) {
   const dir = process.env.VERCEL_SANDBOX_SDK_DIR;
   if (!dir) throw new Error('VERCEL_SANDBOX_SDK_DIR is required');
   const { Sandbox } = await import(pathToFileURL(join(dir, 'dist/index.js')));
-  const { getAuth } = await import(pathToFileURL(join(dir, 'dist/auth/index.js')));
-  const auth = getAuth();
+  const { getAuth, OAuth, updateAuthConfig } = await import(pathToFileURL(join(dir, 'dist/auth/index.js')));
+  let auth = getAuth();
   if (!auth?.token) throw new Error('A Vercel CLI login is required');
+  // The login's access token lasts hours, a campaign can outlast it, and an
+  // expired one fails every poll with 403 while the sandboxes run on. Renew it
+  // up front whenever less than REFRESH_MARGIN_MS is left, as the CLI would.
+  if (auth.refreshToken && auth.expiresAt && auth.expiresAt.getTime() - Date.now() < REFRESH_MARGIN_MS) {
+    const tokens = await (await OAuth()).refreshToken(auth.refreshToken);
+    updateAuthConfig({ token: tokens.access_token, refreshToken: tokens.refresh_token ?? auth.refreshToken,
+                       expiresAt: new Date(Date.now() + tokens.expires_in * 1000) });
+    auth = getAuth();
+    console.log(`vercel login renewed until ${auth.expiresAt.toISOString()}`);
+  }
   return { Sandbox, account: { token: auth.token, teamId: config.teamId, projectId: config.projectId } };
 }
 

@@ -347,6 +347,74 @@ The exact rubric and metric availability can vary with the catalog version. A
 result should therefore always be read with its metric coverage and rubric
 configuration, especially when a recording or provider call was unavailable.
 
+### Scoring
+
+Each call is scored on its own, on the Cekura platform, from the recording, the
+transcript and the tool calls the agent made. A board figure is then a count
+over those calls. Nothing is scored from what the agent says about itself.
+
+**What a call is scored on**
+
+| Check | Scored from | Passes when |
+|---|---|---|
+| Expected Outcome | the transcript, against the outcome the scenario was written to reach | the evaluator gives it the top score, 5 of 5 |
+| Tool Call Accuracy | the tool calls the agent made, against the calls the scenario expects | every expected call was made with the expected arguments, 5 of 5 |
+| Tool Call Accuracy (same record) | the same calls, compared by the record they would store | every expected record would be stored as expected, 5 of 5 |
+| Infrastructure Issues | the recording and call events | the line connected and the agent answered without prolonged dead air |
+| Call termination, interruption, transcription, repetition | the recording and transcript | each by its own rubric; interruption and voice tone are also reported as mean scores out of 5 |
+| Voice Tone + Clarity | the recording | recorded, never a gate |
+
+The two tool checks differ only in what counts as a match. The first compares
+each argument as written. The second asks whether the record a call would
+store is the same: an optional field left out and one sent empty store the same
+record. The first is strict about form, and the second is only about the data. Both are reported, and neither is replaced by the
+other.
+
+**A call passes** only when every check configured for its scenario passes. A
+call that reached the outcome but saved one wrong field is a failed call.
+
+**Rates**
+
+- **Pass rate** is passed calls over all calls. Every call counts, including
+  ones that stalled, dropped or ended early. A call that failed for a reason
+  outside the model is counted and flagged, never dropped.
+- **All runs pass** is the share of scenarios whose three runs all passed. It is
+  counted from the three runs, not estimated from the pass rate, so it shows
+  how repeatable a behaviour is and not only how often it happens.
+- A suite is scored as its own row. A combined figure counts every call in both
+  suites and does not average the two suite rates.
+
+**Uncertainty.** Every rate carries a 95% interval from a bootstrap over
+scenarios: 10,000 resamples, seeded, each resample drawing whole scenarios with
+all their runs, stratified by suite. Runs of one scenario are not independent,
+so resampling them one by one would give intervals that are too narrow. Where
+two rows' intervals overlap, the difference between them is within the noise.
+
+**Response time** is read from the recording: how long the caller waits, after
+they stop speaking, for the agent's reply to start. Each call contributes its
+figure, and a row reports the median and 90th percentile across its calls, by
+linear interpolation. The agent's own
+timings are kept as a diagnostic and never used as the published figure,
+because they are measured at the agent and not at the caller's ear.
+
+**What the agent records beside the score.** The reference agent stamps every
+call with its build and configuration, which lets the board refuse a row that
+mixes builds. It also records who closed the call, and integrity checks: a
+reply the caller waited ten seconds or more for, an error from the model's
+service, caller audio the service stopped processing. Those calls stay in the
+row and are listed, so the row can be read with and without them. Cost is total
+priced dollars over total priced minutes, from verified public list prices, and
+is shown only when every call in the row could be priced. Anything a vendor does not
+meter per call is named next to the figure.
+
+**What is not in this repository.** The evaluator definitions and
+configurations behind each check are not published here: the instructions each
+evaluator scores against, the rubric thresholds, and which checks apply to
+which scenario. They are to be published as a Hugging Face dataset. This
+repository holds the agent under test, the mock-tool contract it answers from,
+and the service bench, whose scoring is in the code (see
+[docs/service.md](docs/service.md)).
+
 ### Evaluator refinement and fairness
 
 Writing reliable conversational tests is iterative. Initial scenario prompts

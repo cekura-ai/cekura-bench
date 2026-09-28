@@ -525,24 +525,25 @@ def gemini_service_class():
 
 def _gemini(
     api_key: str, model: str, voice: str, instructions: str, settings: Settings,
-    thinking: bool = True,
+    thinking: bool = True, service_vad: bool = False,
 ) -> LLMService:
     from google.genai.types import ThinkingConfig
     from pipecat.services.google.gemini_live.llm import GeminiLiveLLMSettings, GeminiVADParams
 
-    # Service VAD off. With it on, the whole call is streamed, silences
-    # included, and the session falls cumulatively behind: about 3 s on the
-    # first reply, up to half a minute late in a long call. Off, the shared
-    # detector sends audio only inside the caller's turn (the service keeps a
-    # short pre-roll) and replies stay at 1-3 s. It is also what
-    # ``turns="local"`` below claims.
+    # Service VAD off by default. With it on, the whole call is streamed,
+    # silences included; on the 2.5 preview the session fell cumulatively
+    # behind that stream, up to half a minute late in a long call. Off, the
+    # shared detector sends audio only inside the caller's turn (the service
+    # keeps a short pre-roll) and replies stay at 1-3 s. The 3.8 service-turn
+    # rows keep it on, where the lag does not recur.
     return gemini_service_class()(
         api_key=api_key,
         settings=GeminiLiveLLMSettings(
             model=model,
             system_instruction=instructions,
             voice=voice,
-            vad=GeminiVADParams(disabled=True),
+            # On, the service's detector runs at the vendor's defaults.
+            vad=None if service_vad else GeminiVADParams(disabled=True),
             # The extended-thinking model reasons in the background between
             # output chunks, at a level the setup must name; the framework
             # would otherwise pick the lowest. Sent as the row's setting.
@@ -554,6 +555,15 @@ def _gemini(
 def _gemini_standard(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
     # The plain model rejects a setup that names a thinking level.
     return _gemini(api_key, model, voice, instructions, settings, thinking=False)
+
+
+def _gemini_service_turns(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
+    return _gemini(api_key, model, voice, instructions, settings, service_vad=True)
+
+
+def _gemini_standard_service_turns(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
+    return _gemini(api_key, model, voice, instructions, settings, thinking=False, service_vad=True)
+
 
 
 def _grok(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
@@ -1020,6 +1030,26 @@ PROVIDERS: dict[str, Provider] = {
         ("GEMINI_API_KEY", "GEMINI_AUTHORIZATION"), "pipecat.services.google.gemini_live.llm",
         discloses=lambda settings: {"gemini_thinking_level": "not sent"},
         turns="local", results="immediate", service_vad=False,
+        caller_transcription="automatic",
+    ),
+    # The two 3.8 rows above with the service's own detector deciding when the
+    # model answers, at the vendor's defaults. The reason the rows above turn it
+    # off -- a session that fell further behind the stream on every turn -- was
+    # measured on the 2.5 preview; on 3.8 replies hold level across a long call.
+    # The service announces no turn boundary, so the pipeline still tracks turns
+    # locally; the record says the service decided the answers.
+    "gemini-live-service-turns": Provider(
+        _gemini_service_turns, 16000, "models/gemini-3.8-live-extended-thinking", "Charon",
+        ("GEMINI_API_KEY", "GEMINI_AUTHORIZATION"), "pipecat.services.google.gemini_live.llm",
+        discloses=lambda settings: {"gemini_thinking_level": GEMINI_THINKING},
+        turns="local", results="immediate", service_vad=True,
+        caller_transcription="automatic",
+    ),
+    "gemini-live-standard-service-turns": Provider(
+        _gemini_standard_service_turns, 16000, "models/gemini-3.8-live", "Charon",
+        ("GEMINI_API_KEY", "GEMINI_AUTHORIZATION"), "pipecat.services.google.gemini_live.llm",
+        discloses=lambda settings: {"gemini_thinking_level": "not sent"},
+        turns="local", results="immediate", service_vad=True,
         caller_transcription="automatic",
     ),
     # The vendor's fast Live tier. Unlike the plain 3.8 model it takes a
@@ -1835,6 +1865,7 @@ class CallNarrator(BaseObserver):
         clock: "AudioClock | None" = None,
         hangup: HangsUpOnceHeard | None = None,
         now: Callable[[], float] = time.monotonic,
+        service_answers: bool = False,
     ) -> None:
         super().__init__()
         # Handed in rather than reached for, so this narrator reports the call it
@@ -1844,6 +1875,15 @@ class CallNarrator(BaseObserver):
         self._now = now
         self._seen: dict[int, None] = {}
         self.caller_turns = 0
+        # Where the service decides when to answer but the turns counted here
+        # are the local detector's, a caller who speaks in pieces is one turn to
+        # the service and several here. Pieces before the agent next speaks
+        # count once, so the answered share is not read against pieces the
+        # service was right to wait through.
+        self._service_answers = service_answers
+        self.caller_spans = 0
+        self.answered_spans = 0
+        self._voiced_since_caller = True
         # Replies the service started, and replies the caller could hear. They
         # differ when a service begins a response and fails before any audio,
         # and only the second is an answer.
@@ -2052,9 +2092,15 @@ class CallNarrator(BaseObserver):
             if abs(drift) * 1000 > self.STARVED_AUDIO_MS:
                 failed.append("audio_in_starved")
 
-        if self.caller_turns:
-            report["answered"] = f"{self.audible_turns}/{self.caller_turns}"
-            if self.audible_turns < self.caller_turns * self.ANSWERED_SHARE:
+        if self._service_answers:
+            answered, turns = self.answered_spans, self.caller_spans
+        else:
+            answered, turns = self.audible_turns, self.caller_turns
+        if turns:
+            report["answered"] = f"{answered}/{turns}"
+            if self._service_answers:
+                report["answered_counts"] = "caller turns before each reply, counted once"
+            if answered < turns * self.ANSWERED_SHARE:
                 failed.append("turns_unanswered")
         elif self.audible_turns == 0:
             # Neither side said anything. The row exists and holds no call.
@@ -2146,6 +2192,9 @@ class CallNarrator(BaseObserver):
             logger.debug("detector: caller speech stops")
         elif isinstance(frame, UserStartedSpeakingFrame):
             self.caller_turns += 1
+            if self._voiced_since_caller:
+                self.caller_spans += 1
+                self._voiced_since_caller = False
             self._untranscribed_turns.append(self._now())
             logger.info("caller turn {} starts", self.caller_turns)
         elif isinstance(frame, UserStoppedSpeakingFrame):
@@ -2173,6 +2222,9 @@ class CallNarrator(BaseObserver):
             # caller stop before it and is not timed.
             if not self._agent_speaking:
                 self.audible_turns += 1
+                if not self._voiced_since_caller:
+                    self.answered_spans += 1
+                    self._voiced_since_caller = True
                 self._settle(answered=True)
             if not self._agent_speaking and self._heard_stop is not None:
                 answered = self._now() - self._heard_stop
@@ -2849,6 +2901,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
                   hangup, DropControlTokens(), aggregators.assistant()]
         rate = CASCADE_RATE
         realtime = False
+        service_answers = False
     else:
         if name not in PROVIDERS:
             known = sorted([*PROVIDERS, *TEXT_MODELS])
@@ -2882,6 +2935,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
                   hangup, DropControlTokens(), aggregators.assistant()]
         rate = provider.input_rate
         realtime = True
+        service_answers = provider.turns == "local" and provider.answers == "provider"
 
     pipeline = Pipeline(stages)
     params = PipelineParams(
@@ -2893,7 +2947,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
     meter = UsageMeter()
     capture_live_audio(llm, meter)
     capture_speech_tokens(llm, meter)
-    narrator = CallNarrator(AUDIO_CLOCK, hangup)
+    narrator = CallNarrator(AUDIO_CLOCK, hangup, service_answers=service_answers)
     backstop = ClosesAfterAnUnfinishedGoodbye(hangup.hang_up)
     _on_event(llm, "on_delegation_created", lambda *_: backstop.delegated())
     observers = [meter, narrator, backstop]

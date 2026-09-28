@@ -868,7 +868,10 @@ class TestCascadeCounterparts:
         answers is "the cheaper model or the flagship", not "native or cascade".
         """
         paired = {c.counterpart_to for c in bot.TEXT_MODELS.values() if c.counterpart_to}
-        tiers = {"openai-realtime-mini", "gemini-live-standard", "gemini-flash-live"}
+        tiers = {
+            "openai-realtime-mini", "gemini-live-standard", "gemini-live-service-turns",
+            "gemini-live-standard-service-turns", "gemini-flash-live",
+        }
         unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live", "phonic"} - tiers
         assert not unpaired, f"native providers with no cascade counterpart: {sorted(unpaired)}"
 
@@ -1252,7 +1255,10 @@ class TestWhoDecidesTheCallersTurns:
     framework's own guidance prescribes for exactly this case.
     """
 
-    SILENT = ("gemini-live", "gemini-live-standard", "gemini-flash-live", "nova-sonic", "qwen-realtime")
+    SILENT = (
+        "gemini-live", "gemini-live-standard", "gemini-live-service-turns", "gemini-live-standard-service-turns",
+        "gemini-flash-live", "nova-sonic", "qwen-realtime",
+    )
 
     def test_the_services_that_announce_nothing_are_marked(self):
         for name in self.SILENT:
@@ -2158,6 +2164,40 @@ class TestAFailingServiceIsNamedNotScoredAsAnAnswer:
         assert report["answered"] == "0/2"
         assert "turns_unanswered" in report["checks"]
 
+    def _pieces_then_one_reply(self, service_answers):
+        # A caller who answers in four pieces, which a service deciding its own
+        # turns waits through and answers once.
+        import asyncio
+
+        from pipecat.observers.base_observer import FramePushed
+        from pipecat.processors.frame_processor import FrameDirection
+
+        f = self._frames()
+        narrator = bot.CallNarrator(service_answers=service_answers)
+        frames = [f.BotStartedSpeakingFrame(), f.BotStoppedSpeakingFrame()]
+        for _ in range(4):
+            frames += [f.UserStartedSpeakingFrame(), f.UserStoppedSpeakingFrame()]
+        frames += [f.BotStartedSpeakingFrame(), f.BotStoppedSpeakingFrame()]
+
+        async def run():
+            for frame in frames:
+                await narrator.on_push_frame(FramePushed(
+                    source=None, destination=None, frame=frame,
+                    direction=FrameDirection.DOWNSTREAM, timestamp=0))
+
+        asyncio.run(run())
+        return narrator.integrity()
+
+    def test_pieces_the_service_answered_once_count_as_one_turn(self):
+        report = self._pieces_then_one_reply(service_answers=True)
+        assert report["answered"] == "1/1"
+        assert "turns_unanswered" not in report["checks"]
+
+    def test_pieces_count_separately_where_the_pipeline_decides_the_answer(self):
+        report = self._pieces_then_one_reply(service_answers=False)
+        assert report["answered"] == "2/4"
+        assert "turns_unanswered" in report["checks"]
+
     def test_an_error_during_the_call_is_named_with_its_message_once(self):
         f = self._frames()
         narrator, _ = self._narrate(
@@ -2463,6 +2503,20 @@ class TestARowSaysWhereItDiffersFromTheOthers:
         service = provider.build("k", provider.default_model, provider.default_voice, "p", {})
         assert service._vad_disabled is True
 
+    def test_the_service_turn_rows_run_the_services_detector_and_say_so(self):
+        for key, twin in (("gemini-live-service-turns", "gemini-live"),
+                          ("gemini-live-standard-service-turns", "gemini-live-standard")):
+            provider, same = bot.PROVIDERS[key], bot.PROVIDERS[twin]
+            assert provider.default_model == same.default_model, key
+            service = provider.build("k", provider.default_model, provider.default_voice, "p", asked())
+            assert service._vad_disabled is False, key
+            assert service._settings.vad is None, key
+            twin_service = same.build("k", same.default_model, same.default_voice, "p", asked())
+            assert service._resolved_thinking_config() == twin_service._resolved_thinking_config(), key
+            divergences = record_for(key)["divergences"]
+            assert divergences["service_vad"] == "on" and divergences["endpointing"] == "provider", key
+            assert record_for(key)["gemini_thinking_level"] == record_for(twin)["gemini_thinking_level"], key
+
     def test_the_declared_interruption_owner_is_the_one_in_force(self):
         for key, provider in bot.PROVIDERS.items():
             if provider.turns != "provider":
@@ -2750,7 +2804,8 @@ class TestAResultIsDeliveredWhileTheAgentIsStillSpeaking:
 
     def test_the_rows_that_only_forward_a_result_are_the_immediate_ones(self):
         assert {k for k, p in bot.PROVIDERS.items() if p.results == "immediate"} == {
-            "gemini-live", "gemini-live-standard", "gemini-flash-live", "nova-sonic", "phonic",
+            "gemini-live", "gemini-live-standard", "gemini-live-service-turns",
+            "gemini-live-standard-service-turns", "gemini-flash-live", "nova-sonic", "phonic",
         }
         for key in ("openai-realtime", "openai-realtime-mini", "grok-realtime"):
             assert bot.PROVIDERS[key].results == "after_speech", key

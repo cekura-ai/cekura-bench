@@ -22,6 +22,11 @@ from tts_bench.metrics import summarize
 
 WAIT_S = 30.0          # a synthesis that takes longer than this is a failure, not a slow success
 FIRST_AUDIO_WAIT_S = 15.0
+WAIT_PER_CHAR_S = 0.15  # ...stretched for long text: a 500-character turn is ~35 s of audio, and some services deliver at realtime
+
+
+def wait_for(text: str) -> float:
+    return max(WAIT_S, len(text) * WAIT_PER_CHAR_S)
 
 
 @dataclass
@@ -63,11 +68,11 @@ class Probe:
         raise NotImplementedError
 
 
-async def one_shot(adapter: TTSAdapter, context_id: str, text: str, wait_s: float = WAIT_S) -> Synthesis:
+async def one_shot(adapter: TTSAdapter, context_id: str, text: str, wait_s: float | None = None) -> Synthesis:
     await adapter.open_context(context_id)
     await adapter.send(context_id, text)
     await adapter.finish(context_id)
-    return await adapter.wait(context_id, wait_s)
+    return await adapter.wait(context_id, wait_s or wait_for(text))
 
 
 def _verdict(synthesis: Synthesis) -> str:
@@ -121,7 +126,7 @@ class StreamedInput(Probe):
             if index < len(words) - 1:
                 await asyncio.sleep(gap)
         await adapter.finish("main")
-        synthesis = await adapter.wait("main", WAIT_S)
+        synthesis = await adapter.wait("main", wait_for(ctx.item.text))
         values = summarize(synthesis)
         values["words"] = len(words)
         values["started_before_input_done"] = (
@@ -211,7 +216,7 @@ class Continuation(Probe):
             if index < len(frames) - 1:
                 await asyncio.sleep(self.frame_gap_ms / 1000.0)
         await adapter.finish("framed")
-        framed = await adapter.wait("framed", WAIT_S)
+        framed = await adapter.wait("framed", wait_for(ctx.item.text))
         w, f = summarize(whole), summarize(framed)
         values = {
             "frames": len(frames),

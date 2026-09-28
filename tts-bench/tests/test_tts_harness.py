@@ -121,3 +121,42 @@ class TestCorpus:
         path.write_text(json.dumps(corpus.as_json()))
         version, items = corpus.load(path)
         assert version == corpus.CORPUS_VERSION and items == list(corpus.ITEMS)
+
+
+class TestCorpusSpans:
+    def test_every_span_names_its_category_and_a_correct_reading_passes_it(self):
+        from dataclasses import asdict
+
+        from tts_bench import corpus
+        from tts_bench.score import score_spans
+
+        spanned = [i for i in corpus.ITEMS if i.spans]
+        assert {i.cohort for i in spanned} >= {"heteronym", "abbrev", "symbols", "terms", "numbers"}
+        for item in spanned:
+            results = score_spans([asdict(s) for s in item.spans], item.spoken_reference)
+            assert all(r["pass"] for r in results if r["check"] == "transcript"), item.id
+            assert all("pass" not in r for r in results if r["check"] == "audio"), item.id
+
+    def test_a_code_passes_only_with_every_digit_in_place(self):
+        from tts_bench.score import score_spans
+
+        span = [{"text": "1-800-555-0199", "category": "sequence", "accept": ["1 800 555 0199"]}]
+        assert score_spans(span, "call one eight hundred five five five oh one nine nine")[0]["pass"]
+        assert not score_spans(span, "call 1-800-555-0198")[0]["pass"]
+
+    def test_the_paragraph_cohort_is_near_five_hundred_characters_and_gets_a_longer_wait(self):
+        from tts_bench import corpus
+        from tts_bench.probes import WAIT_S, wait_for
+
+        paragraphs = [i for i in corpus.ITEMS if i.cohort == "paragraph"]
+        assert len(paragraphs) == 4 and all(450 <= len(i.text) <= 550 for i in paragraphs)
+        assert all(wait_for(i.text) > WAIT_S for i in paragraphs) and wait_for("Hello.") == WAIT_S
+
+    def test_spans_survive_a_run_corpus_file(self, tmp_path):
+        import json
+
+        from tts_bench import corpus
+
+        path = tmp_path / "corpus.json"
+        path.write_text(json.dumps(corpus.as_json()))
+        assert tuple(corpus.load(path)[1]) == corpus.ITEMS

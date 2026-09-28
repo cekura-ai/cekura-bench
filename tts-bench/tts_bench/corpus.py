@@ -16,7 +16,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
-CORPUS_VERSION = "0.1.0"
+CORPUS_VERSION = "0.2.0"
 
 # cohort -> what the cohort tests
 COHORTS = {
@@ -32,7 +32,39 @@ COHORTS = {
     "units": "abbreviations, units and titles that expand in speech",
     "questions": "questions whose meaning depends on rising intonation",
     "long": "multi-sentence turns of fifty words or more",
+    "paragraph": "agent turns near 500 characters: throughput on the prompt length other boards time, and stability over a long utterance",
+    "heteronym": "words spelled alike and said differently, where only the context decides",
+    "abbrev": "abbreviations, acronyms and initialisms that expand, stay letters, or become a word",
+    "symbols": "symbols, codes, web addresses and keypad instructions read as a caller needs them",
+    "terms": "standalone domain terms (medications, procedures) that have one right pronunciation",
+    "numbers": "ordinals, fractions, decimals, ranges, temperatures, roman numerals and years",
 }
+
+# The four pronunciation categories a span is filed under.
+CATEGORIES = {
+    "term": "a standalone word or name with one accepted pronunciation",
+    "context": "a reading the surrounding words decide (heteronyms, St., Dr.)",
+    "sequence": "a string that must come out exactly (codes, emails, web addresses, keypad keys)",
+    "shorthand": "written shorthand that expands (numbers, dates, units, currency, symbols)",
+}
+
+
+@dataclass(frozen=True)
+class Span:
+    """One hard part of an item, scored on its own.
+
+    ``accept`` lists the readings that count as right, written as words; a
+    span passes when one of them appears in the transcript after the scoring
+    normaliser. A span whose right reading a transcript cannot show (a
+    heteronym is spelled the same either way) is ``check="audio"``: it is
+    labelled for a listener or an audio judge, and no transcript scores it.
+    """
+
+    text: str
+    category: str
+    accept: tuple[str, ...] = ()
+    check: str = "transcript"          # or "audio"
+    note: str = ""
 
 
 @dataclass(frozen=True)
@@ -42,15 +74,23 @@ class Item:
     text: str
     spoken_reference: str
     note: str = ""
+    spans: tuple[Span, ...] = ()
 
     @property
     def words(self) -> int:
         return len(self.text.split())
 
 
-def _i(id: str, cohort: str, text: str, spoken: str, note: str = "") -> Item:
+def _i(id: str, cohort: str, text: str, spoken: str, note: str = "", spans: tuple[Span, ...] = ()) -> Item:
     assert cohort in COHORTS, cohort
-    return Item(id, cohort, text, spoken, note)
+    for span in spans:
+        assert span.category in CATEGORIES and span.text in text, (id, span.text)
+        assert span.check == "audio" or span.accept, (id, span.text)
+    return Item(id, cohort, text, spoken, note, spans)
+
+
+def _s(text: str, category: str, *accept: str, check: str = "transcript", note: str = "") -> Span:
+    return Span(text, category, tuple(accept), check, note)
 
 
 ITEMS: tuple[Item, ...] = (
@@ -198,6 +238,144 @@ ITEMS: tuple[Item, ...] = (
        "about two minutes. Once the front light is solid green, try connecting again and let me know what you see.",
        "let's try a reset unplug the router wait a full thirty seconds and plug it back in the lights will blink for "
        "about two minutes once the front light is solid green try connecting again and let me know what you see"),
+    # ── paragraph ─────────────────────────────────────────────────────────
+    _i("paragraph.benefits", "paragraph",
+       "Here's how your plan works for this visit. Because it's an in-network specialist, you'll pay a $40 copay at "
+       "check-in, and your deductible doesn't apply. If the doctor orders lab work, that's covered at 80 percent after "
+       "the deductible, and you've met $620 of your $1,500 deductible so far this year. Imaging like an MRI needs prior "
+       "authorization, which usually takes three to five business days, so we'd submit that request as soon as it's "
+       "ordered. Do you want me to email you a summary of all this?",
+       "here's how your plan works for this visit because it's an in network specialist you'll pay a forty dollar copay "
+       "at check in and your deductible doesn't apply if the doctor orders lab work that's covered at eighty percent "
+       "after the deductible and you've met six hundred twenty dollars of your one thousand five hundred dollar "
+       "deductible so far this year imaging like an m r i needs prior authorization which usually takes three to five "
+       "business days so we'd submit that request as soon as it's ordered do you want me to email you a summary of all "
+       "this"),
+    _i("paragraph.delivery", "paragraph",
+       "I can see the order now. It shipped yesterday from our Memphis warehouse and it's currently in transit with the "
+       "carrier. The latest scan shows it left the regional hub at 6:40 this morning, and the estimated delivery is "
+       "Friday between 9 AM and 1 PM. Someone will need to sign for it because the total is over $500. If nobody's "
+       "home, the driver will leave a notice and try again the next business day, or you can pick it up from the local "
+       "depot after 4 PM with a photo ID.",
+       "i can see the order now it shipped yesterday from our memphis warehouse and it's currently in transit with the "
+       "carrier the latest scan shows it left the regional hub at six forty this morning and the estimated delivery is "
+       "friday between nine a m and one p m someone will need to sign for it because the total is over five hundred "
+       "dollars if nobody's home the driver will leave a notice and try again the next business day or you can pick it "
+       "up from the local depot after four p m with a photo i d"),
+    _i("paragraph.discharge", "paragraph",
+       "Before you go, let me walk you through the discharge instructions. Keep the dressing dry for the first 48 hours, "
+       "then you can shower normally. Take the ibuprofen every six hours as needed for pain, but no more than four "
+       "doses in a day, and always with food. If you notice a fever above 101 degrees, redness spreading from the "
+       "incision, or bleeding that won't stop, call the after-hours line right away. Your follow-up visit is booked for "
+       "Tuesday the 18th at 10:15, and the nurse will remove the stitches then.",
+       "before you go let me walk you through the discharge instructions keep the dressing dry for the first forty eight "
+       "hours then you can shower normally take the ibuprofen every six hours as needed for pain but no more than four "
+       "doses in a day and always with food if you notice a fever above one hundred one degrees redness spreading from "
+       "the incision or bleeding that won't stop call the after hours line right away your follow up visit is booked "
+       "for tuesday the eighteenth at ten fifteen and the nurse will remove the stitches then"),
+    _i("paragraph.account", "paragraph",
+       "Thanks, I've verified your identity. I can see two charges from September 3rd that you don't recognize, one for "
+       "$89.99 and one for $12.50, both from an online merchant. I've frozen the card ending in 4417 so no new charges "
+       "can go through, and I've opened a dispute for both amounts. You'll see a temporary credit within two business "
+       "days while we investigate. A replacement card will arrive in five to seven days, and you'll get a text when it "
+       "ships. Is there anything else on the account you'd like me to check?",
+       "thanks i've verified your identity i can see two charges from september third that you don't recognize one for "
+       "eighty nine dollars and ninety nine cents and one for twelve dollars and fifty cents both from an online "
+       "merchant i've frozen the card ending in four four one seven so no new charges can go through and i've opened a "
+       "dispute for both amounts you'll see a temporary credit within two business days while we investigate a "
+       "replacement card will arrive in five to seven days and you'll get a text when it ships is there anything else "
+       "on the account you'd like me to check"),
+    # ── heteronym ─────────────────────────────────────────────────────────
+    _i("heteronym.read", "heteronym", "Please read the notice. I read it to you yesterday, but it's worth another look.",
+       "please read the notice i read it to you yesterday but it's worth another look",
+       spans=(_s("read the notice", "context", check="audio", note="present tense, reed"),
+              _s("I read it", "context", check="audio", note="past tense, red"))),
+    _i("heteronym.lead", "heteronym", "The lead nurse asked whether the old pipes still have lead in them.",
+       "the lead nurse asked whether the old pipes still have lead in them",
+       spans=(_s("lead nurse", "context", check="audio", note="leed"), _s("have lead", "context", check="audio", note="led, the metal"))),
+    _i("heteronym.record", "heteronym", "We record every call, so there will be a record of what we agreed.",
+       "we record every call so there will be a record of what we agreed",
+       spans=(_s("We record", "context", check="audio", note="verb, stress on the second syllable"),
+              _s("a record", "context", check="audio", note="noun, stress on the first syllable"))),
+    _i("heteronym.close", "heteronym", "We're close to closing, so please close the form and submit it now.",
+       "we're close to closing so please close the form and submit it now",
+       spans=(_s("close to closing", "context", check="audio", note="near, soft s"), _s("close the form", "context", check="audio", note="shut, z sound"))),
+    _i("heteronym.live", "heteronym", "Do you live in the county? The live chat can confirm your coverage area.",
+       "do you live in the county the live chat can confirm your coverage area",
+       spans=(_s("live in", "context", check="audio", note="liv"), _s("live chat", "context", check="audio", note="lyve"))),
+    # ── abbrev ────────────────────────────────────────────────────────────
+    _i("abbrev.street", "abbrev", "Our office on Main St. is right next to St. Mary's Hospital.",
+       "our office on main street is right next to saint mary's hospital",
+       spans=(_s("Main St.", "context", "main street"), _s("St. Mary's", "context", "saint mary's", "saint marys"))),
+    _i("abbrev.drive", "abbrev", "Dr. Okafor's new clinic is on Lakeview Dr., past the second light.",
+       "doctor okafor's new clinic is on lakeview drive past the second light",
+       spans=(_s("Dr. Okafor's", "context", "doctor okafor's", "doctor okafors"), _s("Lakeview Dr.", "context", "lakeview drive"))),
+    _i("abbrev.shorthand", "abbrev", "The appt. is approx. 45 min., incl. check-in and vitals.",
+       "the appointment is approximately forty five minutes including check in and vitals",
+       spans=(_s("appt.", "shorthand", "appointment"), _s("approx.", "shorthand", "approximately"),
+              _s("45 min.", "shorthand", "45 minutes"), _s("incl.", "shorthand", "including"))),
+    _i("abbrev.acronyms", "abbrev", "Please send the HIPAA form ASAP, and check the FAQ before you call back.",
+       "please send the hipaa form asap and check the f a q before you call back",
+       spans=(_s("HIPAA", "term", check="audio", note="said as a word, hip-uh"),
+              _s("ASAP", "shorthand", check="audio", note="letters or a-sap; both accepted"),
+              _s("FAQ", "shorthand", check="audio", note="letters or fak; both accepted"))),
+    _i("abbrev.initialisms", "abbrev", "Your PCP sent the MRI results to the ER at 7 a.m.",
+       "your p c p sent the m r i results to the e r at seven a m",
+       spans=(_s("PCP", "sequence", "pcp"), _s("MRI", "sequence", "mri"), _s("ER", "sequence", "er"),
+              _s("7 a.m.", "shorthand", "7 am", "7 a m"))),
+    # ── symbols ───────────────────────────────────────────────────────────
+    _i("symbols.promo", "symbols", "Use code SAVE20 for 20% off orders over $50 & free shipping.",
+       "use code save twenty for twenty percent off orders over fifty dollars and free shipping",
+       spans=(_s("SAVE20", "sequence", "save 20", "save20"), _s("20%", "shorthand", "20 percent", "20%"),
+              _s("$50", "shorthand", "50 dollars", "$50"), _s("&", "shorthand", "and"))),
+    _i("symbols.url", "symbols", "Go to example.com/support/billing and choose Contact Us.",
+       "go to example dot com slash support slash billing and choose contact us",
+       spans=(_s("example.com/support/billing", "sequence", "example dot com slash support slash billing",
+                 "example.com/support/billing", "example.com slash support slash billing"),)),
+    _i("symbols.keypad", "symbols", "Press # and then 2, or press * to hear the menu again.",
+       "press pound and then two or press star to hear the menu again",
+       spans=(_s("#", "sequence", "pound", "hash", "number sign"), _s("*", "sequence", "star", "asterisk"))),
+    _i("symbols.email", "symbols", "You can write to help@north-clinic.org or call 1-800-555-0199.",
+       "you can write to help at north dash clinic dot org or call one eight hundred five five five zero one nine nine",
+       spans=(_s("help@north-clinic.org", "sequence", "help at north dash clinic dot org", "help@north-clinic.org",
+                 "help at north-clinic.org"),
+              _s("1-800-555-0199", "sequence", "1 800 555 0199", "18005550199", "1-800-555-0199"))),
+    # ── terms ─────────────────────────────────────────────────────────────
+    _i("terms.thyroid", "terms", "Your prescriptions for levothyroxine and metformin are ready for pickup.",
+       "your prescriptions for levothyroxine and metformin are ready for pickup",
+       spans=(_s("levothyroxine", "term", "levothyroxine"), _s("metformin", "term", "metformin"))),
+    _i("terms.fever", "terms", "For the fever, the doctor suggests acetaminophen rather than ibuprofen.",
+       "for the fever the doctor suggests acetaminophen rather than ibuprofen",
+       spans=(_s("acetaminophen", "term", "acetaminophen"), _s("ibuprofen", "term", "ibuprofen"))),
+    _i("terms.referral", "terms", "The referral is to gastroenterology for a colonoscopy consult.",
+       "the referral is to gastroenterology for a colonoscopy consult",
+       spans=(_s("gastroenterology", "term", "gastroenterology"), _s("colonoscopy", "term", "colonoscopy"))),
+    _i("terms.allergy", "terms", "Your chart lists an allergy to amoxicillin and a history of anaphylaxis.",
+       "your chart lists an allergy to amoxicillin and a history of anaphylaxis",
+       spans=(_s("amoxicillin", "term", "amoxicillin"), _s("anaphylaxis", "term", "anaphylaxis"))),
+    # ── numbers ───────────────────────────────────────────────────────────
+    _i("numbers.ordinal", "numbers", "It's the 3rd door on the left, about ¾ of the way down the hall.",
+       "it's the third door on the left about three quarters of the way down the hall",
+       spans=(_s("3rd", "shorthand", "3rd", "third"), _s("¾", "shorthand", "3 quarters", "three quarters", "3/4"))),
+    _i("numbers.temperature", "numbers", "Store the vaccine between 36°F and 46°F, never below -4°F.",
+       "store the vaccine between thirty six degrees fahrenheit and forty six degrees fahrenheit never below minus four "
+       "degrees fahrenheit",
+       spans=(_s("36°F", "shorthand", "36 degrees fahrenheit", "36 degrees"),
+              _s("-4°F", "shorthand", "minus 4", "negative 4"))),
+    _i("numbers.roman", "numbers", "Chapter IV covers Henry VIII and the Act of 1534.",
+       "chapter four covers henry the eighth and the act of fifteen thirty four",
+       spans=(_s("Chapter IV", "context", "chapter 4", "chapter four"),
+              _s("Henry VIII", "context", "henry the 8th", "henry viii", "henry the eighth"),
+              _s("1534", "shorthand", "1534"))),
+    _i("numbers.decimal", "numbers", "Membership grew by 1.2 million, or 3.75%, over the year.",
+       "membership grew by one point two million or three point seven five percent over the year",
+       spans=(_s("1.2 million", "shorthand", "1.2 million", "1 point 2 million"),
+              _s("3.75%", "shorthand", "3.75%", "3.75 percent", "3 point 75 percent"))),
+    _i("numbers.year", "numbers", "In 2019 we served 2,019 families, and by 2025 about 3,400.",
+       "in twenty nineteen we served two thousand nineteen families and by twenty twenty five about three thousand four "
+       "hundred",
+       spans=(_s("In 2019", "context", "in 2019"), _s("2,019 families", "context", "2019 families", "2,019 families"),
+              _s("3,400", "shorthand", "3400", "3,400"))),
 )
 
 # Fixed items the probes that do not care about content reach for.
@@ -217,11 +395,15 @@ def by_cohort(items: Iterable[Item] = ITEMS) -> dict[str, list[Item]]:
 
 
 def as_json(items: Iterable[Item] = ITEMS, version: str = CORPUS_VERSION) -> dict[str, Any]:
-    return {"version": version, "cohorts": COHORTS, "items": [asdict(i) for i in items]}
+    return {"version": version, "cohorts": COHORTS, "categories": CATEGORIES, "items": [asdict(i) for i in items]}
 
 
 def load(path: str | Path) -> tuple[str, list[Item]]:
     """A corpus from a file in the same shape, for a holdout or an external set."""
     payload = json.loads(Path(path).read_text())
-    items = [Item(**{k: v for k, v in raw.items() if k in Item.__dataclass_fields__}) for raw in payload["items"]]
+    items = []
+    for raw in payload["items"]:
+        fields = {k: v for k, v in raw.items() if k in Item.__dataclass_fields__}
+        fields["spans"] = tuple(Span(**{**span, "accept": tuple(span.get("accept", ()))}) for span in raw.get("spans", ()))
+        items.append(Item(**fields))
     return str(payload.get("version", "external")), items

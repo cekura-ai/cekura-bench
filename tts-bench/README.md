@@ -25,7 +25,7 @@ measures the things an agent depends on:
 | 5 | **continuation consistency** | one utterance sent whole versus as sentence frames with pauses: duration and onset deltas, both recordings kept for transcript comparison |
 | 6 | **determinism** | the same text twice: byte-identical or not, duration and TTFA deltas |
 | 7 | **tail under load** | N concurrent one-shots on N connections under one key |
-| 8 | **round-trip WER and digit accuracy**, per cohort | did the words, and separately the digits, survive; scored offline |
+| 8 | **round-trip WER, digit and span accuracy**, per cohort | did the words, the digits, and each labelled hard part survive; scored offline |
 | 9 | **telephony-native output** | capability metadata: does the service emit 8 kHz mu-law itself |
 
 ## Conventions, stated once
@@ -84,9 +84,22 @@ digit sequences are checked separately because a task depends on them.
 
 ## Corpus
 
-61 items in 12 cohorts (`tts_bench/corpus.py`): prose, currency, datetime,
-phone, alnum, spelled, contact, names, repair, units, questions, long.
-Production-shaped, invented values, published. Reported per cohort, never
+88 items in 18 cohorts (`tts_bench/corpus.py`, version 0.2.0): prose,
+currency, datetime, phone, alnum, spelled, contact, names, repair, units,
+questions, long, paragraph, heteronym, abbrev, symbols, terms, numbers.
+Production-shaped, invented values, published.
+
+- **paragraph**: four agent turns of 470–510 characters, the prompt length
+  throughput is usually timed on, and a test of stability over a long utterance.
+  Waits scale with text length (0.15 s per character, never under 30 s).
+- **Spans.** Items in the normalization cohorts label each hard part with one
+  of four categories (term, context, sequence, shorthand) and the readings that
+  count as right. A span is scored from the transcript after the WER
+  normaliser; a code or phone number is checked digit by digit, because the
+  normaliser folds numbers. A span whose right reading a transcript cannot show
+  (a heteronym, an acronym said as a word) is labelled for a listener and never
+  scored from text; the report counts those separately.
+ Reported per cohort, never
 pooled into one number; the prose cohort is the baseline the others are read
 against. Any corpus in the same JSON shape runs through the identical probes
 (`--corpus path/to/corpus.json`), which is how the hidden holdout and the

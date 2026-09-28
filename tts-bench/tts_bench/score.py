@@ -91,7 +91,57 @@ def _canonical_amounts(text: str) -> str:
     return re.sub(r"\b0\.(\d\d)\b", r"\1", text)
 
 
-def score_transcript(text: str, spoken_reference: str, hypothesis: str) -> dict[str, Any]:
+_DIGIT_WORDS = {"zero": "0", "oh": "0", "o": "0", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5",
+                "six": "6", "seven": "7", "eight": "8", "nine": "9"}
+
+
+def _spoken_digits(text: str) -> str:
+    """Every digit a listener heard, in order: written digits, digit words, and "eight hundred" as 800.
+
+    The WER normaliser folds numbers (``0199`` becomes ``199``), which is right
+    for a sentence and wrong for a code, where every digit and its position is
+    the content.
+    """
+    out: list[str] = []
+    previous_digit = False
+    for token in re.findall(r"[0-9]|[a-z]+", text.lower()):
+        if token.isdigit():
+            out.append(token)
+            previous_digit = True
+        elif token in _DIGIT_WORDS:
+            out.append(_DIGIT_WORDS[token])
+            previous_digit = True
+        elif token == "hundred" and previous_digit:
+            out.append("00")
+        elif token in ("double", "triple"):
+            continue
+        else:
+            previous_digit = False
+    return "".join(out)
+
+
+def score_spans(spans: Sequence[dict[str, Any]], hypothesis: str) -> list[dict[str, Any]]:
+    """Each labelled span: did one of its accepted readings come through, after the same normaliser as WER.
+
+    A span marked for a listener is carried through unscored, so its count is
+    visible beside the scored ones rather than silently dropped.
+    """
+    heard = " " + " ".join(normalize(hypothesis)) + " "
+    out = []
+    for span in spans:
+        row = {"text": span["text"], "category": span["category"], "check": span.get("check", "transcript")}
+        if row["check"] == "transcript":
+            forms = [" ".join(normalize(form)) for form in span.get("accept", ())]
+            row["pass"] = any(form and f" {form} " in heard for form in forms)
+            digits = "".join(re.findall(r"[0-9]", span["text"]))
+            if span["category"] == "sequence" and digits and not row["pass"]:
+                row["pass"] = digits in _spoken_digits(hypothesis)
+        out.append(row)
+    return out
+
+
+def score_transcript(text: str, spoken_reference: str, hypothesis: str,
+                     spans: Sequence[dict[str, Any]] = ()) -> dict[str, Any]:
     against_text = score_pair(text, hypothesis)
     against_spoken = score_pair(spoken_reference, hypothesis)
     best = min((against_text, against_spoken), key=lambda s: s["wer"])
@@ -108,6 +158,7 @@ def score_transcript(text: str, spoken_reference: str, hypothesis: str) -> dict[
         "digits_expected": ref_digits,
         "digits_heard": hyp_digits,
         "digits_match": bool(ref_digits) and ref_digits == hyp_digits,
+        "spans": score_spans(spans, hypothesis),
         "hypothesis": hypothesis,
     }
 
@@ -181,7 +232,7 @@ def rescore_run(run_dir: Path) -> int:
             continue
         for name, score in row["instruments"].items():
             if "hypothesis" in score:
-                row["instruments"][name] = {"model": score["model"], **score_transcript(target["text"], target["spoken_reference"], score["hypothesis"])}
+                row["instruments"][name] = {"model": score["model"], **score_transcript(target["text"], target["spoken_reference"], score["hypothesis"], target["spans"])}
         wers = [r["best"]["wer"] for r in row["instruments"].values() if "best" in r]
         row["normalizer"] = {"name": NORMALIZER_NAME, "version": NORMALIZER_VERSION}
         row["instruments_disagree"] = len(wers) >= 2 and (max(wers) - min(wers)) > DISAGREE_WER
@@ -205,6 +256,9 @@ def _write_scores(run_dir: Path, rows: list[dict[str, Any]]) -> None:
 def _targets(run_dir: Path) -> list[dict[str, Any]]:
     """Every (cell, audio file) pair that has text to score against."""
     out = []
+    corpus_path = run_dir / "corpus.json"
+    spans = {} if not corpus_path.exists() else {
+        item["id"]: item.get("spans", []) for item in json.loads(corpus_path.read_text())["items"]}
     for cell in latest_cells(run_dir):
         if cell.get("void") or cell.get("probe") == "cancel":
             continue                         # a cancelled utterance is partial by design; its transcript scores nothing
@@ -214,7 +268,7 @@ def _targets(run_dir: Path) -> list[dict[str, Any]]:
         for wav in sorted([*directory.glob("audio-*.wav"), *directory.glob("audio-*.flac")]):
             out.append({"cell_id": cell["artifacts"]["slug"], "context": wav.stem.split("-", 1)[1], "wav": wav,
                         "text": record["text"]["sent"], "spoken_reference": record["text"]["spoken_reference"],
-                        "cohort": cell["cohort"], "probe": cell["probe"]})
+                        "cohort": cell["cohort"], "probe": cell["probe"], "spans": spans.get(cell["item"], [])})
     return out
 
 
@@ -273,7 +327,7 @@ async def score_run(run_dir: Path, instruments: Sequence[Instrument], concurrenc
         results: dict[str, Any] = {}
         for name, entry in latest.get((target["cell_id"], target["context"]), {}).items():
             if "hypothesis" in entry:
-                results[name] = {"model": entry["model"], **score_transcript(target["text"], target["spoken_reference"], entry["hypothesis"])}
+                results[name] = {"model": entry["model"], **score_transcript(target["text"], target["spoken_reference"], entry["hypothesis"], target["spans"])}
             else:
                 results[name] = {"model": entry["model"], "error": entry["error"]}
         wers = [r["best"]["wer"] for r in results.values() if "best" in r]

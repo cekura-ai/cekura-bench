@@ -85,7 +85,8 @@ def summarize_group(cells: Sequence[dict[str, Any]], scores: dict[str, Any] | No
 def _pool_scores(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
     """Pooled word error over the group: sum of errors over sum of reference words, per instrument."""
     out: dict[str, Any] = {"n": len(rows)}
-    instruments: dict[str, dict[str, float]] = defaultdict(lambda: {"errors": 0.0, "words": 0.0, "digits_ok": 0.0, "digits_n": 0.0})
+    instruments: dict[str, dict[str, float]] = defaultdict(
+        lambda: {"errors": 0.0, "words": 0.0, "digits_ok": 0.0, "digits_n": 0.0, "spans_ok": 0.0, "spans_n": 0.0, "spans_listener": 0.0})
     for row in rows:
         for name, score in row.get("instruments", {}).items():
             if score.get("error"):
@@ -96,12 +97,21 @@ def _pool_scores(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
             if score.get("digits_expected"):
                 instruments[name]["digits_n"] += 1
                 instruments[name]["digits_ok"] += 1 if score.get("digits_match") else 0
+            for span in score.get("spans") or ():
+                if "pass" in span:
+                    instruments[name]["spans_n"] += 1
+                    instruments[name]["spans_ok"] += 1 if span["pass"] else 0
+                else:
+                    instruments[name]["spans_listener"] += 1
     for name, acc in instruments.items():
         out[name] = {
             "pooled_wer": None if acc["words"] == 0 else round(acc["errors"] / acc["words"], 4),
             "reference_words": int(acc["words"]),
             "digits_match_rate": None if acc["digits_n"] == 0 else round(acc["digits_ok"] / acc["digits_n"], 4),
             "digits_cells": int(acc["digits_n"]),
+            "span_pass_rate": None if acc["spans_n"] == 0 else round(acc["spans_ok"] / acc["spans_n"], 4),
+            "spans_scored": int(acc["spans_n"]),
+            "spans_for_a_listener": int(acc["spans_listener"]),
         }
     disagreements = [r for r in rows if r.get("instruments_disagree")]
     out["instruments_disagree"] = len(disagreements)
@@ -183,8 +193,8 @@ def render_markdown(report: dict[str, Any]) -> str:
         s = sentinel["ttfa_ms"]
         lines += [f"**Sentinel** (one fixed cell, n={s['n']}): TTFA P50 {_fmt(s)} ms, spread {s['min']:.0f}–{s['max']:.0f} ms", ""]
     lines += [
-        "| probe | cohort | n | TTFA P50 [CI] | round-trip P50 | lead silence P50 | min margin P50 | underrun cells | cancel→last P50 | audio after cancel P50 | Δdur P50 | pooled WER | digits | pass | voids |",
-        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+        "| probe | cohort | n | TTFA P50 [CI] | round-trip P50 | lead silence P50 | min margin P50 | underrun cells | cancel→last P50 | audio after cancel P50 | Δdur P50 | pooled WER | digits | spans | pass | voids |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for key, g in report["by_cohort"].items():
         variant, cohort = key.split("/", 1)
@@ -194,6 +204,7 @@ def render_markdown(report: dict[str, Any]) -> str:
         success = g.get("success") or {}
         wer = primary.get("pooled_wer")
         digits = primary.get("digits_match_rate")
+        spans = primary.get("span_pass_rate")
         cols = [
             variant, cohort, str(g["scored"]),
             _fmt(g.get("ttfa_ms")), _fmt(g.get("roundtrip_ms")), _fmt(g.get("leading_silence_ms")), _fmt(g.get("min_margin_ms")),
@@ -201,6 +212,7 @@ def render_markdown(report: dict[str, Any]) -> str:
             _fmt(g.get("cancel_to_last_chunk_ms")), _fmt(g.get("audio_after_cancel_ms")), _fmt(g.get("duration_delta_ms")),
             "" if wer is None else f"{wer:.3f}",
             "" if digits is None else f"{digits:.2f}",
+            "" if spans is None else f"{spans:.2f}",
             f"{success['passed']}/{success['n']}" if success else "",
             str(sum(g["voids"].values())),
         ]

@@ -13,6 +13,7 @@
 # to be the code that was built, or the record says nothing.
 #
 #     reference-agents/pipecat-s2s/deploy.sh              # agent and secret set from pcc-deploy.toml
+#                                                         # (a local copy of pcc-deploy.example.toml)
 #     reference-agents/pipecat-s2s/deploy.sh --min-agents 1   # any extra flags go to `pipecat cloud deploy`
 set -euo pipefail
 
@@ -23,6 +24,11 @@ cd "$root"
 if [ -n "$(git status --porcelain -- reference-agents mock_tools agent-definitions)" ]; then
   echo "refusing to deploy from a dirty tree: the commit stamp would not name what was built" >&2
   git status --short -- reference-agents mock_tools agent-definitions >&2
+  exit 1
+fi
+
+if [ ! -f "$here/pcc-deploy.toml" ]; then
+  echo "copy pcc-deploy.example.toml to pcc-deploy.toml and set your agent and secret set names" >&2
   exit 1
 fi
 

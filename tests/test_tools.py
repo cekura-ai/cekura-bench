@@ -489,7 +489,7 @@ class TestAnIdentifierNamesItsRecord:
         return MockToolServer("medicare")
 
     # Every field naming the caller is right; one describing the call is not,
-    # and the scenario that authored it accepts more than one value there.
+    # and it is a field where more than one value is acceptable.
     ONE_FIELD_APART = {
         "consent_id": "perm_1017",
         "caller_name": "Grace Thompson",

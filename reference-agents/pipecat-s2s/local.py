@@ -24,7 +24,7 @@ been sent: the transcript, the tool rows, the log, the record. Three commands::
 from a browser to be the caller yourself, or hand the room and that token to a
 simulated caller. Everything the agent needs comes
 from a ``.env`` at the repository root (see the README's credential table); the
-Daily key may also be spelled ``daily_api_key`` there, which this file maps.
+Daily key is accepted as ``DAILY_API_KEY`` or ``daily_api_key``.
 
 Nothing here is used by a deployed run and nothing here changes what one does.
 """

@@ -145,7 +145,8 @@ class TwilioStreamAdapter(RealtimeAdapter):
             self.stream_sid = start.get("streamSid") or message.get("streamSid")
             self.call_sid = start.get("callSid")
             self.media_format = start.get("mediaFormat")
-            self.session_ack = start
+            # The account and any custom parameters stay off the published record.
+            self.session_ack = {k: v for k, v in start.items() if k not in ("accountSid", "customParameters")}
             self.log.emit(ev.SESSION_CONFIGURED, stream_sid=self.stream_sid, call_sid=self.call_sid)
             self._started.set()
         elif event == "media":

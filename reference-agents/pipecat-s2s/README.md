@@ -245,9 +245,8 @@ And its tools must be strict: every parameter required, so an optional one is
 declared nullable and the `null`s the model sends for fields it leaves out are
 dropped before the call reaches the mock tools.
 
-The model is named on every call. Left unnamed, the service answers with an
-older model than the newest one the account is served, and nothing in the
-reply says so.
+The model is named on every call. Left unnamed, the service may answer with an
+older model, and nothing in the reply says so.
 
 ## The sample rate is not a tuning knob
 
@@ -420,6 +419,7 @@ not what a strange score is measuring.
 
 ```bash
 pipecat cloud auth login                 # once per machine
+cp reference-agents/pipecat-s2s/pcc-deploy.example.toml reference-agents/pipecat-s2s/pcc-deploy.toml   # then set your names
 reference-agents/pipecat-s2s/deploy.sh   # cloud build; agent and secret set from pcc-deploy.toml
 ```
 
@@ -431,7 +431,7 @@ arguments and a record that cannot name the code it ran is not a record.
 
 Credentials live in the secret set named in `pcc-deploy.toml`, never in the
 image or the session. Create it once with `pipecat cloud secrets set
-cekura-s2s-secrets --file <env file>` holding the variables in the table above;
+<your-secret-set> --file <env file>` holding the variables in the table above;
 add `CEKURA_API_KEY` and one `CEKURA_AGENT_ID_<DEFINITION>` per platform agent.
 
 ## Tests

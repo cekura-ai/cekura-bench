@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Check the harness against public audio with known answers.
 
-    python bin/validate-harness.py --provider openai-realtime --per-category 10
+    python bin/validate-harness.py --dataset <hf-dataset-id> --provider openai-realtime --per-category 10
 
 Runs spoken reasoning questions through the ordinary service-bench runner and grades the
 answers by exact match. A score near the floor a guess would reach
@@ -44,7 +44,8 @@ def main() -> int:
     parser.add_argument("--per-category", type=int, default=10, help="questions drawn from each of the four")
     parser.add_argument("--seed", type=int, default=11)
     parser.add_argument("--env", help="dotenv file holding the provider credential")
-    parser.add_argument("--cache", default="data/external/big-bench-audio")
+    parser.add_argument("--dataset", required=True, help="Hugging Face id of a spoken reasoning set (see service/external.py)")
+    parser.add_argument("--cache", help="download cache; defaults to data/external/<dataset>")
     parser.add_argument("--out", default="data/service")
     args = parser.parse_args()
 
@@ -58,10 +59,10 @@ def main() -> int:
         print(f"{entry.credential_env} is not set", file=sys.stderr)
         return 2
 
-    cache = Path(args.cache)
-    questions = sample(metadata(cache), args.per_category, seed=args.seed)
+    cache = Path(args.cache or f"data/external/{args.dataset.replace('/', '--')}")
+    questions = sample(metadata(cache, args.dataset), args.per_category, seed=args.seed)
     rate = entry.adapter.input_rate
-    probes = [SpokenQuestion(question=q, clip=load_clip(q, cache, rate)) for q in questions]
+    probes = [SpokenQuestion(question=q, clip=load_clip(q, cache, args.dataset, rate), dataset=args.dataset) for q in questions]
     print(f"validation: {args.provider} on {len(probes)} questions at {rate} Hz")
 
     spec = RunSpec(
@@ -87,7 +88,7 @@ def main() -> int:
     runner = Runner(spec, build(), key)
     out = asyncio.run(runner.run(on_cell=show))
 
-    report = summarize(runner.cells)
+    report = summarize(runner.cells, args.dataset)
     (out / "validation.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(f"\n{json.dumps(report, indent=2)}")
     print(f"run -> {out}")

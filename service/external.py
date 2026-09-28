@@ -7,10 +7,11 @@ provider audio at the wrong rate, or truncated it, or resampled it badly, would
 not fail any test here: it would quietly look like a provider that reasons less
 well than it does.
 
-So the instrument is checked against a public set with ground-truth answers:
-
-    Big Bench Audio -- 1,000 spoken reasoning questions adapted from BIG-bench
-    Hard, MIT licensed, audio included, hosted on Hugging Face (``DATASET``).
+So the instrument is checked against a public spoken set with ground-truth
+answers: reasoning questions from four BIG-bench Hard categories, read aloud,
+hosted on Hugging Face with a ``metadata.jsonl`` of ``id``, ``category``,
+``official_answer`` and ``file_name``. The dataset id is an input
+(``--dataset``), not a default, and travels with every result.
 
 This is **never a published ranking of ours**. It is a single-turn reasoning
 quiz with no interaction in it, and, being public, it may already have been
@@ -43,9 +44,6 @@ from typing import Any
 from service.caller import Clip
 from service.probes import ProbeContext, ProbeResult
 
-DATASET = "ArtificialAnalysis/big_bench_audio"
-BASE_URL = f"https://huggingface.co/datasets/{DATASET}/resolve/main"
-LICENSE = "MIT"
 TARGET_RATE = 24000
 
 # The reply must be gradable without a judge, so the model is asked for the
@@ -80,8 +78,12 @@ def _download(url: str, target: Path) -> Path:
     return target
 
 
-def metadata(cache: Path) -> list[Question]:
-    path = _download(f"{BASE_URL}/metadata.jsonl", cache / "metadata.jsonl")
+def _base_url(dataset: str) -> str:
+    return f"https://huggingface.co/datasets/{dataset}/resolve/main"
+
+
+def metadata(cache: Path, dataset: str) -> list[Question]:
+    path = _download(f"{_base_url(dataset)}/metadata.jsonl", cache / "metadata.jsonl")
     rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
     return [Question(r["id"], r["category"], str(r["official_answer"]), r["file_name"]) for r in rows]
 
@@ -101,19 +103,19 @@ def sample(questions: list[Question], per_category: int, seed: int = 11) -> list
     return sorted(chosen, key=lambda q: q.id)
 
 
-def load_clip(question: Question, cache: Path, rate: int = TARGET_RATE) -> Clip:
+def load_clip(question: Question, cache: Path, dataset: str, rate: int = TARGET_RATE) -> Clip:
     """One question as PCM at the provider's rate.
 
     ffmpeg decodes the mp3 and resamples in one pass rather than going through
     our own resampler: this audio is the reference, and running it through a
     component under test would leave that component checking itself.
     """
-    source = _download(f"{BASE_URL}/{question.file_name}", cache / question.file_name)
+    source = _download(f"{_base_url(dataset)}/{question.file_name}", cache / question.file_name)
     pcm = subprocess.run(
         ["ffmpeg", "-loglevel", "error", "-i", str(source), "-ac", "1", "-ar", str(rate), "-f", "s16le", "-"],
         capture_output=True, check=True,
     ).stdout
-    return Clip(name=f"bba.{question.id}", pcm=pcm, rate=rate, text="")
+    return Clip(name=f"question.{question.id}", pcm=pcm, rate=rate, text="")
 
 
 # ── grading ──────────────────────────────────────────────────────────────────
@@ -170,6 +172,7 @@ class SpokenQuestion:
 
     question: Question
     clip: Clip
+    dataset: str
     settle_ms: float = 600.0
     timeout_s: float = 45.0
     name: str = "spoken_question"
@@ -195,7 +198,7 @@ class SpokenQuestion:
             self.name,
             verdict="pass" if correct else "fail",
             values={
-                "dataset": DATASET,
+                "dataset": self.dataset,
                 "question_id": self.question.id,
                 "category": self.question.category,
                 "official_answer": self.question.official_answer,
@@ -214,7 +217,7 @@ class SpokenQuestion:
 CHANCE = {"formal_fallacies": 0.5, "navigate": 0.5, "web_of_lies": 0.5, "object_counting": None}
 
 
-def summarize(cells: list[Any]) -> dict[str, Any]:
+def summarize(cells: list[Any], dataset: str | None = None) -> dict[str, Any]:
     """Accuracy overall and per category, with the voids kept separate.
 
     Only graded questions count. A campaign carries cells that are not questions
@@ -228,8 +231,7 @@ def summarize(cells: list[Any]) -> dict[str, Any]:
     for cell in scored:
         by_category.setdefault(cell.values.get("category", "?"), []).append(cell.verdict == "pass")
     return {
-        "dataset": DATASET,
-        "license": LICENSE,
+        "dataset": dataset,
         "scored": len(scored),
         "void": len(questions) - len(scored),
         "accuracy": round(sum(c.verdict == "pass" for c in scored) / len(scored), 4) if scored else None,

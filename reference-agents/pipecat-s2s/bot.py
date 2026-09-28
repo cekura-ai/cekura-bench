@@ -609,8 +609,8 @@ def _phonic(credential: str, model: str, voice: str, instructions: str, settings
     """Phonic's speech-to-speech model, through the service in ``phonic_realtime``.
 
     Pipecat has no service for this provider either. Every setting the row
-    depends on is sent, not left to the server: omit the model and this
-    account is served an older one, with nothing in the reply to say so.
+    depends on is sent, not left to the server: omit the model and the
+    service may answer with an older one, with nothing in the reply to say so.
     """
     from phonic_realtime import PhonicRealtimeLLMService
 
@@ -1058,8 +1058,7 @@ PROVIDERS: dict[str, Provider] = {
         turns="local", results="immediate", caller_transcription="automatic",
     ),
     # Phonic takes and returns 16 kHz, and no framework service exists for it
-    # -- see ``phonic_realtime``. ``phonic_v1`` is the newest model this account
-    # is served; the next is enabled per account on request. The service decides
+    # -- see ``phonic_realtime``. The model is pinned. The service decides
     # when it has been talked over, and delivers a tool's result into the reply
     # it is already speaking, so the result is sent as soon as it exists.
     "phonic": Provider(
@@ -1189,8 +1188,7 @@ TEXT_MODELS: dict[str, TextModel] = {
         _grok_text, "grok-4.7", ("XAI_API_KEY",), "pipecat.services.xai.llm",
         counterpart_to="grok-realtime", reasoning="high",
     ),
-    # Not yet brought up to date: there is no credential to list the vendor's
-    # models with, and this row cannot start without one either.
+    # Not yet moved to the vendor's current text model or a named reasoning level.
     "cascade-qwen": TextModel(
         _qwen_text, "qwen-plus", ("DASHSCOPE_API_KEY",), "pipecat.services.qwen.llm",
         counterpart_to="qwen-realtime",

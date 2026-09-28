@@ -7,10 +7,11 @@
 # that call's build record rather than implied by which service it reached.
 #
 # Deployed by deploy.sh as a Pipecat Cloud build from the repository; this file
-# holds only what the deployment itself declares. See README.md.
+# holds only what the deployment itself declares. See README.md. Copy it to
+# pcc-deploy.toml (untracked) and set your own names and sizes there.
 
-agent_name = "cekura-s2s"
-secret_set = "cekura-s2s-secrets"
+agent_name = "s2s-reference-agent"
+secret_set = "s2s-reference-agent-secrets"
 
 [scaling]
     # Warm replicas, not zero. A cold start here is large -- every provider SDK is
@@ -32,5 +33,5 @@ secret_set = "cekura-s2s-secrets"
     #
     # The ceiling is not the concurrency knob -- the campaign sets that -- it is
     # only headroom above it.
-    min_agents = 5
-    max_agents = 46
+    min_agents = 1
+    max_agents = 10

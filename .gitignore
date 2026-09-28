@@ -16,3 +16,6 @@ credentials.json
 
 # Written by reference-agents/pipecat-s2s/deploy.sh for builders that take no build args.
 reference-agents/pipecat-s2s/agent-commit
+
+# Local Pipecat Cloud deployment names and sizes (see pcc-deploy.example.toml)
+reference-agents/pipecat-s2s/pcc-deploy.toml

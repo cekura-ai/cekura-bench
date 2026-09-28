@@ -525,25 +525,24 @@ def gemini_service_class():
 
 def _gemini(
     api_key: str, model: str, voice: str, instructions: str, settings: Settings,
-    thinking: bool = True, service_vad: bool = False,
+    thinking: bool = True,
 ) -> LLMService:
     from google.genai.types import ThinkingConfig
-    from pipecat.services.google.gemini_live.llm import GeminiLiveLLMSettings, GeminiVADParams
+    from pipecat.services.google.gemini_live.llm import GeminiLiveLLMSettings
 
-    # Service VAD off by default. With it on, the whole call is streamed,
-    # silences included; on the 2.5 preview the session fell cumulatively
-    # behind that stream, up to half a minute late in a long call. Off, the
-    # shared detector sends audio only inside the caller's turn (the service
-    # keeps a short pre-roll) and replies stay at 1-3 s. The 3.8 service-turn
-    # rows keep it on, where the lag does not recur.
+    # The service's own detector decides when the model answers, at the
+    # vendor's defaults, as on every provider that can decide its own turns.
+    # It waits through a caller who speaks in pieces, where the shared
+    # detector ends a turn at each pause. On the 2.5 preview it was turned off:
+    # the whole call is streamed to it, silences included, and that session
+    # fell cumulatively behind, up to half a minute late. On 3.8 and 3.1 Flash
+    # replies hold level across a long call.
     return gemini_service_class()(
         api_key=api_key,
         settings=GeminiLiveLLMSettings(
             model=model,
             system_instruction=instructions,
             voice=voice,
-            # On, the service's detector runs at the vendor's defaults.
-            vad=None if service_vad else GeminiVADParams(disabled=True),
             # The extended-thinking model reasons in the background between
             # output chunks, at a level the setup must name; the framework
             # would otherwise pick the lowest. Sent as the row's setting.
@@ -556,13 +555,6 @@ def _gemini_standard(api_key: str, model: str, voice: str, instructions: str, se
     # The plain model rejects a setup that names a thinking level.
     return _gemini(api_key, model, voice, instructions, settings, thinking=False)
 
-
-def _gemini_service_turns(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
-    return _gemini(api_key, model, voice, instructions, settings, service_vad=True)
-
-
-def _gemini_standard_service_turns(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
-    return _gemini(api_key, model, voice, instructions, settings, thinking=False, service_vad=True)
 
 
 
@@ -878,10 +870,10 @@ class Provider:
     # Where the caller's turn boundary comes from. Most of these services decide
     # it on their own server and announce it, and that announcement is what the
     # pipeline should follow -- provider endpointing is part of what a row
-    # measures. Rows marked local (both Gemini rows, with the service's
-    # detector off, Nova Sonic and Qwen) run the framework's recommended
-    # arrangement, a local detector deciding turns, and the record says so,
-    # because a row whose turns were decided locally measures something else.
+    # measures. Rows marked local (the Gemini rows, Nova Sonic and Qwen) are
+    # services that announce no boundary, so the framework's local detector
+    # tracks the caller's turns for the pipeline; the service still decides
+    # when to answer, which ``answers`` reports.
     turns: str = "provider"
     # When a tool's result is handed to the model, of which there are three
     # cases and the difference between them is the row's behaviour under a
@@ -1017,7 +1009,7 @@ PROVIDERS: dict[str, Provider] = {
         _gemini, 16000, "models/gemini-3.8-live-extended-thinking", "Charon",
         ("GEMINI_API_KEY", "GEMINI_AUTHORIZATION"), "pipecat.services.google.gemini_live.llm",
         discloses=lambda settings: {"gemini_thinking_level": GEMINI_THINKING},
-        turns="local", results="immediate", service_vad=False,
+        turns="local", results="immediate",
         caller_transcription="automatic",
     ),
     # The same model without extended thinking: the plain id, no thinking
@@ -1029,27 +1021,7 @@ PROVIDERS: dict[str, Provider] = {
         _gemini_standard, 16000, "models/gemini-3.8-live", "Charon",
         ("GEMINI_API_KEY", "GEMINI_AUTHORIZATION"), "pipecat.services.google.gemini_live.llm",
         discloses=lambda settings: {"gemini_thinking_level": "not sent"},
-        turns="local", results="immediate", service_vad=False,
-        caller_transcription="automatic",
-    ),
-    # The two 3.8 rows above with the service's own detector deciding when the
-    # model answers, at the vendor's defaults. The reason the rows above turn it
-    # off -- a session that fell further behind the stream on every turn -- was
-    # measured on the 2.5 preview; on 3.8 replies hold level across a long call.
-    # The service announces no turn boundary, so the pipeline still tracks turns
-    # locally; the record says the service decided the answers.
-    "gemini-live-service-turns": Provider(
-        _gemini_service_turns, 16000, "models/gemini-3.8-live-extended-thinking", "Charon",
-        ("GEMINI_API_KEY", "GEMINI_AUTHORIZATION"), "pipecat.services.google.gemini_live.llm",
-        discloses=lambda settings: {"gemini_thinking_level": GEMINI_THINKING},
-        turns="local", results="immediate", service_vad=True,
-        caller_transcription="automatic",
-    ),
-    "gemini-live-standard-service-turns": Provider(
-        _gemini_standard_service_turns, 16000, "models/gemini-3.8-live", "Charon",
-        ("GEMINI_API_KEY", "GEMINI_AUTHORIZATION"), "pipecat.services.google.gemini_live.llm",
-        discloses=lambda settings: {"gemini_thinking_level": "not sent"},
-        turns="local", results="immediate", service_vad=True,
+        turns="local", results="immediate",
         caller_transcription="automatic",
     ),
     # The vendor's fast Live tier. Unlike the plain 3.8 model it takes a
@@ -1059,7 +1031,7 @@ PROVIDERS: dict[str, Provider] = {
         _gemini, 16000, "models/gemini-3.1-flash-live-preview", "Charon",
         ("GEMINI_API_KEY", "GEMINI_AUTHORIZATION"), "pipecat.services.google.gemini_live.llm",
         discloses=lambda settings: {"gemini_thinking_level": GEMINI_THINKING},
-        turns="local", results="immediate", service_vad=False,
+        turns="local", results="immediate",
         caller_transcription="automatic",
     ),
     # Pinned to the versioned name the vendor's ``latest`` alias resolves to:

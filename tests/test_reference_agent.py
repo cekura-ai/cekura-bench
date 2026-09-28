@@ -889,10 +889,7 @@ class TestCascadeCounterparts:
         answers is "the cheaper model or the flagship", not "native or cascade".
         """
         paired = {c.counterpart_to for c in bot.TEXT_MODELS.values() if c.counterpart_to}
-        tiers = {
-            "openai-realtime-mini", "gemini-live-standard", "gemini-live-service-turns",
-            "gemini-live-standard-service-turns", "gemini-flash-live",
-        }
+        tiers = {"openai-realtime-mini", "gemini-live-standard", "gemini-flash-live"}
         unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live", "phonic"} - tiers
         assert not unpaired, f"native providers with no cascade counterpart: {sorted(unpaired)}"
 
@@ -1276,10 +1273,7 @@ class TestWhoDecidesTheCallersTurns:
     framework's own guidance prescribes for exactly this case.
     """
 
-    SILENT = (
-        "gemini-live", "gemini-live-standard", "gemini-live-service-turns", "gemini-live-standard-service-turns",
-        "gemini-flash-live", "nova-sonic", "qwen-realtime",
-    )
+    SILENT = ("gemini-live", "gemini-live-standard", "gemini-flash-live", "nova-sonic", "qwen-realtime")
 
     def test_the_services_that_announce_nothing_are_marked(self):
         for name in self.SILENT:
@@ -2519,24 +2513,15 @@ class TestARowSaysWhereItDiffersFromTheOthers:
     def test_the_declared_detector_is_the_one_the_service_is_built_with(self):
         # The declaration and the builder are two places, so they can disagree.
         # This is the check that stops them.
-        provider = bot.PROVIDERS["gemini-live"]
-        assert provider.service_vad is False
-        service = provider.build("k", provider.default_model, provider.default_voice, "p", {})
-        assert service._vad_disabled is True
-
-    def test_the_service_turn_rows_run_the_services_detector_and_say_so(self):
-        for key, twin in (("gemini-live-service-turns", "gemini-live"),
-                          ("gemini-live-standard-service-turns", "gemini-live-standard")):
-            provider, same = bot.PROVIDERS[key], bot.PROVIDERS[twin]
-            assert provider.default_model == same.default_model, key
-            service = provider.build("k", provider.default_model, provider.default_voice, "p", asked())
-            assert service._vad_disabled is False, key
-            assert service._settings.vad is None, key
-            twin_service = same.build("k", same.default_model, same.default_voice, "p", asked())
-            assert service._resolved_thinking_config() == twin_service._resolved_thinking_config(), key
+        # Every Gemini row runs the service's own detector at the vendor's
+        # defaults, and the record says the service decided the answers.
+        for key in ("gemini-live", "gemini-live-standard", "gemini-flash-live"):
+            provider = bot.PROVIDERS[key]
+            assert provider.service_vad is True, key
+            service = provider.build("k", provider.default_model, provider.default_voice, "p", {})
+            assert service._vad_disabled is False and service._settings.vad is None, key
             divergences = record_for(key)["divergences"]
             assert divergences["service_vad"] == "on" and divergences["endpointing"] == "provider", key
-            assert record_for(key)["gemini_thinking_level"] == record_for(twin)["gemini_thinking_level"], key
 
     def test_the_declared_interruption_owner_is_the_one_in_force(self):
         for key, provider in bot.PROVIDERS.items():
@@ -2694,15 +2679,20 @@ class TestVendorDefaultsAreExplicitAndOnTheRecord:
             assert service._settings.system_instruction == "AGENT PROMPT", key
 
     def test_the_record_separates_who_ended_the_turn_from_who_decided_to_answer(self):
-        # Nova runs its own detector over the whole call and answers on it; the
-        # pipeline's local turn only feeds the context. Gemini, with its detector
-        # switched off, answers on the pipeline's word. Same turn_source, different
-        # endpointing -- and the difference is a second and a half of reply time.
+        # Nova and Gemini run their own detector over the whole call and answer on
+        # it; the pipeline's local turn only feeds the context. A service with its
+        # detector switched off answers on the pipeline's word instead. Same
+        # turn_source, different endpointing -- and the difference is a second
+        # and a half of reply time.
+        import dataclasses
+
         server = bot.load_agent(asked())
-        nova = bot.build_record("nova-sonic", bot.PROVIDERS["nova-sonic"], "m", "v", server, asked())
-        gemini = bot.build_record("gemini-live", bot.PROVIDERS["gemini-live"], "m", "v", server, asked())
-        assert nova["turn_source"] == "local" and nova["divergences"]["endpointing"] == "provider"
-        assert gemini["turn_source"] == "local" and gemini["divergences"]["endpointing"] == "local"
+        for key in ("nova-sonic", "gemini-live"):
+            record = bot.build_record(key, bot.PROVIDERS[key], "m", "v", server, asked())
+            assert record["turn_source"] == "local" and record["divergences"]["endpointing"] == "provider", key
+        detector_off = dataclasses.replace(bot.PROVIDERS["gemini-live"], service_vad=False)
+        record = bot.build_record("gemini-live", detector_off, "m", "v", server, asked())
+        assert record["turn_source"] == "local" and record["divergences"]["endpointing"] == "local"
 
     def test_the_row_that_takes_its_result_off_the_frame_says_so(self):
         # GPT-Live never reads a tool result out of the context: the service
@@ -2825,8 +2815,7 @@ class TestAResultIsDeliveredWhileTheAgentIsStillSpeaking:
 
     def test_the_rows_that_only_forward_a_result_are_the_immediate_ones(self):
         assert {k for k, p in bot.PROVIDERS.items() if p.results == "immediate"} == {
-            "gemini-live", "gemini-live-standard", "gemini-live-service-turns",
-            "gemini-live-standard-service-turns", "gemini-flash-live", "nova-sonic", "phonic",
+            "gemini-live", "gemini-live-standard", "gemini-flash-live", "nova-sonic", "phonic",
         }
         for key in ("openai-realtime", "openai-realtime-mini", "grok-realtime"):
             assert bot.PROVIDERS[key].results == "after_speech", key

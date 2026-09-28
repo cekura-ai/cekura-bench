@@ -19,3 +19,6 @@ reference-agents/pipecat-s2s/agent-commit
 
 # Local Pipecat Cloud deployment names and sizes (see pcc-deploy.example.toml)
 reference-agents/pipecat-s2s/pcc-deploy.toml
+
+# Rendered caller audio: bin/render-corpus.py writes it; manifest.json keeps the checksums.
+corpus/service/audio/

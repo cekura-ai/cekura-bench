@@ -37,9 +37,10 @@ against your own Cekura-connected agent.
 **The service bench** (`service/`, [docs/service.md](docs/service.md)) is a self-contained
 harness that measures a speech-to-speech provider directly over its own
 websocket, with no platform account and no orchestration framework in the
-measured path. It ships its own caller corpus, its own onset detector calibrated
-against known boundaries, and a server for the mock-tool contract in
-`agent-definitions/`. It needs only a provider API key:
+measured path. It renders its own caller corpus from a published script, has its
+own onset detector calibrated against known boundaries, and runs a server for the
+mock-tool contract in `agent-definitions/`. It needs an ElevenLabs key to render
+the corpus once, then only a provider API key:
 
 ```bash
 python -m venv .venv && .venv/bin/pip install -r requirements-service.txt

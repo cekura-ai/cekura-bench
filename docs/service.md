@@ -283,7 +283,9 @@ moves a ranking, that is the finding.
 Results are **stratified by voice**, never averaged over it. Voice-sensitive
 endpointing is itself a finding and a single-voice corpus hides it completely.
 
-Corpus v1 is 54 clips in three voices. Task scenarios are **data**
+Corpus v1 is 54 clips in three voices. The script and each render's checksum are in
+`corpus/service/manifest.json`; the audio itself is not committed and is rendered with
+`bin/render-corpus.py`. Task scenarios are **data**
 (`service/scenarios.py`): an opening clip, an ordered routing table of literal
 patterns that picks the caller's next line from the agent's last sentence, the
 tool trace that counts as success, tools that must not be called, and what

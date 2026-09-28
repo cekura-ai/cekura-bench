@@ -78,6 +78,23 @@ def test_inworld_only_twelve_worker_plan_keeps_full_coverage(tmp_path):
     p.write_text(json.dumps(data))
     with pytest.raises(ValueError,match='corrected'):load_plan(p)
 
+@pytest.mark.parametrize('model',['soniox-stt-rt-v5','inworld-stt-1'])
+def test_public_only_plan_accepts_model_without_private_recordings(tmp_path,model):
+    p=tmp_path/'plan.json'
+    data=dict(version=3,public_only=True,models=[model],max_attempts=2,workers_per_model=12,
+        private_pilot=None,private_manifest_sha256=None,configs={model:{}},
+        items=[dict(clip_id=str(i),cohort='public') for i in range(1000)])
+    p.write_text(json.dumps(data));assert load_plan(p)['models']==[model]
+    data['private_manifest_sha256']='hash';p.write_text(json.dumps(data))
+    with pytest.raises(ValueError,match='private'):load_plan(p)
+
+def test_soniox_still_requires_public_only_scope(tmp_path):
+    p=tmp_path/'plan.json'
+    data=dict(version=2,models=['soniox-stt-rt-v5'],max_attempts=2,workers_per_model=12,
+        items=[dict(clip_id=str(i),cohort='public' if i<1000 else 'private') for i in range(1008)])
+    p.write_text(json.dumps(data))
+    with pytest.raises(ValueError,match='scope'):load_plan(p)
+
 def test_unverified_results_never_enter_report():
     with pytest.raises(ValueError,match='Unverified'):combine({},[{'verified':False}])
 

@@ -1112,6 +1112,9 @@ PROVIDERS: dict[str, Provider] = {
             "phonic_intelligence_level": PHONIC_INTELLIGENCE,
             "phonic_turns": ", ".join(f"{k} {v}" for k, v in PHONIC_TURNS.items()),
             "tool_schema": "strict; optional parameters nullable, null arguments dropped",
+            # The system prompt's rule for optional arguments ("never send null")
+            # is restated for strict tools where the prompt has one.
+            "prompt_null_rule": "restated for strict tools: null leaves an optional argument out",
         },
         results="immediate", interruptions=False, caller_transcription="automatic",
     ),

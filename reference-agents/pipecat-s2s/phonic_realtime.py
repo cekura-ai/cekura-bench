@@ -27,7 +27,9 @@ leaves out. Those nulls are removed before the call reaches the tools, so the
 trace records the same arguments another row's would. The tool text is written
 for rows that can leave a field out ("omit it", "never send null"), which a
 strict model cannot do, so it is told what omitting means here: send ``null``.
-Left as written, the model fills a field it was told to omit. The model writes
+The system prompt carries the same rule and is restated the same way. Left as
+written, the model fills a field it was told to omit, since null is forbidden
+and leaving the field out is impossible. The model writes
 that null as the string ``"null"``, never as JSON null, so on an optional field
 that string is treated as the field left out.
 
@@ -40,6 +42,7 @@ import asyncio
 import base64
 import copy
 import json
+import re
 from dataclasses import fields
 from typing import Any
 
@@ -124,6 +127,30 @@ def strict_description(text: str) -> str:
     return f"{text} {NULL_MEANS_OMITTED}".strip()
 
 
+def _phrase(text: str) -> re.Pattern[str]:
+    # The prompt wraps its lines, so words are matched across any whitespace.
+    return re.compile(r"\s+".join(map(re.escape, text.split())))
+
+
+# The shared system prompt's rule for optional arguments, and its strict-mode
+# restatement. A prompt without the rule is left as it is.
+PROMPT_RULES = (
+    (_phrase("Omit an optional argument entirely when its value is unknown, unavailable, or irrelevant."),
+     "When an optional argument's value is unknown, unavailable, or irrelevant, send null: "
+     "every argument must be sent, and null leaves it out."),
+    (_phrase("Never send null, None, an empty placeholder, or an invented ID as a tool argument. "
+             "A key set to null is invalid and is not equivalent to omitting that key."),
+     "Never send None, an empty placeholder, or an invented ID as a tool argument."),
+)
+
+
+def strict_instructions(text: str) -> str:
+    """The system prompt with its rule for optional arguments restated for strict mode."""
+    for pattern, restated in PROMPT_RULES:
+        text = pattern.sub(restated, text)
+    return text
+
+
 def _optional(text: str) -> str:
     return f"{text.rstrip()} Optional: send null to leave it out.".strip()
 
@@ -177,6 +204,7 @@ class PhonicRealtimeLLMService(LLMService):
         # The framework's settings object, filled in: the model and prompt are
         # what this service sends, and the sampling fields have no counterpart.
         unsupported = {f.name: None for f in fields(LLMSettings) if f.name != "extra"}
+        instructions = strict_instructions(instructions)
         super().__init__(
             settings=LLMSettings(**{**unsupported, "model": model, "system_instruction": instructions}), **kwargs
         )

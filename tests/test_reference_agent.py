@@ -720,6 +720,27 @@ class TestPhonicRealtime:
         # The shared definitions every other row reads are untouched.
         assert any(phonic_realtime._NEVER_NULL in spec.description for spec in specs.values())
 
+    def test_the_prompt_says_what_omitting_means_under_strict(self):
+        # The Medicare prompt forbids null and calls a null key invalid. Under
+        # strict tools, where every field must be sent, that leaves a real value
+        # as the only option, so an optional field got filled.
+        import phonic_realtime
+
+        medicare = bot.MockToolServer(suite="medicare").system_prompt
+        for pattern, _ in phonic_realtime.PROMPT_RULES:
+            assert pattern.search(medicare), pattern.pattern
+        provider = bot.PROVIDERS["phonic"]
+        service = provider.build("k", provider.default_model, provider.default_voice, medicare, asked())
+        sent = service.config()["system_prompt"]
+        assert "Never send null" not in sent and "A key set to null is invalid" not in sent
+        assert "send null: every argument must be sent, and null leaves it out." in sent
+        assert "Never send None, an empty placeholder, or an invented ID as a tool argument." in sent
+        # Only the rule changes, and a prompt without it goes out as written.
+        assert len(sent) < len(medicare) and sent.split("# ")[1] == medicare.split("# ")[1]
+        appointments = bot.MockToolServer(suite="appointments").system_prompt
+        assert phonic_realtime.strict_instructions(appointments) == appointments
+        assert "prompt_null_rule" in record_for("phonic")
+
     async def test_the_nulls_a_strict_model_sends_are_not_arguments(self):
         service, _ = self._service()
         calls = []

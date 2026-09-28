@@ -1,4 +1,4 @@
-"""Grounding the harness against audio someone else authored, with known answers.
+"""Grounding the harness against public audio we did not write, with known answers.
 
 Everything else in the service bench is measured with audio we wrote, which is what makes
 the caller-side boundary exact -- and also means a fault in our own audio path

@@ -33,3 +33,10 @@ def test_default_plan_keeps_all_profiles_and_unknown_models_fail(frozen):
         turn_batch.prepare(frozen/'plan-c', ['not-a-model'])
     with pytest.raises(ValueError, match='Unknown or repeated'):
         turn_batch.prepare(frozen/'plan-d', ['inworld-stt-1', 'inworld-stt-1'])
+
+
+def test_opt_in_profile_runs_only_when_named(frozen):
+    turn_batch.prepare(frozen/'plan-e')
+    assert 'assemblyai-universal-3-6-pro-min-latency' not in json.loads((frozen/'plan-e/plan.json').read_text())['models']
+    turn_batch.prepare(frozen/'plan-f', ['assemblyai-universal-3-6-pro-min-latency'])
+    assert json.loads((frozen/'plan-f/plan.json').read_text())['models'] == ['assemblyai-universal-3-6-pro-min-latency']

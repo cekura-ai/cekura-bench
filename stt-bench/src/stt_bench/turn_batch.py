@@ -18,6 +18,8 @@ from .streaming import read_events
 from .full_benchmark import classify
 
 MANIFEST='datasets/private-turns-v1/automatic-v1/manifest.json'
+# Profiles added after the original 23 run only when a plan names them.
+OPT_IN=frozenset({'assemblyai-universal-3-6-pro-min-latency'})
 
 
 def prepare(root,models=None):
@@ -26,10 +28,12 @@ def prepare(root,models=None):
     m=verify_turn_manifest(Path(MANIFEST))
     paths=sorted(Path('config/profiles/private-turns-v1').glob('*.json'))
     configs={p.stem:validate_profile(json.loads(p.read_text())) for p in paths if '3.8' not in p.stem}
-    require(len(configs)==23,'Expected the 23 non-Gemini-3.8 profiles')
+    require(len(set(configs)-OPT_IN)==23,'Expected the 23 non-Gemini-3.8 profiles')
     if models:
         require(len(set(models))==len(models) and set(models)<=set(configs),'Unknown or repeated turn profile')
         configs={name:configs[name] for name in models}
+    else:
+        configs={name:c for name,c in configs.items() if name not in OPT_IN}
     # Known account limits win over general defaults. Unknown ceilings ramp under
     # a bounded worker budget and permanently reduce after a rate-limit response.
     limits={'deepgram':150,'openai':50,'google':20,'speechmatics':2,'assemblyai':20,

@@ -35,6 +35,9 @@ from .score import aggregate_wer, percentiles, word_errors
 from .streaming import EventLog, read_events
 
 MODELS = ('assemblyai-universal-3-5-pro-min-latency',)
+# One model per plan. The first model is the default; plans for later models
+# share the same dataset, worker count and global session-start gate.
+FULL_MODELS = (*MODELS, 'assemblyai-universal-3-6-pro-min-latency')
 PUBLIC = Path('datasets/pipecat-stt-benchmark/3fe50170d520c951957b86996ef082a6ab87b394/full')
 PRIVATE = Path('reports/assemblyai-private-20260914/dataset')
 PRIVATE_MANIFEST = Path('workspaces/private-longform-recovery-v2/dataset/manifest.json')
@@ -49,7 +52,7 @@ def load_plan(path, expected=None, runtime=None, runtime_hash=None):
     if expected and sha256(path) != expected:
         raise ValueError('Run plan hash changed')
     p = json.loads(path.read_text())
-    if p['models'] != list(MODELS) or p['max_attempts'] != 2 or p['workers_per_model'] != 20:
+    if len(p['models']) != 1 or p['models'][0] not in FULL_MODELS or p['max_attempts'] != 2 or p['workers_per_model'] != 20:
         raise ValueError('Unexpected model or execution scope')
     ids = [c['clip_id'] for c in p['items']]
     if len(set(ids)) != 1008 or len(ids) != 1008 or Counter(c['cohort'] for c in p['items']) != {'public': 1000, 'private': 8}:
@@ -66,7 +69,9 @@ def load_plan(path, expected=None, runtime=None, runtime_hash=None):
     return p
 
 
-def prepare(root):
+def prepare(root, model=MODELS[0]):
+    if model not in FULL_MODELS:
+        raise ValueError('Unexpected model')
     root.mkdir(parents=True, exist_ok=False)
     public = json.loads((PUBLIC/'manifest.json').read_text())
     private = json.loads(PRIVATE_MANIFEST.read_text())
@@ -96,12 +101,12 @@ def prepare(root):
                     *Path('scripts').glob('*.mjs'), *Path('scripts').glob('*.py'),
                     *Path('tests').glob('*.py'), *Path('tests').glob('*.mjs')])
     hashes = {str(p): sha256(p) for p in files if '__pycache__' not in str(p)}
-    plan = dict(version=1, run_id=root.name, created_at=now(), models=list(MODELS),
+    plan = dict(version=1, run_id=root.name, created_at=now(), models=[model],
                 workers_per_model=20, max_workers=20, max_attempts=2,
                 public_manifest_sha256=sha256(PUBLIC/'manifest.json'),
                 private_manifest_sha256=sha256(PRIVATE_MANIFEST),
                 private_pilot=private['clips'][0]['clip_id'], items=items, code_hashes=hashes,
-                configs={m: json.loads(Path(f'config/models/{m}.json').read_text()) for m in MODELS})
+                configs={model: json.loads(Path(f'config/models/{model}.json').read_text())})
     write_json(root/'plan.json', plan)
     load_plan(root/'plan.json')
     with tarfile.open(root/'input.tar.gz', 'w:gz', compresslevel=1) as t:
@@ -300,7 +305,7 @@ def evaluate(events, clip, config, number, raw_hash):
 async def worker(args):
     plan = load_plan(Path(args.plan), args.plan_hash, args.runtime, args.runtime_hash)
     assignment = json.loads(Path(args.assignment).read_text())
-    if assignment['plan_hash'] != args.plan_hash or assignment['model'] not in MODELS:
+    if assignment['plan_hash'] != args.plan_hash or assignment['model'] not in plan['models']:
         raise ValueError('Assignment identity mismatch')
     if assignment.get('runtime_hash') != plan.get('runtime_hash'):
         raise ValueError('Assignment runtime identity mismatch')
@@ -453,7 +458,7 @@ def combine(plan, states):
                 raise ValueError('Duplicate attempt in merge')
             all_rows[key] = row
     output = {}
-    for model in MODELS:
+    for model in plan.get('models', MODELS):
         records = []
         for clip in plan['items']:
             attempts = [all_rows[(model,clip['clip_id'],n)] for n in (1,2) if (model,clip['clip_id'],n) in all_rows]
@@ -518,8 +523,9 @@ def main():
     p.add_argument('--assignment'); p.add_argument('--session-id'); p.add_argument('--out')
     p.add_argument('--archive'); p.add_argument('--archive-hash'); p.add_argument('--convert',action='store_true')
     p.add_argument('--runtime'); p.add_argument('--runtime-hash')
+    p.add_argument('--model', choices=FULL_MODELS, default=MODELS[0])
     a=p.parse_args()
-    if a.mode=='prepare': prepare(Path(a.root)); return
+    if a.mode=='prepare': prepare(Path(a.root), a.model); return
     plan=load_plan(Path(a.plan),a.plan_hash,a.runtime,a.runtime_hash)
     if a.mode=='verify': verify_inputs(plan,convert=a.convert)
     elif a.mode=='worker': asyncio.run(worker(a))

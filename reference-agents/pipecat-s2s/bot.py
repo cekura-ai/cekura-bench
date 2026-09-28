@@ -523,7 +523,10 @@ def gemini_service_class():
     return GeminiResumesQuietly
 
 
-def _gemini(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
+def _gemini(
+    api_key: str, model: str, voice: str, instructions: str, settings: Settings,
+    thinking: bool = True,
+) -> LLMService:
     from google.genai.types import ThinkingConfig
     from pipecat.services.google.gemini_live.llm import GeminiLiveLLMSettings, GeminiVADParams
 
@@ -543,9 +546,14 @@ def _gemini(api_key: str, model: str, voice: str, instructions: str, settings: S
             # The extended-thinking model reasons in the background between
             # output chunks, at a level the setup must name; the framework
             # would otherwise pick the lowest. Sent as the row's setting.
-            thinking=ThinkingConfig(thinking_level=GEMINI_THINKING),
+            thinking=ThinkingConfig(thinking_level=GEMINI_THINKING) if thinking else None,
         ),
     )
+
+
+def _gemini_standard(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
+    # The plain model rejects a setup that names a thinking level.
+    return _gemini(api_key, model, voice, instructions, settings, thinking=False)
 
 
 def _grok(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
@@ -1002,8 +1010,20 @@ PROVIDERS: dict[str, Provider] = {
         turns="local", results="immediate", service_vad=False,
         caller_transcription="automatic",
     ),
+    # The same model without extended thinking: the plain id, no thinking
+    # level sent. The framework reads the id, so this row's tools block until
+    # their result lands and its turns end at the service's turn-complete,
+    # where the row above runs every tool non-blocking and waits out the
+    # background reasoning. Same rates as the row above.
+    "gemini-live-standard": Provider(
+        _gemini_standard, 16000, "models/gemini-3.8-live", "Charon",
+        ("GEMINI_API_KEY", "GEMINI_AUTHORIZATION"), "pipecat.services.google.gemini_live.llm",
+        discloses=lambda settings: {"gemini_thinking_level": "not sent"},
+        turns="local", results="immediate", service_vad=False,
+        caller_transcription="automatic",
+    ),
     # The vendor's fast Live tier. Unlike the plain 3.8 model it takes a
-    # thinking level, so it runs at the same named level as the row above, on the
+    # thinking level, so it runs at the same named level as ``gemini-live``, on the
     # same arrangement; a row of its own for the reason given at the mini row.
     "gemini-flash-live": Provider(
         _gemini, 16000, "models/gemini-3.1-flash-live-preview", "Charon",

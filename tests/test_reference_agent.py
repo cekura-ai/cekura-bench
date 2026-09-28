@@ -868,7 +868,7 @@ class TestCascadeCounterparts:
         answers is "the cheaper model or the flagship", not "native or cascade".
         """
         paired = {c.counterpart_to for c in bot.TEXT_MODELS.values() if c.counterpart_to}
-        tiers = {"openai-realtime-mini", "gemini-flash-live"}
+        tiers = {"openai-realtime-mini", "gemini-live-standard", "gemini-flash-live"}
         unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live", "phonic"} - tiers
         assert not unpaired, f"native providers with no cascade counterpart: {sorted(unpaired)}"
 
@@ -1252,7 +1252,7 @@ class TestWhoDecidesTheCallersTurns:
     framework's own guidance prescribes for exactly this case.
     """
 
-    SILENT = ("gemini-live", "gemini-flash-live", "nova-sonic", "qwen-realtime")
+    SILENT = ("gemini-live", "gemini-live-standard", "gemini-flash-live", "nova-sonic", "qwen-realtime")
 
     def test_the_services_that_announce_nothing_are_marked(self):
         for name in self.SILENT:
@@ -2514,6 +2514,18 @@ class TestVendorDefaultsAreExplicitAndOnTheRecord:
         assert service._resolved_thinking_config().thinking_level.value == "HIGH"
         assert record_for("gemini-live")["gemini_thinking_level"] == "HIGH"
 
+    def test_gemini_without_extended_thinking_sends_no_level(self):
+        # The plain model rejects a setup naming a level, and without the
+        # thinking id the framework neither waits out background reasoning
+        # nor forces tools non-blocking.
+        provider = bot.PROVIDERS["gemini-live-standard"]
+        assert provider.default_model == "models/gemini-3.8-live"
+        service = provider.build("k", provider.default_model, provider.default_voice, "p", asked())
+        assert service._resolved_thinking_config() is None
+        assert not service._expects_interaction_status
+        assert service._supports_blocking_tools
+        assert record_for("gemini-live-standard")["gemini_thinking_level"] == "not sent"
+
     def test_the_live_backend_reasons_at_a_named_effort(self):
         provider = bot.PROVIDERS["gpt-live"]
         service = provider.build("k", provider.default_model, provider.default_voice, "p", asked())
@@ -2738,7 +2750,7 @@ class TestAResultIsDeliveredWhileTheAgentIsStillSpeaking:
 
     def test_the_rows_that_only_forward_a_result_are_the_immediate_ones(self):
         assert {k for k, p in bot.PROVIDERS.items() if p.results == "immediate"} == {
-            "gemini-live", "gemini-flash-live", "nova-sonic", "phonic",
+            "gemini-live", "gemini-live-standard", "gemini-flash-live", "nova-sonic", "phonic",
         }
         for key in ("openai-realtime", "openai-realtime-mini", "grok-realtime"):
             assert bot.PROVIDERS[key].results == "after_speech", key

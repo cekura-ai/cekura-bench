@@ -141,7 +141,7 @@ class TestPricingACall:
         assert mini.usd < price_call("openai-realtime", OPENAI_CALL).usd
         # Each row names the model its rates were read for.
         table = load_table()
-        for row in ("openai-realtime-mini", "gemini-flash-live"):
+        for row in ("openai-realtime-mini", "gemini-live-standard", "gemini-flash-live"):
             assert table["rows"][row]["components"][0]["name"] in bot.PROVIDERS[row].default_model
 
     def test_reasoning_reported_beside_the_output_is_billed_as_output(self):

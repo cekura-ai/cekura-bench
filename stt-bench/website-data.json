@@ -2,9 +2,9 @@
   "benchmark": {
     "clips": 206,
     "conversations": 4,
-    "failed": 62,
+    "failed": 52,
     "firstAttempts": 3296,
-    "models": 15,
+    "models": 16,
     "privateRecordings": 8,
     "publicClips": 1000,
     "recovered": 11,
@@ -28,6 +28,26 @@
         "ttftP50": 489,
         "turnWer": 4.587448231920994,
         "valid": 205
+      },
+      {
+        "attempted": 206,
+        "failed": 0,
+        "id": "assemblyai-universal-3-6-pro-min-latency",
+        "model": "AssemblyAI Universal 3.6 Pro",
+        "overallIncluded": 1008,
+        "overallPlanned": 1008,
+        "overallWer": 2.710644842359662,
+        "privateUsable": 8,
+        "privateWer": 4.49804951835045,
+        "publicUsable": 1000,
+        "publicWer": 1.769317848308247,
+        "referenceWords": 6383,
+        "ttfsN": 206,
+        "ttfsP50": 91,
+        "ttftN": 206,
+        "ttftP50": 485,
+        "turnWer": 4.825317248942503,
+        "valid": 206
       },
       {
         "attempted": 206,
@@ -327,6 +347,18 @@
         "50": 489,
         "90": 966,
         "95": 1085
+      }
+    },
+    "assemblyai-universal-3-6-pro-min-latency": {
+      "ttfs": {
+        "50": 91,
+        "90": 210,
+        "95": 232
+      },
+      "ttft": {
+        "50": 485,
+        "90": 966,
+        "95": 967
       }
     },
     "cartesia-ink-2": {

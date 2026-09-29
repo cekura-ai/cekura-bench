@@ -347,6 +347,15 @@
       "requested_preferences",
       "notes"
     ],
+    "undetermined_params": [
+      "intake_intent"
+    ],
+    "completes_on": {
+      "zip_code": "zip_code",
+      "medicare_part_a_status": "has_medicare_part_a",
+      "medicare_part_b_status": "has_medicare_part_b",
+      "beneficiary_permission": "consent_id"
+    },
     "mock_data": [
       {
         "input": {
@@ -1051,7 +1060,8 @@
     "freetext_params": [
       "fields_collected",
       "open_items",
-      "compliance_notes"
+      "compliance_notes",
+      "destination"
     ],
     "mock_data": [
       {

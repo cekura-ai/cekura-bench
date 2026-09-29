@@ -12,6 +12,7 @@
       "scenario_ids": [1, 2],
       "frequency": 1,
       "concurrency": 1,
+      "expected_agent_commit_prefix": "abcdef0",
       "mock_tool_names": [],
       "config": {
         "agent_dir": "appointments",
@@ -28,6 +29,7 @@
       "scenario_ids": [3],
       "frequency": 1,
       "concurrency": 1,
+      "expected_agent_commit_prefix": "abcdef0",
       "mock_tool_names": [],
       "after": ["example-appointments"],
       "config": {

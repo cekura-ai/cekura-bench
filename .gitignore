@@ -3,8 +3,9 @@ node_modules/
 benchmark.config.json
 data/
 local-registry.json
+local-registry.json.lock/
 *.s2s-registry.json
-*.launch-lock/
+*.s2s-registry.json.lock/
 *.log
 .venv/
 __pycache__/

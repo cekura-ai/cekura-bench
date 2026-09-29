@@ -2,6 +2,7 @@ import asyncio
 from copy import deepcopy
 import json
 from pathlib import Path
+import shutil
 
 import numpy as np
 import pytest
@@ -11,6 +12,9 @@ from stt_bench.data import sha256, write_json
 from stt_bench.turns import prepare_turns, freeze_turns, validate_review, verify_turn_manifest
 from stt_bench.turn_runner import controlled_profile, prepare_run_plan, run_turns
 from stt_bench.turn_metrics import measure, transcript_timeline
+
+# Freezing a turn dataset shells out to ffmpeg; running a frozen one does not.
+needs_ffmpeg = pytest.mark.skipif(shutil.which('ffmpeg') is None, reason='freezing a turn dataset needs ffmpeg')
 
 
 def inputs(root, stereo=False, segments=1):
@@ -44,6 +48,7 @@ def frozen(tmp_path):
     return manifest
 
 
+@needs_ffmpeg
 def test_stereo_channel_identity_and_lossless_crops(tmp_path):
     src=inputs(tmp_path/'source',True);d=prepare_turns(src,tmp_path/'draft');m=freeze_turns(d,approved(d),tmp_path/'out')
     manifest=verify_turn_manifest(m)
@@ -62,6 +67,7 @@ def test_explicit_stereo_mapping_required(tmp_path):
     with pytest.raises(ValueError,match='mapping'):prepare_turns(src,tmp_path/'draft')
 
 
+@needs_ffmpeg
 def test_offsets_affect_conversation_not_source_crop(frozen):
     m=json.loads(frozen.read_text());a,b=m['clips']
     assert a['source_start_sample']==b['source_start_sample']==0
@@ -78,6 +84,7 @@ def test_unreviewed_and_stale_sources_rejected(tmp_path):
     with pytest.raises(ValueError,match='Source changed'):validate_review(d,r)
 
 
+@needs_ffmpeg
 def test_word_accounting_split_merge_exclude(tmp_path):
     d=prepare_turns(inputs(tmp_path/'source'),tmp_path/'draft');r=approved(d);j=json.loads(r.read_text())
     a=j['turns'][0];right=deepcopy(a);right.update(turn_id='split-right',unit_ids=a['unit_ids'][1:],start=.3,reference='please')
@@ -104,6 +111,7 @@ def test_invalid_word_timing_needs_explicit_correction(tmp_path):
     validate_review(d,r)
 
 
+@needs_ffmpeg
 def test_frozen_derivative_and_review_are_bound(frozen):
     m=json.loads(frozen.read_text());path=frozen.parent/m['clips'][0]['derivative_24000'];path.write_bytes(b'changed')
     with pytest.raises(ValueError,match='derivative changed'):verify_turn_manifest(frozen)
@@ -167,12 +175,14 @@ def test_unavailable_is_not_zero(condition):
     if condition=='exception':assert r['observed_speech_end_to_final_ms']==pytest.approx(200)
 
 
+@needs_ffmpeg
 def test_run_plan_deterministic_and_not_authorization(frozen,tmp_path):
     cfg=Path('config/profiles/private-turns-v1/deepgram-nova-3.json')
     plan=prepare_run_plan(frozen,[cfg],tmp_path/'plan.json')
     assert plan['planned_sessions']==2 and len(plan['smoke_clip_ids'])==2 and not plan['provider_calls_authorized']
 
 
+@needs_ffmpeg
 def test_dry_run_resume_and_replay(frozen,tmp_path,monkeypatch):
     import stt_bench.run as runner
     from stt_bench.score import score
@@ -196,6 +206,7 @@ def test_dry_run_resume_and_replay(frozen,tmp_path,monkeypatch):
     with pytest.raises(ValueError,match='matching'):asyncio.run(run_turns(frozen,changed,out,dry_run=True,resume=True))
 
 
+@needs_ffmpeg
 def test_smoke_failure_blocks_full_and_resume_does_not_retry(tmp_path,monkeypatch):
     import stt_bench.run as runner
     src=inputs(tmp_path/'source',segments=6);draft=prepare_turns(src,tmp_path/'draft')
@@ -246,6 +257,7 @@ def test_no_entity_annotations_need_no_entity_attestation(tmp_path):
     write_json(r,j);assert load_review(path,r)[1]['status']=='verified'
 
 
+@needs_ffmpeg
 def test_48khz_source_conversion_and_end_of_recording(tmp_path):
     src=inputs(tmp_path/'source')
     for label in ('A','B'):

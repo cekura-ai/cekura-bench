@@ -2,9 +2,9 @@
   "benchmark": {
     "clips": 206,
     "conversations": 4,
-    "failed": 52,
-    "firstAttempts": 3296,
-    "models": 16,
+    "failed": 58,
+    "firstAttempts": 3502,
+    "models": 17,
     "privateRecordings": 8,
     "publicClips": 1000,
     "recovered": 11,
@@ -315,6 +315,26 @@
       },
       {
         "attempted": 206,
+        "failed": 6,
+        "id": "soniox-stt-rt-v5",
+        "model": "Soniox STT-RT v5",
+        "overallIncluded": 1008,
+        "overallPlanned": 1008,
+        "overallWer": 3.020982093815226,
+        "privateUsable": 8,
+        "privateWer": 3.9248467478703923,
+        "publicUsable": 1000,
+        "publicWer": 2.544966668064232,
+        "referenceWords": 5953,
+        "ttfsN": 200,
+        "ttfsP50": 38,
+        "ttftN": 200,
+        "ttftP50": 1195,
+        "turnWer": 4.501931799092894,
+        "valid": 200
+      },
+      {
+        "attempted": 206,
         "failed": 12,
         "id": "speechmatics-linden-1",
         "model": "Speechmatics Linden",
@@ -517,6 +537,18 @@
         "95": 3033
       }
     },
+    "soniox-stt-rt-v5": {
+      "ttfs": {
+        "50": 38,
+        "90": 72,
+        "95": 79
+      },
+      "ttft": {
+        "50": 1195,
+        "90": 1672,
+        "95": 1707
+      }
+    },
     "speechmatics-linden-1": {
       "ttfs": {
         "50": 147,
@@ -531,5 +563,29 @@
     }
   },
   "schemaVersion": 1,
-  "turnGeneratedAt": "2026-09-16T15:40:07.139476+00:00"
+  "turnGeneratedAt": "2026-09-16T15:40:07.139476+00:00",
+  "versionComparisons": [
+    {
+      "from": "assemblyai-universal-3-5-pro-min-latency",
+      "publicClips": {
+        "errorRateChangeCi95": [
+          -0.315,
+          -0.013
+        ],
+        "fromErrors": 460,
+        "fromPerfect": 724,
+        "paired": 1000,
+        "toErrors": 422,
+        "toPerfect": 743
+      },
+      "to": "assemblyai-universal-3-6-pro-min-latency",
+      "turns": {
+        "finalLater": 42,
+        "finalSooner": 162,
+        "fromFinalOver500": 25,
+        "paired": 205,
+        "toFinalOver500": 0
+      }
+    }
+  ]
 }

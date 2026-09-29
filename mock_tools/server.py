@@ -1,23 +1,11 @@
 """Serves the public mock-tool contract to whatever is being measured.
 
-Shared on purpose. The service bench talks to a provider websocket directly, the text arm
-talks to the same model with no audio, and the agent bench reference agent talks over
-a phone line -- and all three must be answered by the *same* tool implementation,
-or a difference between lanes could be our two servers disagreeing rather than
-anything about the agents.
-
 The contract in ``agent-definitions/`` is tool schemas plus input-to-output
-lookup tables. It is published, so a third party can run the same scenarios
-against their own agent and be scored the same way. This module serves it, for
-every lane: the direct provider websocket, the text control arm, and the
-reference agent.
-
-That matters more than it sounds. A control needs a treatment that differs from
-it in exactly one thing. Text arm to service-bench voice differs by *the speech pathway* alone;
-service bench to agent bench differs by *framework and telephony* alone. If tools only existed in the
-lane that also introduced a framework and a phone line, a pass-in-text /
-fail-in-voice result could be blamed on any of the three, which is precisely the
-ambiguity the control exists to remove.
+lookup tables, published so a third party can score their own agent the same
+way. The service bench, its text arm and the agent bench's reference agent are
+all answered by this one implementation: a control must differ from its
+treatment in one thing only, and two servers would make a pass-in-text /
+fail-in-voice result ambiguous.
 
 State: v1 is **stateless**, because the published tables are stateless. Booking
 then cancelling then verifying needs a store, and that is a contract extension
@@ -88,7 +76,7 @@ def _normalize(value: Any) -> Any:
         if slot is not None:
             return slot
         digits = "".join(ch for ch in stripped if ch.isdigit())
-        if digits and len(digits) >= 7 and not any(ch.isalpha() for ch in stripped):
+        if len(digits) >= 7 and not any(ch.isalpha() for ch in stripped):
             # A leading country code is a dialling detail, not a different
             # number. The tables store ten digits, and a model that says the
             # same number in full is saying the same number.
@@ -100,8 +88,6 @@ def _normalize(value: Any) -> Any:
         return " ".join("".join(
             ch if ch.isalnum() else " " for ch in stripped
         ).lower().split())
-    if isinstance(value, (int, float, bool)) or value is None:
-        return value
     if isinstance(value, list):
         # The arrays these contracts declare are sets -- the product types a
         # caller consented to, the fields collected for a handoff -- so order is
@@ -151,6 +137,8 @@ class ToolCallRecord:
 
 
 _DROP = object()
+_MISSING = object()
+_FACT_MIN_CHARS = 4  # long enough to be a fact, not a flag
 
 
 def _issued(wanted: dict[str, Any]) -> dict[str, Any]:
@@ -190,14 +178,11 @@ def _reflect(value: Any, by_name: dict[str, Any], by_value: dict[str, Any]) -> A
     if isinstance(value, list):
         answers = [_reflect(item, by_name, by_value) for item in value]
         return [answer for answer in answers if answer is not _DROP]
-    if isinstance(value, str) and len(value.strip()) >= 4:
+    if isinstance(value, str) and len(value.strip()) >= _FACT_MIN_CHARS:
         answer = by_value.get(_normalize(value), _MISSING)
         if answer is not _MISSING:
             return answer
     return value
-
-
-_MISSING = object()
 
 
 def _similarity(left: Any, right: Any) -> float:
@@ -240,23 +225,12 @@ class MockToolServer:
     # -- answering --------------------------------------------------------
 
     def _build_abstentions(self) -> dict[str, frozenset[str]]:
-        """Per tool, the (field, value) pairs that say nothing about the record.
+        """Per tool, the optional (field, value) pairs that decline to answer.
 
-        An optional field's enum may offer a value meaning the agent has nothing
-        to report, while the tool's prose says to omit an argument it has no value
-        for. Both say the same thing, so both must score alike, and which one an
-        agent reaches for is a habit of that agent rather than a fact about the
-        call.
-
-        Two conditions, and both are needed. The value must be one that declines
-        to answer rather than asserting something -- naming a category the caller
-        does not fit is a claim, and a wrong claim must still miss. And no record
-        may use it: where a record does, the contract treats it as a real answer
-        and it stays compared, as an ``unknown`` Part B status does, which is a
-        thing callers say and the tables keep a record for.
-
-        Required fields are excluded throughout: there the agent is asked to
-        commit, and declining is itself an answer.
+        An enum value such as ``unknown`` and an omitted argument say the same
+        thing, so they score alike -- but only for values in ``DECLINES`` that no
+        record stores; where a record does (an ``unknown`` Part B status), it is a
+        real answer and stays compared. Required fields are never abstentions.
         """
         abstentions: dict[str, frozenset[str]] = {}
         for definition in self._definitions:
@@ -280,34 +254,15 @@ class MockToolServer:
         return abstentions
 
     def call(self, name: str, arguments: dict[str, Any]) -> Any:
-        """Answer one tool call from the table, in two stages.
+        """Answer one tool call from the table: exact match first, then nearest row.
 
-        The tables are records, not assertions. A row lists the fields that were
-        present when that record was captured, and several of those fields are
-        optional in the tool's own schema -- so requiring a call to repeat every
-        one of them makes a row unreachable for any agent that follows the
-        schema. Stage one therefore compares only the fields the call and the
-        row have in common, and the row sharing the most of them wins, so a
-        specific record still beats a general one.
-
-        Stage two exists because speech is lossy. A misheard surname or a dropped
-        digit is a transcription error, and answering it with nothing turns it
-        into a task failure -- a different thing, measured in the same column. So
-        when no row matches outright, the nearest row above ``FUZZY_THRESHOLD``
-        answers instead. The tables are built for this: they carry seeded rows
-        for the ordinary ways a call goes wrong, a missing postcode or an unknown
-        number, whose outputs tell the agent what is missing and how to recover.
-        Reaching those rows is the point of this stage. Without it an agent has
-        nowhere to go but to tell the caller the system failed, and the
-        conversation being scored becomes a conversation about our harness.
-
-        Only when both stages come up empty is the answer a miss, which is a
-        legitimate answer and not an error: the contract's own wording says a
-        no-match means no record was found.
-
-        The two stages are the resolution the scoring side already performs
-        against the same tables. Serving more strictly than the score is read
-        would fail agents for answers the score accepts.
+        Stage one compares only the fields the call and a row share -- rows carry
+        optional fields a schema-following agent may omit -- and the row sharing
+        the most wins. Stage two answers from the nearest row at or above
+        ``FUZZY_THRESHOLD``, because a misheard name is a transcription error, not a
+        task failure, and the tables seed recovery rows for exactly that. Both empty
+        is a legitimate ``no_match``. This mirrors how the scoring side resolves the
+        same tables; serving stricter would fail answers the score accepts.
         """
         mock = self._mocks.get(name)
         if mock is None:
@@ -318,9 +273,7 @@ class MockToolServer:
         # write the same way, and an answer the conversation never settled.
         freetext = set(mock.get("freetext_params") or ()) | set(mock.get("undetermined_params") or ())
         abstained = self._abstentions.get(name, frozenset())
-        # Free text cannot be compared: no two agents write the same sentence,
-        # and a row never stores one. An argument the model left empty is an
-        # argument it did not send.
+        # An argument left empty, or declined, is one the model did not send.
         wanted = {
             key: value
             for key, value in (arguments or {}).items()
@@ -400,7 +353,7 @@ class MockToolServer:
         for key, value in stored.items():
             answer = wanted.get(key, _DROP) if key not in arguments else arguments[key]
             by_name[key] = answer
-            if isinstance(value, str) and len(value.strip()) >= 4:
+            if isinstance(value, str) and len(value.strip()) >= _FACT_MIN_CHARS:
                 by_value.setdefault(_normalize(value), answer)
         answer = _reflect(output, by_name, by_value)
         if isinstance(answer, dict) and "missing_fields" in answer:

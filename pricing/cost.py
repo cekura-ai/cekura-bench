@@ -72,7 +72,7 @@ def lanes(usage: dict[str, Any], reasoning_in_output: bool = True) -> dict[str, 
 
     cached, cached_audio = n("cache_read_input_tokens"), n("cache_read_input_audio_tokens")
     audio_in, audio_out = n("input_audio_tokens"), n("output_audio_tokens")
-    split = {
+    return {
         "text_input": n("prompt_tokens") - audio_in - (cached - cached_audio),
         "text_input_cached": cached - cached_audio,
         "audio_input": audio_in - cached_audio,
@@ -81,7 +81,6 @@ def lanes(usage: dict[str, Any], reasoning_in_output: bool = True) -> dict[str, 
         + (0 if reasoning_in_output else n("reasoning_tokens")),
         "audio_output": audio_out,
     }
-    return split
 
 
 def price_call(row: str, usage: dict[str, Any], table: dict[str, Any] | None = None) -> Price:
@@ -124,9 +123,10 @@ def price_call(row: str, usage: dict[str, Any], table: dict[str, Any] | None = N
             return refuse(f"{name}: the record lacks {', '.join(missing)}")
 
         if component["basis"] == "per_minute":
-            seconds = usage.get(component.get("measure", "call_seconds"))
+            measure = component.get("measure", "call_seconds")
+            seconds = usage.get(measure)
             if not seconds:
-                return refuse(f"{name}: the call's {component.get('measure', 'call_seconds')} was not recorded")
+                return refuse(f"{name}: the call's {measure} was not recorded")
             lines[name] = rates["minute"] * seconds / 60
         elif component["basis"] == "per_million_tokens":
             # A lane the vendor bills and the table omits would otherwise be

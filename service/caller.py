@@ -125,8 +125,7 @@ class BranchingCaller:
     not a stylistic choice: server-side endpointers decide a turn has ended by
     observing silence *in the stream*, so a caller that simply stops sending is
     never heard to stop talking and the provider waits forever. It is also what a
-    phone line does, which keeps the service bench and the telephony back-end identical in
-    shape.
+    phone line does.
     """
 
     def __init__(self, adapter: RealtimeAdapter, log: ev.EventLog) -> None:

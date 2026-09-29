@@ -85,8 +85,7 @@ A **continuous realtime carrier** holds the stream open for the whole call and
 clips are dropped into it. This is not a stylistic choice: server-side
 endpointers decide a turn ended by observing silence *in the stream*, so a caller
 that simply stops sending is never heard to stop talking and the provider waits
-forever. It is also what a phone line does, which keeps this lane and the
-telephony back-end identical in shape.
+forever. It is also what a phone line does.
 
 Turns are **anchored on observed events**, not on absolute offsets. When a real
 caller would interrupt depends on when the agent started talking and how long it

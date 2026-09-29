@@ -22,17 +22,3 @@ reference-agents/pipecat-s2s/pcc-deploy.toml
 
 # Rendered caller audio: bin/render-corpus.py writes it; manifest.json keeps the checksums.
 corpus/service/audio/
-
-# Phone-leg caller harness (Twilio media stream, phone-line detector, carrier
-# tone): kept locally, not published.
-agent/telephony.py
-agent/adapters/
-agent/detector.py
-agent/tone.py
-agent/calibrate.py
-tests/test_twilio_stream.py
-tests/test_telephony_loopback.py
-tests/test_phone_detector.py
-tests/test_tone.py
-docs/agent.md
-requirements-agent.txt

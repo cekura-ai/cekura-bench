@@ -7,6 +7,10 @@
   "scripts": {
     "benchmark": "node bin/run-benchmark.mjs",
     "validate": "node bin/run-benchmark.mjs --validate",
+    "s2s:campaign": "node bin/s2s-campaign.mjs",
+    "s2s:registry": "node bin/s2s-cohort-registry.mjs",
+    "s2s:export": "node bin/s2s-export-cohort.mjs",
+    "s2s:reduce": "node bin/s2s-reduce-evidence.mjs",
     "export:s2s": "node bin/export-s2s-results.mjs",
     "build:s2s": "node bin/build-s2s-benchmark.mjs",
     "test:s2s-export": "node --test tests/test_s2s_export_contract.mjs"

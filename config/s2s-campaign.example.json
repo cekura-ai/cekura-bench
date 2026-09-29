@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "project_id": 1,
+  "pipecat_agent_name": "example-agent",
+  "rows": [
+    {
+      "key": "example-appointments",
+      "name": "Example S2S - appointments",
+      "suite": "appointments",
+      "provider": "example-provider",
+      "agent_id": 1,
+      "scenario_ids": [1, 2],
+      "frequency": 1,
+      "concurrency": 1,
+      "mock_tool_names": [],
+      "config": {
+        "agent_dir": "appointments",
+        "s2s_provider": "example-provider",
+        "s2s_model": "example-model"
+      }
+    },
+    {
+      "key": "example-medicare",
+      "name": "Example S2S - medicare",
+      "suite": "medicare",
+      "provider": "example-provider",
+      "agent_id": 2,
+      "scenario_ids": [3],
+      "frequency": 1,
+      "concurrency": 1,
+      "mock_tool_names": [],
+      "after": ["example-appointments"],
+      "config": {
+        "agent_dir": "medicare",
+        "s2s_provider": "example-provider",
+        "s2s_model": "example-model"
+      }
+    }
+  ]
+}

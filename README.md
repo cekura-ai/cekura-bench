@@ -29,6 +29,11 @@ credentials, live benchmarks, and offline scoring. See the
 The rest of this page describes the existing voice-agent runner. Run its `npm`
 commands from the repository root. Its commands and configuration are unchanged.
 
+For repeated Pipecat S2S corpus campaigns, see the
+[S2S campaign toolkit](docs/s2s-toolkit.md): preview-first launches, a local
+result registry, privacy-safe cohort/ZIP exports, and value-free evidence
+reduction. These are separate from the runner below.
+
 ## Two things live here
 
 **The scenario runner** (below) launches Cekura's Appointment and Medicare suites

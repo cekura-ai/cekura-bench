@@ -2,11 +2,12 @@ import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import test from "node:test";
-import { payloadFor, TERMINAL, validateCampaign } from "../lib/s2s-toolkit.mjs";
+import { fileURLToPath } from "node:url";
+import { payloadFor, SESSION_KEYS, TERMINAL, validateCampaign } from "../lib/s2s-toolkit.mjs";
 
-const root = resolve(".");
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const run = (script, args) => execFileSync(process.execPath, [join(root, "bin", script), ...args], { cwd: root, encoding: "utf8", env: { ...process.env, CEKURA_API_KEY: "" } });
 const result = (script, args) => spawnSync(process.execPath, [join(root, "bin", script), ...args], { cwd: root, encoding: "utf8", env: { ...process.env, CEKURA_API_KEY: "" } });
 const json = (path, value) => writeFile(path, `${JSON.stringify(value)}\n`);
@@ -26,6 +27,15 @@ test("campaign preview is offline, validates session keys, and builds an exact p
   assert.deepEqual(preview.plans[0].payload.mock_tool_names, []);
   assert.throws(() => validateCampaign({ schema_version: 1, project_id: 1, pipecat_agent_name: "cekura-s2s", rows: [{ ...row, config: { ...row.config, ignored_setting: "x" } }] }), /unsupported or ignored session config key/);
   assert.equal(TERMINAL.has("timeout"), true);
+});
+
+test("session config allowlist matches the bot's accepted keys", async () => {
+  const bot = await readFile(join(root, "reference-agents", "pipecat-s2s", "bot.py"), "utf8");
+  const declaration = bot.match(/class Settings:[\s\S]*?^    KEYS\s*=\s*\(([\s\S]*?)^    \)/m);
+  assert.ok(declaration, "Settings.KEYS declaration must be readable");
+  const keys = [...declaration[1].matchAll(/^\s*"([^"]+)",?\s*$/gm)].map((match) => match[1]);
+  assert.ok(keys.length > 0, "Settings.KEYS must not be empty");
+  assert.deepEqual([...SESSION_KEYS].sort(), keys.sort());
 });
 
 test("registry and campaign share a lock; duplicate refusal has the expected reason", async () => {
@@ -71,9 +81,34 @@ async function fixture(dir) {
   await json(join(definitions, "medicare", "tool-definitions.json"), []);
   await json(join(raw, "appointments", "result-99.json"), { id: 99, status: "timeout", runs: [{ id: 101 }] });
   const meta = { config: "example", agent_definition: "appointments", cekura_agent_id: 10, s2s_provider: "example", s2s_model: "models/example-v1", agent_commit: "3abc123", pipecat_version: "1", cekura_version: "1", integrity: { checks: ["ok"], closed_by: "agent" }, usage: {}, tool_calls: [{ name: "lookup", arguments: { marker: "fixture-only" }, resolution: "exact" }] };
-  await json(join(raw, "appointments", "runs", "101.json"), { source: { suite: "appointments", provider: "example", result_id: 99, run_id: 101 }, run: { id: 101, scenario: 1, status: "completed", success: true, duration: "01:30", started_at: "2026-01-01T00:00:00Z", voice_recording_url: "private-recording-url", transcript: "private caller words", transcript_object: { text: "private caller words" }, evaluation: { metrics: [{ name: "Expected Outcome", score: 5 }, { name: "Infrastructure Issues", score: 1 }, { name: "Latency (in ms)", score: 1200 }, { name: "Tool Call Accuracy", score: 5 }] }, provider_call_details: { custom_metadata: meta } } });
+  await json(join(raw, "appointments", "runs", "101.json"), { source: { suite: "appointments", provider: "example", resultId: 99, run_id: 101 }, run: { id: 101, result_id: 99, scenario: 1, status: "completed", success: true, duration: "01:30", started_at: "2026-01-01T00:00:00Z", voice_recording_url: "private-recording-url", transcript: "private caller words", transcript_object: { text: "private caller words" }, evaluation: { metrics: [{ name: "Expected Outcome", score: 5 }, { name: "Infrastructure Issues", score: 1 }, { name: "Latency (in ms)", score: 1200 }, { name: "Tool Call Accuracy", score: 5 }] }, provider_call_details: { custom_metadata: meta } } });
   return { registry, raw, definitions, campaign };
 }
+
+test("cohort export rejects a run or capture assigned to another result", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "s2s-result-identity-"));
+  const { registry, raw, definitions, campaign } = await fixture(dir);
+  const path = join(raw, "appointments", "runs", "101.json");
+  const original = JSON.parse(await readFile(path, "utf8"));
+  await json(path, { ...original, run: { ...original.run, result_id: 100 } });
+  const flags = ["--registry", registry, "--campaign", campaign, "--definitions", definitions, "--raw", raw];
+  const wrongRun = result("s2s-export-cohort.mjs", [...flags, "--out", join(dir, "wrong-run")]);
+  assert.notEqual(wrongRun.status, 0);
+  assert.match(wrongRun.stderr, /run\/source identity mismatch/);
+  await json(path, { ...original, source: { ...original.source, resultId: 100 } });
+  const wrongCapture = result("s2s-export-cohort.mjs", [...flags, "--out", join(dir, "wrong-capture")]);
+  assert.notEqual(wrongCapture.status, 0);
+  assert.match(wrongCapture.stderr, /run\/source identity mismatch/);
+});
+
+test("cohort export works when invoked outside the repository", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "s2s-external-cwd-"));
+  const { registry, raw, definitions, campaign } = await fixture(dir);
+  const output = join(dir, "safe");
+  const summary = JSON.parse(execFileSync(process.execPath, [join(root, "bin", "s2s-export-cohort.mjs"), "--registry", registry, "--campaign", campaign, "--definitions", definitions, "--raw", raw, "--out", output], { cwd: dir, encoding: "utf8", env: { ...process.env, CEKURA_API_KEY: "" } }));
+  assert.equal(summary.runs, 1);
+  assert.equal(JSON.parse(await readFile(join(output, "s2s-benchmark.json"), "utf8")).schemaVersion, 2);
+});
 
 test("cohort driver emits only the canonical website contract and binds registry clear to its hash", async () => {
   const dir = await mkdtemp(join(tmpdir(), "s2s-export-"));

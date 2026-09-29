@@ -69,6 +69,23 @@ contract directory; `--campaign` supplies the contract builder's presentation
 decisions and must not contain sensitive values. One export requires a uniform
 frequency across selected results.
 
+`--definitions` must contain, for each suite, `expected-tool-calls.json` and
+`tool-definitions.json`:
+
+```text
+private-contracts/{appointments,medicare}/expected-tool-calls.json
+private-contracts/{appointments,medicare}/tool-definitions.json
+```
+
+Expected calls are keyed by scenario ID, for example
+`{"1":[{"name":"lookup","arguments":{"marker":"<freetext>"}}],"2":[]}`;
+`optional` may be set on an expected call. An empty list means no tool call is
+expected. Tool definitions are an array of tool schemas with `name` and
+`parameters` (including argument `properties`). The public dataset's `tool`
+field and `null` no-call rows are **not** this format: convert `tool` to
+`name`, preserve the expected `arguments`, and convert `null` to `[]` before
+using it. Never put private expected argument values into the shareable output.
+
 The driver invokes `lib/s2s-export-contract.mjs`, the same schema-version-2
 builder used for the website. Its shareable output contains `manifest.json`,
 `s2s-benchmark.json`, `scenario-matrix.jsonl`, and

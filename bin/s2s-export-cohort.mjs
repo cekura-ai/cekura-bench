@@ -6,10 +6,12 @@ import { spawn } from "node:child_process";
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import { build } from "../lib/s2s-export-contract.mjs";
 import { fail, isMain, parseFlags, payloadFor, readJson, resultRuns, tally, TERMINAL, validateRegistry } from "../lib/s2s-toolkit.mjs";
 
 const PUBLIC_FILES = ["manifest.json", "s2s-benchmark.json", "scenario-matrix.jsonl", "tool-failure-breakdown.json"];
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const usage = `Usage: node bin/s2s-export-cohort.mjs --registry registry.json --campaign presentation.json --definitions private-contracts --out fresh-safe-dir [--key row-key] [--raw local-capture | --fetch] [--zip fresh.zip]
 --fetch uses CEKURA_API_KEY and writes raw responses only in disposable private scratch. The ZIP contains the four website-contract files only.
 `;
@@ -41,7 +43,8 @@ async function stageEntry(entry, source, target) {
   for (const id of runIds) {
     const sourcePath = join(source, entry.suite, "runs", `${id}.json`);
     const raw = await readJson(sourcePath), run = raw.run ?? raw;
-    if (Number(run.id) !== id || (raw.source?.result_id != null && Number(raw.source.result_id) !== entry.result_id)) fail(`${entry.key}: run/source identity mismatch`);
+    const sourceResultId = raw.source?.resultId ?? raw.source?.result_id;
+    if (Number(run.id) !== id || Number(run.result_id) !== entry.result_id || (sourceResultId != null && Number(sourceResultId) !== entry.result_id)) fail(`${entry.key}: run/source identity mismatch`);
     const scenario = scenarioId(run);
     if (!Number.isSafeInteger(scenario)) fail(`${entry.key}: run ${id} has no scenario ID`);
     observed.push(scenario);
@@ -104,14 +107,14 @@ async function main() {
   try {
     const source = flags["--fetch"] ? join(scratch, "capture") : resolve(flags["--raw"]);
     if (flags["--fetch"]) {
-      const args = [resolve("bin/export-s2s-results.mjs"), "--out", source, "--no-logs", "--no-traces"];
+      const args = [join(repoRoot, "bin", "export-s2s-results.mjs"), "--out", source, "--no-logs", "--no-traces"];
       for (const entry of entries) args.push("--result", `${entry.suite}:${entry.provider}:${entry.result_id}`);
-      await command(process.execPath, args, resolve("."));
+      await command(process.execPath, args, repoRoot);
     }
     const selected = join(scratch, "selected"), built = join(scratch, "built");
     const verificationEntries = [];
     for (const entry of entries) verificationEntries.push(await stageEntry(entry, source, selected));
-    const result = await build({ raw: selected, definitions: resolve(flags["--definitions"]), campaign: presentation, output: built, root: resolve(".") });
+    const result = await build({ raw: selected, definitions: resolve(flags["--definitions"]), campaign: presentation, output: built, root: repoRoot });
     if (result.website.schemaVersion !== 2 || result.website.calls !== verificationEntries.reduce((sum, entry) => sum + entry.run_count, 0)) fail("Contract build count/schema mismatch");
     for (const [key, count] of Object.entries(expectedRuns)) {
       const group = result.manifest.results[key];

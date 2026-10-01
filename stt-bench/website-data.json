@@ -17,8 +17,20 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 2.721630231791717,
+        "privateErrors": {
+          "deletions": 322,
+          "insertions": 68,
+          "referenceWords": 12561,
+          "substitutions": 141
+        },
         "privateUsable": 8,
         "privateWer": 4.227370432290423,
+        "publicErrors": {
+          "deletions": 141,
+          "insertions": 94,
+          "referenceWords": 23851,
+          "substitutions": 225
+        },
         "publicUsable": 1000,
         "publicWer": 1.9286403085824495,
         "referenceWords": 6278,
@@ -37,8 +49,20 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 2.710644842359662,
+        "privateErrors": {
+          "deletions": 363,
+          "insertions": 67,
+          "referenceWords": 12561,
+          "substitutions": 135
+        },
         "privateUsable": 8,
         "privateWer": 4.49804951835045,
+        "publicErrors": {
+          "deletions": 124,
+          "insertions": 76,
+          "referenceWords": 23851,
+          "substitutions": 222
+        },
         "publicUsable": 1000,
         "publicWer": 1.769317848308247,
         "referenceWords": 6383,
@@ -57,8 +81,20 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 2.6282544216192463,
+        "privateErrors": {
+          "deletions": 204,
+          "insertions": 51,
+          "referenceWords": 12561,
+          "substitutions": 133
+        },
         "privateUsable": 8,
         "privateWer": 3.0889260409203088,
+        "publicErrors": {
+          "deletions": 125,
+          "insertions": 108,
+          "referenceWords": 23851,
+          "substitutions": 336
+        },
         "publicUsable": 1000,
         "publicWer": 2.3856442077900297,
         "referenceWords": 6383,
@@ -77,8 +113,20 @@
         "overallIncluded": 1007,
         "overallPlanned": 1008,
         "overallWer": 3.9987915739748976,
+        "privateErrors": {
+          "deletions": 214,
+          "insertions": 100,
+          "referenceWords": 12561,
+          "substitutions": 211
+        },
         "privateUsable": 8,
         "privateWer": 4.179603534750418,
+        "publicErrors": {
+          "deletions": 261,
+          "insertions": 109,
+          "referenceWords": 23850,
+          "substitutions": 561
+        },
         "publicUsable": 999,
         "publicWer": 3.9035639412997902,
         "referenceWords": 6380,
@@ -97,8 +145,20 @@
         "overallIncluded": 1007,
         "overallPlanned": 1008,
         "overallWer": 4.81160057124025,
+        "privateErrors": {
+          "deletions": 214,
+          "insertions": 113,
+          "referenceWords": 12561,
+          "substitutions": 242
+        },
         "privateUsable": 8,
         "privateWer": 4.5298941167104525,
+        "publicErrors": {
+          "deletions": 252,
+          "insertions": 134,
+          "referenceWords": 23851,
+          "substitutions": 797
+        },
         "publicUsable": 999,
         "publicWer": 4.959959750115299,
         "referenceWords": 6311,
@@ -117,8 +177,20 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 3.7844666593430736,
+        "privateErrors": {
+          "deletions": 289,
+          "insertions": 98,
+          "referenceWords": 12561,
+          "substitutions": 165
+        },
         "privateUsable": 8,
         "privateWer": 4.3945545736804394,
+        "publicErrors": {
+          "deletions": 259,
+          "insertions": 132,
+          "referenceWords": 23851,
+          "substitutions": 435
+        },
         "publicUsable": 1000,
         "publicWer": 3.463167162802398,
         "referenceWords": 6383,
@@ -137,8 +209,20 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 3.0072503570251565,
+        "privateErrors": {
+          "deletions": 217,
+          "insertions": 67,
+          "referenceWords": 12561,
+          "substitutions": 193
+        },
         "privateUsable": 8,
         "privateWer": 3.79746835443038,
+        "publicErrors": {
+          "deletions": 134,
+          "insertions": 114,
+          "referenceWords": 23851,
+          "substitutions": 370
+        },
         "publicUsable": 1000,
         "publicWer": 2.591086327617291,
         "referenceWords": 6376,
@@ -158,8 +242,20 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 2.757332747445897,
+        "privateErrors": {
+          "deletions": 245,
+          "insertions": 75,
+          "referenceWords": 12561,
+          "substitutions": 206
+        },
         "privateUsable": 8,
         "privateWer": 4.187564684340419,
+        "publicErrors": {
+          "deletions": 110,
+          "insertions": 89,
+          "referenceWords": 23851,
+          "substitutions": 279
+        },
         "publicUsable": 1000,
         "publicWer": 2.004108842396545,
         "referenceWords": 6383,
@@ -179,8 +275,20 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 5.778314841261123,
+        "privateErrors": {
+          "deletions": 357,
+          "insertions": 30,
+          "referenceWords": 12561,
+          "substitutions": 172
+        },
         "privateUsable": 8,
         "privateWer": 4.450282620810445,
+        "publicErrors": {
+          "deletions": 288,
+          "insertions": 190,
+          "referenceWords": 23851,
+          "substitutions": 1067
+        },
         "publicUsable": 1000,
         "publicWer": 6.477715819043227,
         "referenceWords": 6383,
@@ -199,8 +307,20 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 5.437767768867406,
+        "privateErrors": {
+          "deletions": 195,
+          "insertions": 965,
+          "referenceWords": 12561,
+          "substitutions": 172
+        },
         "privateUsable": 8,
         "privateWer": 10.60425125388106,
+        "publicErrors": {
+          "deletions": 104,
+          "insertions": 291,
+          "referenceWords": 23851,
+          "substitutions": 253
+        },
         "publicUsable": 1000,
         "publicWer": 2.7168672173074504,
         "referenceWords": 6383,
@@ -219,8 +339,20 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 3.7322860595408103,
+        "privateErrors": {
+          "deletions": 304,
+          "insertions": 71,
+          "referenceWords": 12561,
+          "substitutions": 184
+        },
         "privateUsable": 8,
         "privateWer": 4.450282620810445,
+        "publicErrors": {
+          "deletions": 146,
+          "insertions": 419,
+          "referenceWords": 23851,
+          "substitutions": 235
+        },
         "publicUsable": 1000,
         "publicWer": 3.35415705840426,
         "referenceWords": 6383,
@@ -240,8 +372,20 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 6.852136658244534,
+        "privateErrors": {
+          "deletions": 1349,
+          "insertions": 62,
+          "referenceWords": 12561,
+          "substitutions": 153
+        },
         "privateUsable": 8,
         "privateWer": 12.451237958761245,
+        "publicErrors": {
+          "deletions": 559,
+          "insertions": 148,
+          "referenceWords": 23851,
+          "substitutions": 224
+        },
         "publicUsable": 1000,
         "publicWer": 3.9034002767179574,
         "referenceWords": 6383,
@@ -261,8 +405,20 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 2.6282544216192463,
+        "privateErrors": {
+          "deletions": 217,
+          "insertions": 67,
+          "referenceWords": 12561,
+          "substitutions": 159
+        },
         "privateUsable": 8,
         "privateWer": 3.5267892683703526,
+        "publicErrors": {
+          "deletions": 121,
+          "insertions": 84,
+          "referenceWords": 23851,
+          "substitutions": 309
+        },
         "publicUsable": 1000,
         "publicWer": 2.155045910024737,
         "referenceWords": 6383,
@@ -281,8 +437,20 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 2.3838295067560145,
+        "privateErrors": {
+          "deletions": 170,
+          "insertions": 58,
+          "referenceWords": 12561,
+          "substitutions": 140
+        },
         "privateUsable": 8,
         "privateWer": 2.929703049120293,
+        "publicErrors": {
+          "deletions": 90,
+          "insertions": 120,
+          "referenceWords": 23851,
+          "substitutions": 290
+        },
         "publicUsable": 1000,
         "publicWer": 2.0963481615026622,
         "referenceWords": 6383,
@@ -301,8 +469,20 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 3.586729649566077,
+        "privateErrors": {
+          "deletions": 196,
+          "insertions": 61,
+          "referenceWords": 12561,
+          "substitutions": 177
+        },
         "privateUsable": 8,
         "privateWer": 3.4551389220603452,
+        "publicErrors": {
+          "deletions": 114,
+          "insertions": 236,
+          "referenceWords": 23851,
+          "substitutions": 522
+        },
         "publicUsable": 1000,
         "publicWer": 3.656031193660643,
         "referenceWords": 6383,
@@ -321,8 +501,20 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 3.020982093815226,
+        "privateErrors": {
+          "deletions": 264,
+          "insertions": 90,
+          "referenceWords": 12561,
+          "substitutions": 139
+        },
         "privateUsable": 8,
         "privateWer": 3.9248467478703923,
+        "publicErrors": {
+          "deletions": 131,
+          "insertions": 107,
+          "referenceWords": 23851,
+          "substitutions": 369
+        },
         "publicUsable": 1000,
         "publicWer": 2.544966668064232,
         "referenceWords": 5953,
@@ -341,8 +533,20 @@
         "overallIncluded": 1006,
         "overallPlanned": 1008,
         "overallWer": 2.9652632736066833,
+        "privateErrors": {
+          "deletions": 270,
+          "insertions": 55,
+          "referenceWords": 12561,
+          "substitutions": 169
+        },
         "privateUsable": 8,
         "privateWer": 3.9328078974603935,
+        "publicErrors": {
+          "deletions": 146,
+          "insertions": 85,
+          "referenceWords": 23827,
+          "substitutions": 354
+        },
         "publicUsable": 998,
         "publicWer": 2.4551978847525917,
         "referenceWords": 6291,

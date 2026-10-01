@@ -25,6 +25,10 @@
         },
         "privateUsable": 8,
         "privateWer": 4.227370432290423,
+        "privateWerCi95": [
+          3.573,
+          4.681
+        ],
         "publicErrors": {
           "deletions": 141,
           "insertions": 94,
@@ -33,6 +37,10 @@
         },
         "publicUsable": 1000,
         "publicWer": 1.9286403085824495,
+        "publicWerCi95": [
+          1.691,
+          2.176
+        ],
         "referenceWords": 6278,
         "ttfsN": 205,
         "ttfsP50": 180,
@@ -57,6 +65,10 @@
         },
         "privateUsable": 8,
         "privateWer": 4.49804951835045,
+        "privateWerCi95": [
+          3.657,
+          5.342
+        ],
         "publicErrors": {
           "deletions": 124,
           "insertions": 76,
@@ -65,6 +77,10 @@
         },
         "publicUsable": 1000,
         "publicWer": 1.769317848308247,
+        "publicWerCi95": [
+          1.55,
+          1.996
+        ],
         "referenceWords": 6383,
         "ttfsN": 206,
         "ttfsP50": 91,
@@ -89,6 +105,10 @@
         },
         "privateUsable": 8,
         "privateWer": 3.0889260409203088,
+        "privateWerCi95": [
+          2.433,
+          3.837
+        ],
         "publicErrors": {
           "deletions": 125,
           "insertions": 108,
@@ -97,6 +117,10 @@
         },
         "publicUsable": 1000,
         "publicWer": 2.3856442077900297,
+        "publicWerCi95": [
+          2.126,
+          2.651
+        ],
         "referenceWords": 6383,
         "ttfsN": 198,
         "ttfsP50": 123,
@@ -121,6 +145,10 @@
         },
         "privateUsable": 8,
         "privateWer": 4.179603534750418,
+        "privateWerCi95": [
+          3.076,
+          5.229
+        ],
         "publicErrors": {
           "deletions": 261,
           "insertions": 109,
@@ -129,6 +157,10 @@
         },
         "publicUsable": 999,
         "publicWer": 3.9035639412997902,
+        "publicWerCi95": [
+          3.534,
+          4.289
+        ],
         "referenceWords": 6380,
         "ttfsN": 199,
         "ttfsP50": 108,
@@ -153,6 +185,10 @@
         },
         "privateUsable": 8,
         "privateWer": 4.5298941167104525,
+        "privateWerCi95": [
+          3.293,
+          5.689
+        ],
         "publicErrors": {
           "deletions": 252,
           "insertions": 134,
@@ -161,6 +197,10 @@
         },
         "publicUsable": 999,
         "publicWer": 4.959959750115299,
+        "publicWerCi95": [
+          4.491,
+          5.457
+        ],
         "referenceWords": 6311,
         "ttfsN": 175,
         "ttfsP50": 114,
@@ -185,6 +225,10 @@
         },
         "privateUsable": 8,
         "privateWer": 4.3945545736804394,
+        "privateWerCi95": [
+          3.416,
+          5.245
+        ],
         "publicErrors": {
           "deletions": 259,
           "insertions": 132,
@@ -193,6 +237,10 @@
         },
         "publicUsable": 1000,
         "publicWer": 3.463167162802398,
+        "publicWerCi95": [
+          3.162,
+          3.776
+        ],
         "referenceWords": 6383,
         "ttfsN": 202,
         "ttfsP50": 103,
@@ -217,6 +265,10 @@
         },
         "privateUsable": 8,
         "privateWer": 3.79746835443038,
+        "privateWerCi95": [
+          2.929,
+          4.601
+        ],
         "publicErrors": {
           "deletions": 134,
           "insertions": 114,
@@ -225,6 +277,10 @@
         },
         "publicUsable": 1000,
         "publicWer": 2.591086327617291,
+        "publicWerCi95": [
+          2.305,
+          2.892
+        ],
         "referenceWords": 6376,
         "ttfsN": 205,
         "ttfsObserved": true,
@@ -250,6 +306,10 @@
         },
         "privateUsable": 8,
         "privateWer": 4.187564684340419,
+        "privateWerCi95": [
+          2.968,
+          5.271
+        ],
         "publicErrors": {
           "deletions": 110,
           "insertions": 89,
@@ -258,6 +318,10 @@
         },
         "publicUsable": 1000,
         "publicWer": 2.004108842396545,
+        "publicWerCi95": [
+          1.77,
+          2.254
+        ],
         "referenceWords": 6383,
         "ttfsN": 206,
         "ttfsObserved": true,
@@ -283,6 +347,10 @@
         },
         "privateUsable": 8,
         "privateWer": 4.450282620810445,
+        "privateWerCi95": [
+          3.165,
+          5.903
+        ],
         "publicErrors": {
           "deletions": 288,
           "insertions": 190,
@@ -291,6 +359,10 @@
         },
         "publicUsable": 1000,
         "publicWer": 6.477715819043227,
+        "publicWerCi95": [
+          5.93,
+          7.057
+        ],
         "referenceWords": 6383,
         "ttfsN": 198,
         "ttfsP50": 212,
@@ -315,6 +387,10 @@
         },
         "privateUsable": 8,
         "privateWer": 10.60425125388106,
+        "privateWerCi95": [
+          3.847,
+          22.759
+        ],
         "publicErrors": {
           "deletions": 104,
           "insertions": 291,
@@ -323,6 +399,10 @@
         },
         "publicUsable": 1000,
         "publicWer": 2.7168672173074504,
+        "publicWerCi95": [
+          1.665,
+          4.678
+        ],
         "referenceWords": 6383,
         "ttfsN": 206,
         "ttfsP50": 41,
@@ -347,6 +427,10 @@
         },
         "privateUsable": 8,
         "privateWer": 4.450282620810445,
+        "privateWerCi95": [
+          3.224,
+          5.55
+        ],
         "publicErrors": {
           "deletions": 146,
           "insertions": 419,
@@ -355,6 +439,10 @@
         },
         "publicUsable": 1000,
         "publicWer": 3.35415705840426,
+        "publicWerCi95": [
+          3.085,
+          3.648
+        ],
         "referenceWords": 6383,
         "ttfsN": 206,
         "ttfsP50": 630,
@@ -380,6 +468,10 @@
         },
         "privateUsable": 8,
         "privateWer": 12.451237958761245,
+        "privateWerCi95": [
+          7.234,
+          19.583
+        ],
         "publicErrors": {
           "deletions": 559,
           "insertions": 148,
@@ -388,6 +480,10 @@
         },
         "publicUsable": 1000,
         "publicWer": 3.9034002767179574,
+        "publicWerCi95": [
+          3.427,
+          4.418
+        ],
         "referenceWords": 6383,
         "ttfsN": 206,
         "ttfsP50": 652,
@@ -413,6 +509,10 @@
         },
         "privateUsable": 8,
         "privateWer": 3.5267892683703526,
+        "privateWerCi95": [
+          2.58,
+          4.509
+        ],
         "publicErrors": {
           "deletions": 121,
           "insertions": 84,
@@ -421,6 +521,10 @@
         },
         "publicUsable": 1000,
         "publicWer": 2.155045910024737,
+        "publicWerCi95": [
+          1.917,
+          2.41
+        ],
         "referenceWords": 6383,
         "ttfsN": 206,
         "ttfsP50": 543,
@@ -445,6 +549,10 @@
         },
         "privateUsable": 8,
         "privateWer": 2.929703049120293,
+        "privateWerCi95": [
+          2.286,
+          3.681
+        ],
         "publicErrors": {
           "deletions": 90,
           "insertions": 120,
@@ -453,6 +561,10 @@
         },
         "publicUsable": 1000,
         "publicWer": 2.0963481615026622,
+        "publicWerCi95": [
+          1.857,
+          2.347
+        ],
         "referenceWords": 6383,
         "ttfsN": 201,
         "ttfsP50": 235,
@@ -477,6 +589,10 @@
         },
         "privateUsable": 8,
         "privateWer": 3.4551389220603452,
+        "privateWerCi95": [
+          2.664,
+          4.224
+        ],
         "publicErrors": {
           "deletions": 114,
           "insertions": 236,
@@ -485,6 +601,10 @@
         },
         "publicUsable": 1000,
         "publicWer": 3.656031193660643,
+        "publicWerCi95": [
+          3.337,
+          3.989
+        ],
         "referenceWords": 6383,
         "ttfsN": 206,
         "ttfsP50": 201,
@@ -509,6 +629,10 @@
         },
         "privateUsable": 8,
         "privateWer": 3.9248467478703923,
+        "privateWerCi95": [
+          2.604,
+          4.861
+        ],
         "publicErrors": {
           "deletions": 131,
           "insertions": 107,
@@ -517,6 +641,10 @@
         },
         "publicUsable": 1000,
         "publicWer": 2.544966668064232,
+        "publicWerCi95": [
+          2.27,
+          2.834
+        ],
         "referenceWords": 5953,
         "ttfsN": 200,
         "ttfsP50": 38,
@@ -541,6 +669,10 @@
         },
         "privateUsable": 8,
         "privateWer": 3.9328078974603935,
+        "privateWerCi95": [
+          2.937,
+          5.189
+        ],
         "publicErrors": {
           "deletions": 146,
           "insertions": 85,
@@ -549,6 +681,10 @@
         },
         "publicUsable": 998,
         "publicWer": 2.4551978847525917,
+        "publicWerCi95": [
+          2.195,
+          2.729
+        ],
         "referenceWords": 6291,
         "ttfsN": 194,
         "ttfsP50": 147,
@@ -557,7 +693,16 @@
         "turnWer": 4.101096804959465,
         "valid": 194
       }
-    ]
+    ],
+    "werCi95": {
+      "iterations": 10000,
+      "method": "percentile bootstrap of summed errors over summed reference words",
+      "privateGroups": 4,
+      "privateResampled": "conversations",
+      "publicGroups": 1000,
+      "publicResampled": "clips",
+      "seed": 42
+    }
   },
   "generatedAt": "2026-09-16T21:10:20.454474+00:00",
   "percentiles": {

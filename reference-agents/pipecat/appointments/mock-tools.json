@@ -1,0 +1,381 @@
+[
+  {
+    "name": "lookup_patient",
+    "description": "Identify the caller by looking up their patient record by phone number. Call this ONCE, at the start of every call (Step 2 of the conversation flow), with the caller's phone number. Returns the patient record (including patient_id) and any upcoming appointments. A no-match means no record was found; it does not create or identify a patient. For a booking request, use the new-patient registration and callback path. For reschedule, cancellation, or appointment lookup, do not proceed with the requested action; offer desk follow-up. Do not call it again once the caller is identified.",
+    "freetext_params": [],
+    "mock_data": [
+      {
+        "input": {
+          "phone": "4155550123"
+        },
+        "output": {
+          "patient_id": "p_1001",
+          "full_name": "Maria Gomez",
+          "date_of_birth": "1986-04-12",
+          "phone": "+14155550123",
+          "upcoming_appointments": [
+            {
+              "appointment_id": "appt_5001",
+              "confirmation_number": "CW-5001",
+              "datetime": "2026-07-02T14:15:00",
+              "provider": "Dr. Lee",
+              "reason": "annual checkup"
+            }
+          ]
+        }
+      },
+      {
+        "input": {
+          "phone": "2025550188"
+        },
+        "output": {
+          "patient_id": "p_1002",
+          "full_name": "James Carter",
+          "date_of_birth": "1971-11-30",
+          "phone": "+12025550188",
+          "upcoming_appointments": []
+        }
+      },
+      {
+        "input": {
+          "phone": "6175559210"
+        },
+        "output": {
+          "patient_id": "p_1003",
+          "full_name": "Wei Chen",
+          "date_of_birth": "1994-02-09",
+          "phone": "+16175559210",
+          "upcoming_appointments": [
+            {
+              "appointment_id": "appt_5003",
+              "confirmation_number": "CW-5003",
+              "datetime": "2026-07-05T09:00:00",
+              "provider": "Dr. Patel",
+              "reason": "follow-up"
+            }
+          ]
+        }
+      },
+      {
+        "input": {
+          "phone": "9995550000"
+        },
+        "output": {
+          "match": false,
+          "message": "No patient found for that phone number."
+        }
+      },
+      {
+        "input": {
+          "phone": "5005550911"
+        },
+        "output": {
+          "error": "lookup_failed",
+          "message": "Patient lookup service is temporarily unavailable."
+        }
+      },
+      {
+        "input": {
+          "phone": "3105550147"
+        },
+        "output": {
+          "patient_id": "p_1004",
+          "full_name": "Robert Lane",
+          "date_of_birth": "1979-03-22",
+          "phone": "+13105550147",
+          "upcoming_appointments": [
+            {
+              "appointment_id": "appt_5010",
+              "confirmation_number": "CW-5010",
+              "datetime": "2026-07-05T09:00:00",
+              "provider": "Dr. Lee",
+              "reason": "annual checkup"
+            },
+            {
+              "appointment_id": "appt_5011",
+              "confirmation_number": "CW-5011",
+              "datetime": "2026-07-06T11:30:00",
+              "provider": "Dr. Patel",
+              "reason": "follow-up"
+            },
+            {
+              "appointment_id": "appt_9119",
+              "confirmation_number": "CW-9119",
+              "datetime": "2026-07-07T14:00:00",
+              "provider": "Dr. Lee",
+              "reason": "consultation"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "check_availability",
+    "description": "Return the open appointment slots for one specific date, each with its provider. Call this during the Book or Reschedule playbooks once you know a concrete date to check. An empty slot list means that date is fully booked. If the caller gives a date range, ask which date in that range to check first. If the caller wants a specific provider, choose that provider's slot only from the returned results. Never describe a slot on another date as available until this tool returns it.",
+    "freetext_params": [],
+    "mock_data": [
+      {
+        "input": {
+          "date": "2026-07-08"
+        },
+        "output": {
+          "date": "2026-07-08",
+          "slots": [
+            {
+              "datetime": "2026-07-08T09:00:00",
+              "provider": "Dr. Lee"
+            },
+            {
+              "datetime": "2026-07-08T11:30:00",
+              "provider": "Dr. Patel"
+            },
+            {
+              "datetime": "2026-07-08T15:45:00",
+              "provider": "Dr. Lee"
+            }
+          ]
+        }
+      },
+      {
+        "input": {
+          "date": "2026-07-09"
+        },
+        "output": {
+          "date": "2026-07-09",
+          "slots": [
+            {
+              "datetime": "2026-07-09T10:15:00",
+              "provider": "Dr. Patel"
+            },
+            {
+              "datetime": "2026-07-09T14:00:00",
+              "provider": "Dr. Okafor"
+            }
+          ]
+        }
+      },
+      {
+        "input": {
+          "date": "2026-07-10"
+        },
+        "output": {
+          "date": "2026-07-10",
+          "slots": []
+        }
+      },
+      {
+        "input": {
+          "date": "2026-07-15"
+        },
+        "output": {
+          "error": "availability_failed",
+          "message": "Scheduling system is temporarily unavailable."
+        }
+      },
+      {
+        "input": {
+          "date": "2026-07-16"
+        },
+        "output": {
+          "date": "2026-07-16",
+          "slots": [
+            {
+              "datetime": "2026-07-16T09:00:00",
+              "provider": "Dr. Lee"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "book_appointment",
+    "description": "Book an appointment for the identified caller. Call this ONLY after (1) the caller is identified via lookup_patient, (2) you have offered slots returned by check_availability, and (3) the caller has explicitly confirmed a specific slot you read back. This is the success action \u2014 never call it without confirmation, and never claim success unless it returns a confirmation_number. For a reschedule, book the confirmed replacement before cancelling the old appointment.",
+    "freetext_params": [
+      "reason"
+    ],
+    "mock_data": [
+      {
+        "input": {
+          "patient_id": "p_1002",
+          "datetime": "2026-07-08T09:00:00"
+        },
+        "output": {
+          "status": "booked",
+          "confirmation_number": "CW-9A1B",
+          "appointment_id": "appt_6005",
+          "datetime": "2026-07-08T09:00:00",
+          "provider": "Dr. Lee"
+        }
+      },
+      {
+        "input": {
+          "patient_id": "p_1002",
+          "datetime": "2026-07-08T11:30:00"
+        },
+        "output": {
+          "status": "booked",
+          "confirmation_number": "CW-9K2M",
+          "appointment_id": "appt_6002",
+          "datetime": "2026-07-08T11:30:00",
+          "provider": "Dr. Patel"
+        }
+      },
+      {
+        "input": {
+          "patient_id": "p_1002",
+          "datetime": "2026-07-08T15:45:00"
+        },
+        "output": {
+          "status": "booked",
+          "confirmation_number": "CW-9C3D",
+          "appointment_id": "appt_6006",
+          "datetime": "2026-07-08T15:45:00",
+          "provider": "Dr. Lee"
+        }
+      },
+      {
+        "input": {
+          "patient_id": "p_1002",
+          "datetime": "2026-07-09T10:15:00"
+        },
+        "output": {
+          "status": "booked",
+          "confirmation_number": "CW-9P7R",
+          "appointment_id": "appt_6007",
+          "datetime": "2026-07-09T10:15:00",
+          "provider": "Dr. Patel"
+        }
+      },
+      {
+        "input": {
+          "patient_id": "p_1001",
+          "datetime": "2026-07-08T09:00:00"
+        },
+        "output": {
+          "status": "booked",
+          "confirmation_number": "CW-7A3F",
+          "appointment_id": "appt_6001",
+          "datetime": "2026-07-08T09:00:00",
+          "provider": "Dr. Lee"
+        }
+      },
+      {
+        "input": {
+          "patient_id": "p_1003",
+          "datetime": "2026-07-09T10:15:00"
+        },
+        "output": {
+          "status": "booked",
+          "confirmation_number": "CW-4X8Q",
+          "appointment_id": "appt_6003",
+          "datetime": "2026-07-09T10:15:00",
+          "provider": "Dr. Patel"
+        }
+      },
+      {
+        "input": {
+          "patient_id": "p_1002",
+          "datetime": "2026-07-15T10:00:00"
+        },
+        "output": {
+          "error": "booking_failed",
+          "message": "That slot could not be booked. Please try another time."
+        }
+      },
+      {
+        "input": {
+          "patient_id": "p_1002",
+          "datetime": "2026-07-16T09:00:00"
+        },
+        "output": {
+          "error": "booking_failed",
+          "message": "The scheduling system could not complete the booking"
+        }
+      },
+      {
+        "input": {
+          "patient_id": "p_1003",
+          "datetime": "2026-07-08T09:00:00"
+        },
+        "output": {
+          "status": "booked",
+          "confirmation_number": "CW-6308",
+          "appointment_id": "appt_6308",
+          "datetime": "2026-07-08T09:00:00",
+          "provider": "Dr. Lee"
+        }
+      }
+    ]
+  },
+  {
+    "name": "cancel_appointment",
+    "description": "Cancel an existing appointment by its appointment_id (taken from the caller's record returned by lookup_patient). Call this ONLY after the caller has confirmed they want to cancel the appointment you read back. For a reschedule, call it only after the confirmed replacement booking succeeds. Never claim success unless it returns successfully; if a replacement is booked but this cancellation fails, disclose that the old appointment remains active and offer retry or desk follow-up.",
+    "freetext_params": [],
+    "mock_data": [
+      {
+        "input": {
+          "appointment_id": "appt_5001"
+        },
+        "output": {
+          "status": "cancelled",
+          "appointment_id": "appt_5001",
+          "datetime": "2026-07-02T14:15:00",
+          "provider": "Dr. Lee"
+        }
+      },
+      {
+        "input": {
+          "appointment_id": "appt_5003"
+        },
+        "output": {
+          "status": "cancelled",
+          "appointment_id": "appt_5003",
+          "datetime": "2026-07-05T09:00:00",
+          "provider": "Dr. Patel"
+        }
+      },
+      {
+        "input": {
+          "appointment_id": "appt_0000"
+        },
+        "output": {
+          "status": "not_found",
+          "message": "No appointment found with that id."
+        }
+      },
+      {
+        "input": {
+          "appointment_id": "appt_9119"
+        },
+        "output": {
+          "error": "cancel_failed",
+          "message": "Cancellation service is temporarily unavailable."
+        }
+      },
+      {
+        "input": {
+          "appointment_id": "appt_5010"
+        },
+        "output": {
+          "status": "cancelled",
+          "appointment_id": "appt_5010",
+          "datetime": "2026-07-05T09:00:00",
+          "provider": "Dr. Lee"
+        }
+      },
+      {
+        "input": {
+          "appointment_id": "appt_5011"
+        },
+        "output": {
+          "status": "cancelled",
+          "appointment_id": "appt_5011",
+          "datetime": "2026-07-06T11:30:00",
+          "provider": "Dr. Patel"
+        }
+      }
+    ]
+  }
+]

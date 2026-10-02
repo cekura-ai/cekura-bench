@@ -1,0 +1,9 @@
+agent_name = "cekura-benchmark-insurance"
+secret_set = "cekura-benchmark-insurance-secrets"
+agent_profile = "agent-1x"
+[krisp_viva]
+	audio_filter = "tel"
+
+[scaling]
+	min_agents = 5
+	max_agents = 5

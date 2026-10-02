@@ -5,7 +5,7 @@ data/
 *.log
 .venv/
 __pycache__/
-*.pyc
+*.py[cod]
 .pytest_cache/
 
 # Credentials. A service-account JSON is a private key in a file that looks like

@@ -1,0 +1,238 @@
+{
+  "model": {
+    "provider": "openai",
+    "model": "gpt-4.1-2025-04-14",
+    "temperature": 0,
+    "maxTokens": 1000,
+    "promptCacheKey": "vapi-cekura-benchmark",
+    "promptCacheRetention": "24h",
+    "messages": [],
+    "tools": []
+  },
+  "transcriber": {
+    "provider": "soniox",
+    "model": "stt-rt-v5",
+    "language": "en",
+    "customVocabulary": [
+      "Cedarwood Family Clinic",
+      "Dr. Lee",
+      "Dr. Patel",
+      "Dr. Okafor",
+      "Maria Gomez",
+      "James Carter",
+      "Wei Chen",
+      "Robert Lane",
+      "reschedule",
+      "annual checkup",
+      "follow-up",
+      "cleaning",
+      "consultation",
+      "ClearPath Medicare Advisors",
+      "Medicare",
+      "Medicare Advantage",
+      "Part D",
+      "Part A",
+      "Part B",
+      "Medicare Supplement",
+      "Medigap",
+      "Original Medicare",
+      "SHIP",
+      "State Health Insurance Assistance Program",
+      "Medicare.gov",
+      "scope of appointment",
+      "licensed agent",
+      "Robert Williams",
+      "Patricia Lee",
+      "Daniel Rivera",
+      "Rosa Rivera",
+      "James Miller",
+      "Heather Chen",
+      "Marcus Johnson",
+      "Linda Martinez",
+      "Ellen Parker",
+      "Grace Thompson",
+      "Victor Allen",
+      "IEP",
+      "AEP",
+      "OEP",
+      "SEP",
+      "SSDI",
+      "ESRD",
+      "HMO",
+      "PPO",
+      "premium",
+      "premiums",
+      "deductible",
+      "copay",
+      "enrollment",
+      "enrollment period",
+      "Social Security",
+      "beneficiary",
+      "Medicare card",
+      "licensed Medicare agent",
+      "member services"
+    ],
+    "contextGeneral": [
+      {
+        "key": "domain",
+        "value": "Healthcare"
+      },
+      {
+        "key": "topic",
+        "value": "Appointment scheduling and Medicare insurance intake phone calls"
+      },
+      {
+        "key": "task",
+        "value": "Capture caller names, phone numbers, dates, times, ZIP codes, and product choices accurately"
+      },
+      {
+        "key": "intent",
+        "value": "Booking, rescheduling, cancellation, Medicare plan routing and qualification"
+      }
+    ],
+    "maxEndpointDelayMs": 1500,
+    "fallbackPlan": {
+      "transcribers": [
+        {
+          "provider": "deepgram",
+          "model": "nova-3",
+          "language": "en",
+          "numerals": true
+        }
+      ]
+    }
+  },
+  "voice": {
+    "provider": "vapi",
+    "voiceId": "Clara",
+    "version": "2",
+    "cachingEnabled": true,
+    "chunkPlan": {
+      "enabled": true,
+      "minCharacters": 80,
+      "formatPlan": {
+        "enabled": true,
+        "numberToDigitsCutoff": 0,
+        "replacements": [
+          {
+            "type": "regex",
+            "regex": "\\bDr\\.",
+            "value": "Doctor",
+            "options": [
+              {
+                "type": "ignore-case",
+                "enabled": false
+              }
+            ]
+          },
+          {
+            "type": "regex",
+            "regex": "\\b([A-Za-z])([A-Za-z])-(\\d)([A-Za-z0-9])([A-Za-z0-9])([A-Za-z0-9])\\b",
+            "value": "$1. $2. $3. $4. $5. $6."
+          }
+        ]
+      }
+    }
+  },
+  "startSpeakingPlan": {
+    "waitSeconds": 0.4
+  },
+  "stopSpeakingPlan": {
+    "numWords": 2,
+    "backoffSeconds": 1,
+    "acknowledgementPhrases": [
+      "i understand",
+      "i see",
+      "i got it",
+      "i hear you",
+      "im listening",
+      "im with you",
+      "right",
+      "okay",
+      "ok",
+      "sure",
+      "alright",
+      "got it",
+      "understood",
+      "yeah",
+      "yes",
+      "uh-huh",
+      "mm-hmm",
+      "gotcha",
+      "mhmm",
+      "ah",
+      "yeah okay",
+      "yeah sure",
+      "thank you",
+      "thanks",
+      "thank you so much",
+      "thanks so much",
+      "got it thank you",
+      "okay thank you",
+      "okay great",
+      "okay perfect",
+      "sounds good",
+      "that sounds good",
+      "perfect",
+      "great",
+      "wonderful",
+      "youre welcome",
+      "you're welcome",
+      "no problem",
+      "that works",
+      "all right",
+      "alright thanks",
+      "okay thanks",
+      "got it thanks"
+    ]
+  },
+  "firstMessageInterruptionsEnabled": true,
+  "silenceTimeoutSeconds": 300,
+  "hooks": [
+    {
+      "on": "customer.speech.timeout",
+      "name": "silence-reask-1",
+      "options": {
+        "timeoutSeconds": 10,
+        "triggerMaxCount": 1,
+        "triggerResetMode": "onUserSpeech"
+      },
+      "do": [
+        {
+          "type": "say",
+          "exact": "Sorry, are you still there?"
+        }
+      ]
+    },
+    {
+      "on": "customer.speech.timeout",
+      "name": "silence-reask-2",
+      "options": {
+        "timeoutSeconds": 25,
+        "triggerMaxCount": 1,
+        "triggerResetMode": "onUserSpeech"
+      },
+      "do": [
+        {
+          "type": "say",
+          "exact": "Just checking in. Are you still with me?"
+        }
+      ]
+    }
+  ],
+  "maxDurationSeconds": 1800,
+  "backgroundSound": "off",
+  "backgroundSpeechDenoisingPlan": {
+    "smartDenoisingPlan": {
+      "enabled": true
+    }
+  },
+  "analysisPlan": {
+    "summaryPlan": {
+      "enabled": false
+    },
+    "successEvaluationPlan": {
+      "enabled": false
+    }
+  }
+}

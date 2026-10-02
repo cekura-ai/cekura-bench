@@ -1,0 +1,102 @@
+{
+  "conversation_config": {
+    "agent": {
+      "language": "en",
+      "prompt": {
+        "llm": "qwen35-397b-a17b",
+        "temperature": 0.2,
+        "max_tokens": 400,
+        "cascade_timeout_seconds": 3,
+        "backup_llm_config": {
+          "preference": "override",
+          "order": [
+            "gpt-5.6-sol"
+          ]
+        },
+        "ignore_default_personality": true,
+        "built_in_tools": {
+          "end_call": {
+            "type": "system",
+            "name": "end_call",
+            "description": "End the phone call. You MUST call this immediately after Step 5 close: once the caller confirms they have nothing else and you have given a brief goodbye. Do not keep the line open after sign-off — call this tool instead of waiting for the caller to hang up.",
+            "params": {
+              "system_tool_type": "end_call"
+            }
+          },
+          "language_detection": null,
+          "transfer_to_agent": null,
+          "transfer_to_number": null,
+          "skip_turn": null
+        }
+      }
+    },
+    "tts": {
+      "voice_id": "EXAVITQu4vr4xnSDxMaL",
+      "model_id": "eleven_flash_v2",
+      "stability": 0.65,
+      "similarity_boost": 0.75,
+      "speed": 0.95
+    },
+    "asr": {
+      "quality": "high",
+      "provider": "scribe_realtime",
+      "user_input_audio_format": "pcm_16000",
+      "keywords": [
+        "Cedarwood",
+        "Patel",
+        "Okafor",
+        "Lee",
+        "Gomez",
+        "Chen",
+        "Medicare",
+        "Medicare Advantage",
+        "confirmation",
+        "appointment",
+        "Grace",
+        "Thompson",
+        "Victor",
+        "Allen",
+        "Daniel",
+        "Rivera",
+        "Rosa",
+        "Maria",
+        "Marcus",
+        "Johnson",
+        "member services",
+        "claim",
+        "billing"
+      ]
+    },
+    "turn": {
+      "soft_timeout_config": {
+        "timeout_seconds": 2.5,
+        "message": "One moment while I check that for you.",
+        "use_llm_generated_message": false,
+        "randomize_fillers": false,
+        "max_soft_timeouts_per_generation": 1
+      }
+    },
+    "vad": {
+      "background_voice_detection": true
+    }
+  },
+  "platform_settings": {
+    "summary_language": "en",
+    "call_limits": {
+      "agent_concurrency_limit": 50,
+      "daily_limit": 5000,
+      "bursting_enabled": true
+    },
+    "guardrails": {
+      "version": "1",
+      "focus": {
+        "is_enabled": true
+      }
+    },
+    "privacy": {
+      "conversation_history_redaction": {
+        "enabled": false
+      }
+    }
+  }
+}

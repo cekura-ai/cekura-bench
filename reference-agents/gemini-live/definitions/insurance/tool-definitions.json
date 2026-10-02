@@ -1,0 +1,345 @@
+[
+  {
+    "name": "record_medicare_permissions",
+    "description": "Record the caller's explicit permission for the Medicare intake flow. Call this only after the caller gives a clear yes to contact permission and to sharing their safe qualification information with a licensed agent. Use it to record the product-scope categories the caller agreed may be discussed by a licensed agent. Do not call it if the caller refuses, is unsure, or has not answered. Recording the call itself is mandatory and is not optional consent. Include an optional argument only when a real, relevant value exists; otherwise omit it. Never send null for an optional argument.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "caller_name": {
+          "type": "string",
+          "description": "The name of the person speaking on the call."
+        },
+        "beneficiary_name": {
+          "type": "string",
+          "description": "The Medicare beneficiary's name if different from the caller. Omit when the caller is the beneficiary or the name is not known."
+        },
+        "caller_relationship": {
+          "type": "string",
+          "enum": [
+            "self",
+            "spouse",
+            "adult_child",
+            "caregiver",
+            "other"
+          ],
+          "description": "The caller's relationship to the Medicare beneficiary."
+        },
+        "callback_phone": {
+          "type": "string",
+          "description": "The best callback number for the caller as exactly 10 digits, with no spaces, hyphens, parentheses, country code, or plus sign. Example: 2125550199."
+        },
+        "contact_consent": {
+          "type": "boolean",
+          "description": "True only when the caller explicitly agreed to be contacted about this Medicare inquiry."
+        },
+        "data_sharing_consent": {
+          "type": "boolean",
+          "description": "True only when the caller explicitly agreed that safe qualification information may be shared with a licensed ClearPath Medicare agent."
+        },
+        "scope_of_appointment_product_types": {
+          "type": "array",
+          "description": "Product categories the caller agreed may be discussed by a licensed agent. Include only categories the caller explicitly agreed to discuss.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "medicare_advantage",
+              "part_d",
+              "medicare_supplement"
+            ]
+          }
+        },
+        "consent_statement": {
+          "type": "string",
+          "description": "Short natural-language summary of the caller's explicit yes, such as 'Caller said yes to contact and sharing with a licensed agent.'"
+        }
+      },
+      "required": [
+        "caller_name",
+        "caller_relationship",
+        "callback_phone",
+        "contact_consent",
+        "data_sharing_consent",
+        "scope_of_appointment_product_types",
+        "consent_statement"
+      ]
+    }
+  },
+  {
+    "name": "save_medicare_qualification",
+    "description": "Create or update the safe Medicare qualification record after consent. For ordinary sales, plan-review, or callback intake, send only known safe routing fields. Caregiver exception: when the beneficiary is absent and authority is pending, send only caller name, beneficiary name, relationship, caller callback phone, consent_id, intake_intent caregiver_inquiry, and stated product interest. Do not ask for or send state, ZIP, age band, Part A/B status, current coverage, election window, or plan preferences on that limited record, even if volunteered. Never send SSN, Medicare Beneficiary Identifier, full date of birth, diagnoses, medications, income, claims, or payment data. Omit unknown optional arguments and never send null.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "consent_id": {
+          "type": "string",
+          "description": "The consent_id returned by record_medicare_permissions. Never invent this value."
+        },
+        "caller_name": {
+          "type": "string",
+          "description": "The name of the person speaking on the call."
+        },
+        "beneficiary_name": {
+          "type": "string",
+          "description": "The Medicare beneficiary's name if different from the caller. Omit when the caller is the beneficiary or the name is not known."
+        },
+        "caller_relationship": {
+          "type": "string",
+          "enum": [
+            "self",
+            "spouse",
+            "adult_child",
+            "caregiver",
+            "other"
+          ],
+          "description": "The caller's relationship to the Medicare beneficiary."
+        },
+        "callback_phone": {
+          "type": "string",
+          "description": "The best callback number for the caller as exactly 10 digits, with no spaces, hyphens, parentheses, country code, or plus sign. Example: 2125550199."
+        },
+        "state": {
+          "type": "string",
+          "description": "Supply the two-letter US state abbreviation only when it is known. Omit this argument when unknown; never send null."
+        },
+        "zip_code": {
+          "type": "string",
+          "description": "Supply the five-digit ZIP code only when it is known. Omit this argument when unknown; never send null."
+        },
+        "age_band": {
+          "type": "string",
+          "enum": [
+            "turning_65",
+            "already_medicare_age",
+            "under_65_with_medicare_started",
+            "under_65_medicare_status_unknown",
+            "not_yet_on_medicare",
+            "unknown"
+          ],
+          "description": "High-level age or Medicare timing category. Do not use a full date of birth. Do not infer Medicare eligibility from SSDI, private long-term disability, disability benefits, ESRD, ALS, or being under 65 alone; use the caller's stated Part A/B status and whether Medicare has started."
+        },
+        "has_medicare_part_a": {
+          "type": "string",
+          "enum": [
+            "yes",
+            "no",
+            "unknown"
+          ],
+          "description": "Whether the caller says the beneficiary has Medicare Part A. Use the caller's statement as an intake routing field, not as a legal eligibility determination."
+        },
+        "has_medicare_part_b": {
+          "type": "string",
+          "enum": [
+            "yes",
+            "no",
+            "unknown"
+          ],
+          "description": "Whether the caller says the beneficiary has Medicare Part B. Use the caller's statement as an intake routing field, not as a legal eligibility determination."
+        },
+        "current_coverage": {
+          "type": "string",
+          "enum": [
+            "original_medicare",
+            "medicare_advantage",
+            "part_d_only",
+            "medicare_supplement",
+            "employer_or_medicaid",
+            "none_yet",
+            "unknown"
+          ],
+          "description": "The caller's current coverage category, stated at a high level."
+        },
+        "election_window": {
+          "type": "string",
+          "enum": [
+            "aep",
+            "oep",
+            "iep",
+            "sep_general",
+            "not_sure",
+            "none"
+          ],
+          "description": "The general enrollment window or qualifying-event category stated by the caller. Do not determine eligibility."
+        },
+        "product_interest": {
+          "type": "string",
+          "enum": [
+            "medicare_advantage",
+            "part_d",
+            "medicare_supplement",
+            "multiple",
+            "unknown"
+          ],
+          "description": "The caller's stated product category interest. Do not infer a recommendation."
+        },
+        "intake_intent": {
+          "type": "string",
+          "enum": [
+            "new_shopping",
+            "plan_review",
+            "switching",
+            "callback_only",
+            "caregiver_inquiry",
+            "non_qualified"
+          ],
+          "description": "The safe qualification intent for this record. Qualified or routing-ready means the caller provided enough stated safe fields for the requested intake route. For Medicare Advantage and Medicare Supplement, that normally means stated Part A and Part B; for standalone Part D, stated Part A or Part B can be enough. non_qualified means not routing-ready for a licensed sales handoff based on stated Medicare status or missing safe fields; it is not a legal eligibility determination."
+        },
+        "requested_preferences": {
+          "type": "string",
+          "description": "General non-sensitive preferences the caller stated, such as lower premium, dental, vision, or keeping a doctor. Do not include drug names, diagnoses, or claim facts."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Concise non-sensitive routing notes. Do not include SSN, Medicare Beneficiary Identifier, full DOB, diagnoses, medications, income details, claim details, or payment data."
+        }
+      },
+      "required": [
+        "consent_id",
+        "caller_name",
+        "callback_phone",
+        "product_interest",
+        "intake_intent"
+      ]
+    }
+  },
+  {
+    "name": "route_medicare_call",
+    "description": "Determines and records the caller's next operational disposition: a licensed-agent transfer, callback, member-services referral, caregiver follow-up, or public-resource redirect. Call whenever the next step must be resolved: after sales qualification, immediately for member service, or directly for a public-resource-only redirect. For member services send only route_reason member_services and service_issue_type. For a sales or plan-review route, send service_issue_type not_applicable and availability_context normal unless the call establishes after-hours or all agents busy. For a caller clearly not yet on Medicare who only needs enrollment/status help, use route_reason non_qualified and omit lead and identity/location fields. Caregiver exception: when the beneficiary is absent and authority is pending, send the returned lead_id, route_reason caregiver_authority_needed, stated product_interest, service_issue_type not_applicable, and availability_context normal; omit state and ZIP. Omit unknown optional arguments; never send null or invent an ID. transfer_available indicates whether the selected disposition offers a live transfer; false can still be a successful callback or redirect outcome.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "route_reason": {
+          "type": "string",
+          "enum": [
+            "sales_or_plan_review",
+            "member_services",
+            "non_qualified",
+            "no_consent",
+            "caregiver_authority_needed"
+          ],
+          "description": "The reason this call needs routing."
+        },
+        "lead_id": {
+          "type": "string",
+          "description": "Supply lead_id only if save_medicare_qualification returned one for this route. Omit it otherwise; never send null or invent a value."
+        },
+        "state": {
+          "type": "string",
+          "description": "Supply state only when it is known and relevant to this route. Omit it otherwise; never send null."
+        },
+        "zip_code": {
+          "type": "string",
+          "description": "Supply zip_code only when it is known and relevant to this route. Omit it otherwise; never send null."
+        },
+        "product_interest": {
+          "type": "string",
+          "enum": [
+            "medicare_advantage",
+            "part_d",
+            "medicare_supplement",
+            "multiple",
+            "unknown"
+          ],
+          "description": "Supply product_interest only when the caller stated it and it is relevant to this route. Omit it otherwise; never send null."
+        },
+        "service_issue_type": {
+          "type": "string",
+          "enum": [
+            "claim",
+            "billing",
+            "id_card",
+            "address_change",
+            "provider_directory",
+            "prior_authorization",
+            "other",
+            "not_applicable"
+          ],
+          "description": "Supply the known member-services issue type for a member-services route. Supply not_applicable for sales, plan-review, non-qualified, or caregiver-authority routes. Omit it only when neither applies; never send null."
+        },
+        "availability_context": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "after_hours",
+            "all_busy",
+            "unknown"
+          ],
+          "description": "Supply availability_context for sales, plan-review, non-qualified, and caregiver-authority routes. Use normal unless the caller or current call context establishes after-hours or all agents busy. Omit it for member-services routes; never send null. The route result is still the source of truth."
+        }
+      },
+      "required": [
+        "route_reason"
+      ]
+    }
+  },
+  {
+    "name": "create_handoff_summary",
+    "description": "Write the structured handoff or closeout record before presenting a transfer, callback, service route, or consent closeout as complete. Call when a handoff record is needed, a callback is expected, member services is the destination, or any consent closeout, including refusal, must be recorded. For summary_type no_consent_close, call even when permission is denied: this is a minimal internal compliance disposition, not a sales handoff or data-sharing action. Refusal blocks permission, qualification, routing, contact, and transfer, but not this record; include only refusal status and non-personal compliance context. Do not call for a public-resource-only non-qualified redirect; route_medicare_call is its complete record. Otherwise include only safe facts, routing outcome, consent/SOA status, open issues, and compliance notes. Set fields_collected to the safe fields actually obtained, or an empty list when none were collected; make compliance_notes a concise non-sensitive record of the applicable boundaries. For an absent-beneficiary caregiver, omit beneficiary qualification facts. Never include sensitive or claim details. Omit unknown optional arguments; never send null.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "lead_id": {
+          "type": "string",
+          "description": "Supply lead_id only if save_medicare_qualification returned one for this handoff. Omit it otherwise; never send null."
+        },
+        "consent_id": {
+          "type": "string",
+          "description": "Supply consent_id only if record_medicare_permissions returned one for this handoff. Omit it otherwise; never send null."
+        },
+        "route_id": {
+          "type": "string",
+          "description": "Supply route_id only if route_medicare_call returned one for this handoff. Omit it otherwise; never send null."
+        },
+        "summary_type": {
+          "type": "string",
+          "enum": [
+            "warm_transfer",
+            "callback",
+            "member_services_redirect",
+            "non_qualified_redirect",
+            "no_consent_close",
+            "caregiver_follow_up"
+          ],
+          "description": "The final handoff or closeout type."
+        },
+        "route_status": {
+          "type": "string",
+          "description": "The route_status returned by route_medicare_call, or a clear closeout status if no route was allowed."
+        },
+        "destination": {
+          "type": "string",
+          "description": "Caller-friendly destination, queue, callback path, or public resource. Use the route result when available."
+        },
+        "caller_name": {
+          "type": "string",
+          "description": "Supply caller_name only when it is known and relevant to the handoff. Omit it otherwise; never send null."
+        },
+        "beneficiary_name": {
+          "type": "string",
+          "description": "The beneficiary's name if different from the caller and safe to include."
+        },
+        "fields_collected": {
+          "type": "array",
+          "description": "Safe fields collected for handoff, such as state, ZIP, product interest, Part A/B status, age band, current coverage category, and callback phone.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "open_items": {
+          "type": "string",
+          "description": "Open non-sensitive items for the licensed agent or service team, such as caller was unsure about Part B or service issue still needs member services."
+        },
+        "compliance_notes": {
+          "type": "string",
+          "description": "Concise compliance notes such as disclaimer delivered, consent captured, advice declined, no quote given, or sensitive data not retained."
+        }
+      },
+      "required": [
+        "summary_type",
+        "route_status",
+        "destination",
+        "fields_collected",
+        "compliance_notes"
+      ]
+    }
+  }
+]

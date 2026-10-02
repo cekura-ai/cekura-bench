@@ -1,0 +1,31 @@
+{
+  "provider": "deepgram",
+  "endpoint": "wss://api.deepgram.com/v1/listen",
+  "model": "nova-3",
+  "version": "2025-04-17.21547",
+  "expected_model_uuid": "40bd3654-e622-47c4-a111-63a61b23bfe8",
+  "model_catalog_checked_on": "2026-09-12",
+  "model_catalog_source": "https://api.deepgram.com/v1/models",
+  "language": "en-US",
+  "finalize_timeout_seconds": 5,
+  "close_timeout_seconds": 5,
+  "query": {
+    "encoding": "linear16",
+    "sample_rate": 16000,
+    "channels": 1,
+    "interim_results": true,
+    "endpointing": false,
+    "smart_format": false,
+    "punctuate": true
+  },
+  "pricing": {
+    "usd_per_minute": 0.0048,
+    "regular_usd_per_minute": 0.0077,
+    "plan": "Pay As You Go, Nova-3 Monolingual Streaming, current promotional list rate",
+    "checked_on": "2026-09-12",
+    "source": "https://deepgram.com/pricing",
+    "billing_basis": "submitted audio seconds including appended silence; estimate, not an invoice",
+    "model_improvement_opt_out": false
+  },
+  "model_id": "deepgram-nova-3"
+}

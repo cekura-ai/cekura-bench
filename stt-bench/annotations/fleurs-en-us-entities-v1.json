@@ -1,0 +1,3560 @@
+{
+  "schema_version": 1,
+  "source_tsv_sha256": "74c046239374deeb60fa63f258f907388093a32bcaa3140965f70ef05c79f7ca",
+  "reviewer": "Codex; review of all 350 distinct supplied reference texts before expanded provider run; not human audio verification",
+  "policy": {
+    "name": "strict-reference-entities-v2",
+    "categories": [
+      "number",
+      "date",
+      "phone",
+      "email",
+      "amount",
+      "spelled_sequence"
+    ],
+    "number": "Explicit cardinal, ordinal, fraction, percentage, numeric identifier, clock time or order-of-magnitude quantity. Exclude indefinite articles, discourse markers and non-quantitative one-of expressions.",
+    "date": "Explicit calendar year, decade, century, named month/day or calendar date; relative yesterday/today/last week excluded.",
+    "amount": "Currency amount including written currency name or symbol; not separately counted as number.",
+    "spelled_sequence": "Explicit dictated sequence of letters; ordinary acronyms and abbreviations alone do not establish a spelling task.",
+    "comparison": "Case-sensitive; preserve punctuation/digits/spelling; ignore whitespace only; no semantic equivalences or WER normalization."
+  },
+  "records": [
+    {
+      "source_id": "1660",
+      "reference_sha256": "a81391740174adf0516811f524207656b3bbb894276376ac1fec0b5fb0722f26",
+      "reference": "Romanticism had a large element of cultural determinism, drawn from writers such as Goethe, Fichte, and Schlegel.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1661",
+      "reference_sha256": "867cab1e0f4044bf307a4a0fbf39e76b85c052df127244d66f779e00be3b4941",
+      "reference": "He did not set a figure for the cuts, saying they will be made based on China's economic output.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1662",
+      "reference_sha256": "5f02d8c4cc7fccc8b1dab61bb6b9ccb6ad5c5d3ddd681063390f098d848d5fc2",
+      "reference": "Alloys are basically a mixture of two or more metals. Don't forget that there are many elements on the periodic table.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "two",
+          "start": 34,
+          "end": 37
+        }
+      ]
+    },
+    {
+      "source_id": "1663",
+      "reference_sha256": "6347292e3f3fa98ce1f0feb1c20e56b259db806a47ed1a1cc4dd5bd4c14782cd",
+      "reference": "Cochamó Valley - Chile's premier climbing destination, known as the Yosemite of South America, with a variety of granite big walls and crags.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1664",
+      "reference_sha256": "362a06cedd0b60f50abd59f98f4bc38d39c5fe54d8e8a9113d29b5c0efa355fb",
+      "reference": "Swirl the two dry powders together and then, with clean wet hands, squeeze them into a ball.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "two",
+          "start": 10,
+          "end": 13
+        }
+      ]
+    },
+    {
+      "source_id": "1665",
+      "reference_sha256": "b73f2458cd2eb42257fbe4597d59bb2e1e056e6f17d39f2600745342032aeda3",
+      "reference": "The document, according to the leak, will refer to the borders dispute, which Palestine wants based on the borders before the 1967 Mideast War.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "1967",
+          "start": 126,
+          "end": 130
+        }
+      ]
+    },
+    {
+      "source_id": "1666",
+      "reference_sha256": "5a20dfd0e38b00f4ddeb0086147689822ad22f34e619e1244f712ac16741ee44",
+      "reference": "You may also wish to consult the advice of governments other than your own, but their advice is designed for their citizens.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1667",
+      "reference_sha256": "c8e3490106a3406ce2708e843773e31be740d8401de84c7d1d9f93357556d475",
+      "reference": "Generally speaking, two behaviors can emerge as managers begin to lead their former peers. One end of the spectrum is trying to remain “one of the guys” (or gals).",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "two",
+          "start": 20,
+          "end": 23
+        }
+      ]
+    },
+    {
+      "source_id": "1668",
+      "reference_sha256": "a4323a4d417c1169268dd32b23c41e458762b093ad11a1a04f2bfffe772af3f1",
+      "reference": "It may also be beneficial for one to buy a Wild Card, which provides entry to either selections of parks in South Africa or all of the South African National Parks.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1669",
+      "reference_sha256": "889febee2b3eed379bcbde631bdfc92ebca7582681e3354860c32163b7209d61",
+      "reference": "Police superintendent Chandra Shekhar Solanki said the accused appeared in court with covered faces.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1670",
+      "reference_sha256": "2493355ce14b68b8fec5ee7390070bd06f628e4b55f3bf85c46a3e5c3afaa251",
+      "reference": "Their thermal behavior is not as steady as large caves on Earth that often maintain a fairly constant temperature, but it is consistent with these being deep holes in the ground,\" said Glen Cushing of the United States Geological Survey (USGS) Astrogeology Team and of Northern Arizona University located in Flagstaff, Arizona.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1671",
+      "reference_sha256": "1dbef675126ffc91d4daadbb668e5859e5944a8f686114d0817dec1f7910894d",
+      "reference": "Congress began funding the obscenity initiative in fiscal 2005 and specified that the FBI must devote 10 agents to adult pornography.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "2005",
+          "start": 58,
+          "end": 62
+        },
+        {
+          "type": "number",
+          "text": "10",
+          "start": 102,
+          "end": 104
+        }
+      ]
+    },
+    {
+      "source_id": "1672",
+      "reference_sha256": "01d54e9527eceff98429a94e7399e1769d687e3679ab9cb2e95c794b8d569868",
+      "reference": "Be careful not to allow fabric to become too hot (which can cause shrinkage, or in extreme cases, scorch).",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1673",
+      "reference_sha256": "31cf70d353861b70fb89e382109810ac2c9ada6b8cfcc1ad5f833dbd37875e5c",
+      "reference": "During the Revolutionary War, the thirteen states first formed a weak central government—with the Congress being its only component—under the Articles of Confederation.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "thirteen",
+          "start": 34,
+          "end": 42
+        }
+      ]
+    },
+    {
+      "source_id": "1674",
+      "reference_sha256": "5860a3b0c690df5284c8a1a54a18ff64d52633c4ed464de668b600e3b620a98a",
+      "reference": "In some areas boiling water for a minute is enough, in others several minutes are needed.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1675",
+      "reference_sha256": "63d31e54c66a437f7f103d1ea1438dbb719573f49df77c53ed2c250698821520",
+      "reference": "All nouns, alongside the word Sie for you, always begin with a capital letter, even in the middle of a sentence.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1676",
+      "reference_sha256": "2443b0eb3e5cf3384aba601bd83eeaae0429a174f5c32b778f6bc1d329e4dc64",
+      "reference": "As with all South African National Parks, there are daily conservation and entry fees for the park.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1677",
+      "reference_sha256": "f82b6177cdc6fec2b9294eb3e8c90aacc673f34916962fd759be622aaca52102",
+      "reference": "Today, the only insects that cannot fold back their wings are dragon flies and mayflies.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1678",
+      "reference_sha256": "5c51f6eebdf5d0377a2e52a201135f72cb31dbbed2de00e1621400c806fb937f",
+      "reference": "Oliver Sacks, in his paper The President's Speech, indicated how people who are unable to understand speech because of brain damage are nevertheless able to assess sincerity accurately.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1679",
+      "reference_sha256": "776e89b2b222bc2ea3a0cc0294ad3a082774ba76a599eb79467353dc0c08005b",
+      "reference": "Aerosmith have cancelled their remaining concerts on their tour.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1680",
+      "reference_sha256": "af6d7f1acd4da04299ac19e6727705241e7c7e6fee0acd6f44524cda8c03bc30",
+      "reference": "A well rounded athlete, the tiger can climb (though not well), swim, leap great distances and pull with five times the force of a strong human.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "five",
+          "start": 104,
+          "end": 108
+        }
+      ]
+    },
+    {
+      "source_id": "1681",
+      "reference_sha256": "85062de6b4ca1f1ca39c9a2478ed25c2a202f7249e9fb184c2bfe78d67f8816e",
+      "reference": "It isn’t alone though, experimentation, and an experiment is a test that is used to eliminate one or more of the possible hypotheses, asking questions, and making observations also guide scientific research.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "one",
+          "start": 94,
+          "end": 97
+        }
+      ]
+    },
+    {
+      "source_id": "1682",
+      "reference_sha256": "13e936a5941795329e58eb4f086a8c5e601d1fb077880e3f97ba569a8cf35676",
+      "reference": "While no one knows for certain who wrote it, it is known that early in its life, the large parchment document (it measures 29¾ inches by 24½ inches) was rolled up for storage.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "29¾",
+          "start": 123,
+          "end": 126
+        },
+        {
+          "type": "number",
+          "text": "24½",
+          "start": 137,
+          "end": 140
+        }
+      ]
+    },
+    {
+      "source_id": "1683",
+      "reference_sha256": "7c44a1260f81facdc8be499b88b94a7a5161c9cf20efd737ef29d34db7b9815c",
+      "reference": "There are still many men and women alive who survived their time here, and many more who had loved ones who were murdered or worked to death there, Jews and non-Jews alike.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1684",
+      "reference_sha256": "a7b1d118b72c6fd55665fd5d6e1b412a4350b6fce96f758ff07b911c00ef297f",
+      "reference": "Apia is the capital of Samoa. The town is on the island of Upolu and has a population of just under 40,000.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "40,000",
+          "start": 100,
+          "end": 106
+        }
+      ]
+    },
+    {
+      "source_id": "1685",
+      "reference_sha256": "b09f58412ea469ab517352f153a85b5c54acedc50c28c0c009dc77c167d44805",
+      "reference": "For example, the most common still image photography format in the world is 35mm, which was the dominant film size at the close of the analog film era.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "35",
+          "start": 76,
+          "end": 78
+        }
+      ]
+    },
+    {
+      "source_id": "1686",
+      "reference_sha256": "177db35a7b55fc67fca2255dccad061d89462a0f54d30c9813dbc0ab64a0a918",
+      "reference": "As a result, the process of an organization working together to overcome an obstacle can lead to a new innovative process to serve the customer's need.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1687",
+      "reference_sha256": "a1722014df8da956c072ca131bad91dc97b3b8c9a2b7c4d1222360c64a224a50",
+      "reference": "Segregation and recombination shuffle variation back and forth between the two pools with each generation.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "two",
+          "start": 75,
+          "end": 78
+        }
+      ]
+    },
+    {
+      "source_id": "1688",
+      "reference_sha256": "09e19e02827293b592a7cb960f0accae84ff30788a4941a75922e8e8153fe633",
+      "reference": "The job of navies has traditionally been to ensure that your country maintains the ability to move your people and goods, while at the same time, interfering with your enemy's ability to move his people and goods.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1689",
+      "reference_sha256": "0c954b6fbbfcbfc153479604254b5d42fea0118735e168949a145cd1a2e6c742",
+      "reference": "Europe is a continent that is relatively small but with many independent countries. Under normal circumstances, travelling through multiple countries would mean having to go through visa applications and passport control multiple times.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1690",
+      "reference_sha256": "ea76fad8fb36a19155df834fd9863aebe1ca82db0fb298abdd11ecc6423c3d8a",
+      "reference": "We agree with the USOC's statement that the interests of our athletes and clubs, and their sport, may be better served by moving forward with meaningful change within our organization, rather than decertification.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1691",
+      "reference_sha256": "bfe53519f88b3fcc8f1e2b7bd8d49ebd3f26e6b1823175a2c476ffd1918ce287",
+      "reference": "On some routes, the larger companies have their own planes, but for other routes and smaller firms there was a problem.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1692",
+      "reference_sha256": "020c6e848b771be2cd87451fd85127fe53b5e9249c1921d772f907c059be9bd5",
+      "reference": "According to Japan's nuclear agency, radioactive caesium and iodine has been identified at the plant.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1693",
+      "reference_sha256": "97d0cd49215e450671bba6ca96736eb38143a2ddeab2a8536ec09e47a0b334e9",
+      "reference": "But, after losing the captain's wicket India only made 36 runs loosing 7 wickets to end the innings.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "36",
+          "start": 55,
+          "end": 57
+        },
+        {
+          "type": "number",
+          "text": "7",
+          "start": 71,
+          "end": 72
+        }
+      ]
+    },
+    {
+      "source_id": "1694",
+      "reference_sha256": "2d48b4ab47e32fd0ee238ef4edfad49eeb1dda8484e52e1155343ea4e1d42c9b",
+      "reference": "Children are placed in Foster Care for a wide variety of reasons that range from neglect, to abuse, and even to extortion.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1695",
+      "reference_sha256": "a98d9a156b952e36b63b9d26bbc4a7776baa764b323e785ebbdc4015890e042e",
+      "reference": "A simple popular dinner, especially during the summer, is the Pa amb Oli: Bread with olive oil, tomato, and any available condiments such as cheese, tunafish, etc.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1696",
+      "reference_sha256": "32ff6984fadec9566b940c4b19039f6f7315495e3181e281b5378b528453d2e2",
+      "reference": "The two compounds react with one another to form crystals that may block kidney function, researchers at the university said.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "two",
+          "start": 4,
+          "end": 7
+        }
+      ]
+    },
+    {
+      "source_id": "1697",
+      "reference_sha256": "5e7ffde7f139f869e46aaa9215dec83be26697e828dc7cf89920075b89f68a62",
+      "reference": "He has been unable to take the drugs needed to overcome his pain as they are banned from the Games.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1698",
+      "reference_sha256": "1c8094471f8c3ee2c580d73c0e80dab185fd260e03b08a96957a2faa79e3f8a3",
+      "reference": "Everything in the Universe is made of matter. All matter is made of tiny particles called atoms.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1699",
+      "reference_sha256": "a41a60a3aaaa0b5d4e5e4292e3b3e5481eb92174fa77b660ca431c64ed399438",
+      "reference": "Bishkek was described as sinking into a state of \"anarchy\" by one observer, as gangs of people roamed the streets and plundered stores of consumer goods.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "one",
+          "start": 62,
+          "end": 65
+        }
+      ]
+    },
+    {
+      "source_id": "1700",
+      "reference_sha256": "3a62902ee3b8a4bbaa011c54465cc01a92a4b3d6a1e38edc58256142687c83fa",
+      "reference": "It is thinner under the maria and thicker under the highlands.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1701",
+      "reference_sha256": "98ca00e387962c8ea7620b6e1e3402383aba677426d5ae7bfa22d36c1a11748c",
+      "reference": "Goats seem to have been first domesticated roughly 10,000 years ago in the Zagros Mountains of Iran.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "10,000",
+          "start": 51,
+          "end": 57
+        }
+      ]
+    },
+    {
+      "source_id": "1702",
+      "reference_sha256": "5440b882cd433696533494d5663a01cb2832595b589aab53abd2164936cdaa88",
+      "reference": "In just two weeks the Americans and Free French forces had liberated southern France and were turning towards Germany.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "two",
+          "start": 8,
+          "end": 11
+        }
+      ]
+    },
+    {
+      "source_id": "1703",
+      "reference_sha256": "5460c4bc73b6587e583c74a639225781889a30c748f116827116d32ffdc00121",
+      "reference": "Martelly swore in a new Provisional Electoral Council (CEP) of nine members yesterday.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "nine",
+          "start": 63,
+          "end": 67
+        }
+      ]
+    },
+    {
+      "source_id": "1704",
+      "reference_sha256": "e389735a41f4b362a5884933f9a82308d5a441f702081ed4d4136764a773bc4b",
+      "reference": "In 1990, it was added to the list of world heritage sites in danger, due to the threat of desert sands.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "1990",
+          "start": 3,
+          "end": 7
+        }
+      ]
+    },
+    {
+      "source_id": "1705",
+      "reference_sha256": "a38ab305db3edb8723a30c671eb1c83d03733aebc0439f64880c63582ec31cfc",
+      "reference": "On 15 August 1940, the Allies invaded southern France, the invasion was called \"Operation Dragoon\".",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "15 August 1940",
+          "start": 3,
+          "end": 17
+        }
+      ]
+    },
+    {
+      "source_id": "1706",
+      "reference_sha256": "6c721bbc47e2665307330b3fc3730485c8e6fbc20d6206ea310b926c282f2f35",
+      "reference": "More traditional churches often hold an Easter Vigil on Saturday night during the Easter weekend, with the congregations often breaking into celebration at the stroke of midnight to celebrate Christ's resurrection.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "Saturday",
+          "start": 56,
+          "end": 64
+        }
+      ]
+    },
+    {
+      "source_id": "1707",
+      "reference_sha256": "a65e4725dfbfb48db5ecb236e49372359d4bbc858676af82e45ca87940797ca9",
+      "reference": "It is one of the main attractions of South Africa and it is considered the flagship of South African National Parks (SANParks).",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1708",
+      "reference_sha256": "96318520c2b0214bc1dbfa572168c2df79d06feec3fa6f7b20feb9f5badb103e",
+      "reference": "Huhne has resigned and he will be replaced in the Cabinet by Ed Davey MP. Norman Lamb MP is expected to take the Business Minister job Davey is vacating.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1709",
+      "reference_sha256": "8169453746885fc9bbada09f654849c573e8f546d7ee655e8ad6fbdd1f931f60",
+      "reference": "The Report is highly critical of almost every aspect of the present policy of the Executive towards Iraq and it urges an immediate change of direction.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1710",
+      "reference_sha256": "f89bc4947ce0684ce7cabe308ace70da8c00a4b8380c8f25e230fa6e6f6d4c07",
+      "reference": "Last week, METI announced that Apple had informed it of 34 additional overheating incidents, which the company called \"non-serious.\"",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "34",
+          "start": 56,
+          "end": 58
+        }
+      ]
+    },
+    {
+      "source_id": "1711",
+      "reference_sha256": "d46a67bc271c30952a74ddd6aaf58088d7281e0b6beef9ae3b72d577546efea0",
+      "reference": "These theories look at what it is about certain people that make them want the things that they do and what things in their environment will make them do or not do certain things.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1712",
+      "reference_sha256": "00098115ff1aaacf6158a3096159c2b75297a882ba4720342c5b93d17a13e617",
+      "reference": "Since 1966 the Sundarbans have been a wildlife sanctuary, and it is estimated that there are now 400 Royal Bengal tigers and about 30,000 spotted deer in the area.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "1966",
+          "start": 6,
+          "end": 10
+        },
+        {
+          "type": "number",
+          "text": "400",
+          "start": 97,
+          "end": 100
+        },
+        {
+          "type": "number",
+          "text": "30,000",
+          "start": 131,
+          "end": 137
+        }
+      ]
+    },
+    {
+      "source_id": "1713",
+      "reference_sha256": "f9157e4597d56a968dcb4d0e8a6e2981d32f290b5350e131fc6a182c273b556c",
+      "reference": "While Goma is reasonably safe, any visits outside of Goma should be researched to understand the state of the fighting that persists in the North Kivu province.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1714",
+      "reference_sha256": "8b50315c17d25a5e46fd128f9ab873fbf357b0af2108ffc0148a751c208ae83f",
+      "reference": "The satellite was sent into space by a rocket. Scientists use telescopes in space because the Earth’s atmosphere distorts some of our light and view.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1715",
+      "reference_sha256": "7e97449cd17594bcf420e82449a12ef2e2d1cebd2c87b5677f368d98ee903616",
+      "reference": "Regular announcements in the Metro are made only in Catalan, but unplanned disruptions are announced by an automated system in a wide variety of languages including Spanish, English, French, Arabic and Japanese.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1716",
+      "reference_sha256": "f40592d7c6aad922106e6df8dbbebbebd5da2fd5111cf4fc7d3f573246a0ca00",
+      "reference": "Entertainment news website TMZ understands the photographer stopped his vehicle on the other side of Sepulveda Boulevard and attempted to take pictures of the police stop before crossing the road and continuing, prompting the California Highway Patrol police officer conducting the traffic stop to order him back across, twice.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "twice",
+          "start": 321,
+          "end": 326
+        }
+      ]
+    },
+    {
+      "source_id": "1717",
+      "reference_sha256": "81f10b099bac91a165b8a11f6092333420c2be8fb4bc888057cea158774494cb",
+      "reference": "Due to the underwater topology the return flow is concentrated at a few deeper sections, and a fast current to deep water may form there.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1718",
+      "reference_sha256": "bf7655b9b83514de40403168172f0a209b206fec0c2c54286fb578b0d4773e78",
+      "reference": "There is no universal definition for which manufactured items are antiques. Some tax agencies define goods older than 100 years as antiques.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "100",
+          "start": 118,
+          "end": 121
+        }
+      ]
+    },
+    {
+      "source_id": "1719",
+      "reference_sha256": "a67425aa0ea4698ff999ea42c4bed3eb9e9b51efb9ba12335282f5ab958fdb67",
+      "reference": "Severe weather is the generic term for any dangerous weather phenomenon with the potential to cause damage, serious social disruption, or loss of human life.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1720",
+      "reference_sha256": "d5f84a765b18504ed851093cd192fe59530fd001030af71bf12f29c2e6b307e9",
+      "reference": "The hot chocolate is up to Belgian standards. Fruit juices are pricey but excellent.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1721",
+      "reference_sha256": "cbd2cee3e0d380ee4a00506bbde71d4c6d06da167ad65d3a244486c7ae41d08b",
+      "reference": "After the dam was built in 1963, the seasonal floods that would spread sediment throughout the river were halted.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "1963",
+          "start": 27,
+          "end": 31
+        }
+      ]
+    },
+    {
+      "source_id": "1722",
+      "reference_sha256": "9ecb5066bd9346481aba31e38c402d9f5db7bf6591c75561c143fb9eaac9d33d",
+      "reference": "Cuomo, 53, began his governorship earlier this year and signed a bill last month legalizing same-sex marriage.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "53",
+          "start": 7,
+          "end": 9
+        }
+      ]
+    },
+    {
+      "source_id": "1723",
+      "reference_sha256": "b951db3dbbb4c57398f6801718b9dee5ae9e1c14a1f936329855132720b663fb",
+      "reference": "The harbor was the site of an infamous naval standoff in 1889 when seven ships from Germany, the US, and Britain refused to leave the harbor.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "1889",
+          "start": 57,
+          "end": 61
+        },
+        {
+          "type": "number",
+          "text": "seven",
+          "start": 67,
+          "end": 72
+        }
+      ]
+    },
+    {
+      "source_id": "1724",
+      "reference_sha256": "d9b6cbbe0cbceda25521d132b8fe23e743ff23c5969f3f44971200bdabb3b304",
+      "reference": "Its renown for being an epicenter of luxury began in about 400 A.D. and lasted up until about 1100 A.D.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "400 A.D.",
+          "start": 59,
+          "end": 67
+        },
+        {
+          "type": "date",
+          "text": "1100 A.D.",
+          "start": 94,
+          "end": 103
+        }
+      ]
+    },
+    {
+      "source_id": "1725",
+      "reference_sha256": "cbc6b37fc0680c779aab3bb2c509046d6edd4bb4b7aa182795eb1586d6498779",
+      "reference": "ASUS Eee PC, earlier launched world-wide for cost-saving and functionality factors, became a hot topic in 2007 Taipei IT Month.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "2007",
+          "start": 106,
+          "end": 110
+        }
+      ]
+    },
+    {
+      "source_id": "1726",
+      "reference_sha256": "cbf36331328a84154c8b092ec476b8f59c6190d21573692df3d139fe12987815",
+      "reference": "Field trips are a large part of any classroom. Quite often a teacher would love to take her students places to which a bus trip is not an option.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1727",
+      "reference_sha256": "c3b981b9a162cdbca8b4013f72d98865f6cdb5e2037f9ce532a757e14216302f",
+      "reference": "Feral children may have experienced severe child abuse or trauma before being abandoned or running away.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1728",
+      "reference_sha256": "1f710e30f3b84790f6e7b04e3813a08afcaf251b625010272d033c61ba72d4a3",
+      "reference": "The cabbage juice changes color depending on how acidic or basic (alkaline) the chemical is.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1729",
+      "reference_sha256": "dbe455b3a89d4ad075321a46755e8e0f88353c731ad323092e4767df5fb315de",
+      "reference": "For example, each year students from Bennet School in North Carolina design a website about their trip to the State Capital, each year the website gets remodeled, but old versions are kept online to serve as a scrapbook.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1730",
+      "reference_sha256": "91c5db07f0f94779c9a5129ec2aede1ef0b73f91a4f02a0da57fa310791ae31e",
+      "reference": "Buses depart the inter-district bus station (across the river) throughout the day, though most, especially those heading to the east and Jakar/Bumthang leave between 06:30 and 07:30.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "06:30",
+          "start": 166,
+          "end": 171
+        },
+        {
+          "type": "number",
+          "text": "07:30",
+          "start": 176,
+          "end": 181
+        }
+      ]
+    },
+    {
+      "source_id": "1731",
+      "reference_sha256": "58666d47fa7c7ac518a6e26982faa3373c349a2599c5031a97a11249381d3034",
+      "reference": "In the archipelagos and lakes you do not necessarily need a yacht.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1732",
+      "reference_sha256": "b50d0ba7af2e7df19b17c00d97da8cbf191506dee87ba60fbb46ae7b9047afb2",
+      "reference": "The age where the events took place is commonly referred as the High Middle Ages the period of European history in the 11th, 12th, and 13th centuries (AD 1000–1300).",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "11th, 12th, and 13th centuries",
+          "start": 119,
+          "end": 149
+        },
+        {
+          "type": "date",
+          "text": "AD 1000–1300",
+          "start": 151,
+          "end": 163
+        }
+      ]
+    },
+    {
+      "source_id": "1733",
+      "reference_sha256": "7fb9d90ab87c684104ce867e5fb5dd95e4119b1239b1e66a57ed79d5f5fe6716",
+      "reference": "First among its 78 recommendations is that a new diplomatic initiative should be taken before the end of this year to secure Iraq’s borders against hostile interventions and to re-establish diplomatic relations with its neighbors.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "78",
+          "start": 16,
+          "end": 18
+        }
+      ]
+    },
+    {
+      "source_id": "1734",
+      "reference_sha256": "391c88d75aacc8c43f4df2ac8d783f6f2529845bb815b4f3664fa4a3fec9c0c8",
+      "reference": "The scientists were able to conclude that the dark matter affect other dark matter in the same way regular matter does.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1735",
+      "reference_sha256": "e3c8929f50dac6d8102553766a58a928a9d87a29c003f0ed031ead022d6842f6",
+      "reference": "Researchers from Princeton University in the United States and Uppsala University in Sweden reported the new species evolved in just two generations, though this process had been believed to take much longer, due to breeding between an endemic Darwin finch, Geospiza fortes, and the immigrant cactus finch, Geospiza conirostris.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "two",
+          "start": 133,
+          "end": 136
+        }
+      ]
+    },
+    {
+      "source_id": "1736",
+      "reference_sha256": "5348cef4722bf9fb5b7d3f499f0371076b2843613510777e9f9096c77720c9e0",
+      "reference": "Rolando Mendoza fired his M16 rifle at the tourists.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "M16",
+          "start": 26,
+          "end": 29
+        }
+      ]
+    },
+    {
+      "source_id": "1737",
+      "reference_sha256": "8b87e6d6c89945d45bf322a457fe8a1305130492a3500f36f559509b122c1d3b",
+      "reference": "Lions are the most social cats, living in large groups called prides.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1738",
+      "reference_sha256": "c1ffb382a67731fd0dc907a25141e6a3f6910a2e8bdc9dd146b509c808f5d0c8",
+      "reference": "It also attacked anything that entered the water; even a giant dinosaur such as T. rex would be no match for it.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1739",
+      "reference_sha256": "8fa51b3416aebefbf7c9637232f547b045452859ff716f46f57fff986125216d",
+      "reference": "Resting on the top of one of the mountains north of Mecca, the cave is completely isolated from the rest of the world.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1740",
+      "reference_sha256": "6ff2d6657f774bacfc89d96d1610ca2e632447d52623efa2a0766d3412053d32",
+      "reference": "The pyramid sound and light show is one of the most interesting things in the area for kids.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1741",
+      "reference_sha256": "d0d8dde855ed02ac11a3230e556d67a27636810d0644140b7b4d42f2a5115158",
+      "reference": "Large areas further north are quite sparsely populated and some is nearly uninhabited wilderness.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1742",
+      "reference_sha256": "27ed35219eaea97794df4fa2bc6e066067e6309101ba13c4dfca9126b8507770",
+      "reference": "Hong Kong Island gives the territory of Hong Kong its name and is the place that many tourists regard as the main focus.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1743",
+      "reference_sha256": "7dbc1626ac1b521026ddfaf0f813688475869accbc6cba4b43a2778f4b119529",
+      "reference": "Most interpretations of technological determinism share two general ideas: that the development of technology itself follows a path largely beyond cultural or political influence, and that technology in turn has \"effects\" on societies that are inherent, rather than socially conditioned.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "two",
+          "start": 56,
+          "end": 59
+        }
+      ]
+    },
+    {
+      "source_id": "1744",
+      "reference_sha256": "eb25ae752f535c23958151fe6ebb5814c99c46687bab48df68ade54931587b99",
+      "reference": "The smaller the Rossby number, the less active the star with respect to magnetic reversals.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1745",
+      "reference_sha256": "6908807fe60eae896bb751bf45b0e48ec03f7bb5e9c396b73071f90f7d181765",
+      "reference": "Plants look their best when in a natural environment, so resist the temptation to remove even \"just one\" specimen.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "one",
+          "start": 100,
+          "end": 103
+        }
+      ]
+    },
+    {
+      "source_id": "1746",
+      "reference_sha256": "5654a4fac519a2e20b898078c496b5c1beaba037c6879bc811035f0fd4424c54",
+      "reference": "Plants make their food from the sun by photosynthesis. They also provide shade.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1747",
+      "reference_sha256": "31e0616918641d85bd25f23fb5a0d67e47773069668cc7371a7cfd9448132edc",
+      "reference": "Fellow wrestlers also paid tribute to Luna.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1748",
+      "reference_sha256": "d9aa7413940c25a26f264fbd0205f1c30732b4a5a04cf5537e4b04ef0c7a32b4",
+      "reference": "Fire rescue crews eventually doused the fire by 11:35 pm.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "11:35 pm",
+          "start": 48,
+          "end": 56
+        }
+      ]
+    },
+    {
+      "source_id": "1749",
+      "reference_sha256": "48961908e3941421a643e1209480c0a31d1b672072f0d604b24ea926b3828b41",
+      "reference": "It was ruled by the \"Vichy\" French. These were French people who had made peace with the Germans in 1940 and worked with the invaders instead of fighting them.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "1940",
+          "start": 100,
+          "end": 104
+        }
+      ]
+    },
+    {
+      "source_id": "1750",
+      "reference_sha256": "03c5c230bcda63c09f22f6d6e0fa2953c08966a86d2834fd9c55cc86b8e3a23c",
+      "reference": "The find also grants insight into the evolution of feathers in birds.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1751",
+      "reference_sha256": "1481f8b28b28fa9749f934854956f4707bff7f23b0c8907d6940e724f7479d5e",
+      "reference": "The debate was sparked by controversy over spending on relief and reconstruction in the wake Hurricane Katrina; which some fiscal conservatives have humorously labeled \"Bush's New Orleans Deal.\"",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1752",
+      "reference_sha256": "13d3604fdb6a16fcb38975772210a1a2424fb51b6db9071bc7bd92f782a01739",
+      "reference": "As a result, two fish species have become extinct, and two others have become endangered, including the humpback chub.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "two",
+          "start": 13,
+          "end": 16
+        },
+        {
+          "type": "number",
+          "text": "two",
+          "start": 55,
+          "end": 58
+        }
+      ]
+    },
+    {
+      "source_id": "1753",
+      "reference_sha256": "6bb1823af645beec2548dc67ad6056b62112a2c3fed9e1934f3d1b8bd5f48d1b",
+      "reference": "While this is often only an inaccurate stereotype, the best way to get along in Paris still is to be on your best behavior, acting like someone who is \"bien élevé\" (well brought up). It will make getting about considerably easier.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1754",
+      "reference_sha256": "bd0655d8ce5b318a91053fe94bc805dbd2bfb09e22fb21bbf41500b6e133bf6d",
+      "reference": "There may be more maria on the near side because the crust is thinner. It was easier for lava to rise up to the surface.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1755",
+      "reference_sha256": "4e27748a5ac5ad983d76f377cec357bd28af090e515fa712a5cc67b345937c45",
+      "reference": "One bomb exploded outside the governor general's office.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "One",
+          "start": 0,
+          "end": 3
+        }
+      ]
+    },
+    {
+      "source_id": "1756",
+      "reference_sha256": "680bd2c4665e6f632ef8a85ad2f94282b9f3fd318b6da605d21849b50d949be0",
+      "reference": "Late on Sunday, the United States President Donald Trump, in a statement delivered via the press secretary, announced US troops would be leaving Syria.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "Sunday",
+          "start": 8,
+          "end": 14
+        }
+      ]
+    },
+    {
+      "source_id": "1757",
+      "reference_sha256": "57c66a23b7e025f2e9d38d47cee1469275a1780fc2ba04e11909961885b99cde",
+      "reference": "Only mutations in germ-line cells can be passed on to children, while mutations elsewhere can cause cell-death or cancer.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1758",
+      "reference_sha256": "6508ca7eb8f91aeaf541348b22d8e762f5bebe01dfa33a0fcbda2d50b176a3cb",
+      "reference": "The archipelago lies 120 km north of the Peninsula. The largest is King George Island with the settlement of Villa Las Estrellas.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "120",
+          "start": 21,
+          "end": 24
+        }
+      ]
+    },
+    {
+      "source_id": "1759",
+      "reference_sha256": "b20b288a138ba8d4db46f15434e37853420648370f481adfaab16146428a807d",
+      "reference": "Dr. Malar Balasubramanian, 29, was found in Blue Ash, Ohio, a suburb approximately 15 miles north of Cincinnati lying on the ground beside the road in a T-shirt and underwear in an apparently heavily medicated state.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "29",
+          "start": 27,
+          "end": 29
+        },
+        {
+          "type": "number",
+          "text": "15",
+          "start": 83,
+          "end": 85
+        }
+      ]
+    },
+    {
+      "source_id": "1760",
+      "reference_sha256": "fd1a1ee5fc2c6b4f4acbd3d3a3ba1b52ce5c1432698ae958be1453fd101b319d",
+      "reference": "Mosasaurus was the apex predator of its time, so it feared nothing, except other mosasaurs.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1761",
+      "reference_sha256": "955b691f633429be9c02b50bce4b3027bd861ce33239bb111c65ac328e1e88ca",
+      "reference": "The photographers later took the place of an aged lady as she needed the lavatory. Mendoza was gunned down.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1762",
+      "reference_sha256": "14ddfbd0c4b90af2e89ea52255b9cadcd07b43ea4873b532e03286c464ca58fb",
+      "reference": "The disease is carried by pigs, which then migrates to humans through mosquitos.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1763",
+      "reference_sha256": "78005cf898bdd2cd856463feae1cc59b310a253aef80b0d58e84a71f9429d165",
+      "reference": "Just like the moon exerts a pull on the earth, causing tides, so does the Milky Way exert a force on the Sagittarius galaxy.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1764",
+      "reference_sha256": "b34cb1c1920b8a126b34cb6cf10bb11d8f2adfdc5b8f7c13788fc6cab956ece9",
+      "reference": "The number of people present was so large that it was not possible for everybody to gain access to the funeral in St. Peter's Square.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1765",
+      "reference_sha256": "1476d2db5406d26bf7a7f1e272ed162d2acf10ceb317716194456fb397a77eec",
+      "reference": "Since the foundation of Asunción in 1537, Paraguay has managed to keep a lot of its indigenous character and identity.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "1537",
+          "start": 36,
+          "end": 40
+        }
+      ]
+    },
+    {
+      "source_id": "1766",
+      "reference_sha256": "971f45c0579cccd7e88b4b3a09ea4032a6b42198826f72bd1d12fad815534294",
+      "reference": "Some atoms have unstable nuclei which means that they tend to break apart with little or no nudging.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1767",
+      "reference_sha256": "5b847e3c49c0b47ddf747538548fa29348252d3a3ccd6339323f371ab3b9f1d9",
+      "reference": "This offers a good opportunity to see the Aurora borealis, as the sky will be dark more or less around the clock.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1768",
+      "reference_sha256": "bb7e1db19c9df745d40eb53655e27f3e6eb3d287ee8c259659eda1272c7b7a86",
+      "reference": "Most of the buildings on the edges of the complex have been rebuilt in order to give tourists a better idea of how they originally appeared.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1769",
+      "reference_sha256": "f66bf9c85d9af4a4c0d29a28f88efd4bdd9660bbbcd58d2eb3f84659861f4f83",
+      "reference": "Built by the Egyptians in the third century BCE, the Great Pyramid is one of many large pyramid structures built to honor dead Pharaoh.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "third century BCE",
+          "start": 30,
+          "end": 47
+        }
+      ]
+    },
+    {
+      "source_id": "1770",
+      "reference_sha256": "b5e6b6e784f586798bdaaf28a4b7b9ecf2f1a96b607e1155ecb6b86a1d932b7f",
+      "reference": "This seems sensible, because the Earth doesn't feel as if it's moving, does it?",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1771",
+      "reference_sha256": "6586cf6b9b89200ab1c71ae064c2320e2266a21a5e07c838053fa42225feeeaa",
+      "reference": "Remember that even though music on the main stages may have finished, there may be sections of the festival that will keep playing music until late into the night.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1772",
+      "reference_sha256": "a662dade4baa50bda57256f49c6639ac4d38040c215e6100f20b4698faee2e47",
+      "reference": "So, it is likely that the notation was added simply as a label.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1773",
+      "reference_sha256": "0181ce6503149397f14f5fd7e96ce735ea877897f99105ead20b0aa8d90d9058",
+      "reference": "Sleep interruption is the process of purposefully awakening during your normal sleep period and falling asleep a short time later (10–60 minutes).",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "10–60",
+          "start": 131,
+          "end": 136
+        }
+      ]
+    },
+    {
+      "source_id": "1774",
+      "reference_sha256": "b9d3acff81f1ee9df72716ace91e11d2514896b4b380f2e7fa20eb5cf4cee2b2",
+      "reference": "On the outlying islands credit cards will probably not be accepted, although British and United States currency may be taken; check with the owners in advance to determine what is an acceptable payment method.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1775",
+      "reference_sha256": "e6786de1f68886a8f75d76f2f11dab80ec62ae7c5a20eb521c331da42eda3be0",
+      "reference": "The use of video recording has led to important discoveries in the interpretation of micro-expressions, facial movements which last a few milliseconds.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1776",
+      "reference_sha256": "a52b95aa4e386cc14d0c7898f342cfdcfe04b9c6a8d67cf621a68882236f6fa9",
+      "reference": "Through the night between 150 and 200 copies were made, now known as \"Dunlap broadsides\".",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "150",
+          "start": 26,
+          "end": 29
+        },
+        {
+          "type": "number",
+          "text": "200",
+          "start": 34,
+          "end": 37
+        }
+      ]
+    },
+    {
+      "source_id": "1777",
+      "reference_sha256": "683c859413686d0ef9616b380f5c306ea66a76718adacefce44f83e5211f5a46",
+      "reference": "Ottawa is Canada's charming, bilingual capital and features an array of art galleries and museums that showcase Canada's past and present.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1778",
+      "reference_sha256": "723b2a9de44fbdf547c803bf69d45858d1588fab0a42bb3940f849d8a56bc7c6",
+      "reference": "Television reports show white smoke coming from the plant.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1779",
+      "reference_sha256": "3c00701105aa93a7be6b02d5095167839c8d2c1bfa13d38da90e05c39435916a",
+      "reference": "The announcement was made after Trump had a phone conversation with Turkish President Recep Tayyip Erdoğan.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1780",
+      "reference_sha256": "b27bdde0810989a3f6894967735d7264a54258293561ea9dff3ed5bdf57ca4b7",
+      "reference": "With Kundalini Yoga the Kundalini energy (enlightenment energy) is awakened through yoga postures, breathing exercises, mantras and visualizations.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1781",
+      "reference_sha256": "085b3d54c84afa33ab2bd9317f27f323f58bc4523d24d81843f2d0b64ec51dc5",
+      "reference": "Madagascar is by far the biggest, and a continent on its own when it comes to wildlife.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1782",
+      "reference_sha256": "b003f14726cf7145fe91eeb2eb6e9827f67113566799400935b9fda2379cb14b",
+      "reference": "Also between each dynasty was an unstable age of divided provinces. The best-known of these periods was the Three Kingdoms epoch taking place for 60 years between the Han and the Jin Dynasty.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "60",
+          "start": 146,
+          "end": 148
+        }
+      ]
+    },
+    {
+      "source_id": "1783",
+      "reference_sha256": "82fb747ff1889cb5f60874e2a4cd90ed0e6b1eb2f830f11b9e886b11aaf52daf",
+      "reference": "Regional and seasonal severe weather phenomena include blizzards, snowstorms, ice storms, and dust storms.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1784",
+      "reference_sha256": "e0d3b1c1e1274a35327dde321c771cc63079e3c37b7a1262f48c40d92b79d800",
+      "reference": "Greenland was settled sparsely. In the Norse sagas they say that Erik the Red was exiled from Iceland for murder, and when travelling further west, found Greenland and named it Greenland.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1785",
+      "reference_sha256": "e8b30081e73b7ec6d17e0d107e8f4945e7afb10f6d045dbbcd1e9ec45a8e5660",
+      "reference": "Scaffolding is not a method of learning but rather an aid that provides support to individuals whom are undergoing a new learning experience such as using a new computer program or beginning a new project.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1786",
+      "reference_sha256": "46d235ee7b840abffa51b7699e0ae7d80876e2ed21996a259f303feace546ce6",
+      "reference": "The composition of these crystals matches those found in the urine of affected pets when compared by infrared spectroscopy (FTIR).",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1787",
+      "reference_sha256": "e48d78ffcb5b69db7009020a926d487e94e2809518d67fb6edee17621ebc2202",
+      "reference": "Blogging is a tool that inspires collaboration, and encourages students to extend learning well beyond the traditional school day.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1788",
+      "reference_sha256": "52f66e275e6c3b20cebe92797863d12741c8180b7e65d4ddb0861903980edac4",
+      "reference": "USA Gymnastics supports the United States Olympic Committee's letter and accepts the absolute need of the Olympic family to promote a safe environment for all of our athletes.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1789",
+      "reference_sha256": "8820e603ad17a6d2d0689f0f3f4c03e19cf026c8beed73fba4b16ae62eb63b47",
+      "reference": "The other nominations include Best Picture, Director, Cinematography, Costume Design, Film-editing, Original Score, Production Design, Sound Editing, Sound Mixing and Original Screenplay.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1790",
+      "reference_sha256": "41021608caa95cb6f4cdceaffb85ac5b6e9897847ef9a7473902965a6f34bde5",
+      "reference": "His work is of such recognized quality and detail that he is one of the very few \"household names\" among philatelists. Some specialize in collecting his work alone.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1791",
+      "reference_sha256": "b1404a43888598668a03bd3925cfd992b8c5d95fd77c8e81e956f330e3c73de0",
+      "reference": "Do not deface the site by marking or scratching graffiti into structures.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1792",
+      "reference_sha256": "0b01752d32bb55f356f7640ff22536b01736d51a0e2d256f657de765d1b4d072",
+      "reference": "This is called a chemical's pH. You can make an indicator using red cabbage juice.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1793",
+      "reference_sha256": "ccbcd6d7be050c1694e27ee2f7c2bbb19c8dde97f7c3b11b31714cbf75da7333",
+      "reference": "If you're not used to driving on country roads, keep your wits about you: steep grades, narrow lanes, and sharp curves predominate.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1794",
+      "reference_sha256": "19238ad93b83eedcd1124fb1b7cb8fde2d67901eee461b70fa5ab267b5231547",
+      "reference": "A civilization is a singular culture shared by a significant large group of people who live and work co-operatively, a society.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1795",
+      "reference_sha256": "d5cfb690144070660ee3fd4be87766bdae8d94987bb858b5495b69b6b23d63e8",
+      "reference": "Since 1988, ballot boxes must be transparent so that voters and observers can witness that no envelopes are present at the start of the vote and that no envelopes are added except those of the duly counted and authorized voters.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "1988",
+          "start": 6,
+          "end": 10
+        }
+      ]
+    },
+    {
+      "source_id": "1796",
+      "reference_sha256": "8744050f1483c7fcbd4dd1dc76ba16c8be66d8ec559ce6e3b6c0e55ea15855e1",
+      "reference": "This sediment was necessary for creating sandbars and beaches, which served as wildlife habitats.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1797",
+      "reference_sha256": "bc892bd909226caf627156f1400242959441d63f8ed8fe0980f280cf278bb0a7",
+      "reference": "Everyone participates in society and uses transportation systems. Almost everyone complains about transportation systems.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1798",
+      "reference_sha256": "0f3cf0e3ed774f17ba89a0d4b7fe2167ee70fb41e6844413bb9b0d72ce9bd24f",
+      "reference": "In its early days, the show was featured solely at the long-running internet radio site TogiNet Radio, a site focused on talk radio.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1799",
+      "reference_sha256": "c59a12d3ca43f60e6ba9eb4cde16859f6aa01c50712d5bf7b7bae94d226218c6",
+      "reference": "Beyond Wednesday's event, Carpanedo competed in two individual races at the Championships.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "Wednesday",
+          "start": 7,
+          "end": 16
+        },
+        {
+          "type": "number",
+          "text": "two",
+          "start": 48,
+          "end": 51
+        }
+      ]
+    },
+    {
+      "source_id": "1800",
+      "reference_sha256": "93683cd58ba23ded7625a34b6eaab2b39bb2425ebfdc93556c63119b0a6193f5",
+      "reference": "The bridge is scheduled to be fully operational in September 2017, when the Brazilian customs checkpoints are expected to be finished.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "September 2017",
+          "start": 51,
+          "end": 65
+        }
+      ]
+    },
+    {
+      "source_id": "1801",
+      "reference_sha256": "b41d1235e7bef88b9750d614be0ec03157c20d0bd8489ccb20b5fb0b0bb68288",
+      "reference": "The parade of buildings that make the Hong Kong skyline has been likened to a glittering bar chart that is made apparent by the presence of the waters of Victoria Harbour.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1802",
+      "reference_sha256": "1b680a318dcd072e14ad3de07ff8b29f85eb2fdc4fc3daebd6f74467d9a6bb16",
+      "reference": "The Internet combines elements of both mass and interpersonal communication.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1803",
+      "reference_sha256": "f1502ae7a1f0949b0768585fcfdea2e8a9917c0d451dbd37e56e23a01f087ad1",
+      "reference": "The moisture on your hands will react with the outer layers, which will feel funny and form a sort of shell.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1804",
+      "reference_sha256": "8a7ec5fec31c3ccbb818a88bd8b1a2e62e772d671a76ba859ac15e4842229b8c",
+      "reference": "The Haitian Institute for Justice and Democracy has referenced independent studies that suggest the Nepalese UN peacekeeping battalion unknowingly brought the disease to Haiti.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1805",
+      "reference_sha256": "5baeb0b13cc8a278c72a63a50558d236c26d032aaa6e7445eee21ad14b17dd05",
+      "reference": "Scotturb Bus 403 travels regularly to Sintra, stopping at Cabo da Roca.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "403",
+          "start": 13,
+          "end": 16
+        }
+      ]
+    },
+    {
+      "source_id": "1806",
+      "reference_sha256": "833a9475d46748f8b8a309fe4cc203745e5118a5b48a479c3031f0c7cc3bf6a8",
+      "reference": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses, easier to reach than those built in modern times.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1807",
+      "reference_sha256": "88eb8ecca00d2c55b8f23d5ba4a6c9703662daaf6ff9210485bd591c56b92ad3",
+      "reference": "Italian is also the everyday language used by most of those who work in the state while Latin is often used in religious ceremonies.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1808",
+      "reference_sha256": "4853076f189e7bc3156d8457b38d761ecc98b2a39419de234ce7d9a90fc8a427",
+      "reference": "With two years of the end of the war, the former allies were now enemies and the Cold War began.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "two",
+          "start": 5,
+          "end": 8
+        }
+      ]
+    },
+    {
+      "source_id": "1809",
+      "reference_sha256": "b88357152bb9d4dbabb0d94b94b042f84c38c4a9db7e7c39aad4a321e19da624",
+      "reference": "Crossties were introduced fairly early to hold the tracks in place. Gradually, however, it was realised that tracks would be more efficient if they had a stip of iron on the top.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1810",
+      "reference_sha256": "ca762dafef7d4ed35eb1b1ca6add56f1dd45bdbc11038f2fab6a15c30dddb0cb",
+      "reference": "California Governor Arnold Schwarzenegger signed into law a bill that bans the sale or rental of violent video games to minors.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1811",
+      "reference_sha256": "3a45e0ff055d985fd4738ae0799bc7f8bc0b89de9837c8de469d398ed2d4b9be",
+      "reference": "The 802.11n standard operates on both the 2.4Ghz and 5.0Ghz frequencies.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "802.11n",
+          "start": 4,
+          "end": 11
+        },
+        {
+          "type": "number",
+          "text": "2.4",
+          "start": 42,
+          "end": 45
+        },
+        {
+          "type": "number",
+          "text": "5.0",
+          "start": 53,
+          "end": 56
+        }
+      ]
+    },
+    {
+      "source_id": "1812",
+      "reference_sha256": "0fd5a5f34e55bb743aefc0bce7d89dc7848d5f68de00f784f58eeae7cec5383f",
+      "reference": "While one experimental vaccine appears able to reduce Ebola mortality, up until now, no drugs have been clearly demonstrated suitable for treating existing infection.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "one",
+          "start": 6,
+          "end": 9
+        }
+      ]
+    },
+    {
+      "source_id": "1813",
+      "reference_sha256": "3086f77c9e39858d3ca150edd77031fd0464274b21044825c9172dd1b5da130d",
+      "reference": "Barcelona's official languages are Catalan and Spanish. About a half prefer to speak Catalan, a vast majority understands it, and virtually everyone knows Spanish.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "half",
+          "start": 64,
+          "end": 68
+        }
+      ]
+    },
+    {
+      "source_id": "1814",
+      "reference_sha256": "18a763b8a719481dbe949ad212f28d827485ac52122f6c039ccf1d5e9f7706f3",
+      "reference": "Hydrogen ions are protons that had their electrons stripped off them (since Hydrogen atoms consist of one proton and one electron).",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "one",
+          "start": 102,
+          "end": 105
+        },
+        {
+          "type": "number",
+          "text": "one",
+          "start": 117,
+          "end": 120
+        }
+      ]
+    },
+    {
+      "source_id": "1815",
+      "reference_sha256": "7e167a9267d8e1c4cc0e3a347674cc99892225477151ecc698c844a247f10fb7",
+      "reference": "The fission bomb works on the principle that it takes energy to put together a nucleus with many protons and neutrons.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1816",
+      "reference_sha256": "1b71f3eda2c124fb854900f0687a0d94608e7cccf2e35890a7744e71af74fd13",
+      "reference": "Duvall, who is married with two adult children, did not leave a big impression on Miller, to whom the story was related.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "two",
+          "start": 28,
+          "end": 31
+        }
+      ]
+    },
+    {
+      "source_id": "1817",
+      "reference_sha256": "0a059980c1e91a3f434b09e2446342082d6fb22457ade5577e4102d1a5d6f2b5",
+      "reference": "The Schengen zone, however, works somewhat like one country in this respect.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "one",
+          "start": 48,
+          "end": 51
+        }
+      ]
+    },
+    {
+      "source_id": "1818",
+      "reference_sha256": "9fba17dabeb8d464aaf6769734d5cf62c5a277ff87a4ed3fb18b7384e19490fe",
+      "reference": "People may not anticipate that patience and understanding are also necessary for travellers returning home.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1819",
+      "reference_sha256": "59583b37a08232e11e28734baad07b7bf31ca1810cc12c9a61ae82f4fea3c005",
+      "reference": "Ancient China had a unique way of showing different time periods; each stage of China or each family that was in power was a distinctive dynasty.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1820",
+      "reference_sha256": "9c25fe771dbbc7460014c3bd5af47e32ae9b09dd437a2ba1ab550cf01a7f7ca7",
+      "reference": "People now write messages on computer screens, never having to come close to a sharpener.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1821",
+      "reference_sha256": "91a9b9b994c759990be6db92f08f238dfc2444790e5a6ca959b29810ddfe6229",
+      "reference": "The correlation between brain pathology and behaviour supports scientists in their research.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1822",
+      "reference_sha256": "f5f062f40e49536b18e83ea287ae905f7d2704c11d72f6f497c839ac5b0ac985",
+      "reference": "The Moroccan sultan rebuilt the city as Daru l-Badya and it was given the name Casablanca by Spanish traders who established trading bases there.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1823",
+      "reference_sha256": "c214de58b0606e376ef94eb8147eaa877b8a17d0ff40ec162ed34ac1ce5f9f40",
+      "reference": "Traffic Flow is the study of the movement of individual drivers and vehicles between two points and the interactions they make with one another.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "two",
+          "start": 85,
+          "end": 88
+        }
+      ]
+    },
+    {
+      "source_id": "1824",
+      "reference_sha256": "e07e050c84e6e6011a1add398839ef61fa0a8c2638ab0a78242763bf684c7b9b",
+      "reference": "The Giza Plateau, or \"Giza Necropolis\" in the Egyptian Valley of the Dead contains several pyramids (of which the great pyramid is the largest), several small tombs, several temples, and the great Sphinx.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1825",
+      "reference_sha256": "c5f9b09717ba2b83b1ed057a03fbaca54e31ef8b2658439b3f9b872ce0d19090",
+      "reference": "If you want to be close to the action you're going to have to get in early to get a camping site close to the music.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1826",
+      "reference_sha256": "de3852517ca5e24339b3e03a9de23be33c2e43d44e1b8b6bf6dd04f419eba645",
+      "reference": "After the accident occurred, Gibson was transported to a hospital but died shortly afterwards.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1827",
+      "reference_sha256": "e84bd09d6e9f365a562892fb35cdba90d3404029255367f1b5e02a88e2888c4e",
+      "reference": "The crust is about 70 km thick on the near side and 100 km thick on the far side.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "70",
+          "start": 19,
+          "end": 21
+        },
+        {
+          "type": "number",
+          "text": "100",
+          "start": 52,
+          "end": 55
+        }
+      ]
+    },
+    {
+      "source_id": "1828",
+      "reference_sha256": "2730d37f4a38c06103fb2554bb927a424dda5c44a872440f0678c5e1f62ff69f",
+      "reference": "A search of the Internet for 'Hostile environment course' will probably provide the address of a local company.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1829",
+      "reference_sha256": "a11cc11a3d3360b8ca0b7663e82fc659e515a47a3af6d0fab7d25a5ce411c136",
+      "reference": "Travellers bound for countries with heavy taxation can sometimes save a considerable amount of money, especially on products such as alcoholic beverages and tobacco.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1830",
+      "reference_sha256": "bae03cad973afddd76ff6b018f34a7ac521186a95487cfdfbf3f7bf28de3132b",
+      "reference": "The ruling party, South West Africa People's Organisation (SWAPO), also retained a majority in the parliamentary elections.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1831",
+      "reference_sha256": "3137861d3deb37ab6d2181db4bd0270eeb78294430756d1fc6d241995fa4f03d",
+      "reference": "The Plitvice Lakes national park is heavily forested, mainly with beech, spruce, and fir trees, and features a mixture of Alpine and Mediterranean vegetation.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1832",
+      "reference_sha256": "b4f30d68a89ed46c293514dce00bf6bded470d95c0b74feae5c03f9ef4686945",
+      "reference": "Popular sports include football, basketball, volleyball, water-polo, fencing, rugby, cycling, ice hockey, roller hockey and F1 motor racing.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "F1",
+          "start": 124,
+          "end": 126
+        }
+      ]
+    },
+    {
+      "source_id": "1833",
+      "reference_sha256": "db435cdb0938437b0b35a39ee7e93b261de8c3ea1ba3f5fd973a5aab8a9c5721",
+      "reference": "Aristotle, a philosopher, theorised that everything is made up of a mixture of one or more of four elements. They were earth, water, air, and fire.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "one",
+          "start": 79,
+          "end": 82
+        },
+        {
+          "type": "number",
+          "text": "four",
+          "start": 94,
+          "end": 98
+        }
+      ]
+    },
+    {
+      "source_id": "1834",
+      "reference_sha256": "fe5f2b0d0b8f8d6c17076edbdb186202c89b98d5228b77ee436fd695400f76f9",
+      "reference": "Also to the north visit the great Sanctuary of Our Lady of Fatima (Shrine), a place of worldwide famous Marian apparitions.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1835",
+      "reference_sha256": "4cfd36a82adf27879ca3bc9d9ff4eed34227915e19b7bec1e4d8a20eb6384213",
+      "reference": "No tsunami warning has been issued, and according to the Jakarta geophysics agency, no tsunami warning will be issued because the quake did not meet the magnitude 6.5 requirement.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "6.5",
+          "start": 163,
+          "end": 166
+        }
+      ]
+    },
+    {
+      "source_id": "1836",
+      "reference_sha256": "57b4cd509bbe01c2998a3750a4abdcbb0c017eb2eb776f3c0bf0097d799bb855",
+      "reference": "People have known about basic chemical elements such as gold, silver, and copper from antiquity, as these can all be discovered in nature in native form and are relatively simple to mine with primitive tools.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1837",
+      "reference_sha256": "bccbfa9c15ef2dadd4bf14c5f8e1d994efba5524c343cb64faab9a542b6fb9a2",
+      "reference": "Liberal criticism of the reconstruction effort has focused on the awarding of reconstruction contracts to perceived Washington insiders.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1838",
+      "reference_sha256": "ecd36619205c3c75902388d1177c4bf42d0fb6448d926b340f63557e6ee5fcab",
+      "reference": "The Great Pyramid at Giza is the only one of the seven wonders that is still standing today.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "one",
+          "start": 38,
+          "end": 41
+        },
+        {
+          "type": "number",
+          "text": "seven",
+          "start": 49,
+          "end": 54
+        }
+      ]
+    },
+    {
+      "source_id": "1839",
+      "reference_sha256": "5ad2df6a48637643c037737c8ac77b95286f7b1ef04ec7696bcb8c2245414199",
+      "reference": "Think of the skiing route as of a similar hiking route.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1840",
+      "reference_sha256": "9ab63ac15581c730bae656afdd5593b9ee53913b5183d8d35026c82322180836",
+      "reference": "In many other cities of Italy and in the rest of the world, particularly in Poland, similar setups were made, which were viewed by a great number of people.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1841",
+      "reference_sha256": "af0ca3c2f13678e84c1ac43965e0dfefe2e769a6ec61e1d31d4727b1d0a7220b",
+      "reference": "Nothing can be seen other than the clear, beautiful sky above and the many surrounding mountains. Very little of this world can be seen or heard from inside the cave.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1842",
+      "reference_sha256": "75147d936862dde663bfa4dd629ea6b8af5ab47a658d0c0fc50f7b8da055a7e5",
+      "reference": "Because the dinosaur feathers do not have a well-developed shaft, called a rachis, but do have other features of feathers — barbs and barbules — the researchers inferred the rachis was likely a later evolutionary development that these other features.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1843",
+      "reference_sha256": "ff44ced79f270807cbace8a33614cec3497818f33ed706f84202b3258532a56b",
+      "reference": "Professor Pamela Ferguson of the University of Dundee notes \"journalists do seem to be walking a dangerous line if publishing photos etc of suspects.\"",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1844",
+      "reference_sha256": "ba98076ba2734ecb2afa3669744a2bf139f07e1184b0a26bf40f4788fd649c19",
+      "reference": "The surface of the Moon is made of rocks and dust. The outer layer of the Moon is called the crust.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1845",
+      "reference_sha256": "cd9d9bf2c8066d5a4c881c1ce95a11e983b997c732c0064913325792eff493d7",
+      "reference": "In a carriage, they traveled back to Paris surrounded by a mob of people screaming and shouting threats against the King and Queen.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1846",
+      "reference_sha256": "a412c8d9671188861194df5d63cf4bb0a6a4407e1a75db9bdd2440c27cf70d5a",
+      "reference": "The aspect ratio of this format (dividing by twelve to obtain the simplest whole-number ratio) is therefore said to be 3:2.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "twelve",
+          "start": 45,
+          "end": 51
+        },
+        {
+          "type": "number",
+          "text": "3:2",
+          "start": 119,
+          "end": 122
+        }
+      ]
+    },
+    {
+      "source_id": "1847",
+      "reference_sha256": "36cdc23669f48da511bcd0a4a209655ba178e9994480c93922d967a68728559e",
+      "reference": "He was greeted by Singapore's Deputy Prime Minister Wong Kan Seng and discussed trade and terrorism issues with the Singapore Prime Minister Lee Hsien Loong.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1848",
+      "reference_sha256": "bea072dd2a21be67271ca0fc49ee9e84faca4bc207811f52093de0fa0279b898",
+      "reference": "A car bomb detonated at police headquarters in Gaziantep, Turkey yesterday morning killed two police officers and injured more than twenty other people.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "two",
+          "start": 90,
+          "end": 93
+        },
+        {
+          "type": "number",
+          "text": "twenty",
+          "start": 132,
+          "end": 138
+        }
+      ]
+    },
+    {
+      "source_id": "1849",
+      "reference_sha256": "4d6939e545ee9d7493210dd7b751224b3f9150c60b4af87ca8c27e041e579df4",
+      "reference": "If you have watched the movie National Treasure, you may think a treasure map was written on the back of the Declaration of Independence.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1850",
+      "reference_sha256": "85eef49393b5c71ddcfd84838994d7ef92a4920c76f670421a1f8643a7280b66",
+      "reference": "This will allow it to be backwards compatible with 802.11a, 802.11b and 802.11g, provided that the base station has dual radios.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "802.11a",
+          "start": 51,
+          "end": 58
+        },
+        {
+          "type": "number",
+          "text": "802.11b",
+          "start": 60,
+          "end": 67
+        },
+        {
+          "type": "number",
+          "text": "802.11g",
+          "start": 72,
+          "end": 79
+        }
+      ]
+    },
+    {
+      "source_id": "1851",
+      "reference_sha256": "0c8fd9689a8dc4fe7147bd909b41754c4327c7d9e453f786bf9376fcad974b29",
+      "reference": "Rip currents are the returning flow from waves breaking off the beach, often at a reef or similar.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1852",
+      "reference_sha256": "c4347ecf54dd45518bb3b728a4107cad8a9c7b9da529a9645f9ae633a9ee79f1",
+      "reference": "Appropriate use of blogs \"can empower students to become more analytical and critical; through actively responding to Internet materials, students can define their positions in the context of others' writings as well as outline their own perspectives on particular issues (Oravec, 2002).",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "2002",
+          "start": 281,
+          "end": 285
+        }
+      ]
+    },
+    {
+      "source_id": "1853",
+      "reference_sha256": "d8ae08347d07e5d53c8efe0309ae79cb1cb47c45d059508b61f939b065fd09fa",
+      "reference": "Giancarlo Fisichella lost control of his car and ended the race very soon after the start.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1854",
+      "reference_sha256": "97352f3f5ce83999ee41bf5c57f34a0ceb5ffdd4d62c1b5ded4891b9ce8e078f",
+      "reference": "The vehicle itself was taken away from the scene of the accident at approximately 1200 GMT on the same day.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "1200 GMT",
+          "start": 82,
+          "end": 90
+        }
+      ]
+    },
+    {
+      "source_id": "1855",
+      "reference_sha256": "ce1cf26d9336f6955837cd90cfff450fcd9e076407e7bf8dc67cad4a750dcdcb",
+      "reference": "Lion prides act much like packs of wolves or dogs, animals surprisingly similar to lions (but not other big cats) in behavior, and also very deadly to their prey.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1856",
+      "reference_sha256": "413ea0d02640d8fcc68631639c6fc9a91c1e4c28d53c173176762f62ed8cfdcd",
+      "reference": "Finland is a great boating destination. The \"Land of a thousand lakes\" has thousands of islands too, in the lakes and in the coastal archipelagos.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "a thousand",
+          "start": 53,
+          "end": 63
+        },
+        {
+          "type": "number",
+          "text": "thousands",
+          "start": 75,
+          "end": 84
+        }
+      ]
+    },
+    {
+      "source_id": "1857",
+      "reference_sha256": "61b9441af2123242480d984370ec5a2084f83deeb39efe827820a4fd87c6635b",
+      "reference": "He added that \"they should not, however, be asked to take on obligations that go beyond their development stage, responsibility and capabilities.\"",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1858",
+      "reference_sha256": "6ca6e59d1b7d20521c1e36ef100f2bce15677b64383066bd6c654c1fd7617a16",
+      "reference": "Danielle Lantagne, a UN expert on the disease, stated the outbreak was likely caused by the peacekeepers.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1859",
+      "reference_sha256": "af559ad5b85d111b475e92567285331b80d1a8140a99960e6bc6b2f746b47f36",
+      "reference": "towards the end of the Middle Ages western Europe began to develop their own style. one of the biggest developments of the time as a result of the crusades people began to use buttons to fasten clothing.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1860",
+      "reference_sha256": "199c726501266071426001c6580f548f716bd705e9c2e9c1a2430bc0b2f3dca2",
+      "reference": "The governor's office said nineteen of the injured were police officers.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "nineteen",
+          "start": 27,
+          "end": 35
+        }
+      ]
+    },
+    {
+      "source_id": "1861",
+      "reference_sha256": "fc640cb8d2d9f654f796c81cec19348b0bb4a04394dcfcca0d80ce163f0cac29",
+      "reference": "As a result, the performers smoke cannabis joints on stage, and the theatre itself is encouraging the audience to join in.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1862",
+      "reference_sha256": "7786c78a9e1266435a9a3425a12e2ee295b729f362ae21de59b92f592d2a2c23",
+      "reference": "NextGen is a system the FAA claims would allow aircraft to fly shorter routes and save millions of gallons of fuel each year and cut carbon emissions.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "millions",
+          "start": 87,
+          "end": 95
+        }
+      ]
+    },
+    {
+      "source_id": "1863",
+      "reference_sha256": "1282a14ad6812afe1034bc528ee184beeae2f19d738a99889dab59469288524d",
+      "reference": "The center of Tibetan meditation is the Deity Yoga. Through the visualization of various deities the energy channels are cleaned, the chakras are activated and the enlightenment consciousness is created.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1864",
+      "reference_sha256": "8b55bf408c77ed5602b18a07bce831d7325e7bc0a0182eea93f249a1fe218915",
+      "reference": "Mrs. Kirchner announced her intention to run for president at the Argentine Theatre, the same location she used to start her 2005 campaign for the Senate as member of the Buenos Aires province delegation.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "2005",
+          "start": 125,
+          "end": 129
+        }
+      ]
+    },
+    {
+      "source_id": "1865",
+      "reference_sha256": "d8a1f09822e9044fc183ae52f7f6da0dcaf68ad780649475b003d31059c1b723",
+      "reference": "Saint Petersburg cruises include time in town. Cruise passengers are exempted from visa requirements (check the terms).",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1866",
+      "reference_sha256": "7e41c5c6fdc5989af62e413e3a40e9591351ee0849c953b67e4f0f2e9ba653a1",
+      "reference": "First, most riders wear riding boots with a heel and a smooth, quite narrow, sole.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1867",
+      "reference_sha256": "7cf618fe524a611f7439dafc1c27c1a4ad4b497a28ff4c33d3aadda1bedea895",
+      "reference": "Plants make oxygen which humans breathe, and they take in carbon-dioxide which humans exhale (that is, breathe out).",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1868",
+      "reference_sha256": "2584613601a1df0e69cbcc5ce942bd5622503d22c4638d8afc59ca20ebad9105",
+      "reference": "At the other end of the spectrum, one morphs into an unrecognizable individual that feels he or she must change everything the team has been doing and make it their own.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1869",
+      "reference_sha256": "48e592da8d83c3a04f7d8c9af2651559f1a81ad40a6489b9bd0cb4f4fd796c47",
+      "reference": "Its long jaws were studded with more than 70 razor-sharp teeth, along with an extra set in the roof of its mouth, meaning that there was no escape for anything that crossed its path.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "70",
+          "start": 42,
+          "end": 44
+        }
+      ]
+    },
+    {
+      "source_id": "1870",
+      "reference_sha256": "37566425eebae5e1a42c2edb590acae508178b808c0e5b791cc7ce86a0efd349",
+      "reference": "The scenes are displayed on the pyramids and the different pyramids are lit up.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1871",
+      "reference_sha256": "49772b407342f66edc9e40121ea0effe7a5996ea2648ed252a08e5d571e87b4d",
+      "reference": "In the warm climate of the Middle East, the house was not so important.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1872",
+      "reference_sha256": "5fe8701ccde584504c07371e7a51a29051dfb11436016eb62f5ad8e720d3bebc",
+      "reference": "During the struggle for independence organised by the Mau movement, a peaceful gathering in the town resulted in the killing of the paramount chief Tupua Tamasese Lealofi III.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "III",
+          "start": 171,
+          "end": 174
+        }
+      ]
+    },
+    {
+      "source_id": "1873",
+      "reference_sha256": "d44a1500a5114901fc7498b4afbe98462b2dafe4ee6ebccb02e43d39ffb87608",
+      "reference": "Be firm in turning down men, and don't be afraid to stand your ground (cultural differences or not, it doesn't make it ok!).",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1874",
+      "reference_sha256": "ea2abd476e915a76605647bc919ac879faf5390da64f4384e5924f69ed6987cb",
+      "reference": "Some people thought he was right but many people believed the opposite; that the Solar System moved around the Earth, including the Sun (and even the other stars).",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1875",
+      "reference_sha256": "3ae541a6ed3a5e6792048eb4fb1eeff5a2e642c12df96f0d77c8ed4f6701e0f2",
+      "reference": "A full 20 percent of the water that pours out of the planet's rivers into the oceans comes from the Amazon.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "20 percent",
+          "start": 7,
+          "end": 17
+        }
+      ]
+    },
+    {
+      "source_id": "1876",
+      "reference_sha256": "38d901be0ea7f49ef8697e5b100f48d9d94d1f35f819fad48c00bc5076b8f529",
+      "reference": "The Northern Marianas emergency management office said that there were no damages reported in the nation.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1877",
+      "reference_sha256": "adf05153287cbbd8f37811184578405087d55c7fee293f8f0c7d355aec6cae50",
+      "reference": "Current senator and Argentine First Lady Cristina Fernandez de Kirchner announced her presidential candidacy yesterday evening in La Plata, a city 50 kilometers (31 miles) away from Buenos Aires.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "50",
+          "start": 147,
+          "end": 149
+        },
+        {
+          "type": "number",
+          "text": "31",
+          "start": 162,
+          "end": 164
+        }
+      ]
+    },
+    {
+      "source_id": "1878",
+      "reference_sha256": "ef0ff7e223f2dee354acdf46857a12505b1e918970d21a71a25d4dcf007a9b29",
+      "reference": "The central authority of the church had been in Rome for over a thousand years and this concentration of power and money led many to question whether this tenet was being met.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "a thousand",
+          "start": 62,
+          "end": 72
+        }
+      ]
+    },
+    {
+      "source_id": "1879",
+      "reference_sha256": "8b0d4a22fde6d7afc6771f14390b738ff14af0103da3a3ced499028b808d9bba",
+      "reference": "One can only wonder what the keyboard will become when something newer comes along.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1880",
+      "reference_sha256": "db133ee7e3d6e31fe414e71e22cc8a084488d8f8a493259bf7b58a1ece48ad81",
+      "reference": "Thus, the pencil was a good friend to many people when it came out.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1881",
+      "reference_sha256": "82ba347beefd236a6ddf64892b3680fc55c515d002377c2654e25904468a00e4",
+      "reference": "Sharing a field trip virtually is also a great way to reflect a on a trip and share experiences with future classes.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1882",
+      "reference_sha256": "6b7683aac81f2a6b5d5f272adf8f786dba76f2e216fac55f981f0cd89f6208ef",
+      "reference": "Scientists hope to understand how planets form, especially how the Earth formed, since comets collided with the Earth long ago.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1883",
+      "reference_sha256": "bef00d5ad9ccd1027da4b585bd5bb8f4f5ab66489846c1cdf18f317e4471121b",
+      "reference": "The vertical clearance under the bridge is 15 meters. Construction was completed in August 2011, it didn't open to traffic until March 2017.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "15",
+          "start": 43,
+          "end": 45
+        },
+        {
+          "type": "date",
+          "text": "August 2011",
+          "start": 84,
+          "end": 95
+        },
+        {
+          "type": "date",
+          "text": "March 2017",
+          "start": 129,
+          "end": 139
+        }
+      ]
+    },
+    {
+      "source_id": "1884",
+      "reference_sha256": "2c2c6e906904651fbeda00de7cb6a05a960b3ef2815fbd03cc7a39a4b6691b29",
+      "reference": "In particular, it is claimed that one can detect whether a person is lying by interpreting micro-expressions correctly.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1885",
+      "reference_sha256": "f25b4736180f8982c475c878dc3dd630d9b5ad17e3854c7d8ff43dbd0f19b02a",
+      "reference": "Between 10:00-11:00 pm MDT, a fire was started by the inmates in the yard.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "10:00-11:00 pm MDT",
+          "start": 8,
+          "end": 26
+        }
+      ]
+    },
+    {
+      "source_id": "1886",
+      "reference_sha256": "dcade42d21be24a72b316027d95fe84809cdc4927e92e83ec5f5c5654c2f68db",
+      "reference": "Ancient cultures and tribes began to keep them for easy access to milk, hair, meat, and skins.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1887",
+      "reference_sha256": "fe928d86133a9fc1554287244542c6f7bd1f65c5a11162cff56b112cc2c0ba81",
+      "reference": "While he was working at the hospital Liggins began to investigate premature labor during his spare time.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1888",
+      "reference_sha256": "10fffef22b3823b6ac366ac77787911dfcbfcb6d024d4951cb8b4afd61f43377",
+      "reference": "Re-entry shock comes on sooner than culture shock (there's less of a honeymoon phase), lasts longer, and can be more severe.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1889",
+      "reference_sha256": "1e7cb3a1e5b95effad1c0edc7c0ecadf31c5998c6cecb538db00908c769a3f42",
+      "reference": "It has brought us the train, the car, and many other transportation devices.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1890",
+      "reference_sha256": "c4c38b0ba3484039e3795da87a4103cc34d177e060181af28b894b80041cb1d0",
+      "reference": "Most modern research telescopes are enormous facilities in remote areas with favorable atmospheric conditions.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1891",
+      "reference_sha256": "4446d9762ce03b9906a3477fe32aaded6b80b27aca060fbde76e476495d84cc0",
+      "reference": "Lakkha Singh presented the chhappan bhog bhajan as well. Singer, Raju Khandelwal was accompanying him.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1892",
+      "reference_sha256": "e33dfd2c1f2a14365fa66a800bbc55916410d1ec97dcc242847c1162eb1d2041",
+      "reference": "This is the place the British colonisers took as their own and so if you are looking for evidence of the territory's colonial past, this is a good place to start.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1893",
+      "reference_sha256": "3265fb67ac48540d5d8df8f834131495546709a6fe0bde72b5e21ed30233f93f",
+      "reference": "The Sundarbans are the largest littoral mangrove belt in the world, stretching 80 km (50 mi) into the Bangladeshi and Indian hinterland from the coast.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "80",
+          "start": 79,
+          "end": 81
+        },
+        {
+          "type": "number",
+          "text": "50",
+          "start": 86,
+          "end": 88
+        }
+      ]
+    },
+    {
+      "source_id": "1894",
+      "reference_sha256": "203ba79e469ace0559966fc2a150bcdb0d384c851e5a3fc4fd512fd46fe0656e",
+      "reference": "A curry is a dish based on herbs and spices, together with either meat or vegetables.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1895",
+      "reference_sha256": "601c797a46e92534fd066f7a683534bb133ac178e96a48f0dcb421dc6562f908",
+      "reference": "As knowledge of Greek declined, the West found itself cut off from its Greek philosophical and scientific roots.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1896",
+      "reference_sha256": "86a6272580596a307ed4c98abb32f6abe17281421fdedb7a010b199d4fdb46bd",
+      "reference": "USA Gymnastics and the USOC have the same goal — making the sport of gymnastics, and others, as safe as possible for athletes to follow their dreams in a safe, positive and empowered environment.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1897",
+      "reference_sha256": "043cb98b6e8b992cde74959b4b8feea33a5ca2cf18795a3e51416aad16de4137",
+      "reference": "In the north the region is bounded by the Sahel, and in the south and west by the Atlantic Ocean.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1898",
+      "reference_sha256": "1dfb8295e66be901c202dc426f420ff4b4fac4eae704075209478b594a6aa588",
+      "reference": "\"He [Wales] basically lied to us from the start. First, by acting as if this was for legal reasons. Second, by pretending he was listening to us, right up to his art deletion.\"",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1899",
+      "reference_sha256": "ef4ceb7c512705a37290c53cf24c4336e7f26c5f769495cbea9c7cf9e5a51e19",
+      "reference": "Muhammad was deeply interested in matters beyond this mundane life. He used to frequent a cave that became known as “Hira‘” on the Mountain of “Noor” (light) for contemplation.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1900",
+      "reference_sha256": "c18e3c8b5b304a49777a7ca1a7d68c8954e665e45ae29af575a2a907f2e9692a",
+      "reference": "In fact, it is not easy to find at all even if one knew it existed. Once inside the cave, it is a total isolation.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1901",
+      "reference_sha256": "745bda510d20a50c69246e6c0326c7d7e603b208521eb3f25f38fb6287e98ac3",
+      "reference": "Although AI has a strong connotation of science fiction, AI forms a very important branch of computer science, dealing with behavior, learning and intelligent adaptation in a machine.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1902",
+      "reference_sha256": "b19f3203757987f7ed1646162cad2e286f87a3e2fafa9f9459ae223bf239601b",
+      "reference": "He was initially hospitalised in the James Paget Hospital in Great Yarmouth.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1903",
+      "reference_sha256": "d3e0190389c41976d22de222ebf01acc83ec165e9894fee000bbc5ec28fe31cd",
+      "reference": "When all available resources are effectively used across the functional departments of an organization, creativity and ingenuity can transpire.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1904",
+      "reference_sha256": "c2ba1cad9a353d252563cf9b449ed23d3fdf2046a1f2429552be98aed76b5bff",
+      "reference": "However, due to the slow communication channels, styles in the west could lag behind by 25 to 30 year.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "25",
+          "start": 88,
+          "end": 90
+        },
+        {
+          "type": "number",
+          "text": "30",
+          "start": 94,
+          "end": 96
+        }
+      ]
+    },
+    {
+      "source_id": "1905",
+      "reference_sha256": "128b0db0184f31a740dc2d69ed33b9b99dd014eeaea868cac499f5720228ee8c",
+      "reference": "The capital of Moldova is Chişinău. The local language is Romanian, but Russian is widely used.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1906",
+      "reference_sha256": "75e66d6322c33739023fe3edaa4f639987c16e1fb1c1965d0dca333284df867e",
+      "reference": "\"This is not going to be goodbye. This is the closing of one chapter and the opening of a new one.\"",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [],
+      "review_note": "one chapter/new one are metaphorical indefinite references, not a numeric quantity to be copied."
+    },
+    {
+      "source_id": "1907",
+      "reference_sha256": "303c41d1bdd8dd82c125b45b276f5898f61daa6414e899ae5a3950d5ed6bc6f3",
+      "reference": "Soon after the outbreak of hostilities, Britain initiated a naval blockade of Germany.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1908",
+      "reference_sha256": "e26cb42c85ba16c26bed36a4b7d3aedaf0f9c1fce2b35552d1ed0d2e1288ae78",
+      "reference": "This is an important way to distinguish between some verbs and objects.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1909",
+      "reference_sha256": "79394b66eef8b7e5188acf5b6e54cd6abdfbec78df97aecd633341af6fe03467",
+      "reference": "Virtual teams are held to the same standards of excellence as conventional teams, but there are subtle differences.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1910",
+      "reference_sha256": "3ada64e4fcc06a56c2055ea99982ac2ac18829982237c590a6d6fc1790aaa29d",
+      "reference": "Parisians have a reputation for being egocentric, rude and arrogant.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1911",
+      "reference_sha256": "db8b4799964b295293a25e6d1119dc9be362a93716b84bb25712f0c9b3222c00",
+      "reference": "Similarly, by having a Schengen visa, you do not need to apply for visas to each of the Schengen member countries separately, hence saving time, money and paperwork.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1912",
+      "reference_sha256": "88cb4dd58a235f961a60a6045a5061cc81b18d858b1fd303c843a943c677432f",
+      "reference": "Most of the smaller islands are independent nations, or associated with France, and known as luxury beach resorts.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1913",
+      "reference_sha256": "1f583da89192199fcdf585a7b151a01207582eb7b7736951eabc1bb98c6245f5",
+      "reference": "The tiger's roar is not like the full-voiced roar of a lion, but more like a sentence of snarly, shouted words.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1914",
+      "reference_sha256": "4c2ed6b3f083afe8cf22baef2ee0ec56364a40531ebe7b700c0ea574b82ac9df",
+      "reference": "Twentieth century research has shown that there are two pools of genetic variation: hidden and expressed.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "Twentieth century",
+          "start": 0,
+          "end": 17
+        },
+        {
+          "type": "number",
+          "text": "two",
+          "start": 52,
+          "end": 55
+        }
+      ]
+    },
+    {
+      "source_id": "1915",
+      "reference_sha256": "fecfaa6ffc844b5a48f99b670b0e71fc3768a7fd7d190f32e34a3fd61422f6fb",
+      "reference": "You can use boda-boda (motorcycle taxi) to get around Goma. The normal (local) price is ~500 Congolese Francs for the short ride.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "amount",
+          "text": "~500 Congolese Francs",
+          "start": 88,
+          "end": 109
+        }
+      ]
+    },
+    {
+      "source_id": "1916",
+      "reference_sha256": "f2b909977225509e9f3c4cab288bc0345359f9b7603c7ad4693736700541aac1",
+      "reference": "Many German baked goods also feature almonds, hazelnuts, and other tree nuts. Popular cakes often pair particularly well with a cup of strong coffee.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1917",
+      "reference_sha256": "3e756f09f03875bd3696395730ec484c951dd862db99855625c695e02717ddd5",
+      "reference": "Several large television screens were installed in various places in Rome to let the people watch the ceremony.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1918",
+      "reference_sha256": "cfb29926db497b2b8aacc4dcbddad48be07ffef8e01d3dfc001eb4af399cdded",
+      "reference": "The Sundarbans has been declared a UNESCO World Heritage Site. The part of the forest within Indian territory is called Sundarbans National Park.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1919",
+      "reference_sha256": "b6d058613c0ade0f6b171eff55a0d29f6c105be36206a4476401d66a350df5b1",
+      "reference": "The city is also the base to climb the Nyiragongo volcano along with some of the cheapest Mountain Gorilla tracking in Africa.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1920",
+      "reference_sha256": "64af60ddce8b886ad541bb63f7fea0b4281b895eb7b2011c13ef6d928355747f",
+      "reference": "They usually have special food, drink and entertainment offers, to keep guests in a good mood, and keep them at the premise.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1921",
+      "reference_sha256": "05b0c037f58732ff20570f25785abfa7c7e1e921cffbc49fe377d4eaa31a6e77",
+      "reference": "On the other hand, icy and snowy conditions are normal in many countries, and traffic goes on mostly uninterrupted all year round.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1922",
+      "reference_sha256": "3cae305720d46a6f0f6b4e01ddb640a4ab3f49f4497a54899c8372a5c37c7b59",
+      "reference": "There are of course Christian theological explanations for this tradition, but it may well be a pre-Christian Spring and Fertility ritual.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1923",
+      "reference_sha256": "58917252488a7c63695db0e5bc87b35b03942de62732016507b4638f9568b5c7",
+      "reference": "The strategy proved effective, cutting off vital military and civilian supplies, although this blockade violated generally accepted international law codified by several international agreements of the past two centuries.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "two",
+          "start": 207,
+          "end": 210
+        }
+      ]
+    },
+    {
+      "source_id": "1924",
+      "reference_sha256": "8738fc26d3c9a67e3265ae501d29b897c137a54bd074fd9f219c030727e750d8",
+      "reference": "Four skiers in the women's sitting group failed to finish their runs, and 45 of the 117 total skiers in the Giant Slalom failed to rank in the race.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "Four",
+          "start": 0,
+          "end": 4
+        },
+        {
+          "type": "number",
+          "text": "45",
+          "start": 74,
+          "end": 76
+        },
+        {
+          "type": "number",
+          "text": "117",
+          "start": 84,
+          "end": 87
+        }
+      ]
+    },
+    {
+      "source_id": "1925",
+      "reference_sha256": "1ac52722905f11f7117d33c16d20379b5ac4aedea02643d89552d66922b82052",
+      "reference": "The work done was mostly theoretical, but the program was written to simulate observations made of the Sagittarius galaxy.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1926",
+      "reference_sha256": "67613a8324417eff59cf4594ef47bc91af8dce96ba5fba50590941a5ae5cdaa7",
+      "reference": "Accepted were Aristotle's views on all matters of science, including psychology.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1927",
+      "reference_sha256": "d7d869a05cd56f7ecfeb9bdb66faf4c159c01ac45116fe948b4da59fb9f9cee3",
+      "reference": "Angel (2006), explains the Continuum approach as a method being used to help organizations reach a higher level of performance.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "2006",
+          "start": 7,
+          "end": 11
+        }
+      ]
+    },
+    {
+      "source_id": "1928",
+      "reference_sha256": "1868367bee9329bf7ab14f9a3b2d4aef18ade296859c18381a966db4f5dae2d3",
+      "reference": "By 1976, thirty percent of Machu Picchu had been restored and restoration continues till today.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "1976",
+          "start": 3,
+          "end": 7
+        },
+        {
+          "type": "number",
+          "text": "thirty percent",
+          "start": 9,
+          "end": 23
+        }
+      ]
+    },
+    {
+      "source_id": "1929",
+      "reference_sha256": "d0b9fb173366d67ee5d3ccfb12436f74ab9a004caa17bfee30d2bb9c6770c044",
+      "reference": "Del Potro had the early advantage in the second set, but this too required a tie break after reaching 6-6.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "second",
+          "start": 41,
+          "end": 47
+        },
+        {
+          "type": "number",
+          "text": "6-6",
+          "start": 102,
+          "end": 105
+        }
+      ]
+    },
+    {
+      "source_id": "1930",
+      "reference_sha256": "2eb4e63398bf1d4fae720a074b07c103afdda46ad8918311235962a3eff253c2",
+      "reference": "Six hostages, including the children and elderly, were released early, as were the Filipino photographers.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "Six",
+          "start": 0,
+          "end": 3
+        }
+      ]
+    },
+    {
+      "source_id": "1931",
+      "reference_sha256": "7b744595dec7e867088ba41e98434aa2a514d5050c6b2fc771c9705cb76dd064",
+      "reference": "The service is frequently used by shipping, including pleasure craft, as well as expeditions who have remote data and voice needs.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1932",
+      "reference_sha256": "b27ad80a1c38c4953383ef370bc7cc7e7e5a70ccb084b03a55ca3f504304a41f",
+      "reference": "Five minutes into the display a wind starts rolling in, about a minute later, the wind is reaching 70km/h... then the rain comes, but so hard and so large that it slaps your skin like a needle, then hail fell from the sky, people panicking and screaming and running over each other.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "Five",
+          "start": 0,
+          "end": 4
+        },
+        {
+          "type": "number",
+          "text": "70",
+          "start": 99,
+          "end": 101
+        }
+      ]
+    },
+    {
+      "source_id": "1933",
+      "reference_sha256": "edeefe0f7a9f289402b461b3804ddd961131e1f72ba06ef5f235bcacca78f3da",
+      "reference": "Finally, there are many small cats (including loose pet cats) that eat the far more numerous small prey like insects, rodents, lizards, and birds.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1934",
+      "reference_sha256": "4f15a6532f12c418e38819128872cd8f076ecf14681bc4033f054f91a9971324",
+      "reference": "Usually you always here the sound of tourists and vendors. The story of the sound and light is just like a story book.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1935",
+      "reference_sha256": "0fae55bf4e44f94a6de072c54bb9209d471864f2756dc4630eb0fc608616f1a5",
+      "reference": "However, that is not true. Although there is something written on the back of the document, it is not a treasure map.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1936",
+      "reference_sha256": "55e5b57685990e1d9505f3ee0104dd799c4a7eaeb0d409571f7206d0c5e0d378",
+      "reference": "Perry stated that he would \"return to Texas to assess the results of tonight's caucus, determine whether there is a path forward for myself in this race\", but later said that he would remain in the race and compete in the January 21 South Carolina primary.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "January 21",
+          "start": 222,
+          "end": 232
+        }
+      ]
+    },
+    {
+      "source_id": "1937",
+      "reference_sha256": "777eb82b84536135a8a12a7e662cbfb605bb758446c4c98b06d76c8500eaef73",
+      "reference": "However, these plans were rendered obsolete nearly overnight, when over 800,000 soldiers from the Soviet's Union Red Army entered and created the Belarussian and Ukrainian fronts after invading the eastern regions of Poland in violation of the Riga Peace Treaty, the Soviet-Polish Non-Aggression Pact, and other international treaties, both bilateral and multilateral.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "800,000",
+          "start": 72,
+          "end": 79
+        }
+      ]
+    },
+    {
+      "source_id": "1938",
+      "reference_sha256": "e71bc7a42adb8e24a82108087896f4fef0355b2713156c84629b1533baa4198f",
+      "reference": "The hospital has followed protocol for infection control, including separating the patient from others to prevent possible infection of others.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1939",
+      "reference_sha256": "4f736306824db7b3781387a59c0ef385c02e2f8c43e1b8c25935d2bf24f34b13",
+      "reference": "Also after the Revolution occupations were open to all male applicants allowing the most ambitious and successful to succeed.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1940",
+      "reference_sha256": "c42ef68872b3524f40cab969a5fa5074aaef23b26e89a9e7a9576750c762bd40",
+      "reference": "All things considered, we should not be surprised if our own ancestors solved their \"protein problem\" in somewhat the same way that chimps on the savanna do today.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1941",
+      "reference_sha256": "faadd1e4f47ab2e6c57e80ef5c3f6a1d119e37038c0b95f775accb463f28a665",
+      "reference": "These couples may choose to make an adoption plan for their baby.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1942",
+      "reference_sha256": "a82c1680b4ea9e5f746aed4f61d3cbacf199d44ab20e8f9f19c2693a348163e4",
+      "reference": "We make our houses from plants and make clothes from plants. Most foods that we eat are plants. Without plants, animals could not survive.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1943",
+      "reference_sha256": "b90c0a9ec0dca8d647da7e792c612bc50329fa21d4354521ed1b432da6603509",
+      "reference": "The lower the tension, the more positive the life force present. Every person has the potential to find absolute peace and contentment.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1944",
+      "reference_sha256": "6b9f8fd5373bd5270cbdeac91ea1c399e0f3b04e73db7c5cd773ef3b0bd2e0bb",
+      "reference": "These are sometimes-crowded family beaches with a good range of shops lining the shore. Swimming is safe.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1945",
+      "reference_sha256": "ac856d3bcd735d3f0199cb98c3e1825b9b705315c916866931a08ee6af05cfdc",
+      "reference": "Casablanca is one of the least interesting places to shop in all of Morocco.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1946",
+      "reference_sha256": "abe130741a258d1055bfb0a331d13d4e8426ad4e5cae31bebf5e2dd0256d962f",
+      "reference": "Cancellation policies vary, but as of late March most coronavirus-based cancellation policies don't extend to July 2020, when the Olympics had been scheduled.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "March",
+          "start": 43,
+          "end": 48
+        },
+        {
+          "type": "date",
+          "text": "July 2020",
+          "start": 110,
+          "end": 119
+        }
+      ]
+    },
+    {
+      "source_id": "1947",
+      "reference_sha256": "d8b45a6086843d763cf2753d18667688171a1cbf58dd7962e7e83834897c9b90",
+      "reference": "Prior to the arrival of troops, Haiti had not encountered problems related to the disease since the 1800s.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "1800s",
+          "start": 100,
+          "end": 105
+        }
+      ]
+    },
+    {
+      "source_id": "1948",
+      "reference_sha256": "52c307684ac3850b880276bb33637d01244875221cb9cd20ca65854c221924c4",
+      "reference": "The Three Kingdoms was one of the bloodiest eras in Ancient China’s history thousands of people died fighting to sit in the highest seat in the grand palace at Xi’an.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "thousands",
+          "start": 76,
+          "end": 85
+        }
+      ]
+    },
+    {
+      "source_id": "1949",
+      "reference_sha256": "fba70d450ee626ac79b7759612a1514411f5703545ca0710e16248908a54ba3c",
+      "reference": "The term bug is used by entomologists in a formal sense for this group of insects.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1950",
+      "reference_sha256": "3a8817b246eec8255dbc708b58fcb0906ed609afa0f2983ed5e3c322a3dbb4c1",
+      "reference": "To the north and within easy reach is the romantic and fascinating town of Sintra and which was made famous to foreigners after a glowing account of its splendours recorded by Lord Byron.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1951",
+      "reference_sha256": "64565acdf83f3409f5347ac0d291a1e056ba355b97ada4e49722a93bc0c90080",
+      "reference": "In 2002 Goma was destroyed by lava from the Nyiragongo volcano which buried most of the town’s streets, particularly the town centre.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "2002",
+          "start": 3,
+          "end": 7
+        }
+      ]
+    },
+    {
+      "source_id": "1952",
+      "reference_sha256": "16741b104de57508fd118e3740c4a061b840c1dedfdf1890c2707e53d91b74b4",
+      "reference": "Anyone who's going to drive at high latitudes or over mountain passes should consider the possibility of snow, ice, or freezing temperatures.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1953",
+      "reference_sha256": "0a1d05c6a73cccf0e4bf452a55e7c6130dccdf31f7fb3207ea188eeb39c0e4bb",
+      "reference": "He was subsequently relocated to Addenbrooke's Hospital in Cambridge.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1954",
+      "reference_sha256": "2b9ae59534215d0de1c03fee0ee077bef32a04fd27af38f547271b3673de61b1",
+      "reference": "Their disciplined defence, ball handling skills and excellent team work made them stand out and it was clear that this was the team to beat.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1955",
+      "reference_sha256": "88a7d1ab0a109a7ef48330dad1164b182b86ac093927a737e6229c9acae3ae12",
+      "reference": "MS is a disease that affects the central nervous system, which is made up of the brain, the spinal cord and the optic nerve.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1956",
+      "reference_sha256": "e6a38c3c22ec4b254ac934bd206b6f1d32a6639869529ea871020c2f929e5395",
+      "reference": "Using ships to transport goods is by far the most efficient way to move large amounts of people and goods across oceans.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1957",
+      "reference_sha256": "cec5a0d844cd2a1f6ffb4278708277eb084d7079caa1081efc3af1b5ad141a39",
+      "reference": "He referred to the rumors as \"political chatter and silliness\".",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1958",
+      "reference_sha256": "afb04f9a6e59aee04e815cd380241fe25872e4dbe386ec383bad76ad854732e1",
+      "reference": "The city is in stark contrast to the rest of the country's cities, because it has more of an Arabic flair than of an African.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1959",
+      "reference_sha256": "747ddc335bad8c5a934befcf998e340729fa51f11e191377376f67fd593b6cdf",
+      "reference": "Still, take advice from authorities, obey all signs, and pay close attention to safety warnings.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1960",
+      "reference_sha256": "064d18e7ce7a6e09ba5f924917266e6a67e870b1018fc4245ba1718febb3e401",
+      "reference": "He was reportedly aged in his 20s. In a statement, Bieber said \"[w]hile I was not present nor directly involved with this tragic accident, my thoughts and prayers are with the family of the victim.\"",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "20s",
+          "start": 30,
+          "end": 33
+        }
+      ]
+    },
+    {
+      "source_id": "1961",
+      "reference_sha256": "04666a0c941bd5f8f12fb0fb6f2c988f7829ecebcc1796352e40f0571684eab3",
+      "reference": "One of the most common methods used to illustrate the importance of socialization is to draw upon the few unfortunate cases of children who were, through neglect, misfortune, or wilful abuse, not socialized by adults while they were growing up.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1962",
+      "reference_sha256": "777f4d2a9d239a4c64928cc6d9180ec841ea5c3185a498129b608108fc3b5d0f",
+      "reference": "The pH level is indicated by the amount of Hydrogen (the H in pH) ions in the tested chemical.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1963",
+      "reference_sha256": "87b0d555367e40fe5bb03b3ff6d0c1c4af069a8dc67b64ff06ee47543c6952fa",
+      "reference": "Ironing damp clothes can help them dry. Many hotels have an iron and ironing board available for loan, even if one is not present in the room.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1964",
+      "reference_sha256": "500cd46cb42b27c12a47c51d8144820a79d54676ff629024342d748445c249ab",
+      "reference": "The 25 Dunlap broadsides still known to exist are the oldest surviving copies of the document. The original handwritten copy has not survived.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "25",
+          "start": 4,
+          "end": 6
+        }
+      ]
+    },
+    {
+      "source_id": "1965",
+      "reference_sha256": "560cae6ca072476b5fa575a2e08239323d32002cf0b48cb98865b8d80fa1f2ea",
+      "reference": "They are almost all sandy beaches with safe swimming, and most have shade provided by pohutukawa trees.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1966",
+      "reference_sha256": "a3afbb021f3b8d61b02957d2ad75acc4aabb20d0b6ccee4b1b73a0bd159dc3ed",
+      "reference": "The commission was Martelly's response to widespread anti-regime protests that started in October.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "October",
+          "start": 90,
+          "end": 97
+        }
+      ]
+    },
+    {
+      "source_id": "1967",
+      "reference_sha256": "bd5888b5ee15b1cff4ca28715a953c67d5fb65e3203114e3654e0979c551c702",
+      "reference": "Layton had asked for changes to the conservatives' environmental bill during the meeting with the PM, asking for a \"thorough and complete rewriting\" of the Conservative party's environmental bill.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1968",
+      "reference_sha256": "5e6f077caa2311da70f1b59af41d5589abb21d58e642e452b5473960a320c3d8",
+      "reference": "Some cruises feature Berlin, Germany in the brochures. As you can see from the map above Berlin is no where near the sea and a visit to the city is not included in the price of the cruise.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1969",
+      "reference_sha256": "ddcfe8b3a8375d3c1b3750241956e237165bf44c37cde7520c1aeaf2cbee744d",
+      "reference": "It states that the most effective place for the main subject is at the intersection of lines dividing the image into thirds vertically and horizontally (see example).",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "thirds",
+          "start": 117,
+          "end": 123
+        }
+      ]
+    },
+    {
+      "source_id": "1970",
+      "reference_sha256": "d604a00d1fc8f9b11f67e434aa543717817119dcd8e94e0015b4c0d0e0106460",
+      "reference": "We don't know for sure, but it may have had a forked tongue. Its diet included turtles, large fish, other mosasaurs, and it may even have been a cannibal.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1971",
+      "reference_sha256": "7c3db33b9cf225e459f1bb361c367611e3fd0a941ad0813234c4dea09ed92647",
+      "reference": "High winds, hail, excessive precipitation, and wildfires are forms and effects of severe weather, as are thunderstorms, tornadoes, waterspouts, and cyclones.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1972",
+      "reference_sha256": "51bace5258329daee5b9071344ce0e5669d4d5071602bcf4e9fd0a2fc6086c89",
+      "reference": "Many people don't think about them as dinosaurs because they have feathers and can fly.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1973",
+      "reference_sha256": "c2881088d42c8fb7dee8f6b1b8df44f5f989f8936e9138e74f986938600c7329",
+      "reference": "But being placed in the \"high tropics\" just a few degrees north of equator you will need to deal with both heat (always) and strong sun (when the sky is clear, more rarely).",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1974",
+      "reference_sha256": "65294ae21a3ec8af0fffb61610c1f3a83616e60a2474abd70cd7dcd2c2d741e2",
+      "reference": "Along the same line, men are required to wear trousers covering the knees.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1975",
+      "reference_sha256": "41e2cb3c39e922f2e6f3dd54ab5bd9a9428f6192179d7763a6fb8a1ad0e8611e",
+      "reference": "Vatican City's population is around 800. It is the smallest independent country in the world and the country with the lowest population.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "800",
+          "start": 36,
+          "end": 39
+        }
+      ]
+    },
+    {
+      "source_id": "1976",
+      "reference_sha256": "6e3f64c84a359adb1e07dc8bd0103b251518a5b6c872448c122f88bfb0cb06f5",
+      "reference": "Middle order batsmen, Sachin Tendulkar and Rahul Dravid, performed well and made a hundred-run partnership.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "hundred",
+          "start": 83,
+          "end": 90
+        }
+      ]
+    },
+    {
+      "source_id": "1977",
+      "reference_sha256": "51cb0e1f39bf096eb4f4f713b5c148109da9f1f26587160ed845f790826baf9e",
+      "reference": "Prides are made up of one to three related adult males, along with as many as thirty females and cubs.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "one to three",
+          "start": 22,
+          "end": 34
+        },
+        {
+          "type": "number",
+          "text": "thirty",
+          "start": 78,
+          "end": 84
+        }
+      ]
+    },
+    {
+      "source_id": "1978",
+      "reference_sha256": "228fbea7954407b0522f5a67ddb2ead675dd27c835ae86ab9ea60b767f918cd8",
+      "reference": "For the Springboks, it ended a five-match losing streak.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "five",
+          "start": 31,
+          "end": 35
+        }
+      ]
+    },
+    {
+      "source_id": "1979",
+      "reference_sha256": "c6dd3502c647492b8ce73c4e359d8a0a9b763062e48d594b9273ff4389a4b83c",
+      "reference": "The official Falklands currency is the Falkland pound (FKP) whose value is set equivalent to that of one British pound (GBP).",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "amount",
+          "text": "one British pound",
+          "start": 101,
+          "end": 118
+        }
+      ]
+    },
+    {
+      "source_id": "1980",
+      "reference_sha256": "41ae4cd4035e2f9201c9df44bc2bde58aff854302ff67f2fb1a403e367343f2c",
+      "reference": "Unfortunately, studying traffic flow is difficult because driver behavior cannot be predicted with one-hundred percent certainty.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "one-hundred percent",
+          "start": 99,
+          "end": 118
+        }
+      ]
+    },
+    {
+      "source_id": "1981",
+      "reference_sha256": "3899a244de29b2bcc05ef9c7a656660863922e9808f2c5e6fa6bdd8d51bafe0d",
+      "reference": "If you only go ashore using shipboard excursions you will not need a separate visa (as of 2009).",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "2009",
+          "start": 90,
+          "end": 94
+        }
+      ]
+    },
+    {
+      "source_id": "1982",
+      "reference_sha256": "d2e02f6a0f823647b2340ee077b3c80b037d71e39eb69a195afc6e02ad523fb4",
+      "reference": "Women: It is recommended that any women travellers say that they are married, regardless of actual marital status.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1983",
+      "reference_sha256": "03168f442f7480f285145a768dabc6e70a254e99588217bdbe648faea73e4ab5",
+      "reference": "The word civilization comes from the Latin civilis, meaning civil, related to the Latin civis, meaning citizen, and civitas, meaning city or city-state, and that also somehow defines the size of the society.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1984",
+      "reference_sha256": "0c1593635e0be2610dc908c4ea4001ce572113a3a03f49d2eb0fb6594ba3e3a0",
+      "reference": "Mass car ownership also leads to a higher incidence of accidents on the roads, which leads to the invention of new techniques in healthcare for repairing damaged bodies.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1985",
+      "reference_sha256": "af74389d38566cf8c53037ab4af189358437d2a45f2ecbb33938331ddf303d5d",
+      "reference": "It is related to but usually not involving alpine style ski touring or mountaineering, the latter ones done in steep terrain and requiring much stiffer skis and boots.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1986",
+      "reference_sha256": "82686bbb711118e618c67068486055fdfc96b057d04b6b160e3518f5b797001b",
+      "reference": "The presence of a true “invisible team” (Larson and LaFasto, 1989, p109) is also a unique component of a virtual team.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "1989",
+          "start": 61,
+          "end": 65
+        },
+        {
+          "type": "number",
+          "text": "109",
+          "start": 68,
+          "end": 71
+        }
+      ]
+    },
+    {
+      "source_id": "1987",
+      "reference_sha256": "7cd7112437901e37126f4d9a6da9bef8445aeed3f924de54e40b215328e6ba8b",
+      "reference": "The crash occurred high up in mountainous terrain, and is believed to have been the result of hostile fire.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1988",
+      "reference_sha256": "db3f8886108c3703d3db95970e9073b4de8e0d99d832be92c20e3d69fc0c0ff1",
+      "reference": "During the 1920s, the prevailing attitudes of most citizens and nations was that of pacifism and isolation.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "1920s",
+          "start": 11,
+          "end": 16
+        }
+      ]
+    },
+    {
+      "source_id": "1989",
+      "reference_sha256": "e51859935f51fa2535fd62990574850c51b5ea0e3732a09c592d1b1ad39ea620",
+      "reference": "He was also engaged in engraving banknotes for many countries, recent examples of his work including the Prime Ministerial portraits on the front of the new Canadian $5 and $100 bills.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "amount",
+          "text": "$5",
+          "start": 166,
+          "end": 168
+        },
+        {
+          "type": "amount",
+          "text": "$100",
+          "start": 173,
+          "end": 177
+        }
+      ]
+    },
+    {
+      "source_id": "1990",
+      "reference_sha256": "ef358e3417150f6ade90eb2191223e7ca9420cf61ca0876b3f973d0ca886248a",
+      "reference": "Blogs can also help improve student writing. While students often begin their blog experience with sloppy grammar and spelling, the presence of an audience generally changes that.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1991",
+      "reference_sha256": "b0672c06b998b466ae25037a77dd27b19917e3b48ae5f462d70ec0780558cacc",
+      "reference": "During this period of European history, the Catholic Church, which had become rich and powerful, came under scrutiny.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1992",
+      "reference_sha256": "2b39b4054bdb0b7b5ff9dd4564d92d84cbdde1c7ae2d58127bd918477e5bf921",
+      "reference": "The term safari in popular use refers to overland travel to view the stunning African wildlife, particularly on savanna.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1993",
+      "reference_sha256": "91efd228932bc1a52ef496b32f66aa9e98e3d2c6c0bbe33768a2da6054e3cd5b",
+      "reference": "The tenth named storm of the Atlantic Hurricane season, Subtropical Storm Jerry, formed in the Atlantic Ocean today.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "tenth",
+          "start": 4,
+          "end": 9
+        }
+      ]
+    },
+    {
+      "source_id": "1994",
+      "reference_sha256": "aa46e650f6130debfdaca6c653d4a02def0e57c3a7b93514fabd8fca3244e962",
+      "reference": "Needless to say, if you know a Romance language, it will be easier for you to learn Portuguese.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1995",
+      "reference_sha256": "e33af2ce74145daa88f3da2022465389883a0ad5d6c58c1d8fcaf2301c40be6a",
+      "reference": "Virtual Scaffolds are internalized in the software and are meant to question, prompt, and explain procedures that may have been to challenging for the student to handle alone.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "1996",
+      "reference_sha256": "140d0f4af9a1681ff9e0ebd011e26be3b28702c58834ab154dbd93202906c272",
+      "reference": "Australia's Mitchell Gourley finished eleventh in the men's standing Super-G. Czech competitor Oldrich Jelinek finished sixteenth in the men's sitting Super-G.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "eleventh",
+          "start": 38,
+          "end": 46
+        },
+        {
+          "type": "number",
+          "text": "sixteenth",
+          "start": 120,
+          "end": 129
+        }
+      ]
+    },
+    {
+      "source_id": "1997",
+      "reference_sha256": "e0391d642d0bb92e2caa799c2e2d7df82eb7c574e25802186a509f6a7e1937cc",
+      "reference": "However, the percentage of XDR-TB in the entire group of people with tuberculosis still seems to be low; 6,000 of the total 330,000 people infected at any particular moment in South Africa.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "6,000",
+          "start": 105,
+          "end": 110
+        },
+        {
+          "type": "number",
+          "text": "330,000",
+          "start": 124,
+          "end": 131
+        }
+      ]
+    },
+    {
+      "source_id": "1998",
+      "reference_sha256": "5e875b34bd898b5c52909fa458c53c290a6d9c5f8ee64fe43fe742f293ef4a94",
+      "reference": "They have feet with scales and claws, they lay eggs, and they walk on their two back legs like a T-Rex.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "two",
+          "start": 76,
+          "end": 79
+        }
+      ]
+    },
+    {
+      "source_id": "1999",
+      "reference_sha256": "db79b9715f2bf0201c87193e18d963f702c921ddb0e51d398ea0c82c0c3e2f6c",
+      "reference": "Throughout 1960s, Brzezinski worked for John F. Kennedy as his advisor and then the Lyndon B. Johnson administration.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "date",
+          "text": "1960s",
+          "start": 11,
+          "end": 16
+        }
+      ]
+    },
+    {
+      "source_id": "2000",
+      "reference_sha256": "883ccefd5008fb43c6e8a0a6d4053c2f5adfb258915da028ed66c557fb1fc263",
+      "reference": "If crossing the Northern Baltic in winter, check the cabin location, as going through ice causes quite horrible noise for those most affected.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "2001",
+      "reference_sha256": "ec35c6645d97fbb87d93c9a05c76a0261e78d5547f87656090c3238f680f69c3",
+      "reference": "Travellers are strongly advised to be aware of any risk of severe weather affecting their area as they may affect any travel plans.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "2002",
+      "reference_sha256": "891563b10b34b6ffffcb48d2f59a53a78336b9a8a040d5162b04ab48d9bf8f81",
+      "reference": "This will allow players to control actions and movements in video games by moving the device through the air.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "2003",
+      "reference_sha256": "142b3107fc8024c662d39b8355662064c2cb7f16a316c0da79fd7c523c826d3b",
+      "reference": "To get the best views of Hong Kong, leave the island and head for the Kowloon waterfront opposite.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "2004",
+      "reference_sha256": "09ac58c8a4152f097a05e95064ebc9d17160cd282d30ce46ba2fdbe0c73fbd2d",
+      "reference": "The same month saw another airliner overrun a runway at Mashhad and strike a wall, killing seventeen.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "seventeen",
+          "start": 91,
+          "end": 100
+        }
+      ]
+    },
+    {
+      "source_id": "2005",
+      "reference_sha256": "907fa3894bc5b64e078c28f49a2fd024e7cf3fceea48da04f06a1685178ff4e3",
+      "reference": "But there are a lot of things about birds that still look like a dinosaur.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "2006",
+      "reference_sha256": "ffb19dad2936e73fa6e716c2048f2ca83d25ee5d061e27d823fbde5102367cb4",
+      "reference": "Elements like calcium and potassium are considered metals. Of course, there are also metals like silver and gold.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "2007",
+      "reference_sha256": "17db41368e252f5a19699af81a6819713d35aeff8ffb93d004208e698a400c0f",
+      "reference": "The U.S. Corps of Engineers estimated that 6 inches of rainfall could breach the previously damaged levees.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": [
+        {
+          "type": "number",
+          "text": "6",
+          "start": 43,
+          "end": 44
+        }
+      ]
+    },
+    {
+      "source_id": "2008",
+      "reference_sha256": "f2bd7db83d5c119ca59af0c50bc3853524ab5155e40aeb3c0cc01842ac18d88b",
+      "reference": "Other subjects on the agenda in Bali include saving the world's remaining forests, and sharing technologies to help developing nations grow in less-polluting ways.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    },
+    {
+      "source_id": "2009",
+      "reference_sha256": "3a652b1739419e511b290bad18b14d97f106b70f5f45fb90b043a5c5309b713c",
+      "reference": "The most readily accessible plant resources would have been the proteins accessible in leaves and legumes, but these are hard for primates like us to digest unless they are cooked.",
+      "review_status": "agent_reviewed_reference_text",
+      "entities": []
+    }
+  ]
+}

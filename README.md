@@ -1,7 +1,75 @@
 # Cekura Benchmarks
 
-Run Cekura's Appointment and Medicare voice-agent benchmark suites against your
-own Cekura-connected agent.
+Run voice-agent and speech-to-text benchmarks from one repository. Each project
+keeps its own runtime, configuration, and results.
+
+## Choose a benchmark
+
+| Benchmark | What it measures | Where to run commands |
+| --- | --- | --- |
+| Voice agents | Complete Appointment and Medicare workflows against a Cekura-connected agent | Repository root; Node.js 20+ |
+| [Speech-to-text](stt-bench/README.md) | Streaming transcription accuracy, text availability, completion, and reliability | `stt-bench/`; Python 3.12 or 3.13 and `uv` |
+
+For speech-to-text setup and a local model listing (no provider requests):
+
+```sh
+cd stt-bench
+uv sync --locked
+uv run --locked stt-bench models
+```
+
+Run all STT commands from `stt-bench/`: configuration, `.env`, datasets, and
+outputs are resolved within that directory. Keep its Python environment and
+lockfile there. Voice-agent users do not need the Python dependencies.
+
+See the [STT guide](stt-bench/README.md) for dataset preparation, provider
+credentials, live benchmarks, and offline scoring. See the
+[integration notes](docs/stt-integration.md) for project layout and local files.
+
+The rest of this page describes the existing voice-agent runner. Run its `npm`
+commands from the repository root. Its commands and configuration are unchanged.
+
+## Two things live here
+
+**The scenario runner** (below) launches Cekura's Appointment and Medicare suites
+against your own Cekura-connected agent.
+
+**The service bench** (`service/`, [docs/service.md](docs/service.md)) is a self-contained
+harness that measures a speech-to-speech provider directly over its own
+websocket, with no platform account and no orchestration framework in the
+measured path. It renders its own caller corpus from a published script, has its
+own onset detector calibrated against known boundaries, and runs a server for the
+mock-tool contract in `agent-definitions/`. It needs an ElevenLabs key to render
+the corpus once, then only a provider API key:
+
+```bash
+python -m venv .venv && .venv/bin/pip install -r requirements-service.txt
+.venv/bin/python bin/render-corpus.py                      # needs ELEVENLABS_API_KEY
+.venv/bin/python bin/run-service.py --suite latency          # needs OPENAI_API_KEY
+.venv/bin/python bin/run-service.py --provider gemini-live --suite task   # GEMINI_AUTHORIZATION
+.venv/bin/python bin/run-service.py --provider grok-realtime --suite interaction   # XAI_API_KEY
+```
+
+Three providers are measured today over their own wire protocols: OpenAI
+Realtime, Gemini Live and xAI Grok.
+
+Every run writes the caller audio, the agent audio, the normalized event log and
+every raw provider frame, so a published number can be recomputed from the
+artifacts by someone who does not trust the people who published it.
+
+**The agent bench** (`reference-agents/pipecat-s2s`, `agent/report.py`) measures
+the other half: the same realtime models wired as a working agent — prompt, tools,
+a task to finish — on live calls scored by the Cekura platform, answering from the
+same mock-tool contract. The
+agent itself is one readable file in
+[reference-agents/pipecat-s2s](reference-agents/pipecat-s2s/README.md), so a
+provider who thinks their model was badly served has one file to argue with.
+
+The two are never ranked against each other. The service bench names a provider
+realtime service under a stated configuration; the agent bench names a whole
+configuration, framework and transport included. "The model is fast" and "the
+deployment is fast" are different claims, and one number that mixes them answers
+neither.
 
 ## What this runner does
 
@@ -71,6 +139,12 @@ npm run benchmark -- --config benchmark.config.json --execute
 `catalogAgentId` owns the canonical evaluator scenarios. `targetAgentId` is an
 optional existing Cekura agent. `suite` is required and must be either
 `appointments` or `medicare`; each launch runs only that suite.
+
+Add `"scenarios": ["AS1", "AS12", "AS37"]` to run a named subset instead of the
+whole suite — a shakedown launch that only has to prove every field a board is
+scored from arrives. Codes, not ids, so what a run covered stays readable in the
+launch record; a code the catalog does not hold is an error rather than a silent
+omission.
 
 ## Optional provider setup
 
@@ -152,6 +226,39 @@ These settings are sent directly when the runner creates the Cekura agent.
 }
 ```
 
+## Launching against a Pipecat Cloud deployment
+
+A Pipecat Cloud agent is not reached by dialling it. Cekura starts a session on
+the deployment and both sides join the Daily room it returns, so there is no
+phone number in the path and none is required. Add a top-level `pipecat` block
+and the runner launches through that route instead:
+
+```json
+{
+  "projectId": 1234,
+  "catalogAgentId": 5678,
+  "targetAgentId": 9012,
+  "suite": "appointments",
+  "frequency": 3,
+  "pipecat": {
+    "agentName": "your-pipecat-agent",
+    "config": { "example_key": "example_value" }
+  }
+}
+```
+
+`pipecat.config` is the session body. Whatever it holds arrives in the agent's
+session as top-level keys, so one deployment can answer for several
+configurations and each launch states which one it ran. Keep credentials out of
+it: it is quoted in logs, traces and session records, and an agent should read
+its keys from its own environment.
+
+Two behaviours worth knowing before relying on it. The config **replaces** the
+one stored on the agent rather than merging over it, so send the whole
+configuration or send none and let the stored one stand. And a scenario's test
+profile is applied afterwards, so a profile variable sharing a name with a
+session key wins — worth a prefix if the two could ever collide.
+
 ## Reference implementations
 
 Reference-agent examples for LiveKit, Pipecat, OpenAI Realtime, and Gemini
@@ -197,10 +304,15 @@ response to its benchmark results. Reference configurations are available in
 ### Test cases
 
 The suite contains 82 caller situations: 59 Appointment scenarios and 23
-Medicare scenarios. The public scenario coverage summary describes their
-intent at a high level. We do not publish the exact evaluator dialogue,
-conditional logic, fixtures, or assertions because systems could then optimize
-for the test rather than general voice-agent behavior.
+Medicare scenarios. Every case is published in the [Hugging Face
+dataset][hf-dataset]:
+- the simulated caller's script and profile;
+- the outcome the call should reach;
+- the tool calls the agent should make;
+- a copy of the agent definitions from this repository.
+
+A published test can be tuned against. The dataset therefore carries a canary
+string and is versioned. A version is never edited after release.
 
 Appointment coverage includes:
 
@@ -242,6 +354,75 @@ The exact rubric and metric availability can vary with the catalog version. A
 result should therefore always be read with its metric coverage and rubric
 configuration, especially when a recording or provider call was unavailable.
 
+### Scoring
+
+Each call is scored on its own, on the Cekura platform, from the recording, the
+transcript and the tool calls the agent made. A board figure is then a count
+over those calls. Nothing is scored from what the agent says about itself.
+
+**What a call is scored on**
+
+| Check | Scored from | Passes when |
+|---|---|---|
+| Expected Outcome | the transcript, against the outcome the scenario was written to reach | the evaluator gives it the top score, 5 of 5 |
+| Tool Call Accuracy | the tool calls the agent made, against the calls the scenario expects | every expected call was made with the expected arguments, 5 of 5 |
+| Tool Call Accuracy (same record) | the same calls, compared by the record they would store | every expected record would be stored as expected, 5 of 5 |
+| Infrastructure Issues | the recording and call events | the line connected and the agent answered without prolonged dead air |
+| Call termination, interruption, transcription, repetition | the recording and transcript | each by its own rubric; interruption and voice tone are also reported as mean scores out of 5 |
+| Voice Tone + Clarity | the recording | recorded, never a gate |
+
+The two tool checks differ only in what counts as a match. The first compares
+each argument as written. The second asks whether the record a call would
+store is the same: an optional field left out and one sent empty store the same
+record. The first is strict about form, and the second is only about the data. Both are reported, and neither is replaced by the
+other.
+
+**A call passes** only when every check configured for its scenario passes. A
+call that reached the outcome but saved one wrong field is a failed call.
+
+**Rates**
+
+- **Pass rate** is passed calls over all calls. Every call counts, including
+  ones that stalled, dropped or ended early. A call that failed for a reason
+  outside the model is counted and flagged, never dropped.
+- **All runs pass** is the share of scenarios whose three runs all passed. It is
+  counted from the three runs, not estimated from the pass rate, so it shows
+  how repeatable a behaviour is and not only how often it happens.
+- A suite is scored as its own row. A combined figure counts every call in both
+  suites and does not average the two suite rates.
+
+**Uncertainty.** Every rate carries a 95% interval from a bootstrap over
+scenarios: 10,000 resamples, seeded, each resample drawing whole scenarios with
+all their runs, stratified by suite. Runs of one scenario are not independent,
+so resampling them one by one would give intervals that are too narrow. Where
+two rows' intervals overlap, the difference between them is within the noise.
+
+**Response time** is read from the recording: how long the caller waits, after
+they stop speaking, for the agent's reply to start. Each call contributes its
+figure, and a row reports the median and 90th percentile across its calls, by
+linear interpolation. The agent's own
+timings are kept as a diagnostic and never used as the published figure,
+because they are measured at the agent and not at the caller's ear.
+
+**What the agent records beside the score.** The reference agent stamps every
+call with its build and configuration, which lets the board refuse a row that
+mixes builds. It also records who closed the call, and integrity checks: a
+reply the caller waited ten seconds or more for, an error from the model's
+service, caller audio the service stopped processing. Those calls stay in the
+row and are listed, so the row can be read with and without them. Cost is total
+priced dollars over total priced minutes, from verified public list prices, and
+is shown only when every call in the row could be priced. Anything a vendor does not
+meter per call is named next to the figure.
+
+**Where the rest lives.** The test cases are in the [Hugging Face
+dataset][hf-dataset], not here, together with the Tool Call Accuracy metric as
+it runs on the platform, so the board's tool-call score can be recomputed from a
+call's tool calls. The Expected Outcome judge's prompt is not published, and
+neither are the platform's rubrics for the other checks. Those scores can be
+re-run with another judge, but not reproduced exactly. This repository holds
+the agent under test, the mock-tool contract it answers from, and the service
+bench, whose scoring is in the code (see [docs/service.md](docs/service.md)).
+
 ### Evaluator refinement and fairness
 
 Writing reliable conversational tests is iterative. Initial scenario prompts
@@ -266,3 +447,14 @@ scoring conditions, the affected scenario is rerun across every provider so
 the compared evidence uses the same evaluator version and context. This keeps
 the test harness fair while acknowledging that good voice-agent evaluation is
 an empirical test-design process, not a one-shot prompt.
+
+## License
+
+The code here is MIT licensed. See `LICENSE`.
+
+The test cases are not covered by it. They are published separately in the
+[Hugging Face dataset][hf-dataset], under CC BY 4.0.
+
+One file keeps a separate license, noted in `LICENSE` and in its own header.
+
+[hf-dataset]: https://huggingface.co/datasets/cekura/s2s-agent-bench

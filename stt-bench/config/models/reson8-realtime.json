@@ -1,0 +1,32 @@
+{
+  "model_id": "reson8-realtime",
+  "provider": "reson8",
+  "model": "realtime",
+  "version": "provider-default-unversioned",
+  "identity_policy": "realtime_endpoint_session_accepted",
+  "endpoint": "wss://api.reson8.dev/v1/speech-to-text/realtime",
+  "language": "en",
+  "sample_rate": 16000,
+  "encoding": "pcm_s16le",
+  "channels": 1,
+  "frame_ms": 20,
+  "include_interim": true,
+  "include_timestamps": true,
+  "filler_mode": "verbatim",
+  "ready_timeout_seconds": 15,
+  "finalize_timeout_seconds": 5,
+  "close_timeout_seconds": 5,
+  "finalization": "manual_at_speech_end",
+  "completion_basis": "correlated_flush_after_all_audio",
+  "finalize_ack_supported": true,
+  "requires_final_only_completion": true,
+  "model_source": "https://docs.reson8.dev/api/speech-to-text/realtime/",
+  "checked_on": "2026-09-14",
+  "pricing": {
+    "usd_per_minute": null,
+    "source": null,
+    "status": "account_rate_unverified",
+    "billing_basis": "submitted audio including silence and retries; account rate unverified"
+  },
+  "protocol_caveat": "No model selector/version or terminal end-of-stream event is documented. Realtime is a local endpoint label, not a version pin. Correlate speech-end flush, send the full silence tail, then require a distinct final flush confirmation. No custom model or phrase bias is requested; API-client defaults are not independently verified."
+}

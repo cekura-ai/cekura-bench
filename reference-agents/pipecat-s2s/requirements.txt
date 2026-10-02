@@ -1,0 +1,8 @@
+# Pinned exactly. A benchmark result names a configuration, and "latest" is not
+# one: an agent that silently changes version between runs makes two results
+# incomparable without either of them looking wrong.
+# aws-nova-sonic pulls the Bedrock bidirectional-stream SDK. Grok needs no extra
+# of its own; its realtime service ships in the base package.
+pipecat-ai[aws-nova-sonic,daily,deepgram,elevenlabs,google,openai,silero,webrtc,websocket]==1.11.0
+cekura[pipecat]==1.6.7
+python-dotenv>=1.0

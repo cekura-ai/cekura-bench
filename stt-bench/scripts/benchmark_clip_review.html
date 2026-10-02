@@ -1,0 +1,85 @@
+<style>
+#verify-clips{scroll-margin-top:20px}.review-controls{display:grid;grid-template-columns:1fr 1fr 2fr;gap:16px;margin:22px 0 16px}.review-controls label,.review-picker label{display:block;font-size:12px;font-weight:550}.review-controls select,.review-controls input,.review-picker select{display:block;width:100%;min-width:0;margin-top:8px;padding:10px;border:1px solid #cccfc3;border-radius:5px;background:#fff;color:inherit;font:inherit;min-height:42px}.review-picker{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:end;margin:16px 0}.review-picker button{min-height:42px}.review-actions{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:16px 0;font-size:12px}.review-audio{display:block;width:100%;max-width:650px;margin:20px 0 12px}.review-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);border:1px solid var(--line);border-radius:6px;margin-top:18px;overflow:hidden}.review-column{padding:20px;min-width:0}.review-column+.review-column{border-left:1px solid var(--line)}.review-column h3{font-size:14px;margin:0 0 16px}.review-text{font-size:15px;line-height:1.95;overflow-wrap:anywhere;white-space:pre-wrap;max-height:520px;overflow:auto;padding:4px}.review-text .substitute{background:#fff0c2;color:#684000;border-bottom:2px solid #a86600}.review-text .delete{background:#fce2df;color:#922d24;text-decoration:line-through}.review-text .insert{background:#d7eee2;color:#185338;border-bottom:2px solid #24794d}.review-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;margin-top:14px}.review-legend span{padding:3px 7px;border-radius:3px}.review-legend .substitute{background:#fff0c2}.review-legend .delete{background:#fce2df}.review-legend .insert{background:#d7eee2}#review-score{font-size:15px;color:#30312d;margin-top:16px}#review-evidence{font-size:12px;line-height:1.7;overflow-wrap:anywhere;margin-top:22px}#review-evidence summary{cursor:pointer;font-weight:550}#review-evidence pre{white-space:pre-wrap;font:11px/1.7 var(--mono)}#review-original{font:13px/1.8 inherit;white-space:pre-wrap;max-height:260px;overflow:auto}#review-error{color:#922d24}#review-total{margin-top:10px}.review-top-link{margin-top:12px;display:inline-block;font-size:14px}
+@media(max-width:700px){.review-controls{grid-template-columns:1fr}.review-grid{grid-template-columns:1fr}.review-column+.review-column{border-left:0;border-top:1px solid var(--line)}.review-picker{grid-template-columns:1fr 1fr}.review-picker label{grid-column:1/-1}.review-text{max-height:360px}.review-column{padding:14px}}
+</style>
+<section class="panel" id="verify-clips" aria-labelledby="review-title">
+<h2 id="review-title">Verify clips</h2>
+<p>Listen to a recording, then compare its supplied reference with a model’s generated transcript. The highlighted comparison uses the same normalized words as the benchmark score. References can contain mistakes too; listening helps check both sides.</p>
+<p id="review-total"></p>
+<div class="review-controls">
+<label>Dataset<select id="review-cohort"><option value="pipecat">Pipecat · 1,000 clips</option><option value="fleurs">FLEURS · 180 clips</option><option value="private">Private · 8 recordings</option></select></label>
+<label>Model<select id="review-model"></select></label>
+<label>Find a clip<input type="search" id="review-search" placeholder="Search clip ID or reference text"></label>
+</div>
+<div class="review-actions"><label><input type="checkbox" id="review-errors"> Only scored clips with word errors</label><label>Order <select id="review-order"><option value="dataset">Dataset order</option><option value="worst">Highest WER first</option></select></label></div>
+<div class="review-picker"><label>Clip<select id="review-clip"></select></label><button class="button" id="review-prev">Previous</button><button class="button" id="review-next">Next</button></div>
+<p id="review-position" role="status" aria-live="polite"></p>
+<div id="review-content">
+<audio class="review-audio" id="review-audio" controls preload="none" aria-label="Selected recording"></audio>
+<p id="review-error" role="alert" hidden>Audio could not be opened. Extract the entire ZIP and keep the audio folder beside index.html, then open it in a current browser.</p>
+<p>Lossless listening copy of the frozen 16 kHz input, including its added silence. Some providers received a 24 kHz derivative or used session handoffs. Listening verifies transcript content; it does not independently verify network latency.</p>
+<p id="review-score"></p>
+<p id="review-attempt"></p>
+<div class="review-actions"><div class="segment" aria-label="Transcript view"><button id="review-diff" aria-pressed="true">Scored word diff</button><button id="review-raw" aria-pressed="false">Original text</button></div></div>
+<p id="review-view-help">Case, punctuation, number formatting, and other normalization rules are applied before scoring. The two columns highlight the same word alignment.</p>
+<div class="review-legend" id="review-legend"><span class="substitute">Changed word · substitution</span><span class="delete">Missing word · deletion</span><span class="insert">Extra word · insertion</span></div>
+<div class="review-grid"><div class="review-column"><h3>Supplied reference</h3><div class="review-text" id="review-reference" tabindex="0" role="region" aria-label="Reference transcript"></div></div><div class="review-column"><h3>Generated transcript</h3><div class="review-text" id="review-transcript" tabindex="0" role="region" aria-label="Generated transcript"></div></div></div>
+<details id="review-evidence"><summary>Clip evidence and original annotations</summary><pre id="review-provenance"></pre><p>Original reference annotations, when present, are shown below. The scoring reference removes non-speech annotation tags before word normalization.</p><div id="review-original"></div></details>
+</div>
+</section>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+'use strict';
+const $=id=>document.getElementById(id),data=JSON.parse($('benchmark-data').textContent),review=data.clip_review;
+if(!review)return;
+const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const errorCount=r=>r?.counts?r.counts.substitutions+r.counts.insertions+r.counts.deletions:null;
+const wer=r=>r?.counts?.reference_words?errorCount(r)/r.counts.reference_words:null;
+const percentage=n=>n==null?'Unavailable':(n*100).toFixed(2)+'%';
+let filtered=[],diff=true;
+const link=document.createElement('a');link.href='#verify-clips';link.className='review-top-link';link.textContent='Listen and verify individual clips ↓';document.querySelector('.intro').append(link);
+$('review-total').textContent=`${review.clips.length.toLocaleString()} recordings included. ${review.includes_private?'Includes the eight private recordings and their transcripts.':'Public recordings only.'} To share audio too, send the complete benchmark-review.zip; the HTML alone contains only transcripts and scores.`;
+if(!review.includes_private)$('review-cohort').querySelector('[value="private"]').remove();
+$('review-model').innerHTML=data.models.map(m=>`<option value="${escape(m.id)}">${escape(m.label)}</option>`).join('');
+$('review-model').value='deepgram-nova-3';
+function result(c){return c.results[$('review-model').value];}
+function filter(){
+ const previous=$('review-clip').value,q=$('review-search').value.toLowerCase().trim();
+ filtered=review.clips.filter(c=>c.cohort===$('review-cohort').value&&(!q||(c.id+' '+c.reference).toLowerCase().includes(q))&&(!$('review-errors').checked||(errorCount(result(c))??0)>0));
+ if($('review-order').value==='worst')filtered.sort((a,b)=>(wer(result(b))??-1)-(wer(result(a))??-1));
+ $('review-clip').innerHTML=filtered.map((c,i)=>`<option value="${escape(c.id)}">${i+1}. ${escape(c.id)} · ${percentage(wer(result(c)))} · ${escape(c.reference.slice(0,85))}</option>`).join('');
+ if(filtered.some(c=>c.id===previous))$('review-clip').value=previous;
+ show();
+}
+function show(){
+ const index=filtered.findIndex(c=>c.id===$('review-clip').value),c=filtered[index],audio=$('review-audio');
+ $('review-prev').disabled=index<=0;$('review-next').disabled=index<0||index===filtered.length-1;$('review-clip').disabled=!c;
+ $('review-content').hidden=!c;$('review-position').textContent=c?`${index+1} of ${filtered.length.toLocaleString()} matching recordings · ${c.seconds.toFixed(1)} seconds`:'No matching clips. Change the model, search, or error filter.';
+ if(!c){audio.pause();audio.removeAttribute('src');audio.load();return;}
+ if(audio.getAttribute('src')!==c.audio){audio.pause();audio.src=c.audio;$('review-error').hidden=true;audio.load();}
+ const r=result(c),n=errorCount(r);
+ $('review-score').textContent=r?.counts?`${r.counts.reference_words?'WER '+percentage(wer(r)):'Clip WER unavailable (zero reference words)'}: (${r.counts.substitutions} changed + ${r.counts.deletions} missing + ${r.counts.insertions} extra) ÷ ${r.counts.reference_words} reference words`:(r?.status==='excluded'?'Excluded from accuracy: this saved attempt did not pass the benchmark checks.':'No scored result in this dashboard snapshot for this model and clip.');
+ $('review-attempt').textContent=r?.attempt?`${r.status==='scored'?'Scored':'Last saved'} attempt ${r.attempt} · ${r.attempts} total attempt(s) · ${r.failed_attempts} failed attempt(s). ${r.status==='scored'&&r.attempt>1?'Accuracy uses a recovery; first-attempt timing remains separate.':''}`:'This is unavailable, not a zero-error result.';
+ $('review-diff').disabled=!r?.diff;$('review-diff').setAttribute('aria-pressed',String(diff&&!!r?.diff));$('review-raw').setAttribute('aria-pressed',String(!diff||!r?.diff));
+ $('review-legend').hidden=!diff||!r?.diff;
+ $('review-view-help').textContent=diff&&r?.diff?'Case, punctuation, number formatting, and other normalization rules are applied before scoring. The two columns highlight the same word alignment.':'Text as saved, before WER normalization. The private scoring reference removes non-speech tags; original annotations are available below. An excluded transcript is diagnostic only.';
+ if(diff&&r?.diff){
+  const side=i=>r.diff.filter(a=>a[i]).map(a=>a[0]==='equal'?escape(a[i]):`<span class="${escape(a[0])}" title="${escape(a[0])}">${escape(a[i])}</span>`).join(' ');
+  $('review-reference').innerHTML=side(1);$('review-transcript').innerHTML=side(2)||'(Empty transcript)';
+ }else{$('review-reference').textContent=c.reference;$('review-transcript').textContent=r?.transcript??'Transcript unavailable in this snapshot.';if(r?.transcript==='')$('review-transcript').textContent='(Empty transcript)';}
+ $('review-reference').scrollTop=0;$('review-transcript').scrollTop=0;
+ const manifest=review.manifests.find(m=>m.path.includes(c.cohort==='private'?'private-longform':c.cohort==='fleurs'?'fleurs':'pipecat'));
+ const excluded=data.models.find(m=>m.id===$('review-model').value)?.comparison_exclusions?.find(e=>e.clip_id===c.id);
+ if(excluded)$('review-attempt').textContent+=' Excluded from the selected private/combined accuracy comparison: '+excluded.reason+' Original result retained below.';
+ const source=data.sources.find(s=>s.path==='reports/'+r?.source);
+ $('review-provenance').textContent=`Clip: ${c.id}\nDataset: ${c.cohort}\nScored source: ${r?.source??'Unavailable'}\nSource SHA-256: ${source?.sha256??'Unavailable'}\nAttempt event SHA-256: ${r?.raw_sha256??'Unavailable'}\nManifest: ${manifest?.path??'Unavailable'}\nManifest SHA-256: ${manifest?.sha256??'Unavailable'}\nFrozen 16 kHz WAV SHA-256: ${c.input_sha256}\nListening FLAC SHA-256: ${c.sha256}\nThe build verified every decoded audio sample and recomputed each included word alignment against the saved counts.`;
+ $('review-original').textContent=c.original_reference;
+}
+$('review-audio').addEventListener('error',()=>{if($('review-audio').getAttribute('src'))$('review-error').hidden=false;});
+for(const id of ['review-cohort','review-model','review-errors','review-order'])$(id).addEventListener('change',filter);
+$('review-search').addEventListener('input',filter);$('review-clip').addEventListener('change',show);
+for(const [id,step] of [['review-prev',-1],['review-next',1]])$(id).onclick=()=>{const i=$('review-clip').selectedIndex+step;if(i>=0&&i<filtered.length){$('review-clip').selectedIndex=i;show();}};
+$('review-diff').onclick=()=>{diff=true;show();};$('review-raw').onclick=()=>{diff=false;show();};
+filter();
+});
+</script>

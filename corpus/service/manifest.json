@@ -1,5 +1,5 @@
 {
-  "corpus_version": "0.2.0",
+  "corpus_version": "0.3.0",
   "master_rate": 24000,
   "voices": {
     "f-us": {
@@ -80,29 +80,29 @@
     },
     {
       "id": "date.part1",
-      "text": "I could come in on the eighth of July,",
+      "text": "I could come in on the ninth of December,",
       "note": "second ladder first half",
       "renders": {
         "f-us": {
-          "file": "date.part1.f6d5a5b3.wav",
+          "file": "date.part1.164d7dac.wav",
           "provenance": "tts:elevenlabs/f-us",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "34359ab64ac36a3d4a2446e6fa167389c4b7092e4cdb44a16fde7ab961030850",
-          "bytes": 95896
+          "sha256": "822e7ef738d261f2a3f3461e8f74a84ce780ed3d74c751faa98a8a0ebffb78de",
+          "bytes": 102584
         },
         "m-us": {
-          "file": "date.part1.f6d5a5b3.wav",
+          "file": "date.part1.164d7dac.wav",
           "provenance": "tts:elevenlabs/m-us",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "e08a560d4aa914d01c7a2aa9c2d714fb395bd4b42968c48266903303833b7dc1",
-          "bytes": 98126
+          "sha256": "68fe0f770d7c6fe65bc8d6c97ae0d020f59f9b140e505a697970140f0ce41843",
+          "bytes": 104812
         },
         "f-gb": {
-          "file": "date.part1.f6d5a5b3.wav",
+          "file": "date.part1.164d7dac.wav",
           "provenance": "tts:elevenlabs/f-gb",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "3a207489c5becca233d6cd26e51db005125cac02125639dc6442380ddb7b6238",
-          "bytes": 104812
+          "sha256": "d329a72d5ed9c54e06fe430fae5e7bc818a77068a8eae17181e9d642dee351e1",
+          "bytes": 98126
         }
       }
     },
@@ -1088,169 +1088,169 @@
     },
     {
       "id": "task.date",
-      "text": "July the eighth would work. A morning slot, if you have one.",
+      "text": "December the ninth would work. A morning slot, if you have one.",
       "note": "",
       "renders": {
         "f-us": {
-          "file": "task.date.55599be4.wav",
+          "file": "task.date.d8ee835a.wav",
           "provenance": "tts:elevenlabs/f-us",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "24b0fccb59dcb2df175fb106288116360bbea3182f12229d897a623cfd4e4a22",
-          "bytes": 149394
+          "sha256": "65a810fccfd637da5bc9b0217435d7e1415118acd2cc483ece191c3a826519bf",
+          "bytes": 156082
         },
         "m-us": {
-          "file": "task.date.55599be4.wav",
+          "file": "task.date.d8ee835a.wav",
           "provenance": "tts:elevenlabs/m-us",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "d97a9d8777b893695fa37a4d6be4dab3bcd566bf30fe921bc1661d1d5bb6c494",
-          "bytes": 164998
+          "sha256": "ca9d99a386dcdb5b6e581011ac1db106e524ead1f02efc3bc338af963546d0f2",
+          "bytes": 171686
         },
         "f-gb": {
-          "file": "task.date.55599be4.wav",
+          "file": "task.date.d8ee835a.wav",
           "provenance": "tts:elevenlabs/f-gb",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "b703981192ae6d1f881d6f699d872c1bb416efca9f41216602b9df4bba5e6165",
-          "bytes": 193978
+          "sha256": "16ac6a3a6bc4b1febf0cb9d64bb6eaaf45456af35cb4d76b2b05f5e43d62f515",
+          "bytes": 180602
         }
       }
     },
     {
       "id": "task.date.anytime",
-      "text": "July the eighth, any time that day is fine.",
+      "text": "December the ninth, any time that day is fine.",
       "note": "",
       "renders": {
         "f-us": {
-          "file": "task.date.anytime.a7e009f3.wav",
+          "file": "task.date.anytime.045f4111.wav",
           "provenance": "tts:elevenlabs/f-us",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "e75ef5413ae507b9dedaa388ddb58f37a5d761cbd53a74df118926bfe331493e",
-          "bytes": 118188
+          "sha256": "266d576f3a25bf97e926c5d27216eb2a3c0267e7754eecb80c1dc2ab00adbad5",
+          "bytes": 124874
         },
         "m-us": {
-          "file": "task.date.anytime.a7e009f3.wav",
+          "file": "task.date.anytime.045f4111.wav",
           "provenance": "tts:elevenlabs/m-us",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "c11c8bab07f6227608c3d01107562500657bf3a246b50295b65d7a5244897948",
-          "bytes": 120416
+          "sha256": "5a358b0a94870e1565a27e3025ad2131e1a503048ac2b5c2547eb0faeaa7ce70",
+          "bytes": 133790
         },
         "f-gb": {
-          "file": "task.date.anytime.a7e009f3.wav",
+          "file": "task.date.anytime.045f4111.wav",
           "provenance": "tts:elevenlabs/f-gb",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "66c87727df9dd977a17ee21c24caaa08bd27b25ad7f7e54887f72d1971d9eee1",
-          "bytes": 153852
+          "sha256": "a58e6f08945e58f8755bbccd8937cbc71666089cffbb6fcb63aa5f7fb1326bc9",
+          "bytes": 147166
         }
       }
     },
     {
       "id": "task.date.correct",
-      "text": "July the ninth. Sorry, no, I mean the eighth. July the eighth.",
+      "text": "December the tenth. Sorry, no, I mean the ninth. December the ninth.",
       "note": "",
       "renders": {
         "f-us": {
-          "file": "task.date.correct.034bab56.wav",
+          "file": "task.date.correct.2f190c6c.wav",
           "provenance": "tts:elevenlabs/f-us",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "a15143463a542145df5edc80bcb44eb790ab4bdd273cb8821dea118f8ea72e4e",
-          "bytes": 162770
+          "sha256": "71aac72cc38e5e3309865d527c2b506e4fdab5b7cf485b9939cd90055a1eb184",
+          "bytes": 164998
         },
         "m-us": {
-          "file": "task.date.correct.034bab56.wav",
+          "file": "task.date.correct.2f190c6c.wav",
           "provenance": "tts:elevenlabs/m-us",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "2ce3c44abaaaec5b03fd0cec4927de64427675dae5d3ae41a286e2342e2c1c70",
-          "bytes": 173916
+          "sha256": "7b559c20db89792425829b23e8a6e5e16f40e2aeebfff77e9ec9d232f48d53e7",
+          "bytes": 193978
         },
         "f-gb": {
-          "file": "task.date.correct.034bab56.wav",
+          "file": "task.date.correct.2f190c6c.wav",
           "provenance": "tts:elevenlabs/f-gb",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "e76e8fbc7120ef6a860001792359f222d50f0cef29f9dae3c2172ece06e4b2b2",
-          "bytes": 236330
+          "sha256": "8db8e1ddb61ff7c94dde6ae1b1e612369fddb37897310b48fe6e99ef18162585",
+          "bytes": 258622
         }
       }
     },
     {
       "id": "task.date.july10",
-      "text": "July the tenth, please. Any time.",
+      "text": "December the eleventh, please. Any time.",
       "note": "",
       "renders": {
         "f-us": {
-          "file": "task.date.july10.f2b429f3.wav",
+          "file": "task.date.july10.b959d400.wav",
           "provenance": "tts:elevenlabs/f-us",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "2f0794490d5e87b795c67312b0ccbd467bb9f86211ae1f75aee83d0b3e6a8282",
-          "bytes": 84750
+          "sha256": "3342e2584bdee4307099e550d6f532864aa92158535577d35b7e895ada55ce3e",
+          "bytes": 118188
         },
         "m-us": {
-          "file": "task.date.july10.f2b429f3.wav",
+          "file": "task.date.july10.b959d400.wav",
           "provenance": "tts:elevenlabs/m-us",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "ef9898c1414c840a3e3185d8c7186dc9e235145db285eddad8e097c72a7dac11",
-          "bytes": 109270
+          "sha256": "8107f47e192c268cd77b1ea53c5dd369ee3fed6fa83f00147a0cdd8401099c7c",
+          "bytes": 127104
         },
         "f-gb": {
-          "file": "task.date.july10.f2b429f3.wav",
+          "file": "task.date.july10.b959d400.wav",
           "provenance": "tts:elevenlabs/f-gb",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "97574bae3d39a43bb6cac873b07166df66aa003fb83ba02295f1bca9d7e19828",
-          "bytes": 111500
+          "sha256": "e0c06605f8b6f74340a33ea88e058416a1b48e5d17ad04baf6a761cdee38d49c",
+          "bytes": 129332
         }
       }
     },
     {
       "id": "task.date.july9",
-      "text": "How about July the ninth, in the morning if possible?",
+      "text": "How about December the tenth, in the morning if possible?",
       "note": "",
       "renders": {
         "f-us": {
-          "file": "task.date.july9.b604b3cd.wav",
+          "file": "task.date.july9.3661d3c0.wav",
           "provenance": "tts:elevenlabs/f-us",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "debeff183ab2dead801bd23aa7ad557b5fe1adddc35b9285a153a4df4d1603cd",
-          "bytes": 140478
+          "sha256": "522abf3f59cb6277918847bf0ea736e080a90ee52d68dfed27cc4db9e6eabcf2",
+          "bytes": 136020
         },
         "m-us": {
-          "file": "task.date.july9.b604b3cd.wav",
+          "file": "task.date.july9.3661d3c0.wav",
           "provenance": "tts:elevenlabs/m-us",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "2d481737bdd3e7350df07db07eabde988f7dbd4f4d35b8c8d48843b52ba9b43a",
-          "bytes": 153852
+          "sha256": "759b5e00f58aee1773c96d2b19e18936e756be0907abef54cf8bb652ed546723",
+          "bytes": 164998
         },
         "f-gb": {
-          "file": "task.date.july9.b604b3cd.wav",
+          "file": "task.date.july9.3661d3c0.wav",
           "provenance": "tts:elevenlabs/f-gb",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "7aad2d6b88f2fd5061d7bddae8a44a6df766475846c825119fbe117168755401",
-          "bytes": 138250
+          "sha256": "369f33274fc48bd163f2c17049600e184302ed2bb33d6232b38ebfc07a95fa3f",
+          "bytes": 144936
         }
       }
     },
     {
       "id": "task.date.range",
-      "text": "Sometime the week of July sixth, whatever you have.",
+      "text": "Sometime the week of December seventh, whatever you have.",
       "note": "",
       "renders": {
         "f-us": {
-          "file": "task.date.range.e33b3baf.wav",
+          "file": "task.date.range.1640fb8c.wav",
           "provenance": "tts:elevenlabs/f-us",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "ddf9c04b9f4e94a67463a516fa564c48df04fe90dd3498ab43633acda2faf0f6",
-          "bytes": 131562
+          "sha256": "94d0ee2faf68d85041d1840eda1630192a419a4056d118e66ca2725c5e8990fc",
+          "bytes": 147166
         },
         "m-us": {
-          "file": "task.date.range.e33b3baf.wav",
+          "file": "task.date.range.1640fb8c.wav",
           "provenance": "tts:elevenlabs/m-us",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "1d474fafb0d5fa25cfe4c13c627727cee7e3113fded8a7d2d792a5c655d8d60a",
-          "bytes": 229642
+          "sha256": "8d296a0336343482c7b3eb19ad8d596f35b572fe0fb652cee6a899c521dcb520",
+          "bytes": 160540
         },
         "f-gb": {
-          "file": "task.date.range.e33b3baf.wav",
+          "file": "task.date.range.1640fb8c.wav",
           "provenance": "tts:elevenlabs/f-gb",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "f96e38938771f259f1cf63b5ddb99c64bcb3bf0b0c513c1acd606d36282fa582",
-          "bytes": 160540
+          "sha256": "b93fd3c8b6aae25d2c2fb5088600b6a40b08273e564968df3b43bb53e4ec397f",
+          "bytes": 164998
         }
       }
     },
@@ -1396,57 +1396,57 @@
     },
     {
       "id": "task.which",
-      "text": "The one on July sixth with Doctor Patel.",
+      "text": "The one on December seventh with Doctor Patel.",
       "note": "",
       "renders": {
         "f-us": {
-          "file": "task.which.61ddf380.wav",
+          "file": "task.which.cdbb9a22.wav",
           "provenance": "tts:elevenlabs/f-us",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "01bd23c44830de16da2cee5f5dc618838b5627f0900ec8809d5f2dd18520d971",
-          "bytes": 107042
+          "sha256": "9794fe9c3a3447b7472cef4fa00b8895b8a3b6624fc15784291dcaaf25e47533",
+          "bytes": 120416
         },
         "m-us": {
-          "file": "task.which.61ddf380.wav",
+          "file": "task.which.cdbb9a22.wav",
           "provenance": "tts:elevenlabs/m-us",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "312337888f44d9afb2c9e7252dfc8de7218357f4325d51fa267000151cb73b62",
-          "bytes": 129332
+          "sha256": "6bf17751ec279daab191030a2a869fd5a674d194e9a4bcc757f01269a11e43cd",
+          "bytes": 136020
         },
         "f-gb": {
-          "file": "task.which.61ddf380.wav",
+          "file": "task.which.cdbb9a22.wav",
           "provenance": "tts:elevenlabs/f-gb",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "6de468ab32e880981e99ff0c2a71fd74ae83d670b7aef8777636486c1ede43af",
-          "bytes": 127104
+          "sha256": "0cb787656cf571e0ca198bf65c4550d090423292e19d2c9df08bcbe7fd9371d1",
+          "bytes": 138250
         }
       }
     },
     {
       "id": "task.which.consult",
-      "text": "The consultation on July seventh.",
+      "text": "The consultation on December eighth.",
       "note": "",
       "renders": {
         "f-us": {
-          "file": "task.which.consult.39311bd8.wav",
+          "file": "task.which.consult.82a3ebe7.wav",
           "provenance": "tts:elevenlabs/f-us",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "626e6a622e6827883c34cb84915bd04af32d8881fe1930b8016ab1bbae9b0d40",
-          "bytes": 100354
+          "sha256": "d7cbd1402bc6c458e88fbee2be74df087dbfa81fb5f8e22a78b219017b51a9ed",
+          "bytes": 95896
         },
         "m-us": {
-          "file": "task.which.consult.39311bd8.wav",
+          "file": "task.which.consult.82a3ebe7.wav",
           "provenance": "tts:elevenlabs/m-us",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "1d8ca20d290e97111be3ba95300e603140ab4743dffb08b94d79a22c1ea0347e",
-          "bytes": 107042
+          "sha256": "b7e697f48d2e760cbcbc4d901bce5f9a809b6f3976be970a2a90d0974a477463",
+          "bytes": 98126
         },
         "f-gb": {
-          "file": "task.which.consult.39311bd8.wav",
+          "file": "task.which.consult.82a3ebe7.wav",
           "provenance": "tts:elevenlabs/f-gb",
           "tts_model": "eleven_turbo_v2_5",
-          "sha256": "af3539500580bdb2fa2702c5a2c4a74c87cd1ddfea4ff134b44b331890bbdf89",
-          "bytes": 120416
+          "sha256": "a69b05fb7d9111979df91ba657bc09a824ef35c560acfbb6a93742506f195b32",
+          "bytes": 109270
         }
       }
     },

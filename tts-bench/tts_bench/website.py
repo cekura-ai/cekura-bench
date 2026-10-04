@@ -291,11 +291,13 @@ def combine(summaries: Sequence[dict[str, Any]], models: dict[str, Any]) -> dict
             results.append({"id": meta["id"], **{k: v for k, v in s.items() if k not in ("schema",)}})
     commits = sorted({s["harnessCommit"] for s in summaries})
     sites = sorted({s["site"] for s in summaries if s["site"]})
+    # The commit the site links to: the one behind the most recent measurement, amendments included.
+    newest = max(summaries, key=lambda s: max([s["startedUtc"], *(a["startedUtc"] for a in s.get("amendments", ()))]), default=None)
     return {
         "schemaVersion": SITE_SCHEMA,
         "generatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "campaign": models.get("campaign"),
-        "build": {"harnessCommits": commits, "sites": sites,
+        "build": {"harnessCommits": commits, "latestHarnessCommit": newest["harnessCommit"] if newest else None, "sites": sites,
                   "corpusVersions": sorted({s["corpusVersion"] for s in summaries}),
                   "methodologies": sorted({s["methodology"] for s in summaries})},
         "models": entries,

@@ -73,6 +73,8 @@ def main() -> int:
     parser.add_argument("--label", required=True)
     parser.add_argument("--suite", default="full")
     parser.add_argument("--repeats", type=int, default=3)
+    parser.add_argument("--item", action="append", default=[],
+                        help="run only these corpus items: an amendment to an earlier campaign, joined at export")
     parser.add_argument("--out", required=True, help="directory the packed run is written to")
     parser.add_argument("--score-concurrency", type=int, default=8)
     parser.add_argument("--skip-scoring", action="store_true", help="pack the run unscored; score it later with bin/score-tts.py")
@@ -89,7 +91,8 @@ def main() -> int:
     run_dir = find_run(root, args.provider, args.model, args.label)
     if run_dir is None:
         status = step("bin/run-tts.py", "--provider", args.provider, "--model", args.model, "--suite", args.suite,
-                      "--repeats", str(args.repeats), "--label", args.label)
+                      "--repeats", str(args.repeats), "--label", args.label,
+                      *(flag for item in args.item for flag in ("--item", item)))
         run_dir = find_run(root, args.provider, args.model, args.label)
     else:
         status = step("bin/run-tts.py", "--resume", str(run_dir)) if not store.run_status(run_dir)["finished"] else 0

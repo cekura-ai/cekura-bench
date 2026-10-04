@@ -228,7 +228,8 @@ async function launchGroup(ctx, group) {
     } else {
       const command = await sb.runCommand({ cmd: '.venv/bin/python', cwd: REMOTE, env, detached: true, args: [
         '-u', 'bin/campaign-model.py', '--provider', provider, '--model', model, '--label', label,
-        '--suite', config.suite, '--repeats', String(config.repeats), '--out', REMOTE_OUT] });
+        '--suite', config.suite, '--repeats', String(config.repeats), '--out', REMOTE_OUT,
+        ...(config.items ?? []).flatMap(item => ['--item', item])] });
       Object.assign(m, { status: 'dispatched', commandId: command.cmdId, sessionId: session, attempts: m.attempts + 1 });
       await saveJson(path, state);
       finished = await waitFor(sb, command.cmdId);

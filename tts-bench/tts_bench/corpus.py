@@ -3,10 +3,11 @@
 Every item carries the text an agent would send and a ``spoken_reference``: the
 same content written the way it should sound. Round-trip scoring compares the
 transcript of the synthesised audio with both and keeps the better match, so a
-service is never punished for reading ``$347.89`` correctly, and never excused
+service is never punished for reading ``$1,347.09`` correctly, and never excused
 for reading it wrong.
 
-Production-shaped, invented values. Nothing here came from a call.
+Production-shaped, invented values, written here. Nothing came from a call or
+from another benchmark's set.
 """
 
 from __future__ import annotations
@@ -16,7 +17,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
-CORPUS_VERSION = "0.2.0"
+CORPUS_VERSION = "0.3.0"
 
 # cohort -> what the cohort tests
 COHORTS = {
@@ -36,8 +37,11 @@ COHORTS = {
     "heteronym": "words spelled alike and said differently, where only the context decides",
     "abbrev": "abbreviations, acronyms and initialisms that expand, stay letters, or become a word",
     "symbols": "symbols, codes, web addresses and keypad instructions read as a caller needs them",
-    "terms": "standalone domain terms (medications, procedures) that have one right pronunciation",
-    "numbers": "ordinals, fractions, decimals, ranges, temperatures, roman numerals and years",
+    "terms": "standalone terms (medications, procedures, place names, loanwords) that have one right pronunciation",
+    "numbers": "ordinals, fractions, decimals, ranges, temperatures, roman numerals, years and written shorthand for them",
+    "tech": "software and device shorthand a support agent reads: versions, sizes, error codes, key combinations",
+    "worded": "numbers written out as words, the way many agent prompts require, so the voice must phrase them rather than expand them",
+    "dense": "single sentences of 100 to 150 characters carrying two or three hard parts, the length most agent replies land at",
 }
 
 # The four pronunciation categories a span is filed under.
@@ -109,8 +113,8 @@ ITEMS: tuple[Item, ...] = (
        "is there anything else i can help you with before we wrap up"),
     _i("prose.closing", "prose", "Perfect. Thanks again for calling, and have a great rest of your day.",
        "perfect thanks again for calling and have a great rest of your day"),
-    _i("prose.instructions", "prose", "Please arrive ten minutes early and bring your insurance card and a photo ID.",
-       "please arrive ten minutes early and bring your insurance card and a photo i d"),
+    _i("prose.instructions", "prose", "Please plan to be here a quarter of an hour early, with your insurance card and a photo ID.",
+       "please plan to be here a quarter of an hour early with your insurance card and a photo i d"),
     # ── currency ──────────────────────────────────────────────────────────
     _i("currency.balance", "currency", "Your current balance is $1,347.09.",
        "your current balance is one thousand three hundred forty seven dollars and nine cents"),
@@ -118,17 +122,17 @@ ITEMS: tuple[Item, ...] = (
        "the copay for that visit is thirty five dollars and the remaining two hundred twelve dollars and fifty cents goes toward your deductible"),
     _i("currency.refund", "currency", "A refund of $89.99 was issued on the card ending in 4417.",
        "a refund of eighty nine dollars and ninety nine cents was issued on the card ending in four four one seven"),
-    _i("currency.percent", "currency", "That plan is 20% off this month, which saves you $359.88 over the year.",
-       "that plan is twenty percent off this month which saves you three hundred fifty nine dollars and eighty eight cents over the year"),
+    _i("currency.percent", "currency", "That plan is 15% off this month, which saves you $271.80 over the year.",
+       "that plan is fifteen percent off this month which saves you two hundred seventy one dollars and eighty cents over the year"),
     _i("currency.large", "currency", "The quote came to $12,480.00 before tax, or $13,478.40 including it.",
        "the quote came to twelve thousand four hundred eighty dollars before tax or thirteen thousand four hundred seventy eight dollars and forty cents including it"),
     _i("currency.small", "currency", "There's a $0.75 processing fee on each transaction.",
        "there's a seventy five cent processing fee on each transaction"),
     # ── datetime ──────────────────────────────────────────────────────────
-    _i("datetime.appt", "datetime", "Your appointment is on Tuesday, March 5th at 10:30 AM.",
-       "your appointment is on tuesday march fifth at ten thirty a m"),
-    _i("datetime.options", "datetime", "I can offer 11:15 AM on Wednesday or 2:45 PM on Thursday.",
-       "i can offer eleven fifteen a m on wednesday or two forty five p m on thursday"),
+    _i("datetime.appt", "datetime", "Your appointment is on Thursday, April 23rd at 9:40 AM.",
+       "your appointment is on thursday april twenty third at nine forty a m"),
+    _i("datetime.options", "datetime", "I can offer 8:50 AM on Monday or 3:20 PM on Friday.",
+       "i can offer eight fifty a m on monday or three twenty p m on friday"),
     _i("datetime.range", "datetime", "The technician will arrive between 8:00 and 12:00 on July 9th.",
        "the technician will arrive between eight and twelve on july ninth"),
     _i("datetime.iso", "datetime", "The order was placed on 2026-03-14 and shipped two days later.",
@@ -197,6 +201,18 @@ ITEMS: tuple[Item, ...] = (
        "so the total is one second the total is forty eight dollars and twenty cents"),
     _i("repair.misspoke", "repair", "I said Tuesday, I meant Thursday. Thursday at 3.",
        "i said tuesday i meant thursday thursday at three"),
+    _i("repair.menu", "repair",
+       "Right, so go into your account page and tap... sorry, not the account page. Start from the Billing tab; from "
+       "there you'll see Payment methods, and that's where you update the card.",
+       "right so go into your account page and tap sorry not the account page start from the billing tab from there "
+       "you'll see payment methods and that's where you update the card",
+       "a long turn with a mid-instruction correction"),
+    _i("repair.lookup", "repair",
+       "Your window was one to three, and the driver scanned it at... let me see... two fifty-two. So that's inside the "
+       "window, but I know it felt late. Want me to book a morning slot next time?",
+       "your window was one to three and the driver scanned it at let me see two fifty two so that's inside the window "
+       "but i know it felt late want me to book a morning slot next time",
+       "a pause before the key value, and a time written as words"),
     # ── units ─────────────────────────────────────────────────────────────
     _i("units.dose", "units", "Take 500 mg twice a day, with food.", "take five hundred milligrams twice a day with food"),
     _i("units.eta", "units", "The ETA is 3 PM ET, and the driver will text when they're 10 min away.",
@@ -234,10 +250,12 @@ ITEMS: tuple[Item, ...] = (
        "be thirty five dollars and we have your number as five five five zero one three seven seven four two i'll send "
        "the confirmation to m dot rivera eighty eight at example dot org"),
     _i("long.troubleshoot", "long",
-       "Let's try a reset. Unplug the router, wait a full 30 seconds, and plug it back in. The lights will blink for "
-       "about two minutes. Once the front light is solid green, try connecting again and let me know what you see.",
-       "let's try a reset unplug the router wait a full thirty seconds and plug it back in the lights will blink for "
-       "about two minutes once the front light is solid green try connecting again and let me know what you see"),
+       "Let's try a reset. Hold the power button on the modem for 10 full seconds, until the panel goes dark, then let "
+       "go. It takes around 3 minutes to come back up. Once the status light stops flashing and stays white, try "
+       "connecting again and tell me what you see.",
+       "let's try a reset hold the power button on the modem for ten full seconds until the panel goes dark then let "
+       "go it takes around three minutes to come back up once the status light stops flashing and stays white try "
+       "connecting again and tell me what you see"),
     # ── paragraph ─────────────────────────────────────────────────────────
     _i("paragraph.benefits", "paragraph",
        "Here's how your plan works for this visit. Because it's an in-network specialist, you'll pay a $40 copay at "
@@ -353,6 +371,12 @@ ITEMS: tuple[Item, ...] = (
     _i("terms.allergy", "terms", "Your chart lists an allergy to amoxicillin and a history of anaphylaxis.",
        "your chart lists an allergy to amoxicillin and a history of anaphylaxis",
        spans=(_s("amoxicillin", "term", "amoxicillin"), _s("anaphylaxis", "term", "anaphylaxis"))),
+    _i("terms.places", "terms", "The nearest branch is in Poughkeepsie, about forty minutes from Schenectady.",
+       "the nearest branch is in poughkeepsie about forty minutes from schenectady",
+       spans=(_s("Poughkeepsie", "term", "poughkeepsie"), _s("Schenectady", "term", "schenectady"))),
+    _i("terms.loanwords", "terms", "The façade work is by the architect who restored the Boise courthouse.",
+       "the facade work is by the architect who restored the boise courthouse",
+       spans=(_s("façade", "term", "facade"), _s("Boise", "term", check="audio", note="boy-see; boy-zee is also heard"))),
     # ── numbers ───────────────────────────────────────────────────────────
     _i("numbers.ordinal", "numbers", "It's the 3rd door on the left, about ¾ of the way down the hall.",
        "it's the third door on the left about three quarters of the way down the hall",
@@ -376,6 +400,70 @@ ITEMS: tuple[Item, ...] = (
        "hundred",
        spans=(_s("In 2019", "context", "in 2019"), _s("2,019 families", "context", "2019 families", "2,019 families"),
               _s("3,400", "shorthand", "3400", "3,400"))),
+    _i("numbers.apostrophe", "numbers", "The class of '09 meets on 9/9 this year, in the 3rd Fl. lounge.",
+       "the class of oh nine meets on september ninth this year in the third floor lounge",
+       spans=(_s("'09", "shorthand", "class of oh nine", "class of o nine", "class of two thousand nine", "class of twenty oh nine",
+                 note="the normaliser keeps a spoken leading zero (oh nine) but drops a written one (09), so the readings are words"),
+              _s("9/9", "shorthand", "september 9th", "september ninth", "september 9", "9th of september", "ninth of september"),
+              _s("3rd Fl.", "shorthand", "3rd floor", "third floor"))),
+    _i("numbers.height", "numbers", "The patient is 5'11\" and weighs 182 lb, so the dose is 1 tsp twice daily.",
+       "the patient is five foot eleven and weighs one hundred eighty two pounds so the dose is one teaspoon twice daily",
+       spans=(_s("5'11\"", "shorthand", "5 foot 11", "five foot eleven", "5 feet 11", "5 foot 11 inches", "five eleven", "5 11"),
+              _s("182 lb", "shorthand", "182 pounds", "182 lbs"),
+              _s("1 tsp", "shorthand", "1 teaspoon", "one teaspoon", "a teaspoon"))),
+    # ── tech ──────────────────────────────────────────────────────────────
+    _i("tech.version", "tech", "You'll need version 7.2.1 or later; you're on 6.9, and the update is about 180 MB.",
+       "you'll need version seven point two point one or later you're on six point nine and the update is about one "
+       "hundred eighty megabytes",
+       spans=(_s("7.2.1", "shorthand", "7.2.1", "7 point 2 point 1", "seven point two point one"),
+              _s("180 MB", "shorthand", "180 MB", "180 megabytes", "180 megs", "180 meg"))),
+    _i("tech.error", "tech", "The display shows error E-2208, which means the printer has lost its network connection.",
+       "the display shows error e twenty two oh eight which means the printer has lost its network connection",
+       spans=(_s("E-2208", "sequence", "e 2208", "e dash 2208", "e 22 08", "e two two zero eight"),)),
+    _i("tech.alert", "tech", "CPU usage peaked at 94% at 2:15 AM and was back under 60% by 3 o'clock.",
+       "c p u usage peaked at ninety four percent at two fifteen a m and was back under sixty percent by three o'clock",
+       spans=(_s("CPU", "sequence", "cpu", "c p u"), _s("94%", "shorthand", "94%", "94 percent"),
+              _s("2:15 AM", "shorthand", "2:15 am", "215 am", "2 15 am", "two fifteen am", "2:15 a m"))),
+    _i("tech.keys", "tech", "Press Ctrl+Shift+T to reopen the tab you just closed, then sign in again.",
+       "press control shift t to reopen the tab you just closed then sign in again",
+       spans=(_s("Ctrl+Shift+T", "sequence", "control shift t", "ctrl shift t", "control shift tee"),)),
+    # ── worded ────────────────────────────────────────────────────────────
+    _i("worded.time", "worded", "The driver scanned it at three forty-seven, so that's inside the two-to-four window.",
+       "the driver scanned it at three forty seven so that's inside the two to four window",
+       spans=(_s("three forty-seven", "shorthand", "three forty seven", "3:47", "347", "3 47"),
+              _s("two-to-four", "shorthand", "two to four", "2 to 4"))),
+    _i("worded.money", "worded", "That comes to forty-eight dollars and twenty cents, plus a two-dollar delivery fee.",
+       "that comes to forty eight dollars and twenty cents plus a two dollar delivery fee",
+       spans=(_s("forty-eight dollars and twenty cents", "shorthand", "forty eight dollars and twenty cents", "$48.20",
+                 "48 dollars and 20 cents"),
+              _s("two-dollar", "shorthand", "two dollar", "2 dollar", "$2"))),
+    _i("worded.duration", "worded", "Refunds usually take forty-eight to seventy-two hours to show on your statement.",
+       "refunds usually take forty eight to seventy two hours to show on your statement",
+       spans=(_s("forty-eight to seventy-two hours", "shorthand", "forty eight to seventy two hours", "48 to 72 hours"),)),
+    # ── dense ─────────────────────────────────────────────────────────────
+    _i("dense.shipment", "dense",
+       "Your package, tracking 9400 1102 8836 5519 2207, left our Reno hub at 6:05 AM and should arrive Thursday before 8 PM.",
+       "your package tracking nine four zero zero one one zero two eight eight three six five five one nine two two zero "
+       "seven left our reno hub at six oh five a m and should arrive thursday before eight p m",
+       spans=(_s("9400 1102 8836 5519 2207", "sequence", "9400 1102 8836 5519 2207", "94001102883655192207"),
+              _s("6:05 AM", "shorthand", "6:05 am", "6 05 am", "605 am", "six oh five am", "six o five am"),
+              _s("8 PM", "shorthand", "8 pm", "eight pm"))),
+    _i("dense.renewal", "dense",
+       "Your plan renews on 11/02 at $64.99 a month; cancel before 10/31 to avoid the charge, or call ext. 118 to downgrade.",
+       "your plan renews on november second at sixty four dollars and ninety nine cents a month cancel before october "
+       "thirty first to avoid the charge or call extension one one eight to downgrade",
+       spans=(_s("11/02", "shorthand", "november 2nd", "november second", "november 2", "2nd of november", "second of november"),
+              _s("$64.99", "shorthand", "$64.99", "64 dollars and 99 cents", "sixty four ninety nine"),
+              _s("10/31", "shorthand", "october 31st", "october thirty first", "october 31", "31st of october"),
+              _s("ext. 118", "shorthand", "extension 118", "extension one one eight", "ext 118"))),
+    _i("dense.labs", "dense",
+       "Your A1C came back at 6.4%, down from 7.1% in March, and your LDL is 118 mg/dL, so no change to the metformin for now.",
+       "your a one c came back at six point four percent down from seven point one percent in march and your l d l is "
+       "one eighteen milligrams per deciliter so no change to the metformin for now",
+       spans=(_s("A1C", "sequence", "a1c", "a one c", "a 1 c"), _s("6.4%", "shorthand", "6.4%", "6.4 percent", "6 point 4 percent"),
+              _s("118 mg/dL", "shorthand", "118 milligrams per deciliter", "118 mg dl", "118 mg per dl",
+                 "one eighteen milligrams per deciliter"),
+              _s("metformin", "term", "metformin"))),
 )
 
 # Fixed items the probes that do not care about content reach for.

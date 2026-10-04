@@ -2,8 +2,10 @@
 
 Two steps, so a run never has to move to be published:
 
-* ``summarize(run_dir)`` reduces one run to its published numbers (a few
-  kilobytes: no audio, no transcripts), wherever the run is stored.
+* ``summarize(run_dir, amendments)`` reduces one run to its published numbers
+  (a few kilobytes: no audio, no transcripts), wherever the run is stored. A
+  later run on the same model that re-measured some cells amends it: the
+  newer reading of a cell wins, the rest keep theirs.
 * ``combine(summaries, models)`` joins the per-run summaries into the one file
   the site reads, with each model's display name and, where a sourced list
   price exists, its cost.
@@ -90,14 +92,43 @@ def _spans(rows: Sequence[dict[str, Any]], instrument: str) -> dict[str, Any]:
     }
 
 
-def summarize(run_dir: str | Path) -> dict[str, Any]:
-    root = Path(run_dir)
-    provenance = json.loads((root / "provenance.json").read_text())
-    plan = json.loads((root / "plan.json").read_text())["cells"]
-    sessions = read_jsonl(root / "sessions.jsonl")
-    cells = [c for c in latest_cells(root) if not c.get("sentinel")]
-    sentinel = [c for c in latest_cells(root) if c.get("sentinel")]
-    scores = read_jsonl(root / "scores-all.jsonl") if (root / "scores-all.jsonl").exists() else []
+def _provenance(root: Path) -> dict[str, Any]:
+    return json.loads((root / "provenance.json").read_text())
+
+
+def _latest(roots: Sequence[Path], rows_of: Any, key: Any) -> list[dict[str, Any]]:
+    """Rows from every run, a later run's row replacing an earlier one with the same key, in first-seen order."""
+    out: dict[str, dict[str, Any]] = {}
+    for root in roots:
+        for row in rows_of(root):
+            out[key(row)] = row
+    return list(out.values())
+
+
+def summarize(run_dir: str | Path, amendments: Iterable[str | Path] = ()) -> dict[str, Any]:
+    """One model's published numbers from its run, amended by any later runs on the same model.
+
+    An amendment is a later run of the same provider, model and voice that
+    re-measured some cells (a reworded sentence, an added one): its reading of
+    a cell replaces the earlier one, and cells it did not run keep theirs. The
+    corpus and harness reported are the latest run's, and the amendments are
+    listed so the join is visible.
+    """
+    roots = sorted([Path(run_dir), *(Path(a) for a in amendments)], key=lambda r: _provenance(r)["started_utc"])
+    root, later = roots[0], roots[1:]
+    provenance = _provenance(root)
+    latest = _provenance(roots[-1])
+    for r in later:
+        p = _provenance(r)
+        if (p["provider"], p["model"], p["voice"]) != (provenance["provider"], provenance["model"], provenance["voice"]):
+            raise ValueError(f"{r.name} measures {p['provider']}/{p['model']}/{p['voice']}, not the model of {root.name}")
+    plan = _latest(roots, lambda r: json.loads((r / "plan.json").read_text())["cells"], lambda c: c["cell_id"])
+    sessions = [s for r in roots for s in read_jsonl(r / "sessions.jsonl")]
+    all_cells = _latest(roots, latest_cells, lambda c: c["artifacts"]["slug"])
+    cells = [c for c in all_cells if not c.get("sentinel")]
+    sentinel = [c for c in all_cells if c.get("sentinel")]
+    scores = _latest(roots, lambda r: read_jsonl(r / "scores-all.jsonl") if (r / "scores-all.jsonl").exists() else [],
+                     lambda s: s["cell_id"])
 
     by_probe: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for cell in cells:
@@ -164,11 +195,13 @@ def summarize(run_dir: str | Path) -> dict[str, Any]:
         "adapter": provenance["adapter"], "sampleRateHz": provenance["sample_rate"],
         "capabilities": provenance["capabilities"],
         "site": (sessions[0].get("client") or {}).get("site") if sessions else None,
-        "harnessCommit": provenance["harness"]["commit"], "harnessDirty": provenance["harness"]["dirty"],
-        "corpusVersion": provenance["corpus_version"], "methodology": provenance["methodology_version"],
+        "harnessCommit": latest["harness"]["commit"], "harnessDirty": any(_provenance(r)["harness"]["dirty"] for r in roots),
+        "corpusVersion": latest["corpus_version"], "methodology": latest["methodology_version"],
         "startedUtc": provenance["started_utc"], "repeats": provenance["repeats"],
+        "amendments": [{"run": r.name, "startedUtc": _provenance(r)["started_utc"], "corpusVersion": _provenance(r)["corpus_version"],
+                        "harnessCommit": _provenance(r)["harness"]["commit"], "cells": len(latest_cells(r))} for r in later],
         "cells": {
-            "planned": len(plan), "completed": len(latest_cells(root)),
+            "planned": len(plan), "completed": len(all_cells),
             "excludedByProbe": {p: r for p, r in excluded.items() if r},
             "providerRefused": refused, "graded": graded, "failed": fails,
         },

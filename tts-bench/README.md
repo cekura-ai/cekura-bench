@@ -84,10 +84,12 @@ digit sequences are checked separately because a task depends on them.
 
 ## Corpus
 
-88 items in 18 cohorts (`tts_bench/corpus.py`, version 0.2.0): prose,
+104 items in 21 cohorts (`tts_bench/corpus.py`, version 0.3.0): prose,
 currency, datetime, phone, alnum, spelled, contact, names, repair, units,
-questions, long, paragraph, heteronym, abbrev, symbols, terms, numbers.
-Production-shaped, invented values, published.
+questions, long, paragraph, heteronym, abbrev, symbols, terms, numbers, tech,
+worded, dense. Production-shaped, invented values, published. A later corpus
+version re-measures only the items it changed or added: the new run amends the
+earlier one at export (`bin/export-website.py summarize --amend`).
 
 - **paragraph**: four agent turns of 470–510 characters, the prompt length
   throughput is usually timed on, and a test of stability over a long utterance.

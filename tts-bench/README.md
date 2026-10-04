@@ -107,6 +107,19 @@ against. Any corpus in the same JSON shape runs through the identical probes
 (`--corpus path/to/corpus.json`), which is how the hidden holdout and the
 external grounding set are run.
 
+## Naturalness
+
+Transcribers say whether the words came through, not how the voice sounds.
+`bin/score-naturalness.py <run>...` scores every one-shot recording with a
+listener model, UTMOS (`utmos22_strong`, the VoiceMOS 2022 model, MIT code
+and weights, fetched through torch.hub at a pinned tag), which predicts the
+1–5 mean opinion score listeners give synthetic speech. Each score is
+journalled to `naturalness.jsonl` in the run, so the export reads it without
+the model, and an amendment run joins cell by cell. It needs torch, which the
+harness and the sandbox do not: `requirements-naturalness.txt` builds the
+separate environment. The site shows it as a model's estimate of a listening
+test, never as a measurement.
+
 ## Grounding
 
 `bin/fetch-tts-grounding.py` fetches two public sets at run time (nothing is

@@ -27,6 +27,7 @@ from typing import Any, Iterable, Sequence
 import numpy as np
 
 from tts_bench.common.stats import latency_summary, rate_summary
+from tts_bench.naturalness import rows as naturalness_rows
 from tts_bench.store import latest_cells, read_jsonl
 
 SCHEMA = "tts-bench/site-summary/1"
@@ -258,6 +259,23 @@ def summarize(run_dir: str | Path, amendments: Iterable[str | Path] = ()) -> dic
         },
         "accuracy": accuracy,
         "instrumentDisagreements": disagreements,
+        "naturalness": _naturalness(roots),
+    }
+
+
+def _naturalness(roots: Sequence[Path]) -> dict[str, Any] | None:
+    """The listener model's score over the one-shot recordings, if the run was scored for it; never a zero."""
+    rows = naturalness_rows(roots)
+    if not rows:
+        return None
+    by_cohort: dict[str, list[float]] = defaultdict(list)
+    for row in rows:
+        by_cohort[row["cohort"]].append(row["mos"])
+    scores = [row["mos"] for row in rows]
+    return {
+        "model": rows[0]["model"], "scale": "1-5, a listener model's estimate of a mean opinion score",
+        "mos": {**(_lat(scores) or {}), "mean": round(float(np.mean(scores)), 3)},
+        "byCohort": {cohort: round(float(np.mean(v)), 3) for cohort, v in sorted(by_cohort.items())},
     }
 
 

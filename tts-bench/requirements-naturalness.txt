@@ -1,0 +1,8 @@
+# The naturalness scorer (bin/score-naturalness.py) runs in its own environment: the
+# listener model needs torch, which the harness and the campaign sandbox do not.
+#   uv venv .venv-naturalness --python 3.12
+#   uv pip install --python .venv-naturalness/bin/python -r requirements-naturalness.txt --index-url https://download.pytorch.org/whl/cpu --extra-index-url https://pypi.org/simple
+torch
+torchaudio
+librosa
+soundfile

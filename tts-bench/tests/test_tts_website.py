@@ -19,7 +19,7 @@ async def test_a_run_reduces_to_published_numbers_and_joins_the_site_file(tmp_pa
     assert summary["latency"]["ttfa"]["n"] == 3 and summary["site"] == "lab"
     assert summary["underLoad"]["perStreamTtfa"]["n"] == 6
     assert summary["throughput"]["charsPerSecondParagraph"]["n"] == 1
-    assert summary["reliability"]["runaways"] == 0 and summary["accuracy"] == {}
+    assert summary["reliability"]["runaways"] == 0
     assert summary["reliability"]["syntheses"] == 3 + 2 * 3 + 1   # one-shots, repeat pairs, the cancel; not load streams
     assert len(json.dumps(summary)) < 20000                   # numbers only: no audio, no transcripts
 
@@ -29,6 +29,25 @@ async def test_a_run_reduces_to_published_numbers_and_joins_the_site_file(tmp_pa
     site = website.combine([summary], models)
     assert [m["measured"] for m in site["models"]] == [True, False]
     assert site["results"][0]["id"] == "fake" and site["build"]["sites"] == ["lab"]
+
+
+def test_transcriber_scores_never_reach_the_site_file():
+    """Word error and hard-part rates are judged by speech-to-text models, so the site file carries neither,
+    even from a summary written before the exporter stopped computing them."""
+    old_summary = {
+        "schema": website.SCHEMA, "provider": "fake", "model": "m", "harnessCommit": "abc", "site": "lab",
+        "startedUtc": "2026-10-01T00:00:00+00:00", "corpusVersion": "0.3.0", "methodology": "1",
+        "latency": {"ttfa": {"n": 1, "p50": 100.0}},
+        "accuracy": {"nova-3": {"oneShot": {"wer": 0.02}, "spans": {"all": {"passed": 9, "n": 10, "rate": 0.9}}}},
+        "instrumentDisagreements": 3,
+    }
+    models = {"campaign": "t", "models": {"fake/m": {"id": "fake", "name": "Fake", "vendor": "Test", "modelId": "m", "voice": "v", "price": None}}}
+    site = website.combine([old_summary], models)
+    text = json.dumps(site)
+    assert "accuracy" not in site["results"][0] and "instrumentDisagreements" not in site["results"][0]
+    assert site["results"][0]["latency"]["ttfa"]["p50"] == 100.0
+    assert "wer" not in site["methods"] and "spans" not in site["methods"]
+    assert "transcript" not in text and "nova-3" not in text
 
 
 async def test_a_later_run_on_the_same_model_amends_the_earlier_one_cell_by_cell(tmp_path):

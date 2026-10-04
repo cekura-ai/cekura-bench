@@ -156,6 +156,11 @@ class DeepslateRealtimeLLMService(LLMService):
         # audio already in flight for an interrupted reply must not reopen it.
         self._turn: int | None = None
         self._cut_turn: int | None = None
+        # Words that arrived ahead of their reply's audio, by turn: the text
+        # leads the voice by up to ~1.5 s, and a reply cut off or hung up on
+        # before it makes a sound must leave no words in the record.
+        self._held: list[tuple[int | None, str]] = []
+        self._voiced = False
         # Results already handed over: the context is pushed again for every
         # tool, and each result must be sent exactly once.
         self._delivered: set[str] = set()
@@ -366,6 +371,7 @@ class DeepslateRealtimeLLMService(LLMService):
         if not self._speaking:
             return
         self._speaking = False
+        self._voiced = False
         await self.push_frame(TTSStoppedFrame())
         await self.push_frame(LLMFullResponseEndFrame())
         await self.stop_all_metrics()
@@ -409,17 +415,25 @@ class DeepslateRealtimeLLMService(LLMService):
             chunk = message.model_audio_chunk
             if chunk.audio.data and not self._was_cut(chunk):
                 await self._start_reply()
+                if not self._voiced:
+                    # The reply's first sound releases the words held for it.
+                    self._voiced = True
+                    turn = self._turn_of(chunk)
+                    held, self._held = self._held, []
+                    # Words that came before any reply had opened belong to this one.
+                    for text in (text for held_turn, text in held if held_turn in (turn, None)):
+                        await self._push_text(text)
                 await self.stop_ttfb_metrics()
                 await self.push_frame(TTSAudioRawFrame(audio=chunk.audio.data, sample_rate=SAMPLE_RATE, num_channels=1))
 
         elif kind == "model_text_fragment":
             fragment = message.model_text_fragment
             if fragment.text and not self._was_cut(fragment):
-                # What the agent says, ahead of the audio that voices it.
                 await self._start_reply()
-                frame = TTSTextFrame(fragment.text, aggregated_by=AggregationType.TOKEN)
-                frame.includes_inter_frame_spaces = True
-                await self.push_frame(frame)
+                if self._voiced:
+                    await self._push_text(fragment.text)
+                else:
+                    self._held.append((self._turn_of(fragment), fragment.text))
 
         elif kind == "response_begin":
             self._turn = message.response_begin.turn_id
@@ -433,6 +447,7 @@ class DeepslateRealtimeLLMService(LLMService):
             # reply that is still being delivered.
             if self._speaking:
                 self._cut_turn = self._turn
+                self._held = []
                 await self._end_reply()
                 await self.broadcast_interruption()
 
@@ -470,14 +485,19 @@ class DeepslateRealtimeLLMService(LLMService):
                           + (f" (trace {error.trace_id})" if error.HasField("trace_id") else "")
             )
 
-    def _was_cut(self, part) -> bool:
-        """Whether this piece of a reply belongs to one the caller talked over.
+    def _turn_of(self, part) -> int | None:
+        """Turn ids are 0-based and optional; a piece without one belongs to the latest reply."""
+        return part.turn_id if part.HasField("turn_id") else self._turn
 
-        Turn ids are 0-based and optional on these messages; one without an id
-        belongs to the reply opened most recently.
-        """
-        turn = part.turn_id if part.HasField("turn_id") else self._turn
+    def _was_cut(self, part) -> bool:
+        """Whether this piece of a reply belongs to one the caller talked over."""
+        turn = self._turn_of(part)
         return turn is not None and turn == self._cut_turn
+
+    async def _push_text(self, text: str):
+        frame = TTSTextFrame(text, aggregated_by=AggregationType.TOKEN)
+        frame.includes_inter_frame_spaces = True
+        await self.push_frame(frame)
 
     async def _handle_vad(self, event):
         before, after = proto.VadState.Name(event.from_state), proto.VadState.Name(event.to_state)

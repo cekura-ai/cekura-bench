@@ -1141,6 +1141,42 @@ class TestDeepslateRealtime:
         assert name == "TranscriptionFrame" and direction is FrameDirection.UPSTREAM
         assert frame.text == "I need to reschedule."
 
+    async def test_words_reach_the_record_only_once_their_reply_makes_a_sound(self):
+        """The text leads the voice; a reply hung up on or talked over before its audio leaves no words."""
+        from deepslate.core.proto import realtime_pb2 as proto
+
+        def text(words, **turn):
+            return self._message(model_text_fragment=proto.ModelTextFragment(text=words, **turn))
+
+        def chunk(**turn):
+            return self._message(model_audio_chunk=proto.ModelAudioChunk(audio=proto.AudioData(data=b"\1\0"), **turn))
+
+        def words():
+            return [f.text for name, _, f in seen["pushed"] if name == "TTSTextFrame"]
+
+        service, seen = self._service()
+        # Talked over before its first sound: its words are dropped with it.
+        await service._dispatch(self._message(response_begin=proto.ResponseBegin(turn_id=0)))
+        await service._dispatch(text("Let me check."))
+        await service._dispatch(self._message(playback_clear_buffer=proto.PlaybackClearBuffer()))
+        await service._dispatch(chunk(turn_id=0))
+        assert words() == []
+        # A reply whose audio never comes -- hung up on after a goodbye tool -- has no words.
+        await service._dispatch(self._message(response_begin=proto.ResponseBegin(turn_id=1)))
+        await service._dispatch(text("Thank you, "))
+        await service._dispatch(text("goodbye."))
+        await service._dispatch(self._message(response_end=proto.ResponseEnd(turn_id=1)))
+        assert words() == []
+        # The next reply's held words come out just ahead of its first audio; the
+        # silent reply 1's words are not carried into it.
+        await service._dispatch(self._message(response_begin=proto.ResponseBegin(turn_id=2)))
+        await service._dispatch(text("Sure, "))
+        before = len(seen["pushed"])
+        await service._dispatch(chunk())
+        await service._dispatch(text("one moment."))
+        assert [name for name, _, _ in seen["pushed"][before:]] == ["TTSTextFrame", "TTSAudioRawFrame", "TTSTextFrame"]
+        assert words() == ["Sure, ", "one moment."]
+
     async def test_a_close_from_the_far_end_is_an_error_and_not_retried(self):
         errors = []
 

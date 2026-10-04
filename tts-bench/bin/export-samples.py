@@ -70,8 +70,12 @@ def main(argv: list[str]) -> int:
         site = models.get(f"{p['provider']}/{p['model']}")
         if site is None:
             continue
+        # The text a run read, which may predate a rewording: a clip must say the sentence the page shows.
+        read = {i["id"]: i["text"] for i in json.loads((run / "corpus.json").read_text())["items"]}
         for item in items:
             if any(c["model"] == site["id"] and c["item"] == item for c in clips):
+                continue
+            if item not in by_id or read.get(item) != by_id[item].text:
                 continue
             source = recording(run, item)
             if source is None:

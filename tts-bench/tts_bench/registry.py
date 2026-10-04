@@ -15,6 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Type
 
+from tts_bench.adapters.azure_speech import AzureSpeechAdapter
 from tts_bench.adapters.base import TTSAdapter
 from tts_bench.adapters.cartesia import CartesiaAdapter
 from tts_bench.adapters.deepgram import DeepgramSpeakAdapter
@@ -129,11 +130,17 @@ PROVIDERS: dict[str, ProviderEntry] = {
         (Model("Qwen/Qwen3-TTS", "Vivian"),),
         notes="OpenAI-compatible HTTP streaming, raw PCM; whole text per request; any hosted model is a lineup entry",
     ),
+    "azure-speech": ProviderEntry(
+        "azure-speech", AzureSpeechAdapter, "AZURE_SPEECH_KEY",
+        (Model("MAI-Voice-2.1-Flash", "en-US-Harper"), Model("MAI-Voice-2.1", "en-US-Harper")),
+        notes="HTTP SSML, raw PCM streamed back; the model is the voice name's suffix; whole text per request; "
+              "region is the host (option region, default eastus)",
+    ),
 }
 
 # Protocols not yet spoken. Listed so the gap is a fact, not an oversight.
 PENDING = ("qwen-audio", "speechify", "rime", "minimax",
-           "murf", "fish-audio", "hume", "lmnt", "azure-speech", "google-cloud-tts", "polly")
+           "murf", "fish-audio", "hume", "lmnt", "google-cloud-tts", "polly")
 
 
 def lineup() -> list[tuple[str, Model]]:

@@ -153,6 +153,7 @@ vendored):
 | `smallest` | `lightning_v3.1_pro` | websocket, `context_id` continuation | yes | no | yes | no | no end-of-utterance message: a context ends when its stream goes quiet; `cancel_request` drops only unreleased text |
 | `soniox` | `tts-rt-v2` | websocket, one stream per context | yes | `cancel` | yes | yes | |
 | `deepinfra` | `Qwen/Qwen3-TTS` | HTTP streaming (OpenAI-compatible) | no | no | no | no | whole text per request; any model DeepInfra hosts on this endpoint is a lineup entry |
+| `azure-speech` | `MAI-Voice-2.1-Flash`, `MAI-Voice-2.1` | HTTP streaming, SSML | no | no | no | yes | whole text per request; the model is the voice name's suffix (`en-US-Harper:MAI-Voice-2.1-Flash`); the region is the host, option `region` (default `eastus`) |
 
 Each model runs with one fixed voice, set in the registry: a female US English
 stock voice from that provider. `--all-models` runs the whole lineup of a

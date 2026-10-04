@@ -37,8 +37,19 @@ class OpenAITTSAdapter(TTSAdapter):
         self._text: dict[str, str] = {}
         self._tasks: dict[str, asyncio.Task] = {}
 
+    def _headers(self) -> dict[str, str]:
+        return {"Authorization": f"Bearer {self.api_key}"}
+
+    def _request_args(self, text: str) -> dict[str, Any]:
+        """The body of one synthesis request, logged without the text."""
+        payload: dict[str, Any] = {"model": self.config.model, "voice": self.config.voice, "input": text, "response_format": "pcm"}
+        if self.config.speed is not None:
+            payload["speed"] = self.config.speed
+        self.log.raw({**payload, "input": f"<{len(text)} chars>"}, direction="out")
+        return {"json": payload}
+
     async def _connect(self) -> None:
-        self._session = aiohttp.ClientSession(headers={"Authorization": f"Bearer {self.api_key}"})
+        self._session = aiohttp.ClientSession(headers=self._headers())
         try:
             async with self._session.get(self._prewarm_url()) as response:
                 self.log.raw({"prewarm_status": response.status}, direction="in")
@@ -61,12 +72,9 @@ class OpenAITTSAdapter(TTSAdapter):
 
     async def _request(self, context_id: str, text: str) -> None:
         assert self._session is not None
-        payload: dict[str, Any] = {"model": self.config.model, "voice": self.config.voice, "input": text, "response_format": "pcm"}
-        if self.config.speed is not None:
-            payload["speed"] = self.config.speed
-        self.log.raw({**payload, "input": f"<{len(text)} chars>"}, direction="out")
+        args = self._request_args(text)
         try:
-            async with self._session.post(f"{self.base}{self.speech_path}", json=payload) as response:
+            async with self._session.post(f"{self.base}{self.speech_path}", **args) as response:
                 self._on_response(context_id, response.status, response.headers)
                 if response.status != 200:
                     body = await response.text()

@@ -263,3 +263,71 @@ class TestEndOfUtterance:
         smallest._on_audio("main", b"\x01\x00" * 480)
         finished = await smallest.wait("main", 5.0, quiet_s=0.1)
         assert finished.meta["ended_by"] == "quiet"
+
+
+class TestAzureSpeech:
+    def test_the_model_rides_on_the_voice_name_and_the_text_is_escaped(self):
+        from tts_bench.adapters.azure_speech import AzureSpeechAdapter
+
+        azure, _ = adapter(AzureSpeechAdapter, "MAI-Voice-2.1-Flash", "en-US-Harper")
+        body = azure.ssml('Press Ctrl+Shift+T & say "5 < 6".')
+        assert '<voice name="en-US-Harper:MAI-Voice-2.1-Flash">' in body and 'xml:lang="en-US"' in body
+        assert "Ctrl+Shift+T &amp; say \"5 &lt; 6\"." in body and "express-as" not in body
+
+    def test_the_region_is_the_host_and_east_us_is_the_default(self):
+        from tts_bench.adapters.azure_speech import AzureSpeechAdapter
+        from tts_bench.common.events import Clock, EventLog
+
+        azure, _ = adapter(AzureSpeechAdapter, "MAI-Voice-2.1", "en-US-Harper")
+        assert f"{azure.base}{azure.speech_path}" == "https://eastus.tts.speech.microsoft.com/cognitiveservices/v1"
+        clock = Clock()
+        west = AzureSpeechAdapter(TTSConfig(model="MAI-Voice-2.1", voice="en-US-Harper", options=(("region", "westus2"),)),
+                                  "unused", EventLog(clock), clock)
+        assert west.base == "https://westus2.tts.speech.microsoft.com"
+
+    async def test_one_request_streams_pcm_and_the_key_never_reaches_the_log(self, tmp_path):
+        from aiohttp import web
+
+        from tts_bench.adapters.azure_speech import AzureSpeechAdapter
+
+        seen: dict = {}
+
+        async def voices(request):
+            return web.json_response([])
+
+        async def speak(request):
+            seen["headers"], seen["body"] = dict(request.headers), await request.text()
+            response = web.StreamResponse(headers={"X-RequestId": "r1"})
+            await response.prepare(request)
+            for _ in range(3):
+                await response.write(b"\x01\x00" * 240)
+            await response.write_eof()
+            return response
+
+        app = web.Application()
+        app.router.add_get("/cognitiveservices/voices/list", voices)
+        app.router.add_post("/cognitiveservices/v1", speak)
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, "127.0.0.1", 0)
+        await site.start()
+        port = site._server.sockets[0].getsockname()[1]
+        try:
+            clock = Clock()
+            log = EventLog(clock, raw_path=tmp_path / "raw.jsonl")
+            azure = AzureSpeechAdapter(TTSConfig(model="MAI-Voice-2.1-Flash", voice="en-US-Harper"), "secret-key", log, clock)
+            azure.base = f"http://127.0.0.1:{port}"
+            async with azure:
+                synthesis = await azure.open_context("main")
+                await azure.send("main", "Your total is $42.")
+                await azure.finish("main")
+                done = await azure.wait("main", 5.0)
+        finally:
+            await runner.cleanup()
+        assert len(done.pcm) == 1440 and done.meta["ended_by"] == "provider" and synthesis is done
+        assert seen["headers"]["X-Microsoft-OutputFormat"] == "raw-24khz-16bit-mono-pcm"
+        assert seen["headers"]["Ocp-Apim-Subscription-Key"] == "secret-key" and "$42." in seen["body"]
+        assert done.meta["headers"]["x-requestid"] == "r1"
+        raw = (tmp_path / "raw.jsonl").read_text()
+        assert "secret-key" not in raw and "secret-key" not in str(log.events)
+        assert "$42" not in raw and '"input": "<18 chars>"' in raw

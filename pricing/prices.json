@@ -223,6 +223,15 @@
       "unmetered": [
         "The Starter plan's rate; the Pro plan lists $0.12 a minute against a monthly fee."
       ]
+    },
+    "deepslate": {
+      "read_on": null,
+      "verified": false,
+      "source": null,
+      "components": [],
+      "unmetered": [
+        "No public price list. The ElevenLabs voicing the service calls is billed to this deployment's ElevenLabs account, separately."
+      ]
     }
   },
   "cascade_speech_path": {

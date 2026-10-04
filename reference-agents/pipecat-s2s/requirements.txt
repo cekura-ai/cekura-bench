@@ -5,4 +5,7 @@
 # of its own; its realtime service ships in the base package.
 pipecat-ai[aws-nova-sonic,daily,deepgram,elevenlabs,google,openai,silero,webrtc,websocket]==1.11.0
 cekura[pipecat]==1.6.7
+# Deepslate's protocol is protobuf; only the vendor's generated message classes
+# are used from it (see deepslate_realtime.py).
+deepslate-core==0.1.20
 python-dotenv>=1.0

@@ -876,21 +876,310 @@ class TestPhonicRealtime:
         assert [m["type"] for m in seen["sent"]] == ["audio_chunk"]
 
 
+class TestDeepslateRealtime:
+    """The third provider whose protocol we speak ourselves, in protobuf this time."""
+
+    @pytest.fixture(autouse=True)
+    def _account(self, monkeypatch):
+        monkeypatch.setenv("DEEPSLATE_VENDOR_ID", "vendor")
+        monkeypatch.setenv("DEEPSLATE_ORGANIZATION_ID", "org")
+        monkeypatch.setenv("ELEVENLABS_API_KEY", "el-key")
+
+    @staticmethod
+    def _service(settings=None, **overrides):
+        from deepslate_realtime import DeepslateRealtimeLLMService
+
+        provider = bot.PROVIDERS["deepslate"]
+        settings = settings or asked()
+        voice = settings.get("s2s_voice", provider.default_voice)
+        service = provider.build("k", provider.default_model, voice, "prompt", settings)
+        for key, value in overrides.items():
+            setattr(service, key, value)
+        seen = {"pushed": [], "broadcast": [], "sent": [], "interruptions": 0, "calls": []}
+
+        async def push(frame, direction=None):
+            seen["pushed"].append((type(frame).__name__, direction, frame))
+
+        async def broadcast(frame_cls, **_kwargs):
+            seen["broadcast"].append(frame_cls.__name__)
+
+        async def interrupt():
+            seen["interruptions"] += 1
+
+        async def send(message):
+            seen["sent"].append(message)
+
+        async def run(function_calls):
+            seen["calls"].extend(function_calls)
+
+        async def noop(*_args, **_kwargs):
+            return None
+
+        service.push_frame = push
+        service.broadcast_frame = broadcast
+        service.broadcast_interruption = interrupt
+        service._send = send
+        service.run_function_calls = run
+        for name in ("start_ttfb_metrics", "stop_ttfb_metrics", "start_processing_metrics", "stop_all_metrics"):
+            setattr(service, name, noop)
+        assert isinstance(service, DeepslateRealtimeLLMService)
+        return service, seen
+
+    @staticmethod
+    def _message(**payload):
+        from deepslate.core.proto import realtime_pb2 as proto
+
+        return proto.ClientBoundMessage(**payload)
+
+    @staticmethod
+    def _vad(before, after):
+        from deepslate.core.proto import realtime_pb2 as proto
+
+        return TestDeepslateRealtime._message(vad_state_event=proto.VadStateEvent(
+            from_state=proto.VadState.Value(before), to_state=proto.VadState.Value(after)))
+
+    def test_the_session_names_every_setting_the_row_depends_on(self):
+        """The protocol has no server defaults to fall back on, and the record must name each one."""
+        from deepslate.core.proto import realtime_pb2 as proto
+
+        service, _ = self._service()
+        request = service.initialize_request()
+        for line in (request.input_audio_line, request.output_audio_line):
+            assert line.sample_rate == bot.PROVIDERS["deepslate"].input_rate
+            assert line.channel_count == 1 and line.sample_format == proto.SampleFormat.SIGNED_16_BIT
+        vad = request.vad_configuration
+        assert vad.confidence_threshold == pytest.approx(bot.DEEPSLATE_VAD["confidence_threshold"])
+        assert vad.stop_duration.nanos == bot.DEEPSLATE_VAD["stop_duration_ms"] * 1_000_000
+        assert vad.backbuffer_duration.seconds == 1
+        assert request.inference_configuration.temperature == pytest.approx(bot.DEEPSLATE_TEMPERATURE)
+        assert request.inference_configuration.system_prompt == "prompt"
+        assert not request.supports_playback_reporting
+        record = record_for("deepslate")
+        for key in ("deepslate_model", "deepslate_tts", "deepslate_vad", "deepslate_temperature",
+                    "deepslate_playback_reporting"):
+            assert record[key], key
+
+    def test_the_default_voicing_is_the_cascade_voice(self):
+        """The voicing step is part of the row, so it is one the board already measures."""
+        service, _ = self._service()
+        tts = service.initialize_request().tts_configuration
+        assert tts.WhichOneof("provider") == "eleven_labs"
+        assert tts.eleven_labs.voice_id == bot.CASCADE_TTS_VOICE == bot.PROVIDERS["deepslate"].default_voice
+        assert tts.eleven_labs.model_id == bot.CASCADE_TTS_MODEL
+        assert tts.eleven_labs.api_key == "el-key"
+
+    def test_a_hosted_voice_must_be_named(self):
+        """Deepslate hosts no stock voice, so the default voice id is not one of its own."""
+        with pytest.raises(ValueError, match="s2s_voice"):
+            self._service(asked(deepslate_tts="hosted"))
+        service, _ = self._service(asked(deepslate_tts="hosted", s2s_voice="cloned-voice"))
+        tts = service.initialize_request().tts_configuration
+        assert tts.WhichOneof("provider") == "hosted"
+        assert tts.hosted.voice_ref.voice_id == "cloned-voice"
+        assert "hosted" in record_for("deepslate", deepslate_tts="hosted")["deepslate_tts"]
+
+    def test_the_account_is_read_from_the_environment(self, monkeypatch):
+        monkeypatch.delenv("DEEPSLATE_VENDOR_ID")
+        with pytest.raises(ValueError, match="DEEPSLATE_VENDOR_ID"):
+            self._service()
+
+    def test_the_frameworks_settings_are_complete_and_left_in_place(self):
+        from dataclasses import fields
+
+        from pipecat.services.settings import LLMSettings
+        from pipecat.utils.types import is_given
+
+        service, _ = self._service()
+        assert isinstance(service._settings, LLMSettings)
+        assert service._settings.model == "opal"
+        unset = [f.name for f in fields(service._settings) if f.name != "extra"
+                 and not is_given(getattr(service._settings, f.name))]
+        assert not unset
+
+    def test_one_rate_each_way_matches_the_pipeline(self):
+        import deepslate_realtime
+
+        assert deepslate_realtime.SAMPLE_RATE == bot.PROVIDERS["deepslate"].input_rate
+
+    def test_every_tool_is_declared_with_its_published_schema(self):
+        from google.protobuf import json_format
+
+        server = bot.MockToolServer(suite="medicare")
+        service, _ = self._service(_tools=bot.build_tools(server))
+        declared = {d.name: d for d in service.tool_definitions().tool_definitions}
+        specs = {spec.name: spec for spec in server.tool_specs()}
+        assert set(specs) | {"end_call", "transfer_call"} == set(declared)
+        for name, spec in specs.items():
+            assert declared[name].description == spec.description
+            parameters = json_format.MessageToDict(declared[name].parameters)
+            assert parameters["properties"] == spec.parameters["properties"], name
+            assert set(parameters.get("required", [])) == set(spec.parameters.get("required", [])), name
+
+    async def test_the_call_opens_configured_with_tools_then_speaks_first(self):
+        """Configuration, then tools before any audio, then the opening every row is given."""
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service, seen = self._service()
+        service._ready.set()
+        opening = bot.opening_messages("Thank you for calling.")
+        await service._open(service._opening(LLMContext(opening)))
+        kinds = [m.WhichOneof("payload") for m in seen["sent"]]
+        assert kinds == ["initialize_session_request", "update_tool_definitions_request", "trigger_inference"]
+        assert seen["sent"][2].trigger_inference.extra_instructions == opening[0]["content"]
+
+    async def test_audio_before_the_session_is_ready_is_dropped(self):
+        from pipecat.frames.frames import InputAudioRawFrame
+
+        service, seen = self._service()
+        frame = InputAudioRawFrame(audio=b"\0\0" * 160, sample_rate=16000, num_channels=1)
+        await service._send_audio(frame)
+        service._ready.set()
+        await service._send_audio(frame)
+        await service._send_audio(frame)
+        inputs = [m.user_input for m in seen["sent"]]
+        assert [i.packet_id for i in inputs] == [1, 2]
+        assert inputs[0].audio_data.data == frame.audio
+
+    async def test_a_tool_call_reaches_the_pipeline_with_whole_numbers_whole(self):
+        """Through the framework, so the context and the record see it; Struct floats undone."""
+        from deepslate.core.proto import realtime_pb2 as proto
+        from google.protobuf.struct_pb2 import Struct
+
+        service, seen = self._service()
+        parameters = Struct()
+        parameters.update({"zip": 90210, "name": "Sam", "rate": 2.5, "nested": [{"n": 3}]})
+        await service._dispatch(self._message(tool_call_request=proto.ToolCallRequest(
+            id="t1", name="check_availability", parameters=parameters)))
+        [call] = seen["calls"]
+        assert (call.tool_call_id, call.function_name) == ("t1", "check_availability")
+        assert call.arguments == {"zip": 90210, "name": "Sam", "rate": 2.5, "nested": [{"n": 3}]}
+        assert isinstance(call.arguments["zip"], int)
+
+    async def test_a_tool_result_is_sent_once_as_a_string(self):
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service, seen = self._service()
+        service._context = LLMContext([])
+        context = LLMContext([
+            {"role": "tool", "tool_call_id": "t1", "content": '{"patient_id": "p_1"}'},
+            {"role": "tool", "tool_call_id": "t2", "content": "IN_PROGRESS"},
+        ])
+        await service._handle_context(context)
+        await service._handle_context(context)
+        [message] = seen["sent"]
+        assert message.tool_call_response.id == "t1"
+        assert message.tool_call_response.result == '{"patient_id": "p_1"}'
+
+    async def test_the_services_detector_decides_the_callers_turn(self):
+        service, seen = self._service()
+        await service._dispatch(self._vad("SILENCE", "SPEECH_STARTING"))
+        await service._dispatch(self._vad("SPEECH_STARTING", "SILENCE"))
+        assert seen["broadcast"] == [], "a false start is not a turn"
+        await service._dispatch(self._vad("SPEECH_STARTING", "SPEECH"))
+        await service._dispatch(self._vad("SPEECH", "SPEECH_ENDING"))
+        await service._dispatch(self._vad("SPEECH_ENDING", "SPEECH"))
+        await service._dispatch(self._vad("SPEECH", "SPEECH_ENDING"))
+        await service._dispatch(self._vad("SPEECH_ENDING", "SILENCE"))
+        assert seen["broadcast"] == ["ProposedUserStartedSpeakingFrame", "ProposedUserStoppedSpeakingFrame"]
+        assert bot.PROVIDERS["deepslate"].turns == "provider"
+
+    async def test_being_talked_over_is_the_services_call_and_only_mid_reply(self):
+        """The service clears playback whenever the caller starts; only a live reply is interrupted."""
+        from deepslate.core.proto import realtime_pb2 as proto
+
+        service, seen = self._service()
+        await service._dispatch(self._message(playback_clear_buffer=proto.PlaybackClearBuffer()))
+        assert seen["interruptions"] == 0
+        await service._dispatch(self._message(response_begin=proto.ResponseBegin(turn_id=0)))
+        await service._dispatch(self._message(playback_clear_buffer=proto.PlaybackClearBuffer()))
+        assert seen["interruptions"] == 1
+        assert [name for name, _, _ in seen["pushed"]][-2:] == ["TTSStoppedFrame", "LLMFullResponseEndFrame"]
+        assert not bot.PROVIDERS["deepslate"].interruptions
+
+    async def test_audio_still_in_flight_for_a_cut_reply_does_not_reopen_it(self):
+        from deepslate.core.proto import realtime_pb2 as proto
+
+        def chunk(**turn):
+            return self._message(model_audio_chunk=proto.ModelAudioChunk(audio=proto.AudioData(data=b"\1\0"), **turn))
+
+        service, seen = self._service()
+        await service._dispatch(self._message(response_begin=proto.ResponseBegin(turn_id=0)))
+        await service._dispatch(self._message(playback_clear_buffer=proto.PlaybackClearBuffer()))
+        before = len(seen["pushed"])
+        await service._dispatch(chunk(turn_id=0))
+        await service._dispatch(chunk())
+        assert len(seen["pushed"]) == before
+        # The next reply plays as usual.
+        await service._dispatch(self._message(response_begin=proto.ResponseBegin(turn_id=1)))
+        await service._dispatch(chunk())
+        assert [name for name, _, _ in seen["pushed"][before:]] == [
+            "LLMFullResponseStartFrame", "TTSStartedFrame", "TTSAudioRawFrame"]
+
+    async def test_a_reply_is_bracketed_and_carries_its_words_and_audio(self):
+        from deepslate.core.proto import realtime_pb2 as proto
+
+        service, seen = self._service()
+        await service._dispatch(self._message(model_text_fragment=proto.ModelTextFragment(text="Hello ")))
+        await service._dispatch(self._message(response_begin=proto.ResponseBegin(turn_id=0)))
+        await service._dispatch(self._message(model_audio_chunk=proto.ModelAudioChunk(
+            audio=proto.AudioData(data=b"\1\0" * 160))))
+        await service._dispatch(self._message(response_end=proto.ResponseEnd(turn_id=0)))
+        names = [name for name, _, _ in seen["pushed"]]
+        assert names == ["LLMFullResponseStartFrame", "TTSStartedFrame", "TTSTextFrame", "TTSAudioRawFrame",
+                         "TTSStoppedFrame", "LLMFullResponseEndFrame"]
+        audio = next(frame for name, _, frame in seen["pushed"] if name == "TTSAudioRawFrame")
+        assert audio.sample_rate == bot.PROVIDERS["deepslate"].input_rate
+
+    async def test_the_callers_words_travel_upstream_to_the_context(self):
+        from deepslate.core.proto import realtime_pb2 as proto
+        from pipecat.processors.frame_processor import FrameDirection
+
+        service, seen = self._service()
+        await service._dispatch(self._message(user_transcription_result=proto.UserTranscriptionResult(
+            turn_id=1, text="I need to reschedule.", language="en")))
+        [(name, direction, frame)] = seen["pushed"]
+        assert name == "TranscriptionFrame" and direction is FrameDirection.UPSTREAM
+        assert frame.text == "I need to reschedule."
+
+    async def test_a_close_from_the_far_end_is_an_error_and_not_retried(self):
+        errors = []
+
+        class Closed:
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                raise StopAsyncIteration
+
+        for closing, expected in ((True, 0), (False, 1)):
+            service, _ = self._service()
+
+            async def push_error(error_msg, **_kwargs):
+                errors.append(error_msg)
+
+            service.push_error = push_error
+            service._websocket, service._closing = Closed(), closing
+            before = len(errors)
+            await service._receive()
+            assert len(errors) - before == expected, closing
+
+
 class TestCascadeCounterparts:
     """The comparison the board exists to make: native against the pipeline it replaces."""
 
     def test_every_native_provider_has_a_counterpart(self):
         """A native row with nothing to compare against cannot answer the question.
 
-        Nova Sonic, GPT-Live and Phonic have no vendor-default counterpart: GPT-Live
-        delegates to a backend, so its fair pairing is a cascade on that backend,
-        and Phonic offers no text model of its own.
+        Nova Sonic, GPT-Live, Phonic and Deepslate have no vendor-default
+        counterpart: GPT-Live delegates to a backend, so its fair pairing is a
+        cascade on that backend, and Phonic and Deepslate offer no text model of
+        their own.
         A vendor's smaller tier shares its vendor's counterpart: the question it
         answers is "the cheaper model or the flagship", not "native or cascade".
         """
         paired = {c.counterpart_to for c in bot.TEXT_MODELS.values() if c.counterpart_to}
         tiers = {"openai-realtime-mini", "gemini-live-standard", "gemini-flash-live"}
-        unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live", "phonic"} - tiers
+        unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live", "phonic", "deepslate"} - tiers
         assert not unpaired, f"native providers with no cascade counterpart: {sorted(unpaired)}"
 
     def test_a_counterpart_names_a_provider_that_exists(self):
@@ -2815,7 +3104,7 @@ class TestAResultIsDeliveredWhileTheAgentIsStillSpeaking:
 
     def test_the_rows_that_only_forward_a_result_are_the_immediate_ones(self):
         assert {k for k, p in bot.PROVIDERS.items() if p.results == "immediate"} == {
-            "gemini-live", "gemini-live-standard", "gemini-flash-live", "nova-sonic", "phonic",
+            "gemini-live", "gemini-live-standard", "gemini-flash-live", "nova-sonic", "phonic", "deepslate",
         }
         for key in ("openai-realtime", "openai-realtime-mini", "grok-realtime"):
             assert bot.PROVIDERS[key].results == "after_speech", key

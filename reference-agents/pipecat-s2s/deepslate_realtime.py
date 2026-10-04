@@ -376,6 +376,11 @@ class DeepslateRealtimeLLMService(LLMService):
         ws = self._websocket
         assert ws is not None
         async for raw in ws:
+            # The socket keeps delivering through its close handshake, and the
+            # service may begin another reply after the call is torn down; words
+            # nobody heard must not reach the record.
+            if self._closing:
+                break
             if not isinstance(raw, bytes):
                 logger.warning(f"{self} received a text frame on a protobuf socket")
                 continue

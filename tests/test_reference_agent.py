@@ -1163,6 +1163,27 @@ class TestDeepslateRealtime:
             await service._receive()
             assert len(errors) - before == expected, closing
 
+    async def test_a_reply_begun_after_teardown_never_reaches_the_record(self):
+        """A reply the service starts during the close handshake was never heard."""
+        from deepslate.core.proto import realtime_pb2 as proto
+
+        late = [self._message(response_begin=proto.ResponseBegin(turn_id=9)).SerializeToString(),
+                self._message(model_text_fragment=proto.ModelTextFragment(text="Goodbye")).SerializeToString()]
+
+        class Closing:
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                if not late:
+                    raise StopAsyncIteration
+                return late.pop(0)
+
+        service, seen = self._service()
+        service._websocket, service._closing = Closing(), True
+        await service._receive()
+        assert seen["pushed"] == []
+
 
 class TestCascadeCounterparts:
     """The comparison the board exists to make: native against the pipeline it replaces."""

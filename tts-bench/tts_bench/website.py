@@ -11,15 +11,9 @@ Two steps, so a run never has to move to be published:
   price exists, its cost.
 
 Every number says which cells it came from. Latency is P50/P90 (P95 from 30
-cells) with a bootstrap interval on the median; a pass count is given as
-passed/n. A probe the protocol cannot serve is ``null`` with the reason, never
-a zero.
-
-Only what the recordings measure directly is published. Word error and
-hard-part rates are judged by speech-to-text models that write the same audio
-differently, so they stay in the run's own scores and report and never reach
-the site file; ``combine`` also drops them from a summary written before this
-rule.
+cells) with a bootstrap interval on the median; word error is pooled (errors
+over reference words); a span or pass count is given as passed/n. A probe the
+protocol cannot serve is ``null`` with the reason, never a zero.
 """
 
 from __future__ import annotations
@@ -40,8 +34,6 @@ SCHEMA = "tts-bench/site-summary/1"
 SITE_SCHEMA = 1
 RUNAWAY_FACTOR = 2.0      # a recording this many times the model's typical length for the same text...
 RUNAWAY_EXCESS_MS = 3000  # ...and at least this much longer is a runaway, not a slower reading
-# Fields an older summary may carry that a speech-to-text model judged; the site file never takes them.
-TRANSCRIBER_JUDGED = ("accuracy", "instrumentDisagreements")
 
 
 def _exclusion(cell: dict[str, Any]) -> bool:
@@ -67,6 +59,38 @@ def _lat(values: Sequence[float]) -> dict[str, Any] | None:
 def _rate(flags: Sequence[bool]) -> dict[str, Any] | None:
     s = rate_summary(flags)
     return None if not s.get("n") else {"n": s["n"], "passed": s["passed"], "rate": s["rate"]}
+
+
+def _pooled(rows: Sequence[dict[str, Any]], instrument: str) -> dict[str, Any] | None:
+    errors = words = 0
+    n = 0
+    for row in rows:
+        score = row["instruments"].get(instrument) or {}
+        best = score.get("best")
+        if not best:
+            continue
+        errors += best["errors"]
+        words += best["reference_words"]
+        n += 1
+    return None if not words else {"wer": round(errors / words, 4), "recordings": n, "referenceWords": words}
+
+
+def _spans(rows: Sequence[dict[str, Any]], instrument: str) -> dict[str, Any]:
+    by: dict[str, list[int]] = defaultdict(lambda: [0, 0])
+    listener = 0
+    for row in rows:
+        for span in (row["instruments"].get(instrument) or {}).get("spans") or ():
+            if "pass" not in span:
+                listener += 1
+                continue
+            by[span["category"]][0] += 1 if span["pass"] else 0
+            by[span["category"]][1] += 1
+    total = [sum(v[0] for v in by.values()), sum(v[1] for v in by.values())]
+    return {
+        "all": None if not total[1] else {"passed": total[0], "n": total[1], "rate": round(total[0] / total[1], 4)},
+        "byCategory": {k: {"passed": v[0], "n": v[1], "rate": round(v[0] / v[1], 4)} for k, v in sorted(by.items())},
+        "forListener": listener,
+    }
 
 
 def _provenance(root: Path) -> dict[str, Any]:
@@ -104,6 +128,8 @@ def summarize(run_dir: str | Path, amendments: Iterable[str | Path] = ()) -> dic
     all_cells = _latest(roots, latest_cells, lambda c: c["artifacts"]["slug"])
     cells = [c for c in all_cells if not c.get("sentinel")]
     sentinel = [c for c in all_cells if c.get("sentinel")]
+    scores = _latest(roots, lambda r: read_jsonl(r / "scores-all.jsonl") if (r / "scores-all.jsonl").exists() else [],
+                     lambda s: s["cell_id"])
 
     by_probe: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for cell in cells:
@@ -139,6 +165,24 @@ def summarize(run_dir: str | Path, amendments: Iterable[str | Path] = ()) -> dic
     for _, s in singles:
         ended_by[str(s.get("ended_by"))] += 1
     timeouts = ended_by.get("timeout", 0)
+
+    instruments = sorted({name for row in scores for name in row["instruments"]})
+    def rows(probe: str, cohort: str | None = None) -> list[dict[str, Any]]:
+        return [r for r in scores if r["probe"] == probe and (cohort is None or r["cohort"] == cohort)]
+    accuracy = {}
+    for name in instruments:
+        model = next((r["instruments"][name]["model"] for r in scores if name in r["instruments"]), None)
+        normalizer = next((r["normalizer"] for r in scores), None)
+        accuracy[name] = {
+            "model": model, "normalizer": normalizer,
+            "oneShot": _pooled(rows("one_shot"), name),
+            "streamedInput": _pooled(rows("streamed_input"), name),
+            "underLoad": _pooled(rows("concurrency"), name),
+            "byCohort": {cohort: _pooled(rows("one_shot", cohort), name) for cohort in sorted(by_cohort)},
+            "spans": _spans(rows("one_shot"), name),
+            "instrumentErrors": sum(1 for r in scores if "error" in (r["instruments"].get(name) or {})),
+        }
+    disagreements = sum(1 for r in scores if r.get("instruments_disagree"))
 
     fails = sum(1 for cs in measured.values() for c in cs if c.get("verdict") == "fail")
     graded = sum(1 for cs in measured.values() for c in cs if c.get("verdict") in ("pass", "fail"))
@@ -213,6 +257,8 @@ def summarize(run_dir: str | Path, amendments: Iterable[str | Path] = ()) -> dic
             "syntheses": len(singles), "timeouts": timeouts, "runaways": runaways, "endedBy": dict(ended_by),
             "runawayRule": f"a recording over {RUNAWAY_FACTOR:g}x and {RUNAWAY_EXCESS_MS} ms longer than the model's median for the same text",
         },
+        "accuracy": accuracy,
+        "instrumentDisagreements": disagreements,
         "naturalness": _naturalness(roots),
     }
 
@@ -242,7 +288,7 @@ def combine(summaries: Sequence[dict[str, Any]], models: dict[str, Any]) -> dict
         entries.append({**{k: v for k, v in meta.items() if k != "price"}, "key": key, "measured": s is not None,
                         "price": meta.get("price")})
         if s is not None:
-            results.append({"id": meta["id"], **{k: v for k, v in s.items() if k not in ("schema", *TRANSCRIBER_JUDGED)}})
+            results.append({"id": meta["id"], **{k: v for k, v in s.items() if k not in ("schema",)}})
     commits = sorted({s["harnessCommit"] for s in summaries})
     sites = sorted({s["site"] for s in summaries if s["site"]})
     # The commit the site links to: the one behind the most recent measurement, amendments included.
@@ -261,6 +307,9 @@ def combine(summaries: Sequence[dict[str, Any]], models: dict[str, Any]) -> dict
             "ttfa": "first chunk arrival minus t0, plus the leading silence inside the stream",
             "leadingSilence": "first 10 ms window whose DC-removed RMS exceeds 1% of full scale, at 1 ms hops",
             "percentiles": "P50 and P90 over cells, P95 from 30 cells; P50 interval is a 2,000-draw bootstrap",
+            "wer": "pooled errors over reference words after whisper-normalizer plus letter/digit token repair; "
+                   "the better of the written and the spoken reference",
+            "spans": "a labelled hard part passes when an accepted reading appears in the transcript; codes digit by digit",
             "underLoad": "8 simultaneous one-shots on 8 connections under one key",
             "exclusions": "a probe the protocol cannot serve is null with its reason, never zero",
             "location": "every run measured from one cloud region; the round trip is part of every latency",

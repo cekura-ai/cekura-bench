@@ -34,7 +34,7 @@ laptop work unchanged and lets a deployment carry a default:
 
 | Key | Default | Notes |
 |---|---|---|
-| `s2s_provider` | `openai-realtime` | native: also `openai-realtime-mini`, `gemini-live`, `gemini-live-standard`, `gemini-flash-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`, `phonic`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
+| `s2s_provider` | `openai-realtime` | native: also `openai-realtime-mini`, `gemini-live`, `gemini-live-standard`, `gemini-flash-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`, `phonic`, `deepslate`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
 | `s2s_model` | provider default | pin it for a reproducible run |
 | `s2s_voice` | provider default | |
 | `s2s_backend_model` | `gpt-6-sol` | `gpt-live` only, see below |
@@ -42,6 +42,7 @@ laptop work unchanged and lets a deployment carry a default:
 | `aws_region` | `us-west-2` | `nova-sonic` only; must be a region serving the model and granted to the credentials |
 | `qwen_region` | `singapore` | `qwen-realtime` only; also `beijing` |
 | `qwen_workspace_id` | **required for `qwen-realtime`** | names the Alibaba workspace whose endpoint answers |
+| `deepslate_tts` | `elevenlabs` | `deepslate` only: what voices Opal's replies; also `hosted`, which needs `s2s_voice` set to a voice hosted in the account |
 | `cascade_tts_voice` | fixed voice id | cascade rows only |
 | `agent_dir` | **required** | a directory under `agent-definitions/`; no default on purpose |
 | `cekura_mode` | `track` | `observe` also uploads audio and starts evaluation |
@@ -57,8 +58,8 @@ quotes the body.
 
 | Variable | Notes |
 |---|---|
-| provider key | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, `DASHSCOPE_API_KEY`, `PHONIC_API_KEY`, or for Bedrock `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`); see below for why an API key cannot work |
-| `DEEPGRAM_API_KEY`, `ELEVENLABS_API_KEY` | cascade rows only |
+| provider key | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, `DASHSCOPE_API_KEY`, `PHONIC_API_KEY`, `DEEPSLATE_API_KEY` (with `DEEPSLATE_VENDOR_ID` and `DEEPSLATE_ORGANIZATION_ID`), or for Bedrock `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`); see below for why an API key cannot work |
+| `DEEPGRAM_API_KEY`, `ELEVENLABS_API_KEY` | cascade rows; `ELEVENLABS_API_KEY` also for `deepslate`, which hands it to Deepslate to voice its replies |
 | `CEKURA_API_KEY`, `CEKURA_AGENT_ID_<DEFINITION>` | tracing is off without both; one platform agent per agent definition (`CEKURA_AGENT_ID_APPOINTMENTS`, `CEKURA_AGENT_ID_MEDICARE`), with `CEKURA_AGENT_ID` for a deployment that serves one |
 | `AGENT_COMMIT` | stamped by the build; names what was actually deployed |
 
@@ -209,11 +210,12 @@ are granted in some subset of those. Both failures are the same
 `AccessDeniedException` from the outside, which is why the region is recorded
 with every run.
 
-## Two providers have no framework service
+## Three providers are spoken directly
 
 Pipecat ships a realtime service for every other model on this board and none
 for Qwen or Phonic, so `qwen_realtime.py` and `phonic_realtime.py` speak those
-protocols directly.
+protocols directly. Deepslate publishes a Pipecat plugin, and `deepslate_realtime.py`
+does not use it, for the reason given below.
 
 ### Qwen
 
@@ -249,12 +251,36 @@ dropped before the call reaches the mock tools.
 The model is named on every call. Left unnamed, the service may answer with an
 older model, and nothing in the reply says so.
 
+### Deepslate
+
+Deepslate's plugin runs a tool's handler itself and never tells the pipeline a
+call was made, so no tool call would reach the context or the record and every
+tool score on the row would be empty. It also ignores the context each row opens
+the call with. `deepslate_realtime.py` therefore speaks the protocol, using only
+the vendor's generated protobuf classes from `deepslate-core`. Not the SDK's
+session layer either: it configures the session lazily at 24 kHz and then
+reconfigures only the input side when 16 kHz audio follows, so replies arrive at
+one rate labelled as another; and after a drop it reconnects into a new session
+that remembers nothing of the call. Here the session is configured once, at
+16 kHz both ways, and a drop is an error.
+
+Opal produces text, and the service voices it with a configured text-to-speech
+step, which is part of the row. By default that is ElevenLabs, called by
+Deepslate with the voice and model every cascade row speaks with; `deepslate_tts=hosted`
+uses a voice Deepslate hosts instead. Deepslate has no stock hosted voice, so
+that mode needs a voice cloned into the account. The protocol takes no model, so
+the record says the model is not selectable. The service owns the caller's turns
+and barge-in, as Phonic's does, and the detector settings it is sent are the
+vendor SDK's own. Tool arguments arrive as a protobuf `Struct`, whose only number
+is a float, so whole numbers are turned back into integers before the tools see
+them.
+
 ## The sample rate is not a tuning knob
 
 These realtime services **do not resample**. Each base64-encodes the audio frame
 it is handed and declares a rate separately, so the pipeline rate must match what
 the provider expects: 24 kHz for OpenAI Realtime and Grok (the rate each
-recommends), 16 kHz for Gemini Live, Nova Sonic, Qwen and Phonic (Nova Sonic and Qwen
+recommends), 16 kHz for Gemini Live, Nova Sonic, Qwen, Phonic and Deepslate (Nova Sonic and Qwen
 reply at 24 kHz). GPT-Live is the exception: it resamples what it is given. Open it at the wrong rate and the model hears the caller sped up or slowed
 down, transcribes the words badly, and the run looks like a model failure when it
 is a wiring failure.

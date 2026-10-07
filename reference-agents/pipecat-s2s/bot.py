@@ -344,6 +344,7 @@ class Settings:
         "aws_region",
         "qwen_region",
         "qwen_workspace_id",
+        "deepslate_tts",
         "cascade_tts_voice",
         "cekura_mode",
     )
@@ -625,6 +626,68 @@ def _phonic(credential: str, model: str, voice: str, instructions: str, settings
         instructions=instructions,
         settings={"intelligence_level": PHONIC_INTELLIGENCE, **PHONIC_TURNS},
     )
+
+
+def _deepslate(credential: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
+    """Deepslate's speech-to-speech model, through the service in ``deepslate_realtime``.
+
+    Its framework plugin is not used; that module says why. The session takes
+    every setting explicitly and documents no server default, so each one the
+    row depends on is named here and on the record.
+    """
+    from deepslate_realtime import DeepslateRealtimeLLMService
+
+    return DeepslateRealtimeLLMService(
+        api_key=credential,
+        # Account identifiers rather than secrets, but kept out of the session
+        # and the repository all the same: they name whose account a row ran on.
+        vendor_id=_credential(("DEEPSLATE_VENDOR_ID",), "deepslate"),
+        organization_id=_credential(("DEEPSLATE_ORGANIZATION_ID",), "deepslate"),
+        model=model,
+        instructions=instructions,
+        tts=deepslate_tts(voice, settings),
+        vad=DEEPSLATE_VAD,
+        temperature=DEEPSLATE_TEMPERATURE,
+    )
+
+
+def deepslate_tts(voice: str, settings: Settings) -> dict[str, Any]:
+    """The step that voices Opal's replies, which is part of what the row measures.
+
+    ``elevenlabs`` (the default) has Deepslate call ElevenLabs with the voice and
+    model every cascade row speaks with, on this deployment's ElevenLabs key.
+    ``hosted`` uses a voice Deepslate hosts; it has no stock voice, only voices
+    cloned into an account, so that mode needs ``s2s_voice`` set to one.
+    """
+    mode = settings.get("deepslate_tts", "elevenlabs")
+    if mode == "elevenlabs":
+        return {
+            "provider": "elevenlabs",
+            "api_key": _credential(("ELEVENLABS_API_KEY",), "deepslate with ElevenLabs voicing"),
+            "voice_id": voice,
+            "model_id": DEEPSLATE_ELEVENLABS_MODEL,
+            "location": "US",
+        }
+    if mode == "hosted":
+        if not settings.get("s2s_voice"):
+            raise ValueError("deepslate_tts=hosted needs s2s_voice: Deepslate hosts no stock voice to default to")
+        return {"provider": "hosted", "voice_id": voice, "mode": DEEPSLATE_HOSTED_MODE}
+    raise ValueError(f"unknown deepslate_tts {mode!r}; expected elevenlabs or hosted")
+
+
+def deepslate_disclosures(settings: Settings) -> dict[str, str]:
+    mode = settings.get("deepslate_tts", "elevenlabs")
+    return {
+        # The protocol has no model field and the session reports none.
+        "deepslate_model": "not selectable; the service runs its current Opal",
+        "deepslate_tts": (
+            f"elevenlabs {DEEPSLATE_ELEVENLABS_MODEL}, called by the service" if mode == "elevenlabs"
+            else f"hosted {DEEPSLATE_HOSTED_MODE}" if mode == "hosted" else mode
+        ),
+        "deepslate_vad": ", ".join(f"{k} {v}" for k, v in DEEPSLATE_VAD.items()),
+        "deepslate_temperature": str(DEEPSLATE_TEMPERATURE),
+        "deepslate_playback_reporting": "off; the service estimates what a caller heard before a barge-in",
+    }
 
 
 def _gpt_live(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
@@ -932,7 +995,7 @@ class Provider:
 # and it is not a detail: a scored run needs both halves of the conversation, and
 # a transcript holding only the agent reads as a caller who never spoke. Two of
 # these services transcribe the caller only when asked, and each asks
-# differently; five do it themselves. Nothing warns about the difference,
+# differently; six do it themselves. Nothing warns about the difference,
 # because a session without transcription is a working session.
 #
 #   openai-realtime   asked for  -- an input transcription config, default model
@@ -942,6 +1005,7 @@ class Provider:
 #   gpt-live          automatic  -- the protocol is transcript-driven throughout
 #   nova-sonic        automatic  -- the service emits caller transcripts natively
 #   phonic            automatic  -- the service sends each finished caller turn
+#   deepslate         automatic  -- the service transcribes each finished caller turn
 #
 # The tool calls travel separately, through the context aggregator, which is why
 # a run can show resolved tools and still carry no speech.
@@ -978,6 +1042,25 @@ PHONIC_TURNS = {
     "vad_prebuffer_duration_ms": 500,
     "min_words_to_interrupt": 1,
 }
+
+# Deepslate's session has no server defaults to name: every field is sent. These
+# are what the vendor's own SDK (deepslate-core 0.1.20) sends when nothing else
+# is asked for -- 390 ms of silence ends a turn -- so the row runs the setting
+# the vendor ships rather than one this bench chose.
+DEEPSLATE_VAD = {
+    "confidence_threshold": 0.4,
+    "min_volume": 0.0,
+    "start_duration_ms": 150,
+    "stop_duration_ms": 390,
+    "backbuffer_duration_ms": 1000,
+}
+DEEPSLATE_TEMPERATURE = 0.3
+# The cascade rows' voice and model (``CASCADE_TTS_VOICE``, ``CASCADE_TTS_MODEL``),
+# so the voicing step is one this board already measures elsewhere.
+DEEPSLATE_ELEVENLABS_VOICE = "21m00Tcm4TlvDq8ikWAM"
+DEEPSLATE_ELEVENLABS_MODEL = "eleven_flash_v2_5"
+# The vendor's default and recommended mode for its hosted voices.
+DEEPSLATE_HOSTED_MODE = "HIGH_QUALITY"
 
 
 # ``input_rate`` is load-bearing, not a tuning knob. These services do not
@@ -1098,6 +1181,16 @@ PROVIDERS: dict[str, Provider] = {
         "qwen_realtime",
         discloses=lambda settings: {"qwen_region": qwen_region(settings)},
         turns="local", caller_transcription="automatic",
+    ),
+    # Deepslate takes and returns 16 kHz, and its plugin cannot be used -- see
+    # ``deepslate_realtime``. The service decides the caller's turns and when it
+    # has been talked over, and requires an answer to every tool call it makes,
+    # so the result is sent as soon as it exists.
+    "deepslate": Provider(
+        _deepslate, 16000, "opal", DEEPSLATE_ELEVENLABS_VOICE, ("DEEPSLATE_API_KEY",),
+        "deepslate_realtime",
+        discloses=deepslate_disclosures,
+        results="immediate", interruptions=False, caller_transcription="automatic",
     ),
 }
 

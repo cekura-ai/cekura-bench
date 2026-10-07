@@ -12,6 +12,7 @@ dependency-free.
 
 from __future__ import annotations
 
+import asyncio
 import inspect
 import sys
 from pathlib import Path
@@ -1221,22 +1222,312 @@ class TestDeepslateRealtime:
         assert seen["pushed"] == []
 
 
+class TestAzureRealtime:
+    """The fourth provider whose protocol we speak ourselves: Voice Live's flat realtime shape."""
+
+    @pytest.fixture(autouse=True)
+    def _resource(self, monkeypatch):
+        monkeypatch.setenv("AZURE_VOICE_ENDPOINT", "https://resource.services.ai.azure.com/")
+
+    @staticmethod
+    def _service(**overrides):
+        from azure_realtime import AzureRealtimeLLMService
+
+        provider = bot.PROVIDERS["azure-realtime"]
+        service = provider.build("k", provider.default_model, provider.default_voice, "prompt", asked())
+        for key, value in overrides.items():
+            setattr(service, key, value)
+        seen = {"pushed": [], "broadcast": [], "sent": [], "calls": [], "usage": []}
+
+        async def push(frame, direction=None):
+            seen["pushed"].append((type(frame).__name__, direction, frame))
+
+        async def broadcast(frame_cls, **_kwargs):
+            seen["broadcast"].append(frame_cls.__name__)
+
+        async def send(event):
+            seen["sent"].append(event)
+
+        async def run(function_calls):
+            seen["calls"].extend(function_calls)
+
+        async def usage(tokens):
+            seen["usage"].append(tokens)
+
+        async def noop(*_args, **_kwargs):
+            return None
+
+        service.push_frame = push
+        service.broadcast_frame = broadcast
+        service._send = send
+        service.run_function_calls = run
+        service.start_llm_usage_metrics = usage
+        for name in ("start_ttfb_metrics", "stop_ttfb_metrics", "start_processing_metrics",
+                     "stop_processing_metrics", "stop_all_metrics"):
+            setattr(service, name, noop)
+        assert isinstance(service, AzureRealtimeLLMService)
+        return service, seen
+
+    @staticmethod
+    def _audio(response="r1", item="i1", size=4800):
+        import base64
+
+        return {"type": "response.audio.delta", "response_id": response, "item_id": item, "content_index": 0,
+                "delta": base64.b64encode(b"\1\0" * (size // 2)).decode()}
+
+    @staticmethod
+    def _words(seen):
+        return [frame.text for name, _, frame in seen["pushed"] if name == "TTSTextFrame"]
+
+    def test_the_session_names_every_setting_the_row_depends_on(self):
+        import azure_realtime
+
+        service, _ = self._service()
+        session = service.session()
+        assert session["voice"] == {"type": "azure-realtime-native", "name": "ava"}
+        assert session["input_audio_format"] == session["output_audio_format"] == "pcm16"
+        assert session["input_audio_sampling_rate"] == bot.PROVIDERS["azure-realtime"].input_rate
+        assert azure_realtime.SAMPLE_RATE == bot.PROVIDERS["azure-realtime"].input_rate
+        assert session["turn_detection"] == bot.AZURE_TURN_DETECTION
+        assert session["turn_detection"]["type"] == "azure_semantic_vad"
+        assert session["input_audio_transcription"] == bot.AZURE_TRANSCRIPTION
+        assert session["instructions"] == "prompt"
+        record = record_for("azure-realtime")
+        for key in ("azure_api_version", "azure_turn_detection", "azure_caller_transcription",
+                    "azure_noise_suppression", "azure_echo_cancellation"):
+            assert record[key], key
+        assert record["azure_api_version"] == azure_realtime.API_VERSION
+
+    def test_the_session_url_is_the_resources_at_the_pinned_version(self):
+        import azure_realtime
+
+        service, _ = self._service()
+        assert service._url == (
+            f"wss://resource.services.ai.azure.com/voice-live/realtime"
+            f"?api-version={azure_realtime.API_VERSION}&model=azure-realtime"
+        )
+        assert azure_realtime.realtime_url("wss://r.example/", "m") == azure_realtime.realtime_url("https://r.example", "m")
+
+    def test_the_resource_is_read_from_the_environment(self, monkeypatch):
+        monkeypatch.delenv("AZURE_VOICE_ENDPOINT")
+        with pytest.raises(ValueError, match="AZURE_VOICE_ENDPOINT"):
+            self._service()
+
+    def test_every_tool_is_declared_flat_with_its_published_schema(self):
+        server = bot.MockToolServer(suite="medicare")
+        service, _ = self._service(_tools=bot.build_tools(server))
+        declared = {tool["name"]: tool for tool in service.session()["tools"]}
+        specs = {spec.name: spec for spec in server.tool_specs()}
+        assert set(specs) | {"end_call", "transfer_call"} == set(declared)
+        for name, spec in specs.items():
+            assert declared[name]["type"] == "function" and "function" not in declared[name]
+            assert declared[name]["description"] == spec.description
+            assert declared[name]["parameters"]["properties"] == spec.parameters["properties"], name
+
+    async def test_the_call_opens_configured_with_tools_then_speaks_first(self):
+        """The opening reply is asked for only once the session has accepted the tools."""
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        server = bot.MockToolServer(suite="appointments")
+        service, seen = self._service()
+        service.create_task = asyncio.ensure_future
+        opening = bot.opening_messages("Thank you for calling.")
+        await service._handle_context(LLMContext(opening, tools=bot.build_tools(server)))
+        await asyncio.sleep(0)
+        assert [event["type"] for event in seen["sent"]] == ["session.update"]
+        assert seen["sent"][0]["session"]["tools"]
+        await service._dispatch({"type": "session.updated", "session": {}})
+        await service._open_task
+        assert [event["type"] for event in seen["sent"]] == [
+            "session.update", "conversation.item.create", "response.create"]
+        item = seen["sent"][1]["item"]
+        assert item["role"] == "user" and item["content"][0]["text"] == opening[0]["content"]
+
+    async def test_audio_before_the_session_has_its_tools_is_dropped(self):
+        from pipecat.frames.frames import InputAudioRawFrame
+
+        service, seen = self._service()
+        frame = InputAudioRawFrame(audio=b"\0\0" * 240, sample_rate=24000, num_channels=1)
+        await service._send_audio(frame)
+        assert seen["sent"] == []
+        service._open_task = asyncio.get_running_loop().create_future()
+        service._open_task.set_result(None)
+        await service._send_audio(frame)
+        assert [event["type"] for event in seen["sent"]] == ["input_audio_buffer.append"]
+
+    async def test_a_tool_call_reaches_the_pipeline_and_its_result_resumes_the_reply_once(self):
+        """Two calls in one response: one reply, asked for after both results and the response's close."""
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service, seen = self._service()
+        service._context = LLMContext([])
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        for call_id, name in (("c1", "lookup_patient"), ("c2", "check_availability")):
+            await service._dispatch({"type": "response.output_item.added", "response_id": "r1",
+                                     "item": {"type": "function_call", "call_id": call_id, "name": name}})
+        for call_id, name in (("c1", "lookup_patient"), ("c2", "check_availability")):
+            await service._dispatch({"type": "response.function_call_arguments.done", "call_id": call_id,
+                                     "name": name, "arguments": '{"patient_id": "p_1"}'})
+        assert [(c.tool_call_id, c.function_name, c.arguments) for c in seen["calls"]] == [
+            ("c1", "lookup_patient", {"patient_id": "p_1"}), ("c2", "check_availability", {"patient_id": "p_1"})]
+
+        one = LLMContext([{"role": "tool", "tool_call_id": "c1", "content": '{"ok": true}'},
+                          {"role": "tool", "tool_call_id": "c2", "content": "IN_PROGRESS"}])
+        await service._handle_context(one)
+        await service._handle_context(one)
+        both = LLMContext([{"role": "tool", "tool_call_id": "c1", "content": '{"ok": true}'},
+                           {"role": "tool", "tool_call_id": "c2", "content": '{"slots": []}'}])
+        await service._handle_context(both)
+        kinds = [event["type"] for event in seen["sent"]]
+        assert kinds == ["conversation.item.create", "conversation.item.create"], "the response is still open"
+        assert [event["item"]["call_id"] for event in seen["sent"]] == ["c1", "c2"]
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})
+        assert [event["type"] for event in seen["sent"]][-1] == "response.create"
+        assert [event["type"] for event in seen["sent"]].count("response.create") == 1
+
+    async def test_the_services_detector_decides_the_callers_turn(self):
+        service, seen = self._service()
+        await service._dispatch({"type": "input_audio_buffer.speech_started"})
+        await service._dispatch({"type": "input_audio_buffer.speech_stopped"})
+        assert seen["broadcast"] == ["ProposedUserStartedSpeakingFrame", "ProposedUserStoppedSpeakingFrame"]
+        provider = bot.PROVIDERS["azure-realtime"]
+        assert provider.turns == "provider" and provider.interruptions
+
+    async def test_a_cut_reply_is_truncated_at_what_was_delivered(self):
+        """The service is told how much was heard, and audio still in flight does not reopen the reply."""
+        from pipecat.frames.frames import InterruptionFrame
+        from pipecat.processors.frame_processor import FrameDirection
+
+        service, seen = self._service()
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch(self._audio(size=4800))  # 100 ms at 24 kHz
+        service._audio_started_ms -= 5000  # long since started: delivery is the bound
+        await service._dispatch({"type": "input_audio_buffer.speech_started"})
+        [truncate] = [event for event in seen["sent"] if event["type"] == "conversation.item.truncate"]
+        assert (truncate["item_id"], truncate["content_index"], truncate["audio_end_ms"]) == ("i1", 0, 100)
+        await service.process_frame(InterruptionFrame(), FrameDirection.DOWNSTREAM)
+        before = len(seen["pushed"])
+        await service._dispatch(self._audio())
+        await service._dispatch({"type": "response.audio_transcript.delta", "response_id": "r1", "delta": "late"})
+        assert [name for name, _, _ in seen["pushed"][before:]] == []
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "cancelled"}})
+        # The next reply plays as usual.
+        await service._dispatch({"type": "response.created", "response": {"id": "r2"}})
+        await service._dispatch(self._audio(response="r2", item="i2"))
+        assert [name for name, _, _ in seen["pushed"]][-3:] == [
+            "LLMFullResponseStartFrame", "TTSStartedFrame", "TTSAudioRawFrame"]
+
+    async def test_a_reply_heard_to_the_end_is_not_truncated_later(self):
+        from pipecat.frames.frames import BotStoppedSpeakingFrame
+        from pipecat.processors.frame_processor import FrameDirection
+
+        service, seen = self._service()
+        await service._dispatch(self._audio())
+        await service.process_frame(BotStoppedSpeakingFrame(), FrameDirection.UPSTREAM)
+        await service._dispatch({"type": "input_audio_buffer.speech_started"})
+        assert not [event for event in seen["sent"] if event["type"] == "conversation.item.truncate"]
+
+    async def test_words_reach_the_record_only_once_their_reply_makes_a_sound(self):
+        """The text leads the voice; a reply that never makes a sound leaves no words."""
+        service, seen = self._service()
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch({"type": "response.audio_transcript.delta", "response_id": "r1", "delta": "Goodbye."})
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})
+        assert self._words(seen) == []
+        await service._dispatch({"type": "response.created", "response": {"id": "r2"}})
+        await service._dispatch({"type": "response.audio_transcript.delta", "response_id": "r2", "delta": "Sure, "})
+        before = len(seen["pushed"])
+        await service._dispatch(self._audio(response="r2"))
+        await service._dispatch({"type": "response.audio_transcript.delta", "response_id": "r2", "delta": "one moment."})
+        assert [name for name, _, _ in seen["pushed"][before:]] == [
+            "TTSStartedFrame", "TTSTextFrame", "TTSAudioRawFrame", "TTSTextFrame"]
+        assert self._words(seen) == ["Sure, ", "one moment."]
+        audio = next(frame for name, _, frame in seen["pushed"] if name == "TTSAudioRawFrame")
+        assert audio.sample_rate == bot.PROVIDERS["azure-realtime"].input_rate
+
+    async def test_the_callers_words_travel_upstream_to_the_context(self):
+        from pipecat.processors.frame_processor import FrameDirection
+
+        service, seen = self._service()
+        await service._dispatch({"type": "conversation.item.input_audio_transcription.completed",
+                                 "item_id": "u1", "transcript": "I need to reschedule."})
+        [(name, direction, frame)] = seen["pushed"]
+        assert name == "TranscriptionFrame" and direction is FrameDirection.UPSTREAM
+        assert frame.text == "I need to reschedule."
+        assert bot.PROVIDERS["azure-realtime"].caller_transcription == "asked"
+
+    async def test_each_replys_usage_is_reported_in_the_frameworks_names(self):
+        """Gross of the cache, audio apart from text, as the price table reads it."""
+        service, seen = self._service()
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed", "usage": {
+            "total_tokens": 600, "input_tokens": 456, "output_tokens": 144,
+            "input_token_details": {"cached_tokens": 320, "text_tokens": 400, "audio_tokens": 56,
+                                    "cached_tokens_details": {"text_tokens": 300, "audio_tokens": 20}},
+            "output_token_details": {"text_tokens": 24, "audio_tokens": 120}}}})
+        [tokens] = seen["usage"]
+        assert (tokens.prompt_tokens, tokens.completion_tokens, tokens.total_tokens) == (456, 144, 600)
+        assert (tokens.cache_read_input_tokens, tokens.input_audio_tokens) == (320, 56)
+        assert (tokens.output_audio_tokens, tokens.cache_read_input_audio_tokens) == (120, 20)
+
+    async def test_a_close_from_the_far_end_is_an_error_and_not_retried(self):
+        errors = []
+
+        class Closed:
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                raise StopAsyncIteration
+
+        for closing, expected in ((True, 0), (False, 1)):
+            service, _ = self._service()
+
+            async def push_error(error_msg, **_kwargs):
+                errors.append(error_msg)
+
+            service.push_error = push_error
+            service._websocket, service._closing = Closed(), closing
+            before = len(errors)
+            await service._receive()
+            assert len(errors) - before == expected, closing
+
+    async def test_a_reply_begun_after_teardown_never_reaches_the_record(self):
+        import json
+
+        late = [json.dumps({"type": "response.created", "response": {"id": "r9"}}), json.dumps(self._audio("r9"))]
+
+        class Closing:
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                if not late:
+                    raise StopAsyncIteration
+                return late.pop(0)
+
+        service, seen = self._service()
+        service._websocket, service._closing = Closing(), True
+        await service._receive()
+        assert seen["pushed"] == []
+
+
 class TestCascadeCounterparts:
     """The comparison the board exists to make: native against the pipeline it replaces."""
 
     def test_every_native_provider_has_a_counterpart(self):
         """A native row with nothing to compare against cannot answer the question.
 
-        Nova Sonic, GPT-Live, Phonic and Deepslate have no vendor-default
-        counterpart: GPT-Live delegates to a backend, so its fair pairing is a
-        cascade on that backend, and Phonic and Deepslate offer no text model of
-        their own.
+        Nova Sonic, GPT-Live, Phonic, Deepslate and Azure Realtime have no
+        vendor-default counterpart: GPT-Live delegates to a backend, so its fair
+        pairing is a cascade on that backend; Phonic and Deepslate offer no text
+        model of their own; and the text models Voice Live serves next to Azure
+        Realtime are OpenAI's, which the OpenAI cascade already covers.
         A vendor's smaller tier shares its vendor's counterpart: the question it
         answers is "the cheaper model or the flagship", not "native or cascade".
         """
         paired = {c.counterpart_to for c in bot.TEXT_MODELS.values() if c.counterpart_to}
         tiers = {"openai-realtime-mini", "gemini-live-standard", "gemini-flash-live"}
-        unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live", "phonic", "deepslate"} - tiers
+        unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live", "phonic", "deepslate", "azure-realtime"} - tiers
         assert not unpaired, f"native providers with no cascade counterpart: {sorted(unpaired)}"
 
     def test_a_counterpart_names_a_provider_that_exists(self):

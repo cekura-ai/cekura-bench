@@ -690,6 +690,40 @@ def deepslate_disclosures(settings: Settings) -> dict[str, str]:
     }
 
 
+def _azure_realtime(credential: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
+    """Microsoft's speech-to-speech model on Voice Live, through the service in ``azure_realtime``.
+
+    The framework's Azure service speaks a newer protocol than Voice Live does;
+    that module says why it is not used.
+    """
+    from azure_realtime import AzureRealtimeLLMService
+
+    return AzureRealtimeLLMService(
+        api_key=credential,
+        # The resource's endpoint rather than a secret, but kept out of the
+        # session and the repository all the same: it names whose account a row
+        # ran on.
+        endpoint=_credential(("AZURE_VOICE_ENDPOINT",), "azure-realtime"),
+        model=model,
+        voice=voice,
+        instructions=instructions,
+        turn_detection=AZURE_TURN_DETECTION,
+        transcription=AZURE_TRANSCRIPTION,
+    )
+
+
+def azure_disclosures(settings: Settings) -> dict[str, str]:
+    from azure_realtime import API_VERSION
+
+    return {
+        "azure_api_version": API_VERSION,
+        "azure_turn_detection": ", ".join(f"{k} {v}" for k, v in AZURE_TURN_DETECTION.items()),
+        "azure_caller_transcription": ", ".join(f"{k} {v}" for k, v in AZURE_TRANSCRIPTION.items()),
+        "azure_noise_suppression": "off (service default)",
+        "azure_echo_cancellation": "off (service default)",
+    }
+
+
 def _gpt_live(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
     """The live model plus the backend it hands reasoning to.
 
@@ -993,13 +1027,14 @@ class Provider:
 
 # Whether the caller's own words reach the record is a per-provider decision,
 # and it is not a detail: a scored run needs both halves of the conversation, and
-# a transcript holding only the agent reads as a caller who never spoke. Two of
+# a transcript holding only the agent reads as a caller who never spoke. Three of
 # these services transcribe the caller only when asked, and each asks
 # differently; six do it themselves. Nothing warns about the difference,
 # because a session without transcription is a working session.
 #
 #   openai-realtime   asked for  -- an input transcription config, default model
 #   grok-realtime     asked for  -- same shape, but only under its own ASR model
+#   azure-realtime    asked for  -- same shape, Azure's own speech-to-text
 #   qwen-realtime     automatic  -- documented for the audio model
 #   gemini-live       automatic  -- the service configures both directions itself
 #   gpt-live          automatic  -- the protocol is transcript-driven throughout
@@ -1061,6 +1096,22 @@ DEEPSLATE_ELEVENLABS_VOICE = "21m00Tcm4TlvDq8ikWAM"
 DEEPSLATE_ELEVENLABS_MODEL = "eleven_flash_v2_5"
 # The vendor's default and recommended mode for its hosted voices.
 DEEPSLATE_HOSTED_MODE = "HIGH_QUALITY"
+
+# Voice Live's semantic detector, the one the vendor recommends for this model,
+# at the values the service reports when it is asked for with nothing else:
+# 500 ms of silence ends a turn, and a caller speaking cancels the reply.
+AZURE_TURN_DETECTION = {
+    "type": "azure_semantic_vad",
+    "threshold": 0.5,
+    "prefix_padding_ms": 420,
+    "silence_duration_ms": 500,
+    "create_response": True,
+    "interrupt_response": True,
+}
+# The model hears audio, not this transcript; it is what puts the caller's
+# words in the record. Azure's own speech-to-text, pinned to the language
+# every scenario is spoken in.
+AZURE_TRANSCRIPTION = {"model": "azure-speech", "language": "en-US"}
 
 
 # ``input_rate`` is load-bearing, not a tuning knob. These services do not
@@ -1191,6 +1242,15 @@ PROVIDERS: dict[str, Provider] = {
         "deepslate_realtime",
         discloses=deepslate_disclosures,
         results="immediate", interruptions=False, caller_transcription="automatic",
+    ),
+    # Microsoft's own model on Voice Live, at the service's 24 kHz both ways, on
+    # its own Azure realtime-native voices -- see ``azure_realtime``. The
+    # service announces the caller's turns as OpenAI's does, and is asked for a
+    # reply once a tool's result is in.
+    "azure-realtime": Provider(
+        _azure_realtime, 24000, "azure-realtime", "ava", ("AZURE_VOICE_API_KEY",),
+        "azure_realtime",
+        discloses=azure_disclosures,
     ),
 }
 
@@ -2682,7 +2742,7 @@ def _credential(variables: tuple[str, ...], label: str) -> str:
 
 
 # The detector runs at one rate; the pipeline runs at the provider's. Silero
-# accepts 8 or 16 kHz and refuses everything else, and two of these services open
+# accepts 8 or 16 kHz and refuses everything else, and several of these services open
 # the pipeline at 24 kHz, so handing it the pipeline's audio unchanged does not
 # degrade the measurement -- it raises on the first call and takes the whole call
 # with it. Resampling in front of the detector keeps one instrument, at one rate,

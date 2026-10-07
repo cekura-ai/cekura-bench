@@ -34,7 +34,7 @@ laptop work unchanged and lets a deployment carry a default:
 
 | Key | Default | Notes |
 |---|---|---|
-| `s2s_provider` | `openai-realtime` | native: also `openai-realtime-mini`, `gemini-live`, `gemini-live-standard`, `gemini-flash-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`, `phonic`, `deepslate`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
+| `s2s_provider` | `openai-realtime` | native: also `openai-realtime-mini`, `gemini-live`, `gemini-live-standard`, `gemini-flash-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`, `phonic`, `deepslate`, `azure-realtime`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
 | `s2s_model` | provider default | pin it for a reproducible run |
 | `s2s_voice` | provider default | |
 | `s2s_backend_model` | `gpt-6-sol` | `gpt-live` only, see below |
@@ -58,7 +58,7 @@ quotes the body.
 
 | Variable | Notes |
 |---|---|
-| provider key | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, `DASHSCOPE_API_KEY`, `PHONIC_API_KEY`, `DEEPSLATE_API_KEY` (with `DEEPSLATE_VENDOR_ID` and `DEEPSLATE_ORGANIZATION_ID`), or for Bedrock `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`); see below for why an API key cannot work |
+| provider key | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, `DASHSCOPE_API_KEY`, `PHONIC_API_KEY`, `DEEPSLATE_API_KEY` (with `DEEPSLATE_VENDOR_ID` and `DEEPSLATE_ORGANIZATION_ID`), `AZURE_VOICE_API_KEY` (with `AZURE_VOICE_ENDPOINT`, the Voice Live resource's endpoint), or for Bedrock `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`); see below for why an API key cannot work |
 | `DEEPGRAM_API_KEY`, `ELEVENLABS_API_KEY` | cascade rows; `ELEVENLABS_API_KEY` also for `deepslate`, which hands it to Deepslate to voice its replies |
 | `CEKURA_API_KEY`, `CEKURA_AGENT_ID_<DEFINITION>` | tracing is off without both; one platform agent per agent definition (`CEKURA_AGENT_ID_APPOINTMENTS`, `CEKURA_AGENT_ID_MEDICARE`), with `CEKURA_AGENT_ID` for a deployment that serves one |
 | `AGENT_COMMIT` | stamped by the build; names what was actually deployed |
@@ -210,12 +210,14 @@ are granted in some subset of those. Both failures are the same
 `AccessDeniedException` from the outside, which is why the region is recorded
 with every run.
 
-## Three providers are spoken directly
+## Four providers are spoken directly
 
 Pipecat ships a realtime service for every other model on this board and none
 for Qwen or Phonic, so `qwen_realtime.py` and `phonic_realtime.py` speak those
 protocols directly. Deepslate publishes a Pipecat plugin, and `deepslate_realtime.py`
-does not use it, for the reason given below.
+does not use it, for the reason given below. Pipecat's Azure realtime service
+speaks a newer protocol than Azure's Voice Live, so `azure_realtime.py` speaks
+Voice Live's.
 
 ### Qwen
 
@@ -275,11 +277,33 @@ vendor SDK's own. Tool arguments arrive as a protobuf `Struct`, whose only numbe
 is a float, so whole numbers are turned back into integers before the tools see
 them.
 
+### Azure Realtime
+
+Voice Live is Azure's hosting service for voice agents, and `model=` picks what
+answers: OpenAI's realtime models, cascades of Azure speech-to-text, a text model
+and Azure text-to-speech, or `azure-realtime`, Microsoft's own speech-to-speech
+model. This row is `azure-realtime` only, on its own realtime-native voices.
+
+Voice Live speaks the earlier, flat shape of OpenAI's realtime protocol, the one
+Qwen follows, and Pipecat's Azure service speaks the later one, so
+`azure_realtime.py` speaks it directly at the generally available API version,
+pinned. The service's semantic turn detector decides the caller's turns and
+cancels its own reply when talked over, as OpenAI's does; the values it is sent
+are the ones it reports as its defaults. The caller's words reach the record
+only when asked for, through Azure's own speech-to-text. A tool's result does not
+resume the reply, so a response is asked for once every call the model made has
+its result. A reply's words arrive up to about a second before its audio, so they
+are held until it makes a sound, as on the Deepslate row.
+
+The endpoint names the Azure resource, so it is read from `AZURE_VOICE_ENDPOINT`
+rather than written here. The service reports token usage on every reply, and
+the row is priced at Voice Live's Pro rates.
+
 ## The sample rate is not a tuning knob
 
 These realtime services **do not resample**. Each base64-encodes the audio frame
 it is handed and declares a rate separately, so the pipeline rate must match what
-the provider expects: 24 kHz for OpenAI Realtime and Grok (the rate each
+the provider expects: 24 kHz for OpenAI Realtime, Grok and Azure Realtime (the rate each
 recommends), 16 kHz for Gemini Live, Nova Sonic, Qwen, Phonic and Deepslate (Nova Sonic and Qwen
 reply at 24 kHz). GPT-Live is the exception: it resamples what it is given. Open it at the wrong rate and the model hears the caller sped up or slowed
 down, transcribes the words badly, and the run looks like a model failure when it

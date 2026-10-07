@@ -232,6 +232,34 @@
       "unmetered": [
         "No public price list. The ElevenLabs voicing the service calls is billed to this deployment's ElevenLabs account, separately."
       ]
+    },
+    "azure-realtime": {
+      "read_on": "2026-10-07",
+      "verified": true,
+      "source": "https://prices.azure.com/api/retail/prices?$filter=productName eq 'Azure Speech' and contains(meterName,'Voice Live API Pro')",
+      "reasoning_in_output": true,
+      "components": [
+        {
+          "name": "azure-realtime",
+          "basis": "per_million_tokens",
+          "requires": [
+            "input_audio_tokens",
+            "output_audio_tokens"
+          ],
+          "rates": {
+            "text_input": 4.0,
+            "text_input_cached": 0.4,
+            "audio_input": 32.0,
+            "audio_input_cached": 0.4,
+            "text_output": 24.0,
+            "audio_output": 64.0
+          }
+        }
+      ],
+      "unmetered": [
+        "Voice Live's Pro rates, which apply to this model. Azure lists two Pro text-output rates, $16 and, since 1 Sep 2026, $24 per million, without saying which model each covers; the higher is used.",
+        "Caller transcription is billed as Azure speech input and is not in the usage the service reports, so it is not in this figure."
+      ]
     }
   },
   "cascade_speech_path": {

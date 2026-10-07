@@ -37,6 +37,7 @@ COPY agent-definitions ./agent-definitions
 COPY reference-agents/pipecat-s2s/qwen_realtime.py ./qwen_realtime.py
 COPY reference-agents/pipecat-s2s/phonic_realtime.py ./phonic_realtime.py
 COPY reference-agents/pipecat-s2s/deepslate_realtime.py ./deepslate_realtime.py
+COPY reference-agents/pipecat-s2s/azure_realtime.py ./azure_realtime.py
 COPY reference-agents/pipecat-s2s/bot.py ./bot.py
 
 # The agent resolves its own commit to put on every call's build record, and

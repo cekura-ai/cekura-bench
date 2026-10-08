@@ -16,10 +16,9 @@ SUBPROTOCOL = 'live-asr'
 
 def validate(config):
     # The provider registry already pins the endpoint and model.
-    expected = dict(language='en-US', sample_rate=16000,
-                    encoding='pcm_s16le', channels=1, frame_ms=20, finalization='manual_at_speech_end',
-                    completion_basis='session_closed_after_close', finalize_ack_supported=False,
-                    requires_final_only_completion=True)
+    expected = dict(language='en-US', sample_rate=16000, encoding='pcm_s16le', channels=1, frame_ms=20,
+                    finalization='manual_at_speech_end', completion_basis='session_closed_after_close',
+                    finalize_ack_supported=False, requires_final_only_completion=True)
     for key, value in expected.items():
         if config.get(key) != value:
             raise ValueError(f'Zoom Scribe requires {key}={value!r}')
@@ -74,9 +73,9 @@ class Protocol(shared.Protocol):
     def snapshot(self):
         join = lambda texts: ' '.join(' '.join(texts.get(k, '') for k in self.order).split())
         final, partial = join(self.finals), join(self.partials)
+        status = 'unsupported_order_or_overlap' if self.unsupported else 'supported'
         return dict(text=join({**self.partials, **self.finals}), final_text=final, partial_text=partial,
-                    provisional=bool(partial),
-                    reconstruction_status='unsupported_order_or_overlap' if self.unsupported else 'supported')
+                    provisional=bool(partial), reconstruction_status=status)
 
 
 async def exchange(ws, pcm, speech_frames, config, log, secret=''):

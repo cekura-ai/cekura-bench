@@ -5,7 +5,7 @@ import pytest
 from websockets.asyncio.server import serve
 from test_providers import fast_audio
 from stt_bench import zoom as wire
-from stt_bench import full_benchmark
+from stt_bench import full_benchmark, provider_protocol
 from stt_bench.catalog import model_config
 from stt_bench.credentials import command_environment
 from stt_bench.provider_protocol import ProviderError
@@ -151,7 +151,6 @@ async def fake_zoom(ws, text, fault=None):
 
 
 def run_local(tmp_path, monkeypatch, c, handler, *, subprotocols=('live-asr',)):
-    from stt_bench import provider_protocol
     monkeypatch.setattr(provider_protocol, 'stream_audio', fast_audio)
     async def scenario():
         async with serve(handler, '127.0.0.1', 0, subprotocols=list(subprotocols) or None) as server:

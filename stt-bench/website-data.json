@@ -3,8 +3,8 @@
     "clips": 206,
     "conversations": 4,
     "failed": 58,
-    "firstAttempts": 3502,
-    "models": 17,
+    "firstAttempts": 3708,
+    "models": 18,
     "privateRecordings": 8,
     "publicClips": 1000,
     "recovered": 11,
@@ -692,6 +692,47 @@
         "ttftP50": 1190,
         "turnWer": 4.101096804959465,
         "valid": 194
+      },
+      {
+        "attempted": 206,
+        "failed": 0,
+        "id": "zoom-scribe-live",
+        "model": "Zoom Scribe",
+        "overallIncluded": 1008,
+        "overallPlanned": 1008,
+        "overallWer": 2.9715478413709766,
+        "pauseMarksAsSpaces": true,
+        "privateErrors": {
+          "deletions": 394,
+          "insertions": 90,
+          "referenceWords": 12561,
+          "substitutions": 129
+        },
+        "privateUsable": 8,
+        "privateWer": 4.880184698670488,
+        "privateWerCi95": [
+          4.406,
+          5.293
+        ],
+        "publicErrors": {
+          "deletions": 128,
+          "insertions": 77,
+          "referenceWords": 23851,
+          "substitutions": 264
+        },
+        "publicUsable": 1000,
+        "publicWer": 1.9663745754894972,
+        "publicWerCi95": [
+          1.731,
+          2.218
+        ],
+        "referenceWords": 6383,
+        "ttfsN": 206,
+        "ttfsP50": 118,
+        "ttftN": 206,
+        "ttftP50": 1668,
+        "turnWer": 4.762650791164029,
+        "valid": 206
       }
     ],
     "werCi95": {
@@ -908,6 +949,18 @@
         "50": 1190,
         "90": 1565,
         "95": 2525
+      }
+    },
+    "zoom-scribe-live": {
+      "ttfs": {
+        "50": 118,
+        "90": 216,
+        "95": 311
+      },
+      "ttft": {
+        "50": 1668,
+        "90": 9017,
+        "95": 14859
       }
     }
   },

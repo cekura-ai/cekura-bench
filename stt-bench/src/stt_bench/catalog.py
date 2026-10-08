@@ -28,6 +28,7 @@ MODELS = {name: Path('config/models') / (name + '.json') for name in (
     'smallest-pulse',
     'sarvam-saaras-v3-realtime',
     'inworld-stt-1',
+    'zoom-scribe-live',
 )}
 BLOCKED_MODELS = {}
 

@@ -2,8 +2,8 @@
 import asyncio
 import json
 import pytest
-from websockets.asyncio.client import connect
 from websockets.asyncio.server import serve
+from test_providers import fast_audio
 from stt_bench import zoom as wire
 from stt_bench import full_benchmark
 from stt_bench.catalog import model_config
@@ -85,9 +85,7 @@ def test_completion_requires_session_closed_after_our_close():
     missing = [e for e in stream() if e.get('message', {}).get('type') != 'session.closed']
     assert not reduce_events(missing, c)['transcript_complete']
     # A server-side close before we asked for one (idle timeout) is not completion.
-    early = stream()
-    early.insert(9, msg({'type': 'session.closed', 'reason': 'idle_timeout'}, 5.2))
-    early = [e for e in early if not (e.get('message', {}).get('type') == 'session.closed' and e['time_seconds'] == 6.2)]
+    early = missing[:9] + [msg({'type': 'session.closed', 'reason': 'idle_timeout'}, 5.2)] + missing[9:]
     assert not reduce_events(early, c)['transcript_complete']
 
 
@@ -152,31 +150,16 @@ async def fake_zoom(ws, text, fault=None):
             await ws.send(json.dumps({'type': 'session.closed', 'reason': 'client_requested'}))
 
 
-async def fast_audio(pcm, speech_frames, send, finalize, log, *, sample_rate=16000):
-    frame = sample_rate//50*2
-    for i in range(speech_frames+50):
-        await send(pcm[i*frame:(i+1)*frame])
-        log.emit('audio_sent', bytes=frame, sample_rate=sample_rate)
-        if i == speech_frames-1:
-            t0 = log.now(); log.emit('speech_end', at=t0); await finalize(t0)
-        await asyncio.sleep(0)
-    log.emit('audio_complete')
-
-
-def run_local(tmp_path, monkeypatch, c, handler, *, subprotocols=('live-asr',), via_transcribe=False):
+def run_local(tmp_path, monkeypatch, c, handler, *, subprotocols=('live-asr',)):
     from stt_bench import provider_protocol
     monkeypatch.setattr(provider_protocol, 'stream_audio', fast_audio)
     async def scenario():
         async with serve(handler, '127.0.0.1', 0, subprotocols=list(subprotocols) or None) as server:
             url = f'ws://127.0.0.1:{server.sockets[0].getsockname()[1]}'
             log = EventLog(tmp_path / 'events.jsonl'); log.emit('clip_start')
+            monkeypatch.setattr(wire, 'connection', lambda config, key: (url, {}))
             try:
-                if via_transcribe:
-                    monkeypatch.setattr(wire, 'connection', lambda config, key: (url, {}))
-                    await wire.transcribe(bytes(640 * 60), 10, c, 'fixture-secret', log)
-                else:
-                    async with connect(url, subprotocols=['live-asr']) as ws:
-                        await wire.exchange(ws, bytes(640 * 60), 10, c, log, secret='fixture-secret')
+                await wire.transcribe(bytes(640 * 60), 10, c, 'fixture-secret', log)
             except Exception:
                 log.emit('error', error_type='FixtureFailure'); raise
             finally:
@@ -189,7 +172,7 @@ def run_local(tmp_path, monkeypatch, c, handler, *, subprotocols=('live-asr',), 
 @pytest.mark.parametrize('text', ['hello world', ''])
 def test_local_websocket_success(text, tmp_path, monkeypatch):
     c = config()
-    r = run_local(tmp_path, monkeypatch, c, lambda ws: fake_zoom(ws, text), via_transcribe=True)
+    r = run_local(tmp_path, monkeypatch, c, lambda ws: fake_zoom(ws, text))
     assert r['transcript_complete'] and r['model_verified'] and r['transcript'] == text
 
 
@@ -205,4 +188,4 @@ def test_local_websocket_failure_never_becomes_success(fault, tmp_path, monkeypa
 def test_connection_without_the_live_asr_subprotocol_is_rejected(tmp_path, monkeypatch):
     with pytest.raises(ProviderError, match='subprotocol'):
         run_local(tmp_path, monkeypatch, config(), lambda ws: fake_zoom(ws, 'hello'),
-                  subprotocols=(), via_transcribe=True)
+                  subprotocols=())

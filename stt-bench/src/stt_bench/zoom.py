@@ -15,7 +15,8 @@ SUBPROTOCOL = 'live-asr'
 
 
 def validate(config):
-    expected = dict(endpoint=ENDPOINT, model='zoom-asr-en-v1', language='en-US', sample_rate=16000,
+    # The provider registry already pins the endpoint and model.
+    expected = dict(language='en-US', sample_rate=16000,
                     encoding='pcm_s16le', channels=1, frame_ms=20, finalization='manual_at_speech_end',
                     completion_basis='session_closed_after_close', finalize_ack_supported=False,
                     requires_final_only_completion=True)
@@ -32,7 +33,7 @@ def connection(config, key):
 class Protocol(shared.Protocol):
     def __init__(self, config):
         super().__init__(config)
-        self.order = []
+        self.order = {}  # item ids in the order their speech started
 
     def setup(self):
         return {'type': 'session.update', 'language': self.config['language'], 'audio': {'format': 'pcm16'}}
@@ -46,8 +47,7 @@ class Protocol(shared.Protocol):
     def segment(self, item):
         if item is None:
             raise shared.ProviderError('Zoom transcript event lacks an item')
-        if item not in self.order:
-            self.order.append(item)
+        self.order.setdefault(item)
         return item
 
     def feed(self, m):
@@ -63,8 +63,7 @@ class Protocol(shared.Protocol):
             self.segment(m.get('item_id'))
         elif kind == 'transcription.delta':
             item = self.segment(m.get('item_id'))
-            if item not in self.finals:
-                self.partials[item] = self.partials.get(item, '') + m.get('delta', '')
+            self.put(item, self.partials.get(item, '') + m.get('delta', ''), False)
         elif kind == 'transcription.completed':
             if not isinstance(m.get('transcript'), str):
                 raise shared.ProviderError('Zoom completion lacks a transcript')
@@ -73,11 +72,10 @@ class Protocol(shared.Protocol):
             self.terminal = True
 
     def snapshot(self):
-        keys = [k for k in self.order if k in self.finals or k in self.partials]
-        final = ' '.join(self.finals[k].strip() for k in keys if self.finals.get(k, '').strip())
-        partial = ' '.join(self.partials[k].strip() for k in keys if self.partials.get(k, '').strip())
-        text = ' '.join(self.finals.get(k, self.partials.get(k, '')).strip() for k in keys)
-        return dict(text=' '.join(text.split()), final_text=final, partial_text=partial, provisional=bool(partial),
+        join = lambda texts: ' '.join(' '.join(texts.get(k, '') for k in self.order).split())
+        final, partial = join(self.finals), join(self.partials)
+        return dict(text=join({**self.partials, **self.finals}), final_text=final, partial_text=partial,
+                    provisional=bool(partial),
                     reconstruction_status='unsupported_order_or_overlap' if self.unsupported else 'supported')
 
 

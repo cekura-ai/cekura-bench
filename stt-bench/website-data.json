@@ -5,6 +5,7 @@
     "failed": 58,
     "firstAttempts": 3708,
     "models": 18,
+    "pricesCheckedOn": "2026-10-08",
     "privateRecordings": 8,
     "publicClips": 1000,
     "recovered": 11,
@@ -17,6 +18,9 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 2.721630231791717,
+        "priceNote": "AssemblyAI's standard real-time rate, billed while the session is open.",
+        "priceSource": "https://www.assemblyai.com/blog/universal-3-5-pro-realtime-vapi",
+        "priceUsdPerHour": 0.45,
         "privateErrors": {
           "deletions": 322,
           "insertions": 68,
@@ -57,6 +61,9 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 2.710644842359662,
+        "priceNote": "Pay as you go, billed while the session is open.",
+        "priceSource": "https://www.assemblyai.com/pricing",
+        "priceUsdPerHour": 0.45,
         "privateErrors": {
           "deletions": 363,
           "insertions": 67,
@@ -97,6 +104,9 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 2.6282544216192463,
+        "priceNote": "No per-hour rate: Ink 2 is paid in subscription credits, 3 per second of audio.",
+        "priceSource": "https://cartesia.ai/pricing",
+        "priceUsdPerHour": null,
         "privateErrors": {
           "deletions": 204,
           "insertions": 51,
@@ -137,6 +147,9 @@
         "overallIncluded": 1007,
         "overallPlanned": 1008,
         "overallWer": 3.9987915739748976,
+        "priceNote": "Pay as you go, current promotional rate; regular $0.462/hr.",
+        "priceSource": "https://deepgram.com/pricing",
+        "priceUsdPerHour": 0.39,
         "privateErrors": {
           "deletions": 214,
           "insertions": 100,
@@ -177,6 +190,9 @@
         "overallIncluded": 1007,
         "overallPlanned": 1008,
         "overallWer": 4.81160057124025,
+        "priceNote": "Pay as you go.",
+        "priceSource": "https://deepgram.com/pricing",
+        "priceUsdPerHour": 0.468,
         "privateErrors": {
           "deletions": 214,
           "insertions": 113,
@@ -217,6 +233,9 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 3.7844666593430736,
+        "priceNote": "Pay as you go, current promotional rate; regular $0.462/hr.",
+        "priceSource": "https://deepgram.com/pricing",
+        "priceUsdPerHour": 0.288,
         "privateErrors": {
           "deletions": 289,
           "insertions": 98,
@@ -257,6 +276,9 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 3.0072503570251565,
+        "priceNote": "V2 Standard rate for the first 500,000 minutes a month; Chirp is billed as a Standard model.",
+        "priceSource": "https://cloud.google.com/speech-to-text/pricing",
+        "priceUsdPerHour": 0.96,
         "privateErrors": {
           "deletions": 217,
           "insertions": 67,
@@ -298,6 +320,9 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 2.757332747445897,
+        "priceNote": "V2 Standard rate for the first 500,000 minutes a month; Chirp is billed as a Standard model.",
+        "priceSource": "https://cloud.google.com/speech-to-text/pricing",
+        "priceUsdPerHour": 0.96,
         "privateErrors": {
           "deletions": 245,
           "insertions": 75,
@@ -339,6 +364,9 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 5.778314841261123,
+        "priceNote": "No per-hour rate: speech-to-text is paid in plan credits, 3 per second of audio.",
+        "priceSource": "https://gradium.ai/pricing",
+        "priceUsdPerHour": null,
         "privateErrors": {
           "deletions": 357,
           "insertions": 30,
@@ -379,6 +407,9 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 5.437767768867406,
+        "priceNote": "On-demand rate; $0.10/hr on paid plans.",
+        "priceSource": "https://inworld.ai/pricing",
+        "priceUsdPerHour": 0.15,
         "privateErrors": {
           "deletions": 195,
           "insertions": 965,
@@ -419,6 +450,9 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 3.7322860595408103,
+        "priceNote": "OpenAI's estimated cost per minute; billed per token.",
+        "priceSource": "https://developers.openai.com/api/docs/pricing",
+        "priceUsdPerHour": 0.18,
         "privateErrors": {
           "deletions": 304,
           "insertions": 71,
@@ -460,6 +494,9 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 6.852136658244534,
+        "priceNote": "OpenAI's estimated cost per minute; billed per token.",
+        "priceSource": "https://developers.openai.com/api/docs/pricing",
+        "priceUsdPerHour": 0.36,
         "privateErrors": {
           "deletions": 1349,
           "insertions": 62,
@@ -501,6 +538,9 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 2.6282544216192463,
+        "priceNote": "OpenAI's estimated cost per minute for live transcription.",
+        "priceSource": "https://developers.openai.com/api/docs/pricing",
+        "priceUsdPerHour": 1.02,
         "privateErrors": {
           "deletions": 217,
           "insertions": 67,
@@ -541,6 +581,9 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 2.3838295067560145,
+        "priceNote": "No USD rate: priced in euro credits, 2 per minute of real-time audio.",
+        "priceSource": "https://reson8.dev/#pricing",
+        "priceUsdPerHour": null,
         "privateErrors": {
           "deletions": 170,
           "insertions": 58,
@@ -581,6 +624,9 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 3.586729649566077,
+        "priceNote": "Pay as you go, published as about $0.004 a minute.",
+        "priceSource": "https://smallest.ai/pricing/models",
+        "priceUsdPerHour": 0.24,
         "privateErrors": {
           "deletions": 196,
           "insertions": 61,
@@ -621,6 +667,9 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 3.020982093815226,
+        "priceNote": "Real-time rate; billed per audio and text token.",
+        "priceSource": "https://soniox.com/pricing",
+        "priceUsdPerHour": 0.12,
         "privateErrors": {
           "deletions": 264,
           "insertions": 90,
@@ -661,6 +710,9 @@
         "overallIncluded": 1006,
         "overallPlanned": 1008,
         "overallWer": 2.9652632736066833,
+        "priceNote": "Self-serve base rate, before the model-training and volume discounts.",
+        "priceSource": "https://www.speechmatics.com/pricing",
+        "priceUsdPerHour": 0.3,
         "privateErrors": {
           "deletions": 270,
           "insertions": 55,
@@ -701,6 +753,9 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 2.9715478413709766,
+        "priceNote": "Scribe API Live, paid from prepaid credits.",
+        "priceSource": "https://www.zoom.com/en/products/ai-services/scribe-api/",
+        "priceUsdPerHour": 0.25,
         "privateErrors": {
           "deletions": 394,
           "insertions": 90,

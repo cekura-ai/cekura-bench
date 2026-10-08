@@ -581,9 +581,10 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 2.3838295067560145,
-        "priceNote": "No USD rate: priced in euro credits, 2 per minute of real-time audio.",
+        "priceApproximate": true,
+        "priceNote": "Converted from \u20ac0.40/hr, the rate the Pro and Growth plans' included credits give at 2 credits per streaming minute, at the ECB rate of 1.1177 dollars per euro on Oct 7, 2026.",
         "priceSource": "https://reson8.dev/#pricing",
-        "priceUsdPerHour": null,
+        "priceUsdPerHour": 0.447,
         "privateErrors": {
           "deletions": 170,
           "insertions": 58,

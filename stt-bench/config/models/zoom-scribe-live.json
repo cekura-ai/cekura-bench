@@ -20,10 +20,13 @@
   "model_source": "https://developers.zoom.us/docs/ai-services/scribe/live-mode/",
   "checked_on": "2026-10-08",
   "pricing": {
-    "usd_per_minute": null,
-    "source": null,
-    "status": "account_rate_unverified",
-    "billing_basis": "submitted audio including silence and retries; account rate unverified"
+    "usd_per_minute": 0.0041667,
+    "usd_per_hour": 0.25,
+    "plan": "Scribe API Live, prepaid credits",
+    "source": "https://www.zoom.com/en/products/ai-services/scribe-api/",
+    "status": "published_list_rate",
+    "billing_basis": "duration of audio streamed, including silence and retries; rate-dependent estimate, not an invoice",
+    "checked_on": "2026-10-08"
   },
   "protocol_caveat": "The request names only a language; the server reports the model it selected (zoom-asr-en-v1) in session.updated, and a different echo fails the attempt. Zoom segments speech with its own voice activity detection and sends one final transcript per segment, with no partials. input_audio_buffer.commit at speech end is not in the published live-mode reference but is honored: it ends the open segment at the commit point. A commit with no open segment produces no event, so there is no finalize acknowledgment; completion is session.closed after session.close, which flushes every open segment. The documented default limit is 20 concurrent sessions."
 }

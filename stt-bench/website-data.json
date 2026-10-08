@@ -701,7 +701,6 @@
         "overallIncluded": 1008,
         "overallPlanned": 1008,
         "overallWer": 2.9715478413709766,
-        "pauseMarksAsSpaces": true,
         "privateErrors": {
           "deletions": 394,
           "insertions": 90,

@@ -180,7 +180,7 @@ async def fake_provider(ws, c, *, text='hello world', fault=None):
             await ws.close(); return
 
 
-@pytest.mark.parametrize('name', [n for n in MODELS if n != 'speechmatics-linden-1' and config(n)['provider'] not in ('google', 'soniox', 'smallest', 'sarvam', 'inworld', 'gradium', 'reson8', 'assemblyai')])
+@pytest.mark.parametrize('name', [n for n in MODELS if n != 'speechmatics-linden-1' and config(n)['provider'] not in ('google', 'soniox', 'smallest', 'sarvam', 'inworld', 'gradium', 'reson8', 'zoom', 'assemblyai')])
 @pytest.mark.parametrize('text', ['hello world', ''])
 def test_local_websocket_success_and_empty_completed_transcript(name, text, tmp_path, monkeypatch):
     c = config(name)
@@ -205,7 +205,7 @@ def test_local_websocket_success_and_empty_completed_transcript(name, text, tmp_
     asyncio.run(scenario())
 
 
-@pytest.mark.parametrize('name', [n for n in MODELS if n != 'speechmatics-linden-1' and 'nova' not in n and config(n)['provider'] not in ('google', 'soniox', 'smallest', 'sarvam', 'inworld', 'gradium', 'reson8', 'assemblyai')])
+@pytest.mark.parametrize('name', [n for n in MODELS if n != 'speechmatics-linden-1' and 'nova' not in n and config(n)['provider'] not in ('google', 'soniox', 'smallest', 'sarvam', 'inworld', 'gradium', 'reson8', 'zoom', 'assemblyai')])
 @pytest.mark.parametrize('fault', ['auth', 'disconnect', 'timeout'])
 def test_local_websocket_failure_never_becomes_success(name, fault, tmp_path, monkeypatch):
     c = config(name); c.update(finalize_timeout_seconds=.05, close_timeout_seconds=.05, ready_timeout_seconds=.05)

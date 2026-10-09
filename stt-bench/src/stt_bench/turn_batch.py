@@ -19,7 +19,7 @@ from .full_benchmark import classify
 
 MANIFEST='datasets/private-turns-v1/automatic-v1/manifest.json'
 # Profiles added after the original 23 run only when a plan names them.
-OPT_IN=frozenset({'assemblyai-universal-3-6-pro-min-latency'})
+OPT_IN=frozenset({'assemblyai-universal-3-6-pro-min-latency','zoom-scribe-live'})
 
 
 def prepare(root,models=None):
@@ -38,7 +38,7 @@ def prepare(root,models=None):
     # a bounded worker budget and permanently reduce after a rate-limit response.
     limits={'deepgram':150,'openai':50,'google':20,'speechmatics':2,'assemblyai':20,
             'gradium':3,'inworld':32,'reson8':32,'smallest':32,'soniox':32,'sarvam':16,
-            'cartesia':16,'elevenlabs':16,'gemini':10}
+            'cartesia':16,'elevenlabs':16,'gemini':10,'zoom':16}
     files=[Path('pyproject.toml'),Path('uv.lock'),*Path('src/stt_bench').glob('*.py'),
            *Path('src/stt_bench').glob('*.html'),*Path('tests').glob('*.py'),
            *[p for p in Path('config/models').glob('*.json') if '3.8' not in p.stem],*paths,

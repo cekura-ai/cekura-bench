@@ -34,7 +34,7 @@ class TestRouting:
     def test_scenario_routes_win_over_the_shared_ones(self):
         full = by_id("book.fullday")
         assert full.route("What day would you like to come in?") == "task.date.july10"
-        assert full.route("I'm sorry, July tenth is fully booked. Is there another date?") == "task.date.july9"
+        assert full.route("I'm sorry, December eleventh is fully booked. Is there another date?") == "task.date.july9"
 
     def test_placeholders_resolve_per_scenario(self):
         cancel = by_id("cancel.pick")

@@ -1,0 +1,73 @@
+{
+  "schema_version": 2,
+  "id": "TB-06",
+  "conversation_id": "906",
+  "title": "Self-correction mid-turn: a question abandoned and replaced",
+  "family": "long_turns",
+  "difficulty": "medium",
+  "tags": [
+    "eot",
+    "mid-turn-pause",
+    "long-turn",
+    "self-correction"
+  ],
+  "pairings": [
+    {
+      "caller": "f-us",
+      "agent": "m-us"
+    },
+    {
+      "caller": "m-us",
+      "agent": "f-gb"
+    },
+    {
+      "caller": "f-gb",
+      "agent": "f-us"
+    },
+    {
+      "caller": "m-in",
+      "agent": "f-us"
+    },
+    {
+      "caller": "f-au",
+      "agent": "m-us"
+    }
+  ],
+  "timing": {
+    "start_s": 0.5,
+    "tail_s": 1.0,
+    "gap_range_s": [
+      0.5,
+      1.0
+    ],
+    "gap_seed": 2026
+  },
+  "items": [
+    {
+      "id": "g",
+      "speaker": "agent",
+      "text": "Thanks for calling. How can I help you today?"
+    },
+    {
+      "id": "c1",
+      "speaker": "caller",
+      "text": "Hi, two things. What are your hours, <0.8s> and, actually no, scrap that. <0.6s> Can I make changes to something I set up with you over the phone, and how long do they take?",
+      "min_pause_s": 0.3
+    },
+    {
+      "id": "a1",
+      "speaker": "agent",
+      "text": "Yes, you can make changes right here over the phone. They take effect straight away while we are talking, and a confirmation follows within a few minutes."
+    },
+    {
+      "id": "cz",
+      "speaker": "caller",
+      "text": "Okay, that's all I needed. Thanks, bye."
+    },
+    {
+      "id": "az",
+      "speaker": "agent",
+      "text": "You're welcome. Goodbye."
+    }
+  ]
+}

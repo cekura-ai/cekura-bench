@@ -1,0 +1,32 @@
+{
+  "seed": 2026,
+  "fractions": {
+    "holdout": 0.2,
+    "dev": 0.4,
+    "test": 0.6
+  },
+  "rule": "assigned per template, stratified by family; every pairing and condition of a template is in one split",
+  "dev": [
+    "NB-01",
+    "NB-04",
+    "NB-09",
+    "NB-12",
+    "NB-13",
+    "NB-19",
+    "NB-21",
+    "NB-23",
+    "NB-27",
+    "NB-29",
+    "NB-34",
+    "TB-04",
+    "TB-06",
+    "TB-09",
+    "TB-15"
+  ],
+  "test": [],
+  "private": {
+    "test_count": 25,
+    "holdout_count": 10,
+    "note": "The test (leaderboard) and holdout templates are kept outside this repository. Point --specs at the private specs directory; its splits.json lists their ids."
+  }
+}

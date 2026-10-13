@@ -1,0 +1,130 @@
+{
+  "schema_version": 2,
+  "id": "NB-29",
+  "conversation_id": "829",
+  "title": "Two-word acknowledgements during long agent explanations: uh-huh yeah, okay sure, right right",
+  "family": "backchannels",
+  "subtype": "two_word",
+  "difficulty": "medium",
+  "tags": [
+    "int",
+    "backchannel",
+    "two-word"
+  ],
+  "pairings": [
+    {
+      "caller": "f-us",
+      "agent": "m-us"
+    },
+    {
+      "caller": "m-us",
+      "agent": "f-gb"
+    },
+    {
+      "caller": "f-gb",
+      "agent": "f-us"
+    },
+    {
+      "caller": "m-in",
+      "agent": "f-us"
+    },
+    {
+      "caller": "f-au",
+      "agent": "m-us"
+    }
+  ],
+  "timing": {
+    "start_s": 0.5,
+    "tail_s": 1.0,
+    "gap_range_s": [
+      0.5,
+      1.0
+    ],
+    "gap_seed": 2026
+  },
+  "items": [
+    {
+      "id": "g",
+      "speaker": "agent",
+      "text": "Hi, thank you for calling. What can I do for you?"
+    },
+    {
+      "id": "c1",
+      "speaker": "caller",
+      "text": "Hi, could you explain how the waiting list works? I'd like the full picture."
+    },
+    {
+      "id": "a1",
+      "speaker": "agent",
+      "text": "The way the waiting list works is this. If the time you want is not free, I can add you to the list for that day. Whenever someone moves or cancels, the freed slot is offered to the people on the list in the order they joined, by text message, with a link to accept it. You have two hours to accept before it is offered to the next person. Your existing booking stays in place the whole time, so you lose nothing by being on the list, and you can ask to be taken off it at any point by calling us."
+    },
+    {
+      "id": "b1",
+      "speaker": "caller",
+      "kind": "backchannel",
+      "text": "Uh-huh, yeah.",
+      "into": "a1",
+      "offset_s": 4.5
+    },
+    {
+      "id": "b2",
+      "speaker": "caller",
+      "kind": "backchannel",
+      "text": "Okay, sure.",
+      "into": "a1",
+      "offset_s": 11.0
+    },
+    {
+      "id": "b3",
+      "speaker": "caller",
+      "kind": "backchannel",
+      "text": "Right, right.",
+      "into": "a1",
+      "offset_s": 18.0
+    },
+    {
+      "id": "c2",
+      "speaker": "caller",
+      "text": "Thank you. And what do you do with my information? Please explain that too."
+    },
+    {
+      "id": "a2",
+      "speaker": "agent",
+      "text": "Let me describe what happens with your information. The details you give us are stored on a secure system that only the staff dealing with your booking can see. We do not pass them to anyone outside the service unless you ask us to, for example if you want a letter sent to another organisation. You can ask for a copy of everything we hold about you at any time, and you can ask for anything that is wrong to be corrected. If you close your account, the record is kept for the period required by law and then deleted."
+    },
+    {
+      "id": "b4",
+      "speaker": "caller",
+      "kind": "backchannel",
+      "text": "Mm-hm, okay.",
+      "into": "a2",
+      "offset_s": 5.0
+    },
+    {
+      "id": "b5",
+      "speaker": "caller",
+      "kind": "backchannel",
+      "text": "Got it, yeah.",
+      "into": "a2",
+      "offset_s": 12.0
+    },
+    {
+      "id": "b6",
+      "speaker": "caller",
+      "kind": "backchannel",
+      "text": "Yes, yes.",
+      "into": "a2",
+      "offset_s": 19.5
+    },
+    {
+      "id": "cz",
+      "speaker": "caller",
+      "text": "Great, that answers everything. Thanks, bye."
+    },
+    {
+      "id": "az",
+      "speaker": "agent",
+      "text": "Thank you for calling. Goodbye."
+    }
+  ]
+}

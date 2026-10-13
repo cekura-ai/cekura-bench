@@ -1,0 +1,97 @@
+{
+  "schema_version": 2,
+  "id": "NB-12",
+  "conversation_id": "812",
+  "title": "A slow speaker (speed 0.75) with long clauses and mid-turn pauses",
+  "family": "pauses",
+  "subtype": "slow_speaker",
+  "difficulty": "medium",
+  "tags": [
+    "eot",
+    "mid-turn-pause",
+    "slow-speech"
+  ],
+  "pairings": [
+    {
+      "caller": "f-us",
+      "agent": "m-us"
+    },
+    {
+      "caller": "m-us",
+      "agent": "f-gb"
+    },
+    {
+      "caller": "f-gb",
+      "agent": "f-us"
+    },
+    {
+      "caller": "m-in",
+      "agent": "f-us"
+    },
+    {
+      "caller": "f-au",
+      "agent": "m-us"
+    }
+  ],
+  "timing": {
+    "start_s": 0.5,
+    "tail_s": 1.0,
+    "gap_range_s": [
+      0.5,
+      1.0
+    ],
+    "gap_seed": 2026
+  },
+  "items": [
+    {
+      "id": "g",
+      "speaker": "agent",
+      "text": "Hello, you're through to the helpline. How can I help you today?"
+    },
+    {
+      "id": "c1",
+      "speaker": "caller",
+      "text": "Hello there, I would like to ask about the appointment I have next month, <1.4s> because I may need to change it.",
+      "speed": 0.75
+    },
+    {
+      "id": "a1",
+      "speaker": "agent",
+      "text": "Of course. Take your time and tell me what you would like to change."
+    },
+    {
+      "id": "c2",
+      "speaker": "caller",
+      "text": "Well, <1.2s> the date is fine, <1.6s> but the time is a little too early for me.",
+      "speed": 0.75,
+      "splice_breaks": true
+    },
+    {
+      "id": "a2",
+      "speaker": "agent",
+      "text": "I understand. The same day has a later slot at half past two. Would that be better?"
+    },
+    {
+      "id": "c3",
+      "speaker": "caller",
+      "text": "Half past two <1.3s> would be much better, <1.5s> thank you.",
+      "speed": 0.75
+    },
+    {
+      "id": "a3",
+      "speaker": "agent",
+      "text": "I have moved it to half past two on the same day. A new confirmation will come to you by post and by email. Is there anything else?"
+    },
+    {
+      "id": "cz",
+      "speaker": "caller",
+      "text": "No, that is all. Thank you very much. Goodbye.",
+      "speed": 0.75
+    },
+    {
+      "id": "az",
+      "speaker": "agent",
+      "text": "Goodbye, and thank you for calling."
+    }
+  ]
+}

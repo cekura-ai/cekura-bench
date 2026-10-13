@@ -5,7 +5,7 @@ name with it in the SSML (``en-US-Harper:MAI-Voice-2.1-Flash``), so ``model``
 and ``voice`` stay separate in the config and are joined only on the wire.
 
 The key belongs to one Speech resource in one region, and the region is the
-host. The default is East US, next to the campaign's cloud region; the
+host. The default is East US 2, where the Speech resource lives, next to the campaign's cloud region; the
 ``region`` option overrides it and is recorded in every cell.
 
 The whole text goes in one request, so streamed input, cancel and continuation
@@ -23,7 +23,7 @@ from xml.sax.saxutils import escape, quoteattr
 from tts_bench.adapters.openai_tts import OpenAITTSAdapter
 
 RATE = 24000
-DEFAULT_REGION = "eastus"
+DEFAULT_REGION = "eastus2"
 
 
 class AzureSpeechAdapter(OpenAITTSAdapter):

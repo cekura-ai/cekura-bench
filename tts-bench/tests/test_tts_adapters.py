@@ -596,7 +596,7 @@ class TestAzureSpeech:
         from tts_bench.common.events import Clock, EventLog
 
         azure, _ = adapter(AzureSpeechAdapter, "MAI-Voice-2.1", "en-US-Harper")
-        assert f"{azure.base}{azure.speech_path}" == "https://eastus.tts.speech.microsoft.com/cognitiveservices/v1"
+        assert f"{azure.base}{azure.speech_path}" == "https://eastus2.tts.speech.microsoft.com/cognitiveservices/v1"
         clock = Clock()
         west = AzureSpeechAdapter(TTSConfig(model="MAI-Voice-2.1", voice="en-US-Harper", options=(("region", "westus2"),)),
                                   "unused", EventLog(clock), clock)

@@ -1,0 +1,17 @@
+# Local credentials and deployment-secret inputs are injected at runtime,
+# never baked into the LiveKit agent image.
+.env
+.env.*
+!.env.example
+cloud-secrets.env
+
+# Local development artifacts
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.DS_Store
+
+# Source-control metadata
+.git/
+.gitignore

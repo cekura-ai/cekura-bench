@@ -55,14 +55,13 @@ and the explicit private-manifest authorization check still apply.
 Automatic and manually reviewed datasets cannot be interchanged on resume.
 Existing reviewed datasets and historical reports keep their interpretation.
 
-### Relationship to Coval
+### Speech boundary
 
-Like the supplied Coval code, this mode uses Silero to estimate a shared final
-speech boundary. It is not an exact copy: we preserve short replies, retain the
-existing 20 ms framing and provider-specific silence tails, and calculate TTFS
-from actual boundary-frame delivery. Coval subtracts a stored audio offset from
-audio-start-to-final time. VAD settings and transcript-boundary conflicts are
-recorded rather than presented as human truth.
+This mode uses Silero to estimate one shared final speech boundary per turn. It
+preserves short replies, keeps the existing 20 ms framing and provider-specific
+silence tails, and calculates TTFS from the delivery of the actual boundary
+frame. VAD settings and
+transcript-boundary conflicts are recorded rather than presented as human truth.
 
 ## Current delivery
 
@@ -224,8 +223,7 @@ commands are retained. AssemblyAI enables ForceEndpoint and Speechmatics enables
 ForceEndOfUtterance while retaining their other base settings. Google Chirp has
 no equivalent control in the adapter, so its observed end-to-final delay is an
 exception metric and not controlled TTFS. Packetization and finalization behavior
-still differ across providers; this is not exact replication of Coval's host,
-data, model configuration, or timing implementation.
+still differ across providers.
 
 `score` dispatches version 5 to a distinct report with JSON and a listening HTML
 dashboard. It shows conversation/recording/turn counts, planned/attempted/valid/

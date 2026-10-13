@@ -18,7 +18,7 @@ import tarfile
 import numpy as np
 import soundfile as sf
 
-from . import gradium, reson8, trial_providers
+from . import gradium, reson8, trial_providers, zoom
 from .audio_formats import derivative, resample_24k
 from .credentials import redact
 from .data import sha256, write_json
@@ -31,7 +31,12 @@ from .score import aggregate_wer, percentiles, word_errors
 from .streaming import EventLog, read_events
 
 MODELS = ('smallest-pulse', 'gradium-default', 'reson8-realtime', 'inworld-stt-1')
-PUBLIC_LIVE_MODELS = ('gemini-3.8-live', 'gemini-3.8-live-extended-thinking')
+# Version 1 plans must list exactly MODELS, so later additions live separately.
+FULL_MODELS = (*MODELS, 'soniox-stt-rt-v5', 'zoom-scribe-live')
+# Public-only runs stream the 1,000 Pipecat clips without the eight private
+# recordings. Inworld is listed again so it can be re-run on public clips alone.
+PUBLIC_LIVE_MODELS = ('gemini-3.8-live', 'gemini-3.8-live-extended-thinking', 'soniox-stt-rt-v5', 'inworld-stt-1',
+                      'zoom-scribe-live')
 PUBLIC = Path('datasets/pipecat-stt-benchmark/3fe50170d520c951957b86996ef082a6ab87b394/full')
 PRIVATE = Path('reports/assemblyai-private-20260914/dataset')
 PRIVATE_MANIFEST = Path('workspaces/private-longform-recovery-v2/dataset/manifest.json')
@@ -51,7 +56,7 @@ def load_plan(path, expected=None, runtime=None, runtime_hash=None):
     public_only = p.get('version') == 3 and p.get('public_only') is True
     if (p.get('version', 1) not in (1, 2, 3)
             or (p.get('version') == 3 and not public_only)
-            or not models or len(models) != len(set(models)) or not set(models).issubset(PUBLIC_LIVE_MODELS if public_only else MODELS)
+            or not models or len(models) != len(set(models)) or not set(models).issubset(PUBLIC_LIVE_MODELS if public_only else FULL_MODELS)
             or p['max_attempts'] != 2 or type(workers) is not int or not 1 <= workers <= 12
             or (legacy and (models != list(MODELS) or workers != 10))):
         raise ValueError('Unexpected model or execution scope')
@@ -78,7 +83,7 @@ def load_plan(path, expected=None, runtime=None, runtime_hash=None):
 
 
 def prepare(root, models=MODELS, workers=10, fast_inworld=False, public_only=False):
-    if (not models or len(models) != len(set(models)) or not set(models).issubset(PUBLIC_LIVE_MODELS if public_only else MODELS)
+    if (not models or len(models) != len(set(models)) or not set(models).issubset(PUBLIC_LIVE_MODELS if public_only else FULL_MODELS)
             or type(workers) is not int or not 1 <= workers <= 12):
         raise ValueError('Invalid model selection or worker count')
     if fast_inworld and tuple(models) != ('inworld-stt-1',):
@@ -250,7 +255,7 @@ def session_assessment(events,clip,config):
 
 
 def final_snapshots(events, config):
-    factory = gradium.Protocol if config['provider'] == 'gradium' else reson8.Protocol if config['provider'] == 'reson8' else trial_providers.Protocol
+    factory = {'gradium': gradium.Protocol, 'reson8': reson8.Protocol, 'zoom': zoom.Protocol}.get(config['provider'], trial_providers.Protocol)
     protocol = factory(config)
     snapshots, previous = [], None
     for e in events:
@@ -506,7 +511,7 @@ def combine(plan, states):
 def main():
     p=argparse.ArgumentParser()
     p.add_argument('mode', choices=('prepare','verify','worker','replay','report'))
-    p.add_argument('--models', nargs='+', choices=(*MODELS, *PUBLIC_LIVE_MODELS), default=list(MODELS))
+    p.add_argument('--models', nargs='+', choices=tuple(dict.fromkeys((*FULL_MODELS, *PUBLIC_LIVE_MODELS))), default=list(MODELS))
     p.add_argument('--workers', type=int, default=10)
     p.add_argument('--fast-inworld', action='store_true')
     p.add_argument('--public-only', action='store_true')

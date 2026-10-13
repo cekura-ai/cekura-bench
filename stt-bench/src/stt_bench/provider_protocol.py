@@ -1,6 +1,6 @@
 """Explicit streaming protocols and offline reconstruction from receipt-time evidence.
 
-Wire contracts checked against vendor docs and Coval d62a5d22 (see MODEL_READINESS.md).
+Wire contracts checked against vendor docs (see MODEL_READINESS.md).
 No provider SDK controls audio pacing or retries.
 """
 import asyncio

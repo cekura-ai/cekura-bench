@@ -111,7 +111,9 @@ class Protocol(shared.Protocol):
                 'sarvam': {'event': 'speech_end'}, 'inworld': {'endTurn': {}}}[self.provider]
 
     def finish(self, frames):
-        return {'soniox': b'', 'smallest': {'type': 'close_stream'},
+        # Soniox ends the stream only on an empty text frame; an empty binary
+        # frame gets no `finished` response and the session times out.
+        return {'soniox': '', 'smallest': {'type': 'close_stream'},
                 'sarvam': {'event': 'end'}, 'inworld': {'closeStream': {}}}[self.provider]
 
     def segment(self, text, final):

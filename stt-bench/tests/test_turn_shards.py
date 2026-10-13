@@ -6,9 +6,10 @@ import pytest
 from stt_bench.turn_runner import run_turns, smoke_selection
 from stt_bench.turns import prepare_turns, freeze_turns
 from stt_bench.data import write_json, sha256
-from test_turns import inputs, approved
+from test_turns import inputs, approved, needs_ffmpeg
 
 
+@needs_ffmpeg
 def test_selected_turns_use_same_manifest_and_resume_cannot_expand(tmp_path):
     d=prepare_turns(inputs(tmp_path/'source'),tmp_path/'draft')
     manifest=freeze_turns(d,approved(d),tmp_path/'frozen')
@@ -24,6 +25,7 @@ def test_selected_turns_use_same_manifest_and_resume_cannot_expand(tmp_path):
         asyncio.run(run_turns(manifest,config,out,dry_run=True,resume=True,selected_clip_ids=ids))
 
 
+@needs_ffmpeg
 def test_full_shard_cannot_bypass_smoke(tmp_path):
     d=prepare_turns(inputs(tmp_path/'source',segments=6),tmp_path/'draft')
     manifest=freeze_turns(d,approved(d),tmp_path/'frozen')

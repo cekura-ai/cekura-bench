@@ -70,7 +70,7 @@ def test_config_auth_audio_and_secret_isolation(name):
     if p == 'soniox':
         assert not headers and setup['api_key'] == 'fixture'
         assert setup['audio_format'] == 'pcm_s16le' and setup['model'] == 'stt-rt-v5'
-        assert isinstance(audio, bytes) and protocol.finish(60) == b''
+        assert isinstance(audio, bytes) and protocol.finish(60) == '' and isinstance(protocol.finish(60), str)
     elif p == 'smallest':
         assert headers == {'Authorization': 'Bearer fixture'}
         assert q['word_timestamps'] == ['true'] and q['sample_rate'] == ['16000']
@@ -172,7 +172,8 @@ def test_loopback_exchange_completion_and_failures(tmp_path, name, failure):
             if p == 'sarvam':
                 await ws.send(json.dumps({'event': 'session.begin'}))
             async for raw in ws:
-                value = json.loads(raw) if isinstance(raw, str) else raw
+                # An empty text frame is Soniox's end of stream; it is not JSON.
+                value = raw if raw == '' else json.loads(raw) if isinstance(raw, str) else raw
                 received.append(value)
                 if value == wire.Protocol(c).finalize():
                     if failure == 'disconnect':
@@ -182,7 +183,8 @@ def test_loopback_exchange_completion_and_failures(tmp_path, name, failure):
                     await ws.send(json.dumps(final(p)))
                     if p == 'soniox':
                         await ws.send(json.dumps({'tokens': [{'text': '<fin>', 'is_final': True}]}))
-                if value == wire.Protocol(c).finish(60):
+                # Like the live service, Soniox's fake answers only an empty text frame.
+                if value == wire.Protocol(c).finish(60) and (p != 'soniox' or raw == ''):
                     if failure == 'missing_terminal':
                         continue
                     await ws.send(json.dumps(terminal(p)))

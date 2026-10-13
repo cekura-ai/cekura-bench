@@ -68,3 +68,15 @@ def test_merge_retains_original_delays_and_word_weights():
     g=combined[model]['groups']['private']
     assert g['word_finalization']['n']==2 and g['word_finalization']['p50_ms']==50
     assert g['completion_first_attempt']['n']==1 and g['recovered']==1
+
+
+def test_plan_names_one_accepted_model_and_legacy_plans_still_load(tmp_path):
+    p=tmp_path/'plan.json'
+    items=[dict(clip_id=str(i),cohort='public' if i<1000 else 'private') for i in range(1008)]
+    for model in full.FULL_MODELS:
+        p.write_text(json.dumps(dict(models=[model],max_attempts=2,workers_per_model=20,items=items)))
+        assert full.load_plan(p)['models']==[model]
+    for models in ([],list(full.FULL_MODELS),['deepgram-nova-3']):
+        p.write_text(json.dumps(dict(models=models,max_attempts=2,workers_per_model=20,items=items)))
+        with pytest.raises(ValueError,match='scope'):full.load_plan(p)
+    with pytest.raises(ValueError,match='Unexpected model'):full.prepare(tmp_path/'x','deepgram-nova-3')

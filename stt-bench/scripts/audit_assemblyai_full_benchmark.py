@@ -9,7 +9,7 @@ from pathlib import Path
 import tarfile
 import soundfile as sf
 
-from stt_bench.assemblyai_full_benchmark import MODELS, combine, load_plan
+from stt_bench.assemblyai_full_benchmark import combine, load_plan
 
 
 def digest(path):
@@ -99,7 +99,7 @@ def audit(root):
     assert reversed_merge['models'] == merged['models'], 'Metrics depend on worker partition order'
     expected = {(c['clip_id'], c['cohort']) for c in plan['items']}
     coverage = {}
-    for model in MODELS:
+    for model in plan['models']:
         items = report['models'][model]['items']
         assert len(items) == 1008 and {(i['clip_id'], i['cohort']) for i in items} == expected
         assert Counter(i['cohort'] for i in items) == {'public': 1000, 'private': 8}

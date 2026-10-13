@@ -15,7 +15,7 @@ LABELS = {
     'deepgram-nova-3': 'Deepgram Nova-3', 'cartesia-ink-2': 'Cartesia Ink 2',
     'elevenlabs-scribe-v2-realtime': 'ElevenLabs Scribe v2', 'gemini-3.5-transcribe-live': 'Gemini 3.5',
     'google-chirp-2': 'Google Chirp 2', 'google-chirp-3': 'Google Chirp 3',
-    'gradium-default': 'Gradium', 'inworld-stt-1': 'Inworld STT-1',
+    'gradium-default': 'Gradium', 'inworld-stt-1': 'Inworld STT-1', 'zoom-scribe-live': 'Zoom Scribe',
     'openai-gpt-4o-mini-transcribe': 'GPT-4o Mini Transcribe', 'openai-gpt-4o-transcribe': 'GPT-4o Transcribe',
     'openai-gpt-realtime-whisper': 'GPT Realtime Whisper', 'reson8-realtime': 'Reson8',
     'sarvam-saaras-v3-realtime': 'Sarvam Saaras v3', 'smallest-pulse': 'Smallest Pulse',

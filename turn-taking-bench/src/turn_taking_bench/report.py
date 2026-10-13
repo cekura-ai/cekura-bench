@@ -1,13 +1,13 @@
-"""Score a submission with Sesame's scorer and write report.json / report.md.
+"""Score a submission with TurnBench's scorer and write report.json / report.md.
 
 Nothing here computes a metric: ``turnbench.score`` does, unchanged. This
 module only turns its ``TaskScore`` objects into JSON and a Markdown table.
 
 Scores come in three blocks: **caller** (speaker_1 only), **agent** (speaker_2
-only) and **all** (both, Sesame's ``score_conversation`` verbatim). The caller
+only) and **all** (both, TurnBench's ``score_conversation`` verbatim). The caller
 side is the headline for a voice-agent product (it is the user's turns the agent
 has to end-point); the agent side is reported separately. A per-role block is
-Sesame's ``score_task`` run on the gold restricted to that speaker, with the
+TurnBench's ``score_task`` run on the gold restricted to that speaker, with the
 other speaker's predictions blanked. ``score_task`` scores each speaker's
 channel independently (ledgers, next-event caps and negative spans are all
 per speaker), so the caller and agent blocks partition the all block: their
@@ -54,12 +54,12 @@ from turn_taking_bench.scorecard import (
 )
 
 TASKS = (("eot", "task_eot"), ("int", "task_int"))
-ROLES: dict[str, int] = {"caller": 1, "agent": 2}  # Sesame's speaker_1 / speaker_2
+ROLES: dict[str, int] = {"caller": 1, "agent": 2}  # TurnBench's speaker_1 / speaker_2
 BLOCKS = ("caller", "agent", "all")
 
 
 def score_conversation_for_speaker(prediction: ConversationPrediction, conv: Conversation, speaker: int) -> ConversationScores:
-    """Sesame's ``score_task`` on the gold of one speaker only, with the other
+    """TurnBench's ``score_task`` on the gold of one speaker only, with the other
     speaker's predictions blanked; see the module docstring."""
     validate_event_times(prediction, conv.duration_s)
     events = events_for_conversation(conv)
@@ -160,7 +160,7 @@ def score_report(
     """Aggregate and per-conversation scores in the three blocks.
 
     ``aggregate`` / ``per_conversation`` are the ``all`` block (both speakers,
-    Sesame's scoring loop, unchanged shape); ``blocks`` holds every block by
+    TurnBench's scoring loop, unchanged shape); ``blocks`` holds every block by
     name with its speaker, aggregate and per-conversation scores, plus its
     ``scorecard`` and ``ci95`` (``turn_taking_bench.scorecard``); ``breakdowns`` the
     per-block aggregates, scorecards and intervals over each named subset in
@@ -311,7 +311,7 @@ def render_markdown(report: dict[str, Any], run_info: dict[str, Any]) -> str:
         "",
         f"- Model: `{model['name']}` config `{json.dumps(model['config'])}`",
         f"- Dataset: `{dataset['source']}`" + (f" @ `{dataset['revision']}`" if dataset.get("revision") else " (local directory)"),
-        f"- Scorer: Sesame TurnBench `{scorer['commit'] or scorer['version']}` (official scorer, unchanged)",
+        f"- Scorer: TurnBench `{scorer['commit'] or scorer['version']}` (official scorer, unchanged)",
         f"- Harness: turn-taking-bench {run_info['harness']['version']} @ `{run_info['harness']['git_commit']}`"
         + (" (dirty)" if run_info['harness']['git_dirty'] else ""),
         f"- Scored: {scope}",
@@ -321,7 +321,7 @@ def render_markdown(report: dict[str, Any], run_info: dict[str, Any]) -> str:
     lines += [
         "",
         "Blocks: **caller** = speaker_1 only (headline), **agent** = speaker_2 only, **all** = both speakers "
-        "(Sesame's scorer verbatim). Caller + agent tp/fn/fp/tn add up to all.",
+        "(TurnBench's scorer verbatim). Caller + agent tp/fn/fp/tn add up to all.",
     ]
     blocks = report.get("blocks") or {"all": {"aggregate": report["aggregate"], "per_conversation": report["per_conversation"]}}
     if any("scorecard" in scores for scores in blocks.values()):

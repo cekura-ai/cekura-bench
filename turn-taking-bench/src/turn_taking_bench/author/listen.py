@@ -8,7 +8,7 @@ For each conversation of a built dataset directory this writes, under
     <conversation_id>-<spec id>.cues.csv  every labelled event in time order
 
 The cue sheet has one row per annotation segment (what the tracks say) and one
-per planted gold event (what Sesame's scorer will test), so a listener can seek
+per planted gold event (what TurnBench's scorer will test), so a listener can seek
 to ``time_s`` in any audio editor and confirm the label matches what is heard:
 
     time_s, end_s, speaker, channel, event, label, text

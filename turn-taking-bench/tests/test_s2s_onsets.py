@@ -88,7 +88,7 @@ def test_caller_activity_mask_marks_loud_frames_only():
     assert active_at(mask, 1.0)
     assert not active_at(mask, 1.6)
     assert not active_at(mask, 99.0)
-    # A short gap is bridged only when asked to (Sesame's 0.5 s merge).
+    # A short gap is bridged only when asked to (TurnBench's 0.5 s merge).
     gappy = pcm(tone(0.5), silence(0.3), tone(0.5))
     assert not active_at(active_mask(gappy, RATE), 0.65)
     assert active_at(active_mask(gappy, RATE, merge_gap_s=0.5), 0.65)

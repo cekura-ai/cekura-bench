@@ -1,4 +1,4 @@
-"""Caller / agent / all scoring blocks: each block is Sesame's scorer on one
+"""Caller / agent / all scoring blocks: each block is TurnBench's scorer on one
 speaker's gold, the oracle is perfect in every block, and caller + agent
 partition the all block (tp/fn/fp/tn add up, latencies concatenate)."""
 

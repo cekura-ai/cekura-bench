@@ -1,9 +1,9 @@
-"""Sesame annotation tracks from the timeline, and the gold events the script plants.
+"""TurnBench annotation tracks from the timeline, and the gold events the script plants.
 
 Annotation events are ``{start_s, end_s, label, text}`` per speaker, exactly the
 dataset's ``speaker_{n}_annotation_{a,b,c}`` columns. The three tracks are
 identical — they are derived from the script, not from three annotators — and
-the dataset metadata says so. Labels are Sesame's fine labels (``turnbench.gold.LABEL_MAP``):
+the dataset metadata says so. Labels are TurnBench's fine labels (``turnbench.gold.LABEL_MAP``):
 
     turn item        every segment            "Normal Turn"
     barge_in item    first segment            "Floor-taking Competitive Interruption"
@@ -11,7 +11,7 @@ the dataset metadata says so. Labels are Sesame's fine labels (``turnbench.gold.
     backchannel item every segment            "Acknowledgement Backchannel"
 
 ``planted_events`` states what ``turnbench.gold`` must derive from those tracks,
-written from the script's own floor logic rather than Sesame's code:
+written from the script's own floor logic rather than TurnBench's code:
 
     EOT positive  a floor-claiming segment (turn / barge-in) ends and the other
                   speaker speaks next, is already speaking, or nobody speaks
@@ -25,7 +25,7 @@ written from the script's own floor logic rather than Sesame's code:
 Note the consequence for a caller who barges in and then continues ("one
 quick question" ... pause ... the question): the pause after the barge-in is a
 mid-turn pause (EOT negative), and the floor only passes when the agent
-replies. ``check`` compares these planted events with what Sesame's gold
+replies. ``check`` compares these planted events with what TurnBench's gold
 builder derives, time by time.
 """
 
@@ -70,7 +70,7 @@ def annotation_tracks(timeline: Timeline) -> dict[int, list[Annotation]]:
 
 
 def as_conversation(conversation_id: str, tracks: dict[int, list[Annotation]], duration_s: float) -> Conversation:
-    """A Sesame ``Conversation`` (no audio) with the three identical tracks, for
+    """A TurnBench ``Conversation`` (no audio) with the three identical tracks, for
     running ``turnbench.gold.events_for_conversation`` in memory."""
     return Conversation(
         conversation_id=conversation_id,
@@ -152,7 +152,7 @@ def _interval_key(interval: Interval) -> tuple[int, float, float]:
 
 
 def compare(planted: Planted, derived: ConversationEvents) -> list[str]:
-    """Differences between the planted events and Sesame's derived gold; empty when identical."""
+    """Differences between the planted events and TurnBench's derived gold; empty when identical."""
     problems: list[str] = []
     pairs = [
         ("eot_positive", planted.eot_positive, derived.eot_positive_events, _anchor_key),

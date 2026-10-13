@@ -15,9 +15,9 @@ the last reply has to arrive), closes the session, and reads the events off the
 recorded artifacts with ``turn_taking_bench.s2s.onsets``:
 
 * ``readout: onset`` — EOT at every onset of model speech while the caller was
-  quiet (Sesame's generative protocol, ``baselines/gemini_vad``). No INT.
+  quiet (TurnBench's generative protocol, ``baselines/gemini_vad``). No INT.
 * ``readout: vad_events`` — EOT at the provider's ``speech_stopped``, INT at its
-  ``speech_started`` (Sesame's ``openai_server_vad`` / ``openai_semantic_vad``).
+  ``speech_started`` (TurnBench's ``openai_server_vad`` / ``openai_semantic_vad``).
 
 Both readouts' raw timings are kept in the diagnostics and in ``readout.json``,
 so a run can be re-read the other way without a new session.
@@ -28,7 +28,7 @@ live model cannot hear a sample before it has been spoken. The model's audio
 clock is anchored there: ``origin`` is the wall instant at which audio time 0
 lies, fixed at the first push, and every provider-side instant ``t`` maps to
 audio time ``t - origin``. A commit time is that audio time, clamped to the
-audio pushed so far (Sesame's ``appended_ms`` rule), so causality holds by
+audio pushed so far (TurnBench's ``appended_ms`` rule), so causality holds by
 construction and the harness's check is a second opinion. The service bench
 sends a chunk at the *start* of its interval instead, so a latency measured
 here is up to one frame (20 ms) more conservative than the service bench's for
@@ -107,7 +107,7 @@ def provider_entry(provider: str):
 
 
 def vad_only_adapter(base: type) -> type:
-    """``base`` with Sesame's baseline session: text output and no responses, so
+    """``base`` with TurnBench's baseline session: text output and no responses, so
     the only thing the provider does is run its endpointer over our audio
     (``baselines/openai_realtime.py::_session_config``). Only an OpenAI-shaped
     protocol has ``create_response``; the base adapter's own payload is kept and
@@ -523,7 +523,7 @@ class S2SModel:
 
 
 def _clean(times: list[float]) -> list[float]:
-    """Sorted, rounded to the millisecond, exact repeats dropped (Sesame's ``_clean``)."""
+    """Sorted, rounded to the millisecond, exact repeats dropped (TurnBench's ``_clean``)."""
     kept: list[float] = []
     for t in sorted(round(t, 3) for t in times):
         if not kept or t > kept[-1]:

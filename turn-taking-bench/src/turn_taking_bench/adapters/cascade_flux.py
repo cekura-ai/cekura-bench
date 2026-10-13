@@ -9,7 +9,7 @@ speaker channel to Flux in real time and maps its ``TurnInfo`` events:
 * ``EndOfTurn``   -> ``eot``
 * ``StartOfTurn`` -> ``interruption``. Flux has no notion of "the other
   speaker holds the floor" (it hears one channel), so this is speech-start
-  semantics: every turn start is reported, the same way Sesame scores OpenAI
+  semantics: every turn start is reported, the same way TurnBench scores OpenAI
   server VAD's ``speech_started`` as an interruption.
 * ``Update`` / ``EagerEndOfTurn`` / ``TurnResumed``: recorded, not mapped
   (eager EOT is off by default, as in a plain cascade).

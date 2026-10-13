@@ -26,13 +26,13 @@ def parse_config(pairs: list[str]) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Streaming turn-taking benchmark harness scored by Sesame's TurnBench scorer"
+        description="Streaming turn-taking benchmark harness scored by TurnBench scorer"
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("models", help="List registered model adapters")
 
-    p = sub.add_parser("run", help="Stream a split through a model, write predictions, score with Sesame's scorer")
+    p = sub.add_parser("run", help="Stream a split through a model, write predictions, score with TurnBench's scorer")
     p.add_argument("--model", required=True, choices=model_names())
     p.add_argument("--split", default="dev", choices=["dev", "test"])
     p.add_argument("--dataset", type=Path, help="local dataset directory (from `author build`) instead of --split")
@@ -57,7 +57,7 @@ def main() -> None:
     m = msub.add_parser("verify", help="Check the local snapshot against the committed manifest (what `run` does first)")
     m.add_argument("--split", default="dev", choices=["dev", "test"])
 
-    p = sub.add_parser("author", help="Authored datasets: build one from conversation specs, or check one against Sesame's gold")
+    p = sub.add_parser("author", help="Authored datasets: build one from conversation specs, or check one against TurnBench's gold")
     asub = p.add_subparsers(dest="author_command", required=True)
     a = asub.add_parser("build", help="Render specs with TTS, compose the timelines, write a local dataset directory")
     a.add_argument("--specs", type=Path, required=True, help="directory of conversation spec JSON files")
@@ -68,7 +68,7 @@ def main() -> None:
     a.add_argument("--cache-dir", type=Path, help="render cache; default .cache/renders")
     a.add_argument("--max-characters", type=int, help="refuse to build when more than this many characters would be rendered")
     a.add_argument("--estimate", action="store_true", help="only print how many lines/characters the build would render")
-    a = asub.add_parser("check", help="Planted-vs-derived gold table and the oracle round trip through Sesame's scorer")
+    a = asub.add_parser("check", help="Planted-vs-derived gold table and the oracle round trip through TurnBench's scorer")
     a.add_argument("--dataset", type=Path, required=True, help="dataset directory written by `author build`")
     a = asub.add_parser("degrade", help="Condition variants of a clean dataset: every conversation under each named degradation, labels unchanged, ids suffixed")
     a.add_argument("--dataset", type=Path, required=True, help="clean dataset directory written by `author build`")
@@ -416,8 +416,6 @@ def run_manifest(args) -> None:
             "benchmark": "https://github.com/SesameAILabs/turnbench",
         },
         license={
-            "name": "Dataset Public License v1.0",
-            "licensor": "Mundo AI Inc.",
             "link": f"{dataset_url}/blob/{split.revision}/LICENSE",
             "note": (
                 "Non-commercial use only; voice cloning prohibited; redistribution must carry the licence in full. "

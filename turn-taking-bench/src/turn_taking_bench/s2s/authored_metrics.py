@@ -22,7 +22,7 @@ BOOTSTRAP_SEED = 7
 SUCCESS_WINDOW_S = 1.0
 
 NOTES = [
-    "Experimental authored Track 2; independent of the unchanged official Sesame Track 1 scorer.",
+    "Experimental authored Track 2; independent of the unchanged official TurnBench Track 1 scorer.",
     "A stop is the first >=200 ms observed silence after stimulus injection, with sustained agent speech overlapping that onset. The success window is 1.0 s.",
     "Agent PCM is measured on the reference client playout clock, including buffer cuts. Caller timing is the exact first transmitted PCM sample, not the scheduled target. Raw clip padding is retained and acoustic onset is diagnostic only.",
     "Acoustic stops can coincide with natural reply ends or pauses: these measurements do not establish that an interruption caused the stop. A playback cut is recorded as supporting evidence, not used as a substitute for observed silence.",

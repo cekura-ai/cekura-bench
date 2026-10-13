@@ -7,7 +7,7 @@ Measures how well speech-to-speech models handle the moments that decide whether
 - **Stops when the caller cuts in**: a barge-in while the model is speaking (barge-in yield, stop latency).
 - **Keeps going through "mm-hmm"**: backchannels such as "mm-hmm", "okay", "got it" (backchannel continue rate).
 
-End of turn (the first two) is scored with [Sesame TurnBench](https://huggingface.co/datasets/mundo-ai/turn-benchmark-dev)'s published scorer, unchanged. Interruptions (the last two) use our own method and are reported separately; the two are never blended into one rank.
+End of turn (the first two) is scored with [Sesame's TurnBench](https://github.com/SesameAILabs/turnbench) published scorer, unchanged. Interruptions (the last two) use our own method and are reported separately; the two are never blended into one rank.
 
 ## Data
 
@@ -35,7 +35,7 @@ Provider keys are read from a dotenv file (`--env`); values never enter reports.
 | Command | What it does |
 |---|---|
 | `turn-taking-bench author build` | Render specs with TTS and write a local dataset directory |
-| `turn-taking-bench author check` | Planted-vs-derived gold table and the oracle round trip through Sesame's scorer |
+| `turn-taking-bench author check` | Planted-vs-derived gold table and the oracle round trip through TurnBench's scorer |
 | `turn-taking-bench author degrade` / `split` | Audio-condition variants of a dataset; public / test / holdout splits |
 | `turn-taking-bench run` | Stream a split through a model (reference detector or `s2s:<provider>`), score end of turn |
 | `turn-taking-bench s2s t2-run` | Live cut-in and backchannel sessions for one model; `--condition`, `--turn-detection` |
@@ -80,6 +80,6 @@ Tests that need local model assets or cached renders skip when those are absent.
 
 ## Licences
 
-Code: as the repository. Sesame TurnBench data is under its own non-commercial licence and is used only to calibrate timing; it is not redistributed here.
+Code: as the repository. TurnBench data is under its own non-commercial licence and is used only to calibrate timing; it is not redistributed here.
 
-Not affiliated with or endorsed by Sesame or the TurnBench authors. Sesame TurnBench's scorer is used under its MIT licence.
+Not affiliated with or endorsed by Sesame or the TurnBench authors. Its scorer is used, and two of its baselines are ported, under its MIT licence (see `THIRD_PARTY_NOTICES.md`).

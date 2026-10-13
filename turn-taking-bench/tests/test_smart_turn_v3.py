@@ -50,7 +50,7 @@ def silence_vowel_silence() -> np.ndarray:
     ).astype(np.float32)
 
 
-def test_edge_committer_matches_sesame_commit_events_frame_by_frame():
+def test_edge_committer_matches_turnbench_commit_events_frame_by_frame():
     rng = np.random.default_rng(0)
     for _ in range(50):
         probs = (rng.random(400) * 0.02).astype(np.float32).tolist()

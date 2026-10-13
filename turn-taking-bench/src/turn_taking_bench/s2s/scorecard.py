@@ -6,7 +6,7 @@ block's Conversational Dynamics scorecard with its conversation-level
 bootstrap intervals (``turn_taking_bench.scorecard``) — and Track 2 rows from an
 interaction run's ``interaction.json`` (``turn_taking_bench.s2s.interaction``). The
 two are not combined into one number: Track 1 scores the model's end-of-turn
-decisions on authored conversations with Sesame's scorer, Track 2 scores its
+decisions on authored conversations with TurnBench's scorer, Track 2 scores its
 yielding and backchannel tolerance on the service bench's probes, and an
 overall across them would average two different experiments.
 
@@ -170,10 +170,10 @@ def _track2_rows(track2: dict[str, Any]) -> dict[str, Any]:
 
 
 NOTES = [
-    "Track 1 (end of turn): Sesame's TurnBench scorer on the caller block (speaker_1) of the named conversations. "
+    "Track 1 (end of turn): TurnBench scorer on the caller block (speaker_1) of the named conversations. "
     "Pause handling = 1 - EOT fp_rate (cut-ins during scripted mid-turn pauses); turn taking = EOT recall; latency = "
     "p50 / p90 of the matched EOT latencies. For an S2S model an EOT is an onset of its speech while the caller is quiet "
-    "(Sesame's generative protocol); INT is undefined for S2S and shown n/a. 95% CIs are conversation-level cluster "
+    "(TurnBench's generative protocol); INT is undefined for S2S and shown n/a. 95% CIs are conversation-level cluster "
     "bootstrap intervals and are only as narrow as the number of conversations allows.",
     "Track 2 (interaction): the service bench's barge_in and backchannel_tolerance probes, unchanged, on its caller corpus. "
     "Interruption handling = share of scored barge-in cells in which the model yielded; yield time = caller onset to the "
@@ -227,7 +227,7 @@ def render_markdown(card: dict[str, Any]) -> str:
     if track1 is not None:
         model_id = track1.get("model_id") or "?"
         lines += [
-            f"## Track 1 — end of turn (Sesame method), caller block",
+            f"## Track 1 — end of turn (TurnBench method), caller block",
             "",
             f"- Model: `{track1['model']}` = {model_id}; readout `{track1.get('readout')}`; prompt sha256 `{(track1.get('prompt_sha256') or '')[:12]}`",
             f"- Conversations: {', '.join(track1['conversations'])}" + (f"; failed: {len(track1['failures'])}" if track1["failures"] else ""),

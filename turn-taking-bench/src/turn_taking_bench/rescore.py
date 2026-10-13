@@ -4,7 +4,7 @@
 the model is not run again — and rewrites ``report.json`` / ``report.md`` with
 the current report layout (scorecard, intervals, breakdowns). The dataset is
 the one ``run.json`` names (a local directory, or the Hugging Face split), or
-``--dataset`` to point at the same data elsewhere. Sesame's scorer gives the
+``--dataset`` to point at the same data elsewhere. TurnBench's scorer gives the
 same per-conversation scores for the same predictions and gold, so every
 existing number is reproduced exactly; only the additions are new.
 ``run.json`` is left untouched; the report records that it was rescored.

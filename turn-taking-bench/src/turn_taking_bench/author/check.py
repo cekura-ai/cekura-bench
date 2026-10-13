@@ -1,13 +1,13 @@
 """Two checks that an authored dataset means what its script says.
 
-1. Gold check — load the dataset directory with Sesame's own loader
+1. Gold check — load the dataset directory with TurnBench's own loader
    (``turnbench.data.resolve_dataset``), run ``turnbench.gold.events_for_conversation``
    on each conversation's annotation tracks and compare, event by event, with
    the gold the script planted (``ground_truth.json``). The table prints
    planted vs derived counts per conversation; any difference is listed.
 
 2. Oracle round trip — replay the derived gold positives as a submission
-   (what Sesame's ``baselines/oracle_annotator`` does; the baselines are not part
+   (what TurnBench's ``baselines/oracle_annotator`` does; the baselines are not part
    of the ``turnbench`` package, so the few lines that build it live here) and
    score it with ``turnbench.score.score_submission``. By construction this must
    give recall 1.0 and fp_rate 0.0 on both tasks, which proves the dataset
@@ -102,7 +102,7 @@ def gold_check(dataset_dir: Path, dataset: Dataset | None = None) -> GoldCheck:
 
 
 def oracle_submission(dataset: Dataset) -> Submission:
-    """The gold positives replayed as predictions (Sesame's oracle baseline)."""
+    """The gold positives replayed as predictions (TurnBench's oracle baseline)."""
     predictions = []
     for cid in conversation_ids(dataset):
         conv = conversation(dataset, cid)

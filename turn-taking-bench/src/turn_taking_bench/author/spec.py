@@ -5,7 +5,7 @@ Schema (``schema_version`` 2)::
     {
       "schema_version": 2,
       "id": "TB-01",                       # scenario id; goes into the dataset metadata
-      "conversation_id": "901",            # numeric string: Sesame sorts ids with int()
+      "conversation_id": "901",            # numeric string: TurnBench sorts ids with int()
       "title": "Pause ladder",
       "family": "pauses",                  # free tags for stratified reporting
       "subtype": "clause_pause",           # finer tag within the family (optional)
@@ -51,7 +51,7 @@ An item is one rendered utterance of one speaker::
     {"id": "x2", "speaker": "caller", "kind": "barge_in", "text": "Wait.",
      "into": "a2", "offset_from_end_s": 1.2}                 # placed from the agent's speech END
 
-* ``speaker``: ``caller`` is Sesame's speaker_1 channel, ``agent`` speaker_2.
+* ``speaker``: ``caller`` is TurnBench's speaker_1 channel, ``agent`` speaker_2.
 * ``text`` may contain pause markers. The SSML form ``<break time="1.5s"/>``
   (also ``time="300ms"``) is what ElevenLabs renders; the shorthand ``<1.5s>``
   is accepted and normalised to it. Each marker splits the utterance into
@@ -318,7 +318,7 @@ def specs_from_json(raw: dict[str, Any], *, source_path: str | None = None, sour
     if ("voices" in raw) == ("pairings" in raw):
         raise SpecError(f"spec {spec_id}: give exactly one of 'voices' (one conversation) or 'pairings' (one per pairing)")
     if not isinstance(raw["conversation_id"], str) or not _CONVERSATION_ID.match(raw["conversation_id"]):
-        raise SpecError(f"spec {spec_id}: conversation_id must be a string of digits (Sesame sorts ids numerically)")
+        raise SpecError(f"spec {spec_id}: conversation_id must be a string of digits (TurnBench sorts ids numerically)")
     timing = _timing_from_json(raw.get("timing", {}), spec_id)
     seen: dict[str, Item] = {}
     items: list[Item] = []

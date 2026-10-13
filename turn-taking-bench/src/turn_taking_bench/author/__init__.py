@@ -11,13 +11,13 @@ Pipeline (one module each, in order):
               ``<break time="1.5s"/>`` markers produce
     compose   both speakers on one 48 kHz clock at exact sample offsets; barge-ins
               cut the agent, backchannels do not; yields the ground-truth events
-    labels    Sesame annotation tracks (a/b/c identical, script-derived) and the
+    labels    TurnBench annotation tracks (a/b/c identical, script-derived) and the
               gold events the script *plants*, for checking against ``turnbench.gold``
     package   the local dataset directory ``turnbench.data`` loads: one parquet
               shard (FLAC bytes, annotation columns, metadata), durations,
               ground truth, and a hashed manifest
     check     planted-vs-derived gold table and the oracle round trip through
-              Sesame's scorer
+              TurnBench's scorer
     listen    listening pack: a stereo WAV (caller left, agent right) and a cue
               sheet of every labelled event per conversation, to check by ear
 

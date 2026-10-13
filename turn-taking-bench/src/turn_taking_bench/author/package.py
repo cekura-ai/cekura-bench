@@ -9,17 +9,17 @@ Layout (``resolve_dataset(<dir>)`` globs ``*.parquet`` at the top level)::
                                       placed items, segments, planted gold
       manifest.json                   sha256 of every file above + build provenance
 
-Parquet columns mirror Sesame's released shards: ``conversation_id`` (string),
+Parquet columns mirror TurnBench's released shards: ``conversation_id`` (string),
 ``speaker_{1,2}_audio`` (struct<bytes, path>: FLAC, 48 kHz mono, 24-bit — the
 released set's format), ``speaker_{1,2}_annotation_{a,b,c}`` (list<struct<start_s,
 end_s, label, text>>), ``metadata`` (struct<conversation_type,
 speaker_{1,2}_actor_id, speaker_{1,2}_actor_gender>). One extra column,
 ``authored`` (JSON string), records the spec id, family, difficulty, tags,
 renderer, transform and the fact that the three tracks are script-derived;
-Sesame's loader projects only the columns it knows, so the extra is inert there.
+TurnBench's loader projects only the columns it knows, so the extra is inert there.
 
-``durations.json`` has the shape of Sesame's ``durations-{split}.json`` so the
-harness can score without decoding audio; Sesame's own local-directory path
+``durations.json`` has the shape of TurnBench's ``durations-{split}.json`` so the
+harness can score without decoding audio; TurnBench's own local-directory path
 ignores it and reads the FLAC headers, which agree by construction.
 
 ``DatasetWriter`` streams rows into the shard one row group at a time, so a
@@ -187,7 +187,7 @@ class DatasetWriter:
 
     ``add`` takes one parquet row (``conversation_row`` shape), its ground-truth
     record and its duration; rows must arrive in ascending numeric id order
-    (Sesame sorts ids with ``int``) and ids must be unique. ``finish`` writes the
+    (TurnBench sorts ids with ``int``) and ids must be unique. ``finish`` writes the
     sidecars and the manifest and returns the manifest."""
 
     def __init__(self, out: Path, *, name: str | None = None) -> None:

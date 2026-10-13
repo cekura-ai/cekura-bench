@@ -1,4 +1,4 @@
-"""Labels -> Sesame gold: the annotation tracks we write make ``turnbench.gold``
+"""Labels -> TurnBench gold: the annotation tracks we write make ``turnbench.gold``
 derive exactly the events the script plants, for every seed spec and for the
 specific events each family is about."""
 
@@ -72,7 +72,7 @@ def test_the_templates_expand_to_one_conversation_per_pairing_with_stable_ids():
 
 
 @pytest.mark.parametrize("name", SPEC_NAMES)
-def test_sesame_gold_derives_exactly_the_planted_events(built, name):
+def test_turnbench_gold_derives_exactly_the_planted_events(built, name):
     conversation = built[name]
     assert compare(conversation.planted, derived(conversation)) == []
 

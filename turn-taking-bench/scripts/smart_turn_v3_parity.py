@@ -1,6 +1,6 @@
-"""Parity checks for the Smart Turn v3 adapter against Sesame's reference.
+"""Parity checks for the Smart Turn v3 adapter against TurnBench's reference.
 
-``reference``: run Sesame's own ``baselines/smart_turn_v3/predict.py`` pipeline
+``reference``: run TurnBench's own ``baselines/smart_turn_v3/predict.py`` pipeline
 (its per-conversation function, not its whole-dataset loader) on the first N
 dev conversations in this environment, stream the same conversations through
 the adapter, and compare events (``turn-taking-bench parity``) and the 12.5 Hz score
@@ -22,7 +22,7 @@ the rounding in the committed file.
         --reference path/to/predictions-dev.json
 
 ``commit``: the decision logic alone, no inference. Apply the adapter's
-``EdgeCommitter`` (theta_eot, theta_int, 12.5 Hz) frame by frame to Sesame's
+``EdgeCommitter`` (theta_eot, theta_int, 12.5 Hz) frame by frame to TurnBench's
 published per-frame probabilities (``probs-eot.json`` / ``probs-int.json``,
 fetched from the pinned ``freemanjiang/turnbench-baseline-probs`` snapshot
 unless ``--probs-dir`` points at local copies) and check that every event
@@ -45,7 +45,7 @@ import numpy as np
 
 REPO = Path(__file__).resolve().parents[1]
 
-# Sesame's published per-frame probabilities for the smart_turn_v3 baseline
+# TurnBench's published per-frame probabilities for the smart_turn_v3 baseline
 # (turnbench/probs.py fetches the same files into its baselines/ directory).
 PROBS_REPO = "freemanjiang/turnbench-baseline-probs"
 PROBS_REVISION = "e3cd4caa2a45b85ef4d6714d79d5c7c40471ae79"
@@ -306,7 +306,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p = sub.add_parser("reference", help="Sesame's pipeline vs the adapter on the first N dev conversations")
+    p = sub.add_parser("reference", help="TurnBench's pipeline vs the adapter on the first N dev conversations")
     p.add_argument("--turnbench", type=Path, required=True, help="TurnBench checkout with baselines/smart_turn_v3/smart_turn set up")
     p.add_argument("--limit", type=int, default=3)
     p.add_argument("--out", type=Path, required=True)
@@ -326,8 +326,8 @@ def main() -> None:
     p.add_argument("--decimals", type=int, default=4, help="round our scores like the committed file (None: compare raw)")
     p.set_defaults(func=cmd_probs)
 
-    p = sub.add_parser("commit", help="The commit rule alone: Sesame's published probs -> their committed predictions")
-    p.add_argument("--reference", type=Path, required=True, help="Sesame's baselines/smart_turn_v3/predictions-dev.json")
+    p = sub.add_parser("commit", help="The commit rule alone: TurnBench's published probs -> their committed predictions")
+    p.add_argument("--reference", type=Path, required=True, help="TurnBench's baselines/smart_turn_v3/predictions-dev.json")
     p.add_argument("--probs-dir", type=Path, help="directory holding probs-eot.json and probs-int.json (default: the pinned HF snapshot)")
     p.add_argument("--theta-eot", type=float, default=0.0082)
     p.add_argument("--theta-int", type=float, default=0.0155)

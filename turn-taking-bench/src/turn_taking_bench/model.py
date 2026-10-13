@@ -4,7 +4,7 @@ A model sees one speaker channel as a sequence of fixed 20 ms frames, in order,
 and never sees future audio: the runner (``turn_taking_bench.runner``) pushes frame
 ``i`` only after frames ``0..i-1`` and tells the model the audio time reached
 (``t_end_s``). Every event a model emits carries a *commit time* — the time by
-which all audio the decision depended on has been heard, Sesame's causality
+which all audio the decision depended on has been heard, TurnBench's causality
 rule (docs/SUBMISSION_FORMAT.md in TurnBench). The runner rejects any event
 whose commit time lies past the audio pushed so far, so a model built on this
 interface is causal by construction and the submission is causal by checking.
@@ -21,7 +21,7 @@ import numpy as np
 EventKind = Literal["eot", "interruption"]
 EVENT_KINDS: tuple[EventKind, ...] = ("eot", "interruption")
 
-# Frame the runner feeds, in seconds. It equals Sesame's rms_vad WINDOW_S so the
+# Frame the runner feeds, in seconds. It equals TurnBench's rms_vad WINDOW_S so the
 # streamed baseline can reproduce the reference predictions sample for sample.
 FRAME_S = 0.02
 

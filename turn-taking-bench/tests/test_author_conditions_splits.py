@@ -1,6 +1,6 @@
 """Condition variants and template splits of an authored dataset: labels copied
 unchanged, ids suffixed, every pairing of a template in one split, and the
-result still round-trips through Sesame's gold and scorer."""
+result still round-trips through TurnBench's gold and scorer."""
 
 import json
 from pathlib import Path

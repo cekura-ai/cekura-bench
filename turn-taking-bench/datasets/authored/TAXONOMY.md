@@ -1,6 +1,6 @@
 # Authored dataset: taxonomy and splits
 
-Every template is one spec file (schema v2, `src/turn_taking_bench/author/spec.py`). A template expands into one conversation per voice pairing, and each conversation into one variant per audio condition. Labels are planted by the script and verified against Sesame TurnBench's gold builder and scorer (`turn-taking-bench author check`).
+Every template is one spec file (schema v2, `src/turn_taking_bench/author/spec.py`). A template expands into one conversation per voice pairing, and each conversation into one variant per audio condition. Labels are planted by the script and verified against TurnBench's gold builder and scorer (`turn-taking-bench author check`).
 
 ## Splits
 
@@ -40,4 +40,4 @@ Templates are assigned to a split per template, stratified by family; every pair
 - A `<break>` is labelled at its detected length, never its scripted one; a line whose breaks do not come out as detectable pauses fails the build.
 - Pauses under 0.6 s, filler-led pauses, rushed digit groups and every pause of 3 s or more are spliced as exact silence rather than left to the TTS.
 - A cut-in or "mm-hmm" must land inside the agent's speech; one placed after the agent has finished is a build error, not a label.
-- Unscripted natural gaps stay unlabelled, as in Sesame's annotation.
+- Unscripted natural gaps stay unlabelled, as in TurnBench's annotation.

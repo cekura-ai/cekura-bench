@@ -1,5 +1,5 @@
 """Conversational Dynamics scorecard and conversation-level bootstrap: the
-mapping from Sesame's rates, n/a handling, seeded determinism, pooled-count
+mapping from TurnBench's rates, n/a handling, seeded determinism, pooled-count
 resampling on a hand-computed case, and the two-run comparison."""
 
 import copy

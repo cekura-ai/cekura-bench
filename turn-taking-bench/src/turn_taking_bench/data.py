@@ -1,19 +1,19 @@
-"""Memory-bounded access to the TurnBench dataset, on top of Sesame's data module.
+"""Memory-bounded access to the TurnBench dataset, on top of TurnBench's data module.
 
 Everything that defines the benchmark comes from ``turnbench.data``: the dataset
 id and pinned revision, the conversation ids, the committed durations, and the
-``Conversation`` type (whose ``audio()`` decodes a channel). Sesame's
+``Conversation`` type (whose ``audio()`` decodes a channel). TurnBench's
 ``resolve_dataset()`` reads every shard into memory when audio is wanted, which
 is the whole ~4 GB dev split; this host has 7 GB. So this module loads the
 split with ``skip_audio=True`` (gold columns only, cached) and reads one
 conversation's audio bytes at a time straight from the pinned parquet snapshot
-(one parquet row group per conversation), wrapping them in Sesame's own
+(one parquet row group per conversation), wrapping them in TurnBench's own
 ``Conversation`` so the decode path is theirs too.
 
 A *local* dataset (a directory of parquet shards in the same schema — an
 authored dataset from ``turn-taking-bench author build``) goes through the same
 functions: ``local_split`` names it, ``load_split`` reads its gold columns and
-``durations.json`` (falling back to the FLAC headers, which is what Sesame's
+``durations.json`` (falling back to the FLAC headers, which is what TurnBench's
 loader does for a local directory), and ``locate_rows`` indexes its shards.
 """
 
@@ -28,7 +28,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import soundfile as sf
 from huggingface_hub import snapshot_download
-from turnbench.data import (  # HFDataset: the row wrapper Sesame's own loader uses
+from turnbench.data import (  # HFDataset: the row wrapper TurnBench's own loader uses
     AUDIO_COLUMNS,
     GOLD_COLUMNS,
     HFDataset,
@@ -47,7 +47,7 @@ from turnbench.durations import SPLITS
 class Split:
     name: str  # "dev" | "test" | a local directory's name
     source: str  # HF dataset repo id, or the local directory
-    revision: str | None  # pinned commit when Sesame pins one; None for local
+    revision: str | None  # pinned commit when TurnBench pins one; None for local
     local_dir: Path | None = None  # set for a local dataset directory
     labelled: bool = True  # gold available, so a run can be scored
 
@@ -64,7 +64,7 @@ def split_for(name: str) -> Split:
 
 
 def local_split(directory: str | Path) -> Split:
-    """A dataset directory of parquet shards in Sesame's schema (``turn-taking-bench author build``)."""
+    """A dataset directory of parquet shards in TurnBench's schema (``turn-taking-bench author build``)."""
     path = Path(directory).expanduser().resolve()
     if not path.is_dir() or not any(path.glob("*.parquet")):
         raise FileNotFoundError(f"{path} is not a dataset directory (no *.parquet shards)")
@@ -72,19 +72,19 @@ def local_split(directory: str | Path) -> Split:
 
 
 def local_shards(directory: Path) -> list[Path]:
-    """The shards Sesame's loader would read for this directory (top level, sorted)."""
+    """The shards TurnBench's loader would read for this directory (top level, sorted)."""
     return sorted(Path(directory).glob("*.parquet"))
 
 
 def load_split(split: Split) -> Dataset:
-    """The split's gold columns and durations, without audio (Sesame's scorer path)."""
+    """The split's gold columns and durations, without audio (TurnBench's scorer path)."""
     if split.local_dir is not None:
         return load_local_dataset(split.local_dir)
     return resolve_dataset(source=split.source, revision=split.revision, skip_audio=True)
 
 
 def load_local_dataset(directory: Path) -> Dataset:
-    """Gold columns of a local dataset directory, wrapped exactly as Sesame's
+    """Gold columns of a local dataset directory, wrapped exactly as TurnBench's
     ``resolve_dataset`` wraps them, plus durations from ``durations.json`` when
     the directory has one, else from each conversation's FLAC header (one row at
     a time, so the audio never sits in memory as a whole)."""
@@ -124,7 +124,7 @@ def subset(dataset: Dataset, ids: list[str]) -> Dataset:
 
 
 def durations(dataset: Dataset) -> dict[str, float]:
-    """{conversation_id: duration_s} via Sesame's `conversation()` (committed
+    """{conversation_id: duration_s} via TurnBench's `conversation()` (committed
     durations artifact, with their audio-header fallback)."""
     return {cid: conversation(dataset, cid).duration_s for cid in conversation_ids(dataset)}
 
@@ -140,7 +140,7 @@ class RowLocation:
 
 def snapshot_dir(split: Split, patterns: list[str] | str = "*.parquet", *, local_only: bool = False) -> Path:
     """The local Hugging Face snapshot of the split at its pinned revision (the
-    same one Sesame's loader reads), holding at least the files matching
+    same one TurnBench's loader reads), holding at least the files matching
     ``patterns``; downloaded on demand unless ``local_only``. A local split is
     its own directory."""
     if split.local_dir is not None:
@@ -158,7 +158,7 @@ def snapshot_dir(split: Split, patterns: list[str] | str = "*.parquet", *, local
 
 def locate_rows(split: Split) -> dict[str, RowLocation]:
     """Map every conversation id to its parquet row group, reading only the id
-    column. Uses the same snapshot (and revision) Sesame's loader would."""
+    column. Uses the same snapshot (and revision) TurnBench's loader would."""
     snapshot = snapshot_dir(split)
     shards = local_shards(snapshot) if split.local_dir is not None else sorted(Path(snapshot).rglob("*.parquet"))
     locations: dict[str, RowLocation] = {}
@@ -182,7 +182,7 @@ def read_row(location: RowLocation) -> dict:
 def load_audio_conversation(
     conversation_id: str, location: RowLocation, duration_s: float
 ) -> Conversation:
-    """One conversation's audio bytes as a Sesame `Conversation` (annotations
+    """One conversation's audio bytes as a TurnBench `Conversation` (annotations
     omitted: the runner only streams audio; gold comes from `load_split`)."""
     table = pq.ParquetFile(location.path).read_row_group(
         location.row_group, columns=["conversation_id"] + AUDIO_COLUMNS

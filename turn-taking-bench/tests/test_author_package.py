@@ -1,6 +1,6 @@
 """End to end: build three seed specs (first voice pairing) with the mock
-renderer into a dataset directory, load it with Sesame's own loader, round-trip
-the gold through Sesame's scorer, and stream it through the harness."""
+renderer into a dataset directory, load it with TurnBench's own loader, round-trip
+the gold through TurnBench's scorer, and stream it through the harness."""
 
 import json
 import shutil
@@ -28,7 +28,7 @@ def dataset_dir(tmp_path_factory, seed_specs_dir):
     return out
 
 
-def test_sesame_loads_the_directory_and_its_gold_is_the_planted_gold(dataset_dir):
+def test_turnbench_loads_the_directory_and_its_gold_is_the_planted_gold(dataset_dir):
     dataset = resolve_dataset(source=str(dataset_dir))
     assert conversation_ids(dataset) == SEED_IDS
     conv = conversation(dataset, "9091")

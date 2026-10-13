@@ -1,4 +1,5 @@
-"""Pipecat Smart Turn v3, Sesame's baseline pipeline, as a streaming adapter.
+"""Pipecat Smart Turn v3, TurnBench's baseline pipeline, as a streaming adapter.
+Ported from TurnBench (MIT licence); see THIRD_PARTY_NOTICES.md.
 
 A port of TurnBench's ``baselines/smart_turn_v3/predict.py`` (Sathvik Udupa,
 2026) and the two pieces of pipecat-ai/smart-turn it runs on
@@ -20,10 +21,10 @@ frame in, events out":
    frame wins, exactly as the reference fills its ``scores`` array, including
    its ``int(i / SR * OUT_HZ)`` frame index (a float expression that assigns
    some boundary chunks to the previous frame; ported verbatim).
-4. Events are committed with the rule of Sesame's ``turnbench.sweep.commit_events``
+4. Events are committed with the rule of TurnBench's ``turnbench.sweep.commit_events``
    (rising edge above theta, 2 s refractory, time = frame end), applied
    incrementally as each 12.5 Hz frame becomes final. EOT uses the score,
-   INT uses ``1 - score`` in float32, at the operating point Sesame swept
+   INT uses ``1 - score`` in float32, at the operating point TurnBench swept
    (theta_eot = 0.0082, theta_int = 0.0155).
 
 Two places where the reference is not causal, and what this port does:
@@ -32,12 +33,12 @@ Two places where the reference is not causal, and what this port does:
   end of its 12.5 Hz frame, but a frame's score is written by the last 32 ms
   chunk *starting* inside it, which can end up to 32 ms after the frame does;
   the resampler adds 0.44 ms. ``commit_time="reference"`` (default) keeps the
-  reference's timestamps so predictions can be compared with Sesame's file;
+  reference's timestamps so predictions can be compared with TurnBench's file;
   those stamps precede the audio they depend on by up to ~32 ms. The runner
   accepts them because the adapter only emits an event after that audio was
   pushed. ``commit_time="causal"`` stamps the end of the 20 ms frame in which
   the decision was actually available (20 ms later, 40 ms at the boundary
-  chunks the float frame index assigns backwards), which satisfies Sesame's
+  chunks the float frame index assigns backwards), which satisfies TurnBench's
   causality rule to the letter.
 - VAD state reset (``vad_reset_s``). The reference's Silero wrapper zeroes its
   recurrent state every 5 s of *wall-clock* time, so its decisions depend on
@@ -73,7 +74,7 @@ SMART_TURN_HF_REPO = "pipecat-ai/smart-turn-v3"
 SMART_TURN_HF_REVISION = "f766f81d3cfdf7737ac64aad813d91bbfd56bf93"
 # The reference runs the "-cpu" file without CUDA and the "-gpu" file with it;
 # both are v3.1. The -cpu graph is the quantised 8.7 MB export, the -gpu graph
-# the 32 MB float32 one. Sesame's published dev results come from the -gpu
+# the 32 MB float32 one. TurnBench's published dev results come from the -gpu
 # graph, and the two graphs disagree enough to move EOT recall by ~4 points
 # (see README), so "gpu" is the default: it runs on CPU too, about 25 % slower.
 ONNX_FILES = {
@@ -120,7 +121,7 @@ _SETTLE_CHUNKS = math.ceil(2000.0 / _CHUNK_MS)
 _MAX_CHUNKS = math.ceil(8000.0 / _CHUNK_MS)
 _SETTLE_STRIDE = 8
 
-# Operating point from Sesame's dev sweep (baselines/smart_turn_v3/README.md).
+# Operating point from TurnBench's dev sweep (baselines/smart_turn_v3/README.md).
 THETA_EOT = 0.0082
 THETA_INT = 0.0155
 # turnbench.sweep.REFRACTORY_S
@@ -135,7 +136,7 @@ MAX_SEGMENT_S = 8
 DEFAULT_CONFIG: dict[str, Any] = {
     "theta_eot": THETA_EOT,
     "theta_int": THETA_INT,
-    "onnx_variant": "gpu",  # "gpu" (full-precision graph, Sesame's published results) | "cpu" (quantised)
+    "onnx_variant": "gpu",  # "gpu" (full-precision graph, TurnBench's published results) | "cpu" (quantised)
     "commit_time": "reference",  # "reference" | "causal"
     "vad_reset_s": VAD_RESET_S,  # audio seconds between Silero state resets; 0 disables
     "onnx_threads": 0,  # intra-op threads for the Smart Turn session; 0 = onnxruntime default

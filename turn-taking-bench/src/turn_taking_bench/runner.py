@@ -4,8 +4,8 @@
 20 ms frames in order, audio time announced with each frame, every emitted
 event checked against the audio heard so far. ``run_benchmark`` fans
 conversations out over worker processes (one conversation at a time each),
-writes the predictions in Sesame's format plus the raw events and a provenance
-record, and scores the predictions with Sesame's scorer.
+writes the predictions in TurnBench's format plus the raw events and a provenance
+record, and scores the predictions with TurnBench's scorer.
 """
 
 from __future__ import annotations
@@ -139,7 +139,7 @@ def stream_speaker(
 
 
 def speaker_events(events: list[Event]) -> tuple[SpeakerEvents, dict[str, int]]:
-    """Raw events -> Sesame's per-speaker lists: strictly increasing per kind.
+    """Raw events -> TurnBench's per-speaker lists: strictly increasing per kind.
 
     Exact repeats of a time (two decisions committed on the same frame) are
     collapsed and counted; a time earlier than the previous one of the same

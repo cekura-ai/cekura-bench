@@ -57,7 +57,7 @@ class Bounds:
     frame_s: float
     # Quiet gaps of at least the pause minimum that lie *inside* a segment
     # (``scripted_segments`` only): natural pauses the script did not ask for.
-    # They stay unlabelled, as in Sesame's annotation (a turn is one turn), so
+    # They stay unlabelled, as in TurnBench's annotation (a turn is one turn), so
     # a model firing there is neither rewarded nor penalised.
     unscripted_pauses: list[Segment] = field(default_factory=list)
 

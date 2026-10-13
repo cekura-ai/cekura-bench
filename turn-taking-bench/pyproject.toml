@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Streaming turn-taking benchmark harness scored with Sesame's TurnBench official scorer"
 requires-python = ">=3.12,<3.14"
 dependencies = [
-  # Sesame's TurnBench: dataset access, submission format and the official scorer.
+  # TurnBench: dataset access, submission format and the official scorer.
   # Pinned to a commit; scores are only comparable across the same scorer version.
   "turnbench @ git+https://github.com/SesameAILabs/turnbench@38a6f874322430cb3ca71d8a52aa1e636e88bad8",
   "numpy==2.4.6",
@@ -15,7 +15,7 @@ dependencies = [
 
 [project.optional-dependencies]
 # Smart Turn v3 adapter (turn_taking_bench/adapters/smart_turn_v3.py): the same
-# libraries Sesame's reference pipeline runs on, CPU builds only. torch is the
+# libraries the TurnBench reference pipeline runs on, CPU builds only. torch is the
 # reference's resampler and the Whisper log-mel front end; onnxruntime runs the
 # Silero VAD and the Smart Turn classifier. Install with `uv sync --extra smart-turn`.
 smart-turn = [

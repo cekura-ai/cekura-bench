@@ -1,7 +1,7 @@
 """Two speakers on one clock: exact sample offsets, barge-in cuts, ground truth.
 
 Output is two mono float32 channels of equal length at ``OUTPUT_RATE`` (48 kHz,
-the rate of Sesame's released FLAC channels, so the harness streams authored
+the rate of TurnBench's released FLAC channels, so the harness streams authored
 and released conversations identically). Every placement is an integer sample
 on that clock:
 

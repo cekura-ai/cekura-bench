@@ -1,6 +1,6 @@
 """Conversational Dynamics scorecard and conversation-level bootstrap intervals.
 
-Nothing here re-scores anything: the inputs are Sesame's per-conversation
+Nothing here re-scores anything: the inputs are TurnBench's per-conversation
 ``TaskScore`` objects (tp/fn/fp/tn and the TP latencies) exactly as
 ``turnbench.score`` produced them. This module only (a) maps the pooled EOT /
 INT rates onto the four Artificial Analysis "Conversational Dynamics" names

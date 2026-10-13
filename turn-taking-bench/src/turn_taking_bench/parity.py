@@ -2,7 +2,7 @@
 
 Per conversation, speaker and task: how many events each side has, how many
 times match exactly (same position, bit-identical float), and the largest
-absolute time difference. Then both files are scored with Sesame's scorer over
+absolute time difference. Then both files are scored with TurnBench's scorer over
 the same conversations and the scores are compared field by field. Scores
 that differ make the command fail; the comparison is never rounded.
 """
@@ -151,7 +151,7 @@ def render(result: dict[str, Any]) -> str:
             f"exact_matches={total['exact_matches']} max_abs_diff={diff} "
             f"length_mismatches={total['length_mismatches']}"
         )
-    lines.append("  scores (Sesame scorer, same conversations):")
+    lines.append("  scores (TurnBench scorer, same conversations):")
     lines.append(
         f"    {'task':4}  {'side':9}  {'recall':>6}  {'fp_rate':>7}  {'lat p10/p50/p90 ms':>18}"
         f"  {'tp':>5} {'fn':>5} {'fp':>5} {'tn':>5}"

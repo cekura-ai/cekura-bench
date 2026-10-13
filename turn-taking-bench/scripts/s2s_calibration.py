@@ -1,6 +1,6 @@
-"""Calibration of the S2S readouts against Sesame's committed baseline predictions.
+"""Calibration of the S2S readouts against TurnBench's committed baseline predictions.
 
-Sesame derives events for OpenAI Realtime from the provider's own endpointer
+TurnBench derives events for OpenAI Realtime from the provider's own endpointer
 (``baselines/openai_realtime.py``: ``speech_stopped`` -> EOT, ``speech_started``
 -> INT, each at the audio position appended when the event arrived, every
 channel in its own session with text output and ``create_response: false``).
@@ -9,7 +9,7 @@ readout=vad_events --config model=gpt-realtime --config channels=[1,2]`` is that
 method inside this harness. This script compares such a run with the committed
 ``predictions-dev.json`` on the conversations both have:
 
-* per conversation and overall, Sesame's scorer on both files (``all`` block,
+* per conversation and overall, TurnBench's scorer on both files (``all`` block,
   and the caller / agent blocks of ``turn_taking_bench.report``);
 * per channel and task, how many of the reference's events have one of ours
   within ``--tolerance`` seconds (greedy nearest match), the median and p90 of
@@ -127,7 +127,7 @@ def render(result: dict[str, Any], label_a: str, label_b: str) -> list[str]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--run", type=Path, action="append", required=True, help="run directory (predictions-dev.json); repeatable")
-    parser.add_argument("--reference", type=Path, required=True, help="Sesame's committed predictions-dev.json")
+    parser.add_argument("--reference", type=Path, required=True, help="TurnBench's committed predictions-dev.json")
     parser.add_argument("--split", default="dev")
     parser.add_argument("--tolerance", type=float, default=0.5, help="seconds within which two events count as the same decision")
     parser.add_argument("--out", type=Path, help="markdown report path (calibration.json is written beside it)")
@@ -137,7 +137,7 @@ def main() -> int:
     runs = {run.name: load_submission(run / f"predictions-{args.split}.json") for run in args.run}
     dataset = load_split(split_for(args.split))
     results: dict[str, Any] = {}
-    lines = ["# S2S calibration against Sesame's committed predictions", "", f"- Reference: `{args.reference}`", f"- Split: {args.split}; tolerance {args.tolerance} s", ""]
+    lines = ["# S2S calibration against TurnBench's committed predictions", "", f"- Reference: `{args.reference}`", f"- Split: {args.split}; tolerance {args.tolerance} s", ""]
     first_name = next(iter(runs))
     for name, ours in runs.items():
         ids = [cid for cid in ours.by_conversation() if cid in reference.by_conversation()]
@@ -145,7 +145,7 @@ def main() -> int:
             raise SystemExit(f"{name}: no conversations in common with the reference")
         result = compare(ours, reference, ids, subset(dataset, ids), args.tolerance)
         results[f"{name} vs reference"] = result
-        lines += render(result, f"A = {name}", "B = Sesame reference")
+        lines += render(result, f"A = {name}", "B = TurnBench reference")
         if name != first_name:
             common = [cid for cid in ids if cid in runs[first_name].by_conversation()]
             if common:

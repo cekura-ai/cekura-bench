@@ -1,10 +1,11 @@
-"""RMS energy VAD, Sesame's reference baseline, as a streaming adapter.
+"""RMS energy VAD, TurnBench's reference baseline, as a streaming adapter.
+Ported from TurnBench (MIT licence); see THIRD_PARTY_NOTICES.md.
 
 A port of ``baselines/rms_vad/predict.py`` from TurnBench into the
 ``TurnModel`` interface. The rule is unchanged: a 20 ms window is "speaking"
 when its RMS exceeds the threshold; a flip to speaking is an interruption, a
 flip to silent is an EOT, each committed at the end of the window that revealed
-the flip. Sesame computes every window up front from the whole channel; here
+the flip. TurnBench computes every window up front from the whole channel; here
 each window arrives as one frame, and the decision for window ``i`` uses only
 windows ``0..i``, which is exactly the information the offline rule uses.
 
@@ -20,7 +21,7 @@ import numpy as np
 
 from turn_taking_bench.model import Event
 
-# Sesame's constants (baselines/rms_vad/predict.py), verbatim.
+# TurnBench's constants (baselines/rms_vad/predict.py), verbatim.
 WINDOW_S = 0.02
 RMS_THRESHOLD = 0.01
 

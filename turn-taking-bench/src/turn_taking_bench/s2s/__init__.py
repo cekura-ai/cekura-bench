@@ -1,7 +1,7 @@
 """Speech-to-speech (S2S) models as turn-taking models: the ``s2s:<provider>`` family.
 
 An S2S model has no end-of-turn detector a client can ask; it simply starts
-talking. Sesame's TurnBench therefore scores such models with a *generative*
+talking. TurnBench therefore scores such models with a *generative*
 protocol (``baselines/gemini_vad``): the model converses with the dataset's
 caller in real time, its output audio is recorded sample-aligned with the input,
 and every onset of model speech while the caller is quiet is read as the model's
@@ -16,14 +16,14 @@ because a server endpointer decides a turn ended by hearing silence — and the
 model's reply audio is recorded with arrival timestamps. Onsets are detected
 with the service bench's energy detector on the arrival-anchored audio clock
 (``service.audio.AudioTimeline``). An onset inside a scripted caller pause is a
-cut-in, scored as a false positive by Sesame's scorer; an onset within the
+cut-in, scored as a false positive by TurnBench's scorer; an onset within the
 window after a real turn end is a hit with its latency. The agent channel of the
 dataset (speaker_2) is not streamed: the S2S model *is* the agent.
 
 For providers whose protocol reports its own endpointer (OpenAI-shaped:
 ``speech_stopped`` / ``speech_started``) the model also records those events
 and can emit them instead (``readout: vad_events``), which is exactly how
-Sesame's ``openai_server_vad`` / ``openai_semantic_vad`` baselines derive their
+TurnBench's ``openai_server_vad`` / ``openai_semantic_vad`` baselines derive their
 events; ``mode: vad_only`` reproduces those baselines' session (text output, no
 responses) for calibration against their committed predictions.
 
@@ -99,15 +99,15 @@ def default_config(provider: str) -> dict[str, Any]:
         "provider": provider,
         # The pinned id above; None = the service registry's default for the provider.
         "model": PINNED_MODELS.get(provider),
-        # "agent": audio replies under SYSTEM_PROMPT (Sesame's generative protocol).
-        # "vad_only": Sesame's openai_* baselines' session — text output, no
+        # "agent": audio replies under SYSTEM_PROMPT (TurnBench's generative protocol).
+        # "vad_only": TurnBench's openai_* baselines' session — text output, no
         # responses, events from the provider's endpointer (OpenAI-shaped only).
         "mode": "agent",
         # "onset": EOT = onset of model speech while the caller is quiet.
         # "vad_events": EOT = the provider's speech_stopped, INT = speech_started.
         "readout": "onset",
         # Which dataset channels get a session. The caller is speaker_1; the
-        # agent channel is replaced by the model. Both for Sesame's dev split,
+        # agent channel is replaced by the model. Both for TurnBench's dev split,
         # whose two speakers are both humans.
         "channels": [1],
         # The provider's own ("native") turn detection, as the service bench
@@ -118,11 +118,11 @@ def default_config(provider: str) -> dict[str, Any]:
         "voice": None,  # None = the service registry's default output voice
         "transcribe_input": True,
         # Silence streamed after the last frame so the provider can endpoint the
-        # caller's final turn and the last reply can arrive (Sesame waits 5 s).
+        # caller's final turn and the last reply can arrive (TurnBench waits 5 s).
         "trailing_grace_s": 3.0,
         # Onset readout: model speech segments closer than this are one onset
-        # (Sesame's gemini_vad MERGE_GAP_S), and an onset while the caller's own
-        # channel is active is not an EOT decision (Sesame's rule).
+        # (TurnBench's gemini_vad MERGE_GAP_S), and an onset while the caller's own
+        # channel is active is not an EOT decision (TurnBench's rule).
         "merge_gap_s": 0.5,
         "caller_active_filter": True,
         "caller_merge_gap_s": 0.0,

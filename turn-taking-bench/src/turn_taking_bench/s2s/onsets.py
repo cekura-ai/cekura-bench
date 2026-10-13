@@ -5,7 +5,7 @@ bench's arrival-anchored ``AudioTimeline`` for it, the normalized event log,
 and the caller PCM that was sent — so the readout can be recomputed from a
 run's files by anyone, and tested without a provider.
 
-The rules, each the service bench's or Sesame's rather than new:
+The rules, each the service bench's or TurnBench's rather than new:
 
 * **Responses.** The adapter marks the first chunk of every reply
   (``agent.audio.start``, with its sample index); a response spans from that
@@ -14,7 +14,7 @@ The rules, each the service bench's or Sesame's rather than new:
   energy against its noise-floor estimate (``service.detector``: 10 ms frames,
   3 frames of evidence for an onset, 200 ms of quiet for an offset, 8 dB
   margin, 200 ms of zero padding so the floor estimate has known-quiet
-  material). Segments closer than ``merge_gap_s`` are one segment (Sesame's
+  material). Segments closer than ``merge_gap_s`` are one segment (TurnBench's
   ``MERGE_GAP_S`` in ``baselines/gemini_vad``).
 * **When an onset is audible.** The first segment of a response is anchored on
   *arrival*: sample ``k`` of the chunk that arrived at ``t`` is audible at
@@ -25,10 +25,10 @@ The rules, each the service bench's or Sesame's rather than new:
   the provider's interrupt signal) is not an onset.
 * **Caller activity.** An onset while the caller's own channel is active is the
   model talking over the caller, not a decision that the turn had ended, and is
-  dropped (Sesame's ``gemini_vad`` rule). Activity comes from the same energy
+  dropped (TurnBench's ``gemini_vad`` rule). Activity comes from the same energy
   detector on the caller PCM that was sent, without the offset hysteresis (the
   caller is active while a frame is loud, not for 200 ms after), merged over
-  gaps shorter than ``caller_merge_gap_s`` (0 by default; Sesame's 0.5 s would
+  gaps shorter than ``caller_merge_gap_s`` (0 by default; TurnBench's 0.5 s would
   hide a cut-in during a short scripted pause).
 """
 

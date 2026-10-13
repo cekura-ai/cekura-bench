@@ -1,6 +1,6 @@
 """Track 1 end to end against the service bench's scripted agent (``service/adapters/fake.py``):
 a session per conversation, the caller channel streamed in real time, onsets
-read off the recorded output, Sesame's scorer on the result. The fake agent's
+read off the recorded output, TurnBench's scorer on the result. The fake agent's
 reply timing is known (it answers ``endpoint_ms`` after the caller goes quiet),
 so the EOT latencies and the cut-in during a scripted pause are checkable
 against ground truth. Real-time by construction, so these tests take about as
@@ -98,7 +98,7 @@ def test_fake_provider_session_yields_onsets_as_eots(tmp_path):
     assert readout["session"]["requested"]["instructions_sha256"]
 
 
-def test_run_benchmark_scores_fake_provider_with_sesame_scorer(tmp_path):
+def test_run_benchmark_scores_fake_provider_with_turnbench_scorer(tmp_path):
     dataset = write_dataset(tmp_path / "dataset")
     out = tmp_path / "run"
     info = run_benchmark(

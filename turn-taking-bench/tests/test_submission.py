@@ -25,7 +25,7 @@ def build_prediction(conversation_id="20"):
     )
 
 
-def test_predictions_json_round_trips_through_sesame_validation():
+def test_predictions_json_round_trips_through_turnbench_validation():
     submission = Submission(schema_version=SCHEMA_VERSION, predictions=[build_prediction()])
     text = submission.model_dump_json(indent=2)
     parsed = Submission.model_validate(json.loads(text))  # pydantic schema, extra="forbid"
@@ -35,7 +35,7 @@ def test_predictions_json_round_trips_through_sesame_validation():
     assert parsed.predictions[0].speaker_2.interruption == [51 * 0.02]
 
 
-def test_events_past_the_audio_fail_sesame_validation():
+def test_events_past_the_audio_fail_turnbench_validation():
     prediction = build_prediction()
     with pytest.raises(ValueError, match="past the end of the audio"):
         validate_event_times(prediction, duration_s=1.5)

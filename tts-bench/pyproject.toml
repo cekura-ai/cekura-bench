@@ -11,6 +11,7 @@ dependencies = [
   "whisper-normalizer==0.1.15",
   "jiwer==4.0.0",
   "soundfile==0.14.0",
+  "msgpack==1.1.2",
 ]
 
 [dependency-groups]

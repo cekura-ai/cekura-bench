@@ -173,6 +173,323 @@ class TestXai:
         assert "voice=carina" in xai.url and "codec=pcm" in xai.url
 
 
+class TestGradium:
+    async def test_setup_waits_for_ready_and_only_end_of_stream_ends_the_utterance(self):
+        import asyncio
+
+        from tts_bench.adapters.gradium import GradiumAdapter
+        from tts_bench.probes import Continuation
+
+        gradium, sent = adapter(GradiumAdapter, "default", "NbpkqMVS3CJeq2j8")
+        opening = asyncio.create_task(gradium.open_context("main"))
+        await asyncio.sleep(0.01)
+        assert not opening.done() and gradium.contexts["main"].t0 is None
+        assert sent == [{"type": "setup", "model_name": "default", "voice_id": "NbpkqMVS3CJeq2j8",
+                         "output_format": "pcm_24000", "close_ws_on_eos": False, "client_req_id": "main"}]
+        gradium._on_message({"type": "ready", "client_req_id": "main", "request_id": "r1", "sample_rate": 24000})
+        synthesis = await opening
+        for frame in Continuation.frames("Hello there. How can I help?"):
+            await gradium.send("main", frame)
+        await gradium.finish("main")
+        assert sent[1:] == [{"type": "text", "text": "Hello there. ", "client_req_id": "main"},
+                            {"type": "text", "text": "How can I help?", "client_req_id": "main"},
+                            {"type": "end_of_stream", "client_req_id": "main"}]
+        gradium._on_message({"type": "audio", "client_req_id": "main", "audio": "AQABAA=="})
+        gradium._on_message({"type": "text", "client_req_id": "main", "text": "Hello"})
+        gradium._on_message({"type": "flushed", "client_req_id": "main"})
+        assert bytes(synthesis.pcm) == b"\x01\x00" * 2 and not synthesis.done.is_set()
+        gradium._on_message({"type": "end_of_stream", "client_req_id": "main"})
+        assert synthesis.done.is_set() and synthesis.t0 is not None and synthesis.meta["ready"]["request_id"] == "r1"
+
+    async def test_interleaved_responses_go_to_their_own_context(self):
+        import asyncio
+
+        from tts_bench.adapters.gradium import GradiumAdapter
+
+        gradium, _ = adapter(GradiumAdapter, "default", "v")
+        a = asyncio.create_task(gradium.open_context("a"))
+        b = asyncio.create_task(gradium.open_context("b"))
+        await asyncio.sleep(0.01)
+        gradium._on_message({"type": "ready", "client_req_id": "b"})
+        second = await b
+        assert not a.done()
+        gradium._on_message({"type": "ready", "client_req_id": "a"})
+        first = await a
+        gradium._on_message({"type": "audio", "client_req_id": "b", "audio": "AQABAA=="})
+        gradium._on_message({"type": "end_of_stream", "client_req_id": "b"})
+        assert second.done.is_set() and second.pcm and not first.done.is_set() and not first.pcm
+        gradium._on_message({"type": "error", "client_req_id": "a", "message": "Internal server error", "code": 1011})
+        assert first.error == "Internal server error" and second.error is None
+
+    async def test_setup_errors_and_a_closed_socket_release_the_ready_wait(self):
+        import asyncio
+
+        import pytest
+
+        from tts_bench.adapters.base import AdapterError
+        from tts_bench.adapters.gradium import GradiumAdapter
+
+        for frame in ({"type": "error", "message": "Invalid API key", "code": 1008}, None):
+            gradium, _ = adapter(GradiumAdapter, "default", "v")
+            opening = asyncio.create_task(gradium.open_context("main"))
+            await asyncio.sleep(0.01)
+            if frame is None:
+                gradium._on_closed("connection lost")
+            else:
+                gradium._on_message(frame)
+            with pytest.raises(AdapterError, match="gradium refused context main"):
+                await asyncio.wait_for(opening, 1.0)
+
+    async def test_account_errors_are_refusals_but_policy_errors_on_input_are_failures(self):
+        import asyncio
+
+        from tts_bench.adapters.gradium import GradiumAdapter
+        from tts_bench.probes import ProbeResult
+        from tts_bench.runner import _refused
+
+        for error in ("API key is revoked or expired", "Missing API key", "Missing subscription", "Insufficient balance",
+                      "Quota exceeded", "Rate limit exceeded", "Invalid audio format"):
+            gradium, _ = adapter(GradiumAdapter, "default", "v")
+            opening = asyncio.create_task(gradium.open_context("main"))
+            await asyncio.sleep(0.01)
+            gradium._on_message({"type": "ready", "client_req_id": "main"})
+            synthesis = await opening
+            await gradium.send("main", "Hello.")
+            gradium._on_message({"type": "error", "client_req_id": "main", "message": error, "code": 1008})
+            result = _refused(ProbeResult("one_shot", verdict="fail", syntheses=[synthesis]))
+            assert synthesis.done.is_set() and bool(result.void) == (error != "Invalid audio format")
+            assert result.verdict == ("fail" if error == "Invalid audio format" else None)
+
+    async def test_pcm_rates_match_the_setup_and_cancel_is_a_declared_exclusion(self):
+        import asyncio
+
+        from tts_bench.adapters.gradium import GradiumAdapter
+
+        for rate in GradiumAdapter.native_rates:
+            gradium, sent = adapter(GradiumAdapter, "default", "v")
+            gradium.config = TTSConfig("default", "v", sample_rate=rate)
+            opening = asyncio.create_task(gradium.open_context("main"))
+            await asyncio.sleep(0.01)
+            assert sent[0]["output_format"] == ("pcm" if rate == 48000 else f"pcm_{rate}")
+            gradium._on_message({"type": "ready", "client_req_id": "main"})
+            await opening
+        assert gradium.url == "wss://api.gradium.ai/api/speech/tts" and gradium._headers() == {"x-api-key": "unused"}
+        assert GradiumAdapter.unsupported_reason(gradium.config, ("cancel",)) == "gradium has no cancel"
+        assert GradiumAdapter.unsupported_reason(gradium.config, ("streamed_input", "continuation")) is None
+        assert GradiumAdapter.native_mulaw_8k and not GradiumAdapter.ends_on_quiet
+
+    async def test_a_reusable_socket_streams_two_syntheses_without_logging_the_key(self, tmp_path):
+        import base64
+        import json
+
+        import websockets
+
+        from tts_bench.adapters.gradium import GradiumAdapter
+
+        seen: list[dict] = []
+        headers: dict = {}
+        pcm = b"\x01\x00" * 240
+
+        async def serve(ws):
+            headers.update(ws.request.headers)
+            async for raw in ws:
+                frame = json.loads(raw)
+                seen.append(frame)
+                stamp = {"client_req_id": frame["client_req_id"]}
+                if frame["type"] == "setup":
+                    await ws.send(json.dumps({"type": "ready", "sample_rate": 24000, **stamp}))
+                elif frame["type"] == "text":
+                    await ws.send(json.dumps({"type": "audio", "audio": base64.b64encode(pcm).decode(), **stamp}))
+                elif frame["type"] == "end_of_stream":
+                    await ws.send(json.dumps({"type": "end_of_stream", **stamp}))
+
+        clock = Clock()
+        log = EventLog(clock, raw_path=tmp_path / "raw.jsonl")
+        gradium = GradiumAdapter(TTSConfig("default", "NbpkqMVS3CJeq2j8"), "secret-key", log, clock)
+        async with websockets.serve(serve, "127.0.0.1", 0) as server:
+            gradium.url = f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}"
+            async with gradium:
+                for context_id in ("first", "repeat"):
+                    synthesis = await gradium.open_context(context_id)
+                    assert synthesis.t0 is None
+                    await gradium.send(context_id, "Hello ")
+                    await gradium.send(context_id, "there.")
+                    await gradium.finish(context_id)
+                    done = await gradium.wait(context_id, 5.0)
+                    assert bytes(done.pcm) == pcm * 2 and done.meta["ended_by"] == "provider"
+        assert [frame["type"] for frame in seen] == ["setup", "text", "text", "end_of_stream"] * 2
+        assert headers["x-api-key"] == "secret-key"
+        raw = (tmp_path / "raw.jsonl").read_text()
+        assert "secret-key" not in raw and "secret-key" not in str(log.events) and "<640 b64 chars>" in raw
+
+
+class TestRime:
+    async def test_concatenable_text_waits_for_one_flush_and_done_ends_the_batch(self):
+        from tts_bench.adapters.rime import RimeAdapter
+        from tts_bench.probes import Continuation
+
+        rime, sent = adapter(RimeAdapter, "coda", "astra")
+        synthesis = await rime.open_context("main")
+        assert synthesis.t0 is None and sent == []
+        for frame in Continuation.frames("Hello there. How can I help?"):
+            await rime.send("main", frame)
+        await rime.finish("main")
+        assert sent == [{"text": "Hello there. ", "contextId": "main"},
+                        {"text": "How can I help?", "contextId": "main"}, {"operation": "flush"}]
+        rime._on_message({"type": "chunk", "contextId": "main", "data": "AQABAA=="})
+        rime._on_message({"type": "timestamps", "contextId": "main", "word_timestamps": {"words": ["Hello"]}})
+        assert bytes(synthesis.pcm) == b"\x01\x00" * 2 and not synthesis.done.is_set()
+        rime._on_message({"type": "done", "contextId": "main"})
+        assert synthesis.done.is_set() and synthesis.t_done is not None
+
+    async def test_errors_are_recorded_and_clear_is_not_offered_as_a_cancel(self):
+        from tts_bench.adapters.rime import RimeAdapter
+        from tts_bench.registry import PENDING
+
+        rime, _ = adapter(RimeAdapter, "mistv3", "astra")
+        synthesis = await rime.open_context("main")
+        rime._on_message({"type": "error", "message": "Speaker not found"})
+        assert synthesis.error == "Speaker not found" and synthesis.done.is_set()
+        for model in PROVIDERS["rime"].models:
+            for rate in RimeAdapter.native_rates:
+                rime.config = TTSConfig(model.model, model.voice, sample_rate=rate)
+                assert f"modelId={model.model}" in rime.url and f"samplingRate={rate}" in rime.url
+                assert "audioFormat=pcm" in rime.url and "segment=never" in rime.url
+                assert RimeAdapter.unsupported_reason(rime.config, ("streamed_input", "continuation")) is None
+        assert rime.url.startswith("wss://users-ws.rime.ai/ws3?") and rime._headers() == {"Authorization": "Bearer unused"}
+        assert RimeAdapter.unsupported_reason(rime.config, ("cancel",)) == "rime has no cancel"
+        assert RimeAdapter.native_mulaw_8k and not RimeAdapter.ends_on_quiet and "rime" not in PENDING
+
+    async def test_a_reusable_socket_keeps_repeat_audio_separate_and_the_key_out_of_logs(self, tmp_path):
+        import base64
+        import json
+
+        import websockets
+
+        from tts_bench.adapters.rime import RimeAdapter
+
+        seen: list[dict] = []
+        headers: dict = {}
+        pcm = b"\x01\x00" * 240
+
+        async def serve(ws):
+            headers.update(ws.request.headers)
+            context_id = None
+            async for raw in ws:
+                frame = json.loads(raw)
+                seen.append(frame)
+                if "text" in frame:
+                    context_id = frame["contextId"]
+                elif frame.get("operation") == "flush":
+                    await ws.send(json.dumps({"type": "chunk", "contextId": context_id, "data": base64.b64encode(pcm).decode()}))
+                    await ws.send(json.dumps({"type": "done", "contextId": context_id}))
+
+        clock = Clock()
+        log = EventLog(clock, raw_path=tmp_path / "raw.jsonl")
+        rime = RimeAdapter(TTSConfig("coda", "astra"), "secret-key", log, clock)
+        async with websockets.serve(serve, "127.0.0.1", 0) as server:
+            rime.base = f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}"
+            async with rime:
+                for context_id in ("first", "repeat"):
+                    synthesis = await rime.open_context(context_id)
+                    assert synthesis.t0 is None
+                    await rime.send(context_id, "Hello ")
+                    await rime.send(context_id, "there.")
+                    await rime.finish(context_id)
+                    done = await rime.wait(context_id, 5.0)
+                    assert bytes(done.pcm) == pcm and done.meta["ended_by"] == "provider"
+        assert len(seen) == 6 and headers["authorization"] == "Bearer secret-key"
+        raw = (tmp_path / "raw.jsonl").read_text()
+        assert "secret-key" not in raw and "secret-key" not in str(log.events) and "<640 b64 chars>" in raw
+
+
+class TestFishAudio:
+    async def test_start_is_before_t0_and_only_finish_ends_the_utterance(self):
+        import msgpack
+
+        from tts_bench.adapters.fish_audio import FishAudioAdapter
+        from tts_bench.registry import SARAH
+
+        fish, sent = adapter(FishAudioAdapter, "s2.1-pro", SARAH)
+        synthesis = await fish.open_context("main")
+        assert synthesis.t0 is None and sent == [{"event": "start", "request": {
+            "text": "", "reference_id": SARAH, "format": "pcm", "sample_rate": 24000,
+            "latency": "balanced", "condition_on_previous_chunks": True}}]
+        await fish.send("main", "Hello ")
+        await fish.send("main", "there.")
+        await fish.finish("main")
+        assert sent[1:] == [{"event": "text", "text": "Hello "}, {"event": "text", "text": "there."}, {"event": "stop"}]
+        fish._on_binary(msgpack.packb({"event": "audio", "audio": b"\x01\x00" * 2}, use_bin_type=True))
+        fish._on_binary(msgpack.packb({"event": "future_event"}, use_bin_type=True))
+        assert bytes(synthesis.pcm) == b"\x01\x00" * 2 and not synthesis.done.is_set()
+        fish._on_binary(msgpack.packb({"event": "finish", "reason": "stop"}, use_bin_type=True))
+        assert synthesis.done.is_set() and synthesis.t_done is not None
+
+    async def test_finish_error_is_a_failure_and_cancel_and_mulaw_are_excluded(self):
+        from tts_bench.adapters.fish_audio import FishAudioAdapter
+        from tts_bench.registry import PENDING, SARAH
+
+        fish, sent = adapter(FishAudioAdapter, "s2.1-pro", SARAH)
+        synthesis = await fish.open_context("main")
+        fish._on_message({"event": "finish", "reason": "error"})
+        assert synthesis.error and synthesis.done.is_set() and synthesis.t_done is None
+        assert fish.url == "wss://api.fish.audio/v1/tts/live"
+        assert fish._headers() == {"Authorization": "Bearer unused", "model": "s2.1-pro"}
+        for rate in FishAudioAdapter.native_rates:
+            fish, sent = adapter(FishAudioAdapter, "s2.1-pro", SARAH)
+            fish.config = TTSConfig("s2.1-pro", SARAH, sample_rate=rate, options=(("latency", "low"),))
+            await fish.open_context("main")
+            assert sent[0]["request"]["sample_rate"] == rate and sent[0]["request"]["latency"] == "low"
+            assert FishAudioAdapter.unsupported_reason(fish.config, ("streamed_input", "continuation")) is None
+        assert FishAudioAdapter.unsupported_reason(fish.config, ("cancel",)) == "fish-audio has no cancel"
+        assert FishAudioAdapter.unsupported_reason(TTSConfig("s2.1-pro", SARAH, sample_rate=48000)) == "fish-audio does not emit 48000 Hz PCM"
+        assert not FishAudioAdapter.native_mulaw_8k and not FishAudioAdapter.ends_on_quiet and "fish-audio" not in PENDING
+
+    async def test_messagepack_streams_two_syntheses_on_two_sockets_without_logging_the_key(self, tmp_path):
+        import msgpack
+        import websockets
+
+        from tts_bench.adapters.fish_audio import FishAudioAdapter
+        from tts_bench.registry import SARAH
+
+        seen: list[list[dict]] = []
+        headers: list[dict] = []
+        pcm = b"\x01\x00" * 240
+
+        async def serve(ws):
+            frames: list[dict] = []
+            seen.append(frames)
+            headers.append(dict(ws.request.headers))
+            async for raw in ws:
+                assert isinstance(raw, bytes)
+                frame = msgpack.unpackb(raw, raw=False)
+                frames.append(frame)
+                if frame["event"] == "text":
+                    await ws.send(msgpack.packb({"event": "audio", "audio": pcm}, use_bin_type=True))
+                elif frame["event"] == "stop":
+                    await ws.send(msgpack.packb({"event": "finish", "reason": "stop"}, use_bin_type=True))
+                    await ws.close()
+
+        clock = Clock()
+        log = EventLog(clock, raw_path=tmp_path / "raw.jsonl")
+        fish = FishAudioAdapter(TTSConfig("s2.1-pro", SARAH), "secret-key", log, clock)
+        async with websockets.serve(serve, "127.0.0.1", 0) as server:
+            fish.url = f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}"
+            async with fish:
+                for context_id in ("first", "repeat"):
+                    synthesis = await fish.open_context(context_id)
+                    assert synthesis.t0 is None
+                    await fish.send(context_id, "Hello ")
+                    await fish.send(context_id, "there.")
+                    await fish.finish(context_id)
+                    done = await fish.wait(context_id, 5.0)
+                    assert bytes(done.pcm) == pcm * 2 and done.meta["ended_by"] == "provider"
+        assert [[frame["event"] for frame in frames] for frames in seen] == [["start", "text", "text", "stop"]] * 2
+        assert all(h["authorization"] == "Bearer secret-key" and h["model"] == "s2.1-pro" for h in headers)
+        raw = (tmp_path / "raw.jsonl").read_text()
+        assert "secret-key" not in raw and "secret-key" not in str(log.events) and "<480 bytes>" in raw
+
+
 class TestSmallest:
     async def test_frames_continue_one_context_and_complete_does_not_end_it(self):
         from tts_bench.adapters.smallest import SmallestAdapter

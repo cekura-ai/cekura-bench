@@ -126,7 +126,13 @@ async function sdk(config) {
   const { Sandbox } = await import(pathToFileURL(join(dir, 'dist/index.js')));
   const { getAuth, OAuth, updateAuthConfig } = await import(pathToFileURL(join(dir, 'dist/auth/index.js')));
   let auth = getAuth();
-  if (!auth?.token) throw new Error('A Vercel CLI login is required');
+  // An access token in the environment stands in for a CLI login; it does not
+  // expire mid-campaign. VERCEL_PROJECT_ID may name another project in the team.
+  if (!auth?.token && process.env.VERCEL_TOKEN) {
+    return { Sandbox, account: { token: process.env.VERCEL_TOKEN, teamId: config.teamId,
+                                 projectId: process.env.VERCEL_PROJECT_ID || config.projectId } };
+  }
+  if (!auth?.token) throw new Error('A Vercel CLI login or VERCEL_TOKEN is required');
   // The login's access token lasts hours, a campaign can outlast it, and an
   // expired one fails every poll with 403 while the sandboxes run on. Renew it
   // up front whenever less than REFRESH_MARGIN_MS is left, as the CLI would.

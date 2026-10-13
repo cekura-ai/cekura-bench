@@ -25,9 +25,12 @@ from tts_bench.adapters.elevenlabs import ElevenLabsAdapter
 from tts_bench.adapters.elevenlabs_dialogue import ElevenLabsDialogueAdapter
 from tts_bench.adapters.elevenlabs_dialogue_multi import ElevenLabsDialogueMultiAdapter
 from tts_bench.adapters.fake import FakeTTSAdapter
+from tts_bench.adapters.fish_audio import FishAudioAdapter
 from tts_bench.adapters.gemini_tts import GeminiTTSAdapter
+from tts_bench.adapters.gradium import GradiumAdapter
 from tts_bench.adapters.inworld import InworldAdapter
 from tts_bench.adapters.openai_tts import OpenAITTSAdapter
+from tts_bench.adapters.rime import RimeAdapter
 from tts_bench.adapters.smallest import SmallestAdapter
 from tts_bench.adapters.soniox import SonioxAdapter
 from tts_bench.adapters.xai import XaiTTSAdapter
@@ -60,6 +63,9 @@ class ProviderEntry:
 # model string, so there the voice is the model.
 SKYLAR = "db6b0ed5-d5d3-463d-ae85-518a07d3c2b4"       # Cartesia
 RACHEL = "21m00Tcm4TlvDq8ikWAM"                       # ElevenLabs
+HARPER = "4SZHfMpw-p46Ywgs"     # Gradium, from its recommended voices
+ASTRA = "astra"                                      # Rime, female US English on Coda and Mist v3
+SARAH = "933563129e564b19a115bedd57b7406a"              # Fish Official, female US English
 
 PROVIDERS: dict[str, ProviderEntry] = {
     "fake": ProviderEntry("fake", FakeTTSAdapter, "FAKE_KEY_UNUSED", (Model("scripted", "tone"),)),
@@ -110,6 +116,29 @@ PROVIDERS: dict[str, ProviderEntry] = {
         (Model("inworld-tts-2-flash", "Brooke"),),
         notes="bidirectional websocket, contexts by contextId; raw PCM; no cancel (close_context flushes first)",
     ),
+    "gradium": ProviderEntry(
+        "gradium", GradiumAdapter, "GRADIUM_API_KEY",
+        (Model("default", HARPER),),
+        notes="websocket, contexts by client_req_id; setup/ready before t0; streamed input and continuation "
+              "via text frames in one request (split on whitespace, punctuation attached); <flush> forces generation; "
+              "end_of_stream ends input; no cancel (unscoped end waits for active requests); "
+              "limits guide: 3000 s per session; reference free-tier cap: 1500 characters; paragraph cohort fits both",
+    ),
+    "rime": ProviderEntry(
+        "rime", RimeAdapter, "RIME_API_KEY",
+        (Model("coda", ASTRA), Model("mistv3", ASTRA)),
+        notes="/ws3 JSON websocket; segment=never buffers concatenable text until finish flushes; "
+              "done ends the batch; sequential contexts; no cancel (clear only drops unsubmitted text); "
+              "Coda replaces the retired Arcana family",
+    ),
+    "fish-audio": ProviderEntry(
+        "fish-audio", FishAudioAdapter, "FISH_AUDIO_API_KEY",
+        (Model("s2.1-pro", SARAH),),
+        notes="MessagePack websocket; start before t0; text pieces conditioned on previous audio; "
+              "latency=balanced by default; stop drains input, finish ends output and closes the socket; "
+              "new socket per utterance, including repeat; no cancel/clear; paid production model "
+              "(s2.1-pro-free has no TTFA or DPA guarantees)",
+    ),
     "xai": ProviderEntry(
         "xai", XaiTTSAdapter, "XAI_API_KEY",
         (Model("grok-tts", "carina"),),
@@ -139,8 +168,8 @@ PROVIDERS: dict[str, ProviderEntry] = {
 }
 
 # Protocols not yet spoken. Listed so the gap is a fact, not an oversight.
-PENDING = ("qwen-audio", "speechify", "rime", "minimax",
-           "murf", "fish-audio", "hume", "lmnt", "google-cloud-tts", "polly")
+PENDING = ("qwen-audio", "speechify", "minimax",
+           "murf", "hume", "lmnt", "google-cloud-tts", "polly")
 
 
 def lineup() -> list[tuple[str, Model]]:

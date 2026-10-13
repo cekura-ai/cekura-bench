@@ -81,3 +81,5 @@ Tests that need local model assets or cached renders skip when those are absent.
 ## Licences
 
 Code: as the repository. Sesame TurnBench data is under its own non-commercial licence and is used only to calibrate timing; it is not redistributed here.
+
+Not affiliated with or endorsed by Sesame or Mundo AI. Sesame TurnBench's scorer is used under its MIT licence.

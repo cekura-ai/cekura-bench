@@ -1,0 +1,16 @@
+.venv/
+.uv-cache/
+__pycache__/
+.pytest_cache/
+*.egg-info/
+/runs/
+.env
+.DS_Store
+# Model assets fetched by `turn-bench setup <model>` (pinned in the adapter, hashed on use).
+/.assets/
+# Hash cache written by dataset manifest verification (turn_bench/manifest.py).
+/.cache/
+# Built authored datasets (audio): regenerate with `turn-bench author build`.
+/datasets/authored/build/
+# Hidden holdout split of the authored dataset (ids, holdout dataset): never committed.
+/datasets/authored/holdout/

@@ -1,0 +1,96 @@
+{
+  "schema_version": 2,
+  "id": "NB-13",
+  "conversation_id": "813",
+  "title": "A fast talker (speed 1.15 to 1.2) with brief mid-turn pauses",
+  "family": "pauses",
+  "subtype": "fast_talker",
+  "difficulty": "medium",
+  "tags": [
+    "eot",
+    "mid-turn-pause",
+    "fast-speech"
+  ],
+  "pairings": [
+    {
+      "caller": "f-us",
+      "agent": "m-us"
+    },
+    {
+      "caller": "m-us",
+      "agent": "f-gb"
+    },
+    {
+      "caller": "f-gb",
+      "agent": "f-us"
+    },
+    {
+      "caller": "m-in",
+      "agent": "f-us"
+    },
+    {
+      "caller": "f-au",
+      "agent": "m-us"
+    }
+  ],
+  "timing": {
+    "start_s": 0.5,
+    "tail_s": 1.0,
+    "gap_range_s": [
+      0.5,
+      1.0
+    ],
+    "gap_seed": 2026
+  },
+  "items": [
+    {
+      "id": "g",
+      "speaker": "agent",
+      "text": "Hi, thanks for calling. How can I help?"
+    },
+    {
+      "id": "c1",
+      "speaker": "caller",
+      "text": "Hi, quick one, I need to push my appointment back by a week <1s> and I also want to double check the address.",
+      "speed": 1.2
+    },
+    {
+      "id": "a1",
+      "speaker": "agent",
+      "text": "Sure. Pushing it back a week puts it on the fourteenth at the same time. Shall I do that?"
+    },
+    {
+      "id": "c2",
+      "speaker": "caller",
+      "text": "Yes, do that, <1.2s> and the address is the one on Market Street, right?",
+      "speed": 1.15
+    },
+    {
+      "id": "a2",
+      "speaker": "agent",
+      "text": "That's right, it is the Market Street branch, on the second floor. Anything else you need?"
+    },
+    {
+      "id": "c3",
+      "speaker": "caller",
+      "text": "One more, can I get the confirmation by text, <1.1s> and the reminder too, <1.3s> both by text?",
+      "speed": 1.2
+    },
+    {
+      "id": "a3",
+      "speaker": "agent",
+      "text": "Both by text, done. The confirmation is going out now and the reminder will come the day before. Anything else?"
+    },
+    {
+      "id": "cz",
+      "speaker": "caller",
+      "text": "Nope, that's it, thanks, bye.",
+      "speed": 1.15
+    },
+    {
+      "id": "az",
+      "speaker": "agent",
+      "text": "Thanks, goodbye."
+    }
+  ]
+}

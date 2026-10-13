@@ -71,7 +71,8 @@ print(json.dumps(out))`;
 export function groups(entries, only) {
   const by = new Map();
   for (const e of entries) {
-    if (only && !only.includes(e.provider)) continue;
+    // --providers takes a provider, or provider/model for a single model of its lineup.
+    if (only && !only.includes(e.provider) && !only.includes(`${e.provider}/${e.model}`)) continue;
     const name = e.credential.toLowerCase().replace(/_(api_key|authorization|key)$/, '').replace(/_/g, '-');
     if (!by.has(e.credential)) by.set(e.credential, { name, credential: e.credential, hosts: new Set(), models: [] });
     const g = by.get(e.credential);

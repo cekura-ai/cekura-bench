@@ -66,6 +66,7 @@ RACHEL = "21m00Tcm4TlvDq8ikWAM"                       # ElevenLabs
 HARPER = "4SZHfMpw-p46Ywgs"     # Gradium, from its recommended voices
 ASTRA = "astra"                                      # Rime, female US English on Coda and Mist v3
 SARAH = "933563129e564b19a115bedd57b7406a"              # Fish Official, female US English
+DELIA = "c70cfb98867a4bfb9ae20d2401257b92"              # Fish Audio, female US English, from its Drama 3 voice cast
 
 PROVIDERS: dict[str, ProviderEntry] = {
     "fake": ProviderEntry("fake", FakeTTSAdapter, "FAKE_KEY_UNUSED", (Model("scripted", "tone"),)),
@@ -133,7 +134,7 @@ PROVIDERS: dict[str, ProviderEntry] = {
     ),
     "fish-audio": ProviderEntry(
         "fish-audio", FishAudioAdapter, "FISH_AUDIO_API_KEY",
-        (Model("s2.1-pro", SARAH),),
+        (Model("s2.1-pro", SARAH), Model("drama-3-preview", DELIA)),
         notes="MessagePack websocket; start before t0; text pieces conditioned on previous audio; "
               "latency=balanced by default; stop drains input, finish ends output and closes the socket; "
               "new socket per utterance, including repeat; no cancel/clear; paid production model "

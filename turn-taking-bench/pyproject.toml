@@ -1,0 +1,73 @@
+[project]
+name = "turn-taking-bench"
+version = "0.1.0"
+description = "Streaming turn-taking benchmark harness scored with Sesame's TurnBench official scorer"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+  # Sesame's TurnBench: dataset access, submission format and the official scorer.
+  # Pinned to a commit; scores are only comparable across the same scorer version.
+  "turnbench @ git+https://github.com/SesameAILabs/turnbench@38a6f874322430cb3ca71d8a52aa1e636e88bad8",
+  "numpy==2.4.6",
+  "soundfile==0.13.1",
+  "pyarrow==24.0.0",
+  "huggingface-hub==1.17.0",
+]
+
+[project.optional-dependencies]
+# Smart Turn v3 adapter (turn_taking_bench/adapters/smart_turn_v3.py): the same
+# libraries Sesame's reference pipeline runs on, CPU builds only. torch is the
+# reference's resampler and the Whisper log-mel front end; onnxruntime runs the
+# Silero VAD and the Smart Turn classifier. Install with `uv sync --extra smart-turn`.
+smart-turn = [
+  "torch==2.7.0",
+  "torchaudio==2.7.0",
+  "onnxruntime==1.23.2",
+  "transformers==5.17.0",
+]
+# Amazon Nova 2 Sonic adapter (turn_taking_bench/s2s/nova_sonic.py): AWS's Bedrock
+# runtime SDK, the only client for InvokeModelWithBidirectionalStream (boto3 has
+# no bidirectional event stream). Pinned inside the range the reference agent's
+# pipecat-ai[aws-nova-sonic]==1.11.0 accepts. `uv sync --extra s2s-nova`.
+s2s-nova = [
+  "aws-sdk-bedrock-runtime==0.9.0",
+]
+
+# Speech-to-speech models (turn_taking_bench/s2s): the provider sessions are opened by
+# the service bench's adapters (service/adapters/*, imported through
+# turn_taking_bench.author.service_bridge), which speak the providers' websockets.
+# Install with `uv sync --extra s2s`.
+s2s = [
+  "websockets==17.2",
+  # Deepslate Opal adapter (turn_taking_bench/s2s/deepslate.py)
+  "deepslate-core==0.1.20",
+  # Amazon Nova 2 Sonic adapter (turn_taking_bench/s2s/nova_sonic.py)
+  "aws-sdk-bedrock-runtime==0.9.0",
+]
+
+[dependency-groups]
+dev = ["pytest==9.0.3"]
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+torchaudio = [{ index = "pytorch-cpu" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[project.scripts]
+turn-taking-bench = "turn_taking_bench.cli:main"
+
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/turn_taking_bench"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

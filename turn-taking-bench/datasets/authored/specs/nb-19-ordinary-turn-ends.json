@@ -1,0 +1,100 @@
+{
+  "schema_version": 2,
+  "id": "NB-19",
+  "conversation_id": "819",
+  "title": "Ordinary question and statement ends with no pauses, backchannels or barge-ins",
+  "family": "turn_ends",
+  "subtype": "plain",
+  "difficulty": "easy",
+  "tags": [
+    "eot"
+  ],
+  "pairings": [
+    {
+      "caller": "f-us",
+      "agent": "m-us"
+    },
+    {
+      "caller": "m-us",
+      "agent": "f-gb"
+    },
+    {
+      "caller": "f-gb",
+      "agent": "f-us"
+    },
+    {
+      "caller": "m-in",
+      "agent": "f-us"
+    },
+    {
+      "caller": "f-au",
+      "agent": "m-us"
+    }
+  ],
+  "timing": {
+    "start_s": 0.5,
+    "tail_s": 1.0,
+    "gap_range_s": [
+      0.5,
+      1.0
+    ],
+    "gap_seed": 2026
+  },
+  "items": [
+    {
+      "id": "g",
+      "speaker": "agent",
+      "text": "Thanks for calling the support line. What can I help you with?"
+    },
+    {
+      "id": "c1",
+      "speaker": "caller",
+      "text": "Hi, I'd like to know what time you open on Saturdays."
+    },
+    {
+      "id": "a1",
+      "speaker": "agent",
+      "text": "On Saturdays we open at nine in the morning and close at one in the afternoon."
+    },
+    {
+      "id": "c2",
+      "speaker": "caller",
+      "text": "Great, that works for me. Can I book a Saturday slot now?"
+    },
+    {
+      "id": "a2",
+      "speaker": "agent",
+      "text": "You can. This Saturday has openings at nine, ten and eleven. Which would you like?"
+    },
+    {
+      "id": "c3",
+      "speaker": "caller",
+      "text": "Ten o'clock, please. I'll have my son with me."
+    },
+    {
+      "id": "a3",
+      "speaker": "agent",
+      "text": "Ten o'clock on Saturday is booked, and your son is welcome. Will you need parking?"
+    },
+    {
+      "id": "c4",
+      "speaker": "caller",
+      "text": "Yes, I'll be driving. Is there a car park nearby?"
+    },
+    {
+      "id": "a4",
+      "speaker": "agent",
+      "text": "There is a car park directly behind the building, and the first hour is free. Anything else I can help with?"
+    },
+    {
+      "id": "cz",
+      "speaker": "caller",
+      "text": "That's all I needed. Thanks very much, bye."
+    },
+    {
+      "id": "az",
+      "speaker": "agent",
+      "text": "Thank you, goodbye."
+    }
+  ]
+}

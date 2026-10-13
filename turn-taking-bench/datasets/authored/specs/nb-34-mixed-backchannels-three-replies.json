@@ -1,0 +1,163 @@
+{
+  "schema_version": 2,
+  "id": "NB-34",
+  "conversation_id": "834",
+  "title": "Three backchannels in each of three long replies: sure, got it, yep, true, okay, mm",
+  "family": "backchannels",
+  "subtype": "single_word",
+  "difficulty": "medium",
+  "tags": [
+    "int",
+    "backchannel"
+  ],
+  "pairings": [
+    {
+      "caller": "f-us",
+      "agent": "m-us"
+    },
+    {
+      "caller": "m-us",
+      "agent": "f-gb"
+    },
+    {
+      "caller": "f-gb",
+      "agent": "f-us"
+    },
+    {
+      "caller": "m-in",
+      "agent": "f-us"
+    },
+    {
+      "caller": "f-au",
+      "agent": "m-us"
+    }
+  ],
+  "timing": {
+    "start_s": 0.5,
+    "tail_s": 1.0,
+    "gap_range_s": [
+      0.5,
+      1.0
+    ],
+    "gap_seed": 2026
+  },
+  "items": [
+    {
+      "id": "g",
+      "speaker": "agent",
+      "text": "Good afternoon, thanks for calling the clinic. How can I help?"
+    },
+    {
+      "id": "c1",
+      "speaker": "caller",
+      "text": "Hi, I've got a procedure booked next month and nobody has told me how to prepare for it. Could you go through it?"
+    },
+    {
+      "id": "a1",
+      "speaker": "agent",
+      "text": "Certainly, I will take you through the preparation. In the week before, please keep taking your usual medication unless the letter you received says otherwise, and try to avoid any new supplements or herbal remedies, because some of them can affect the results. Two days before, you will get a call from the nurse to go over any questions and to confirm the time. The evening before, have a light meal and nothing after midnight apart from water."
+    },
+    {
+      "id": "b1",
+      "speaker": "caller",
+      "kind": "backchannel",
+      "text": "Sure.",
+      "into": "a1",
+      "offset_s": 3.0
+    },
+    {
+      "id": "b2",
+      "speaker": "caller",
+      "kind": "backchannel",
+      "text": "Got it.",
+      "into": "a1",
+      "offset_s": 10.0
+    },
+    {
+      "id": "b3",
+      "speaker": "caller",
+      "kind": "backchannel",
+      "text": "Okay.",
+      "into": "a1",
+      "offset_s": 17.5
+    },
+    {
+      "id": "c2",
+      "speaker": "caller",
+      "text": "That's clear. And on the day itself, what happens when I arrive?"
+    },
+    {
+      "id": "a2",
+      "speaker": "agent",
+      "text": "On the day, come to the main entrance and check in at the desk on the ground floor, where they will take your name and confirm your date of birth. A nurse will then take you through to the waiting area, check your blood pressure and go through a short form with you. After that you change into a gown, and the procedure itself usually starts within half an hour of your appointment time, although it can run a little late if the morning has been busy."
+    },
+    {
+      "id": "b4",
+      "speaker": "caller",
+      "kind": "backchannel",
+      "text": "Yep.",
+      "into": "a2",
+      "offset_s": 4.0
+    },
+    {
+      "id": "b5",
+      "speaker": "caller",
+      "kind": "backchannel",
+      "text": "Mm.",
+      "into": "a2",
+      "offset_s": 11.5
+    },
+    {
+      "id": "b6",
+      "speaker": "caller",
+      "kind": "backchannel",
+      "text": "True.",
+      "into": "a2",
+      "offset_s": 18.5
+    },
+    {
+      "id": "c3",
+      "speaker": "caller",
+      "text": "And afterwards? Will I be able to get home on my own?"
+    },
+    {
+      "id": "a3",
+      "speaker": "agent",
+      "text": "Afterwards you will rest in the recovery area for about an hour while the nurse keeps an eye on you. Because of the sedation, you will not be able to drive, and we ask that someone collects you and stays with you for the rest of the day. You will be given a short written summary before you leave, and the full results are sent to you and to your doctor within two weeks. If anything is urgent, the clinic will call you directly rather than waiting for the letter."
+    },
+    {
+      "id": "b7",
+      "speaker": "caller",
+      "kind": "backchannel",
+      "text": "Right.",
+      "into": "a3",
+      "offset_s": 3.5
+    },
+    {
+      "id": "b8",
+      "speaker": "caller",
+      "kind": "backchannel",
+      "text": "Okay.",
+      "into": "a3",
+      "offset_s": 10.5
+    },
+    {
+      "id": "b9",
+      "speaker": "caller",
+      "kind": "backchannel",
+      "text": "Mm-hmm.",
+      "into": "a3",
+      "offset_s": 18.0
+    },
+    {
+      "id": "cz",
+      "speaker": "caller",
+      "text": "That's really helpful, thank you. Bye."
+    },
+    {
+      "id": "az",
+      "speaker": "agent",
+      "text": "You're welcome. Goodbye."
+    }
+  ]
+}

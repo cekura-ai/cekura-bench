@@ -1,0 +1,90 @@
+{
+  "schema_version": 2,
+  "id": "TB-09",
+  "conversation_id": "909",
+  "title": "Barge-in 1.5 s into a long agent answer, then a redirect",
+  "family": "barge_in",
+  "difficulty": "easy",
+  "tags": [
+    "int",
+    "barge-in",
+    "eot"
+  ],
+  "pairings": [
+    {
+      "caller": "f-us",
+      "agent": "m-us"
+    },
+    {
+      "caller": "m-us",
+      "agent": "f-gb"
+    },
+    {
+      "caller": "f-gb",
+      "agent": "f-us"
+    },
+    {
+      "caller": "m-in",
+      "agent": "f-us"
+    },
+    {
+      "caller": "f-au",
+      "agent": "m-us"
+    }
+  ],
+  "timing": {
+    "start_s": 0.5,
+    "tail_s": 1.0,
+    "gap_range_s": [
+      0.5,
+      1.0
+    ],
+    "gap_seed": 2026
+  },
+  "items": [
+    {
+      "id": "g",
+      "speaker": "agent",
+      "text": "Thanks for calling. How can I help you today?"
+    },
+    {
+      "id": "c1",
+      "speaker": "caller",
+      "text": "Hi. Before we get into anything, could you walk me through everything you can help me with on this line, in detail? Take your time."
+    },
+    {
+      "id": "a1",
+      "speaker": "agent",
+      "text": "Absolutely, happy to. On this line I can help you with bookings: making a new appointment, moving one to a different day or time, and cancelling one you no longer need. I can also look up the details of anything you already have with us, update the contact information we hold for you, and send confirmations by email or text message. If something needs a specialist, I can take a message and arrange a call back from the right team."
+    },
+    {
+      "id": "x1",
+      "speaker": "caller",
+      "kind": "barge_in",
+      "text": "Sorry, stop. I actually just have one quick question.",
+      "into": "a1",
+      "offset_s": 1.5,
+      "stop_delay_s": 0.4
+    },
+    {
+      "id": "c2",
+      "speaker": "caller",
+      "text": "Can changes to something I set up with you be made over the phone, or do I need to do it another way?"
+    },
+    {
+      "id": "a2",
+      "speaker": "agent",
+      "text": "Yes, changes can be made right here over the phone. Just tell me what you would like changed and I will take care of it for you."
+    },
+    {
+      "id": "cz",
+      "speaker": "caller",
+      "text": "Okay, that's all I needed. Thanks, bye."
+    },
+    {
+      "id": "az",
+      "speaker": "agent",
+      "text": "You're welcome. Goodbye."
+    }
+  ]
+}

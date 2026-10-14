@@ -1,0 +1,106 @@
+{
+  "schema_version": 2,
+  "id": "TB-15",
+  "conversation_id": "915",
+  "title": "Late barge-in on the agent's goodbye",
+  "family": "barge_in",
+  "difficulty": "hard",
+  "tags": [
+    "int",
+    "barge-in",
+    "eot",
+    "goodbye"
+  ],
+  "pairings": [
+    {
+      "caller": "f-us",
+      "agent": "m-us"
+    },
+    {
+      "caller": "m-us",
+      "agent": "f-gb"
+    },
+    {
+      "caller": "f-gb",
+      "agent": "f-us"
+    },
+    {
+      "caller": "m-in",
+      "agent": "f-us"
+    },
+    {
+      "caller": "f-au",
+      "agent": "m-us"
+    }
+  ],
+  "timing": {
+    "start_s": 0.5,
+    "tail_s": 1.0,
+    "gap_range_s": [
+      0.5,
+      1.0
+    ],
+    "gap_seed": 2026
+  },
+  "items": [
+    {
+      "id": "g",
+      "speaker": "agent",
+      "text": "Thanks for calling. How can I help you today?"
+    },
+    {
+      "id": "c1",
+      "speaker": "caller",
+      "text": "Hi, a quick one: can changes to something I set up with you be made over the phone?"
+    },
+    {
+      "id": "a1",
+      "speaker": "agent",
+      "text": "Yes, they can. Any change can be made right here over the phone, and it takes effect straight away."
+    },
+    {
+      "id": "c2",
+      "speaker": "caller",
+      "text": "Great. That is all I needed, thanks. Bye."
+    },
+    {
+      "id": "a2",
+      "speaker": "agent",
+      "text": "You're very welcome. Thanks for calling, and have a lovely rest of your day. Goodbye."
+    },
+    {
+      "id": "x1",
+      "speaker": "caller",
+      "kind": "barge_in",
+      "text": "Oh wait, sorry, one more thing before you go.",
+      "into": "a2",
+      "offset_s": 0.7,
+      "stop_delay_s": 0.35
+    },
+    {
+      "id": "a3",
+      "speaker": "agent",
+      "text": "Of course, go ahead."
+    },
+    {
+      "id": "c4",
+      "speaker": "caller",
+      "text": "Is there a way to get a confirmation of any change in writing?"
+    },
+    {
+      "id": "a4",
+      "speaker": "agent",
+      "text": "Yes. Every change comes with a written confirmation, sent by email or by text message, whichever you prefer."
+    },
+    {
+      "id": "cz",
+      "speaker": "caller",
+      "text": "Okay, that's all I needed. Thanks, bye."
+    },
+    {
+      "id": "az",
+      "speaker": "agent",
+      "text": "You're welcome. Goodbye."
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "schema_version": 2,
+  "id": "TB-04",
+  "conversation_id": "904",
+  "title": "Slow speaker (speed 0.8) with mid-turn pauses",
+  "family": "pauses",
+  "difficulty": "medium",
+  "tags": [
+    "eot",
+    "mid-turn-pause",
+    "slow-speech"
+  ],
+  "pairings": [
+    {
+      "caller": "f-us",
+      "agent": "m-us"
+    },
+    {
+      "caller": "m-us",
+      "agent": "f-gb"
+    },
+    {
+      "caller": "f-gb",
+      "agent": "f-us"
+    },
+    {
+      "caller": "m-in",
+      "agent": "f-us"
+    },
+    {
+      "caller": "f-au",
+      "agent": "m-us"
+    }
+  ],
+  "timing": {
+    "start_s": 0.5,
+    "tail_s": 1.0,
+    "gap_range_s": [
+      0.5,
+      1.0
+    ],
+    "gap_seed": 2026
+  },
+  "items": [
+    {
+      "id": "g",
+      "speaker": "agent",
+      "text": "Hello, thanks for calling. What can I do for you today?"
+    },
+    {
+      "id": "c1",
+      "speaker": "caller",
+      "text": "Hello. I am calling about something I set up with you, <1.5s> and I have a couple of questions about it.",
+      "speed": 0.8
+    },
+    {
+      "id": "a1",
+      "speaker": "agent",
+      "text": "Of course. Go ahead with your questions whenever you are ready, and I will answer each one."
+    },
+    {
+      "id": "c2",
+      "speaker": "caller",
+      "text": "First, <1.2s> how long does it usually take <1.3s> for a change to go through?",
+      "speed": 0.8
+    },
+    {
+      "id": "a2",
+      "speaker": "agent",
+      "text": "A change goes through straight away while we are on the phone. The confirmation usually arrives within a few minutes, and the new details are in place from that moment."
+    },
+    {
+      "id": "cz",
+      "speaker": "caller",
+      "text": "Okay, that's all I needed. Thanks, bye."
+    },
+    {
+      "id": "az",
+      "speaker": "agent",
+      "text": "You're welcome. Goodbye."
+    }
+  ]
+}

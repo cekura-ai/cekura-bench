@@ -1,0 +1,118 @@
+{
+  "schema_version": 2,
+  "id": "NB-21",
+  "conversation_id": "821",
+  "title": "Early barge-ins 0.5 to 2 s into each agent reply",
+  "family": "barge_in",
+  "subtype": "early",
+  "difficulty": "easy",
+  "tags": [
+    "int",
+    "barge-in",
+    "eot"
+  ],
+  "pairings": [
+    {
+      "caller": "f-us",
+      "agent": "m-us"
+    },
+    {
+      "caller": "m-us",
+      "agent": "f-gb"
+    },
+    {
+      "caller": "f-gb",
+      "agent": "f-us"
+    },
+    {
+      "caller": "m-in",
+      "agent": "f-us"
+    },
+    {
+      "caller": "f-au",
+      "agent": "m-us"
+    }
+  ],
+  "timing": {
+    "start_s": 0.5,
+    "tail_s": 1.0,
+    "gap_range_s": [
+      0.5,
+      1.0
+    ],
+    "gap_seed": 2026
+  },
+  "items": [
+    {
+      "id": "g",
+      "speaker": "agent",
+      "text": "Thank you for calling. How can I help?"
+    },
+    {
+      "id": "c1",
+      "speaker": "caller",
+      "text": "Hi, I have a few questions about changing a booking, and I'm short on time."
+    },
+    {
+      "id": "a1",
+      "speaker": "agent",
+      "text": "Let me walk you through how a change works. First, I look up the booking and read the current details back to you, so we both know what we are changing. Then I check the new day and time against what is free, and if it is available, I move the booking straight away. After that, I read the new details back to you once more, and when you are happy, I save them and send a confirmation by email or text. From then on the change is complete and nothing further is needed from you."
+    },
+    {
+      "id": "x1",
+      "speaker": "caller",
+      "kind": "barge_in",
+      "text": "Sorry, I just need to know if I can do it today.",
+      "into": "a1",
+      "offset_s": 0.6,
+      "stop_delay_s": 0.4
+    },
+    {
+      "id": "a2",
+      "speaker": "agent",
+      "text": "Yes, you can do it today, right now on this call if you like. Just tell me the new day and time you have in mind and I will check whether it is free and move the booking for you straight away."
+    },
+    {
+      "id": "x2",
+      "speaker": "caller",
+      "kind": "barge_in",
+      "text": "Okay, and is there a fee?",
+      "into": "a2",
+      "offset_s": 1.2,
+      "stop_delay_s": 0.35
+    },
+    {
+      "id": "a3",
+      "speaker": "agent",
+      "text": "There is no fee for moving a booking, as long as it is more than a day before the original slot. Inside that window there can be a small charge, which I would tell you about before doing anything."
+    },
+    {
+      "id": "x3",
+      "speaker": "caller",
+      "kind": "barge_in",
+      "text": "Right, that's fine. Next Monday at nine, please.",
+      "into": "a3",
+      "offset_s": 1.8,
+      "stop_delay_s": 0.4
+    },
+    {
+      "id": "a4",
+      "speaker": "agent",
+      "text": "Next Monday at nine is free, so I have moved you to it, and the confirmation is on its way to your email. Is there anything else I can help with while you are on the line?"
+    },
+    {
+      "id": "x4",
+      "speaker": "caller",
+      "kind": "barge_in",
+      "text": "No, that's all, thanks, bye.",
+      "into": "a4",
+      "offset_s": 2.0,
+      "stop_delay_s": 0.3
+    },
+    {
+      "id": "az",
+      "speaker": "agent",
+      "text": "Goodbye."
+    }
+  ]
+}

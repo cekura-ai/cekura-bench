@@ -1,0 +1,110 @@
+{
+  "schema_version": 2,
+  "id": "NB-23",
+  "conversation_id": "823",
+  "title": "Late barge-ins at least 10 s into long agent explanations",
+  "family": "barge_in",
+  "subtype": "late",
+  "difficulty": "medium",
+  "tags": [
+    "int",
+    "barge-in",
+    "eot",
+    "long-turn"
+  ],
+  "pairings": [
+    {
+      "caller": "f-us",
+      "agent": "m-us"
+    },
+    {
+      "caller": "m-us",
+      "agent": "f-gb"
+    },
+    {
+      "caller": "f-gb",
+      "agent": "f-us"
+    },
+    {
+      "caller": "m-in",
+      "agent": "f-us"
+    },
+    {
+      "caller": "f-au",
+      "agent": "m-us"
+    }
+  ],
+  "timing": {
+    "start_s": 0.5,
+    "tail_s": 1.0,
+    "gap_range_s": [
+      0.5,
+      1.0
+    ],
+    "gap_seed": 2026
+  },
+  "items": [
+    {
+      "id": "g",
+      "speaker": "agent",
+      "text": "Hello, you're through to the booking desk. How can I help?"
+    },
+    {
+      "id": "c1",
+      "speaker": "caller",
+      "text": "Hi, I wanted to ask how I can pay for the appointment."
+    },
+    {
+      "id": "a1",
+      "speaker": "agent",
+      "text": "There are three ways to pay, and you can choose whichever suits you. The first is by card over the phone right now, which takes about a minute and gives you an instant receipt. The second is by bank transfer, using the details on your confirmation letter, which usually clears within one working day. The third is in person at the branch on the day of your visit, where both cash and cards are accepted. Whichever you pick, a receipt is sent to the email address we hold for you."
+    },
+    {
+      "id": "x1",
+      "speaker": "caller",
+      "kind": "barge_in",
+      "text": "Hang on, can I just pay by card now then?",
+      "into": "a1",
+      "offset_s": 11.0,
+      "stop_delay_s": 0.4
+    },
+    {
+      "id": "a2",
+      "speaker": "agent",
+      "text": "Yes, you can pay by card right now. I will take the card number, the expiry date and the security code, and then read the amount back to you before anything is charged. The receipt is emailed to you within a minute, and the payment shows on your account straight away, so there is nothing to do on the day apart from arriving and checking in at the desk."
+    },
+    {
+      "id": "x2",
+      "speaker": "caller",
+      "kind": "barge_in",
+      "text": "Actually, wait, I'd rather pay on the day after all.",
+      "into": "a2",
+      "offset_s": 12.5,
+      "stop_delay_s": 0.45
+    },
+    {
+      "id": "a3",
+      "speaker": "agent",
+      "text": "That is fine too. On the day, go to the front desk after your visit and they will take the payment by card or in cash. The receipt is printed there and also sent to your email. There is no difference in price, and your booking stays exactly as it is, so nothing changes apart from when you pay. If you change your mind again, just call us."
+    },
+    {
+      "id": "x3",
+      "speaker": "caller",
+      "kind": "barge_in",
+      "text": "Okay, perfect, that's all I needed to know.",
+      "into": "a3",
+      "offset_s": 14.0,
+      "stop_delay_s": 0.35
+    },
+    {
+      "id": "a4",
+      "speaker": "agent",
+      "text": "Great. Thanks for calling, and goodbye."
+    },
+    {
+      "id": "cz",
+      "speaker": "caller",
+      "text": "Bye, thanks."
+    }
+  ]
+}

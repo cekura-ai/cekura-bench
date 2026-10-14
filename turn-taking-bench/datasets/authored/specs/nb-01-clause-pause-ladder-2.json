@@ -1,0 +1,103 @@
+{
+  "schema_version": 2,
+  "id": "NB-01",
+  "conversation_id": "801",
+  "title": "Clause pauses of 0.8, 1.2, 1.8 and 3 s between complete clauses",
+  "family": "pauses",
+  "subtype": "clause_pause",
+  "difficulty": "medium",
+  "tags": [
+    "eot",
+    "mid-turn-pause"
+  ],
+  "pairings": [
+    {
+      "caller": "f-us",
+      "agent": "m-us"
+    },
+    {
+      "caller": "m-us",
+      "agent": "f-gb"
+    },
+    {
+      "caller": "f-gb",
+      "agent": "f-us"
+    },
+    {
+      "caller": "m-in",
+      "agent": "f-us"
+    },
+    {
+      "caller": "f-au",
+      "agent": "m-us"
+    }
+  ],
+  "timing": {
+    "start_s": 0.5,
+    "tail_s": 1.0,
+    "gap_range_s": [
+      0.5,
+      1.0
+    ],
+    "gap_seed": 2026
+  },
+  "items": [
+    {
+      "id": "g",
+      "speaker": "agent",
+      "text": "Good afternoon, you've reached the booking desk. How can I help?"
+    },
+    {
+      "id": "c1",
+      "speaker": "caller",
+      "text": "Hi there, I booked a slot for next week <0.8s> and I'd like to check a couple of details on it.",
+      "splice_breaks": true
+    },
+    {
+      "id": "a1",
+      "speaker": "agent",
+      "text": "Happy to check those for you. I can see the slot you booked right here. Which details did you want to go over?"
+    },
+    {
+      "id": "c2",
+      "speaker": "caller",
+      "text": "The first thing is the time, <1.2s> because I remember it being in the morning.",
+      "splice_breaks": true
+    },
+    {
+      "id": "a2",
+      "speaker": "agent",
+      "text": "It is in the morning, at half past nine. You will get a reminder the day before as well. What is the second thing?"
+    },
+    {
+      "id": "c3",
+      "speaker": "caller",
+      "text": "The second thing is the location. <1.8s> I want to make sure it's the branch on the high street."
+    },
+    {
+      "id": "a3",
+      "speaker": "agent",
+      "text": "It is the high street branch, yes. The entrance is on the side road, and there is parking behind the building. Anything else you would like me to confirm?"
+    },
+    {
+      "id": "c4",
+      "speaker": "caller",
+      "text": "No, I think that covers everything. <3s> Actually, could you also tell me how early I should arrive?"
+    },
+    {
+      "id": "a4",
+      "speaker": "agent",
+      "text": "Arriving about ten minutes early is plenty. That gives you time to check in at the front desk before your slot starts. Is there anything else?"
+    },
+    {
+      "id": "cz",
+      "speaker": "caller",
+      "text": "That's everything, thank you. Bye now."
+    },
+    {
+      "id": "az",
+      "speaker": "agent",
+      "text": "Thank you for calling. Goodbye."
+    }
+  ]
+}

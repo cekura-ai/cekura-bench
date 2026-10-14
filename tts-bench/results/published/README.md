@@ -5,13 +5,10 @@ One summary per model on the website's text-to-speech page, as written by
 no audio, no transcripts. Every run was measured from Vercel iad1 on corpus
 0.3.0.
 
-The website's data file is these summaries combined. Microsoft's two MAI models
-are in `config/site-models.json` but not measured yet, so they are left out of
-the model list until they are:
+The website's data file is these summaries combined:
 
 ```bash
-jq '.models |= with_entries(select(.key | startswith("azure-speech/") | not))' config/site-models.json > /tmp/site-models.json
-uv run --locked python bin/export-website.py combine results/published/*.site.json --models /tmp/site-models.json --out tts-benchmark.json
+uv run --locked python bin/export-website.py combine results/published/*.site.json --models config/site-models.json --out tts-benchmark.json
 ```
 
 The output equals the published file apart from its `generatedAt`. To add a
@@ -30,9 +27,13 @@ replaces the base run's.
 | Grok TTS | `campaign-0928-fix` | `campaign-1004-xai` |
 | ElevenLabs v4 Turbo and v4 | `campaign-0928-v4` | `campaign-1004` |
 | Soniox TTS RT v2 | `campaign-1004-soniox` | none |
+| Gradium (default), Rime Coda and Mist v3, Fish Audio S2.1-Pro | `campaign-1013` | none |
+| Microsoft MAI-Voice-2.1 and MAI-Voice-2.1-Flash | `campaign-1013-azure` | none |
+| Fish Audio Drama 3 (preview) | `campaign-1013-drama3` | none |
 
 `campaign-0928-fix` re-ran the models whose recordings an early stream-end bug
 had cut short, and `campaign-0928-v4` added the two v4 models. Grok's
 `campaign-1004` run was refused on every request and was re-run as
 `campaign-1004-xai`; Soniox was first measured on 2026-10-04, as one full run.
-Each summary names its runs in `run` and `amendments`.
+The `campaign-1013` runs were measured on corpus 0.3.0 from the start, so they
+need no amending run. Each summary names its runs in `run` and `amendments`.

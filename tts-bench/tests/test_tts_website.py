@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from tts_bench import corpus, website
 from tts_bench.probes import Cancel, Concurrency, OneShot, Repeat
@@ -57,3 +58,12 @@ async def test_a_later_run_on_the_same_model_amends_the_earlier_one_cell_by_cell
     await other.run()
     with pytest.raises(ValueError):
         website.summarize(base.root, [other.root])
+
+
+def test_published_summaries_cover_every_site_model():
+    """The committed summaries rebuild the site file with every listed model measured."""
+    root = Path(__file__).resolve().parent.parent
+    summaries = [json.loads(path.read_text()) for path in sorted((root / "results" / "published").glob("*.site.json"))]
+    site = website.combine(summaries, json.loads((root / "config" / "site-models.json").read_text()))
+    assert [entry["key"] for entry in site["models"] if not entry["measured"]] == []
+    assert len(site["results"]) == len(summaries)

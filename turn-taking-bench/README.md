@@ -45,7 +45,7 @@ Provider keys are read from a dotenv file (`--env`); values never enter reports.
 | `turn-taking-bench models` | List registered adapters |
 
 Reference systems (`adapters/`): a classic cascade's end-of-turn decision (Deepgram Flux), Smart Turn v3 and an energy VAD.
-Speech-to-speech adapters (`s2s/`): OpenAI Realtime, GPT-Live, Azure Realtime, Gemini Live (incl. extended thinking), Grok, Amazon Nova Sonic, Phonic and Deepslate, each run at its provider's default turn settings unless a flag says otherwise.
+Speech-to-speech adapters (`s2s/`): OpenAI Realtime, GPT-Live, Azure Realtime, Gemini Live (incl. extended thinking), Grok, Amazon Nova Sonic, Phonic, Deepslate and Higgs Realtime, each run at its provider's default turn settings unless a flag says otherwise. Models other than a provider's pinned default are selected with `--config model=<id>`, e.g. `--model s2s:grok-realtime --config model=grok-voice-3.0`.
 
 ## Running the public set
 

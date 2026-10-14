@@ -34,7 +34,7 @@ laptop work unchanged and lets a deployment carry a default:
 
 | Key | Default | Notes |
 |---|---|---|
-| `s2s_provider` | `openai-realtime` | native: also `openai-realtime-mini`, `gemini-live`, `gemini-live-standard`, `gemini-flash-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`, `phonic`, `deepslate`, `azure-realtime`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
+| `s2s_provider` | `openai-realtime` | native: also `openai-realtime-mini`, `gemini-live`, `gemini-live-standard`, `gemini-flash-live`, `grok-realtime`, `grok-realtime-3`, `gpt-live`, `nova-sonic`, `qwen-realtime`, `phonic`, `deepslate`, `azure-realtime`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
 | `s2s_model` | provider default | pin it for a reproducible run |
 | `s2s_voice` | provider default | |
 | `s2s_backend_model` | `gpt-6-sol` | `gpt-live` only, see below |
@@ -110,8 +110,9 @@ are like this". All three services are named in every record, because a row
 naming only its text model would hide the two components doing most of what a
 latency column measures.
 
-Rows without a cascade counterpart: `openai-realtime-mini`, `gemini-live-standard`, `gemini-flash-live`,
-`gpt-live` and `nova-sonic`. `gpt-live-1` delegates its reasoning to a separate
+Rows without a cascade counterpart: `gpt-live` and `nova-sonic`. A vendor's other
+tiers and models (`openai-realtime-mini`, `gemini-live-standard`, `gemini-flash-live`,
+`grok-realtime-3`) share their vendor's. `gpt-live-1` delegates its reasoning to a separate
 text model, so a fair pairing for it is a cascade on *that* model.
 
 ## One provider does not do its own reasoning

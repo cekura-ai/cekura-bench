@@ -89,7 +89,9 @@ currency, datetime, phone, alnum, spelled, contact, names, repair, units,
 questions, long, paragraph, heteronym, abbrev, symbols, terms, numbers, tech,
 worded, dense. Production-shaped, invented values, published. A later corpus
 version re-measures only the items it changed or added: the new run amends the
-earlier one at export (`bin/export-website.py summarize --amend`).
+earlier one at export (`bin/export-website.py summarize --amend`). The summaries behind the
+published page are in `results/published/`, with the runs each came from and
+the command that rebuilds the website's data from them.
 
 - **paragraph**: four agent turns of 470–510 characters, the prompt length
   throughput is usually timed on, and a test of stability over a long utterance.

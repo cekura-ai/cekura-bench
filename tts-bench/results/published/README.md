@@ -30,6 +30,7 @@ replaces the base run's.
 | Gradium (default), Rime Coda and Mist v3, Fish Audio S2.1-Pro | `campaign-1013` | none |
 | Microsoft MAI-Voice-2.1 and MAI-Voice-2.1-Flash | `campaign-1013-azure` | none |
 | Fish Audio Drama 3 (preview) | `campaign-1013-drama3` | none |
+| Hume Octave 2 (preview) | `campaign-1014-hume` | none |
 
 `campaign-0928-fix` re-ran the models whose recordings an early stream-end bug
 had cut short, and `campaign-0928-v4` added the two v4 models. Grok's

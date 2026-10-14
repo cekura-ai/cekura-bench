@@ -21,6 +21,7 @@ from service.adapters.base import RealtimeAdapter
 from service.adapters.fake import FakeAdapter
 from service.adapters.gemini_live import GeminiLiveAdapter
 from service.adapters.grok_realtime import GrokRealtimeAdapter
+from service.adapters.higgs_realtime import HiggsRealtimeAdapter
 from service.adapters.openai_realtime import OpenAIRealtimeAdapter
 
 
@@ -56,6 +57,13 @@ PROVIDERS: dict[str, ProviderEntry] = {
         default_model="grok-voice-think-fast-2.0",
         credential_env="XAI_API_KEY",
         default_voice="eve",
+    ),
+    "higgs-realtime": ProviderEntry(
+        key="higgs-realtime",
+        adapter=HiggsRealtimeAdapter,
+        default_model="higgs-realtime",
+        credential_env="BOSON_API_KEY",
+        default_voice="default",
     ),
     # Not a provider: a scripted agent with known reply timing, registered so the
     # whole harness can be run end to end with no API key and no network. Anyone

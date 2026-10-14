@@ -28,6 +28,7 @@ from tts_bench.adapters.fake import FakeTTSAdapter
 from tts_bench.adapters.fish_audio import FishAudioAdapter
 from tts_bench.adapters.gemini_tts import GeminiTTSAdapter
 from tts_bench.adapters.gradium import GradiumAdapter
+from tts_bench.adapters.hume import HumeAdapter
 from tts_bench.adapters.inworld import InworldAdapter
 from tts_bench.adapters.openai_tts import OpenAITTSAdapter
 from tts_bench.adapters.rime import RimeAdapter
@@ -36,10 +37,14 @@ from tts_bench.adapters.soniox import SonioxAdapter
 from tts_bench.adapters.xai import XaiTTSAdapter
 
 
+DEFAULT_RATE = 24000
+
+
 @dataclass(frozen=True)
 class Model:
     model: str
     voice: str
+    rate: int = DEFAULT_RATE    # a model that emits only one PCM rate names it here
 
 
 @dataclass(frozen=True)
@@ -54,6 +59,10 @@ class ProviderEntry:
     def default_model(self) -> str:
         return self.models[0].model
 
+    def rate_for(self, model: str) -> int:
+        """The lineup's sample rate for ``model``; the harness default for a model outside the lineup."""
+        return next((m.rate for m in self.models if m.model == model), DEFAULT_RATE)
+
     def voice_for(self, model: str) -> str:
         """The lineup's voice for ``model``; the default model's voice for a model outside the lineup."""
         return next((m.voice for m in self.models if m.model == model), self.models[0].voice)
@@ -67,6 +76,7 @@ HARPER = "4SZHfMpw-p46Ywgs"     # Gradium, from its recommended voices
 ASTRA = "astra"                                      # Rime, female US English on Coda and Mist v3
 SARAH = "933563129e564b19a115bedd57b7406a"              # Fish Official, female US English
 DELIA = "c70cfb98867a4bfb9ae20d2401257b92"              # Fish Audio, female US English, from its Drama 3 voice cast
+AVA = "5bb7de05-c8fe-426a-8fcc-ba4fc4ce9f9c"           # Hume "Ava Song", female US English, from its Voice Library
 
 PROVIDERS: dict[str, ProviderEntry] = {
     "fake": ProviderEntry("fake", FakeTTSAdapter, "FAKE_KEY_UNUSED", (Model("scripted", "tone"),)),
@@ -139,6 +149,11 @@ PROVIDERS: dict[str, ProviderEntry] = {
               "latency=balanced by default; stop drains input, finish ends output and closes the socket; "
               "new socket per utterance, including repeat; no cancel/clear; paid production model "
               "(s2.1-pro-free has no TTFA or DPA guarantees)",
+    ),
+    "hume": ProviderEntry(
+        "hume", HumeAdapter, "HUME_API_KEY",
+        (Model("octave-2", AVA, rate=48000),),
+        notes="input-streaming websocket, one utterance per socket; close ends the stream; 48 kHz PCM only; no cancel",
     ),
     "xai": ProviderEntry(
         "xai", XaiTTSAdapter, "XAI_API_KEY",

@@ -648,3 +648,38 @@ class TestAzureSpeech:
         raw = (tmp_path / "raw.jsonl").read_text()
         assert "secret-key" not in raw and "secret-key" not in str(log.events)
         assert "$42" not in raw and '"input": "<18 chars>"' in raw
+
+
+class TestHume:
+    async def test_the_voice_rides_on_the_first_frame_and_only_the_closed_socket_ends_the_utterance(self):
+        from tts_bench.adapters.hume import HumeAdapter
+        from tts_bench.probes import Continuation
+
+        hume, sent = adapter(HumeAdapter, "octave-2", "voice-id")
+        synthesis = await hume.open_context("main")
+        for frame in Continuation.frames("Hello there. How can I help?"):
+            await hume.send("main", frame)
+        await hume.finish("main")
+        assert sent == [{"text": "Hello there. ", "voice": {"id": "voice-id"}}, {"text": "How can I help?"}, {"close": True}]
+        hume._on_message({"type": "audio", "audio": "AQABAA==", "is_last_chunk": True})
+        assert bytes(synthesis.pcm) == b"\x01\x00" * 2 and not synthesis.done.is_set()   # one snippet ending is not the end
+        hume._on_closed("closed by server")
+        assert synthesis.done.is_set() and synthesis.t_done is not None
+
+    async def test_errors_are_recorded_and_the_protocol_limits_are_declared(self):
+        from tts_bench.adapters.hume import HumeAdapter
+
+        hume, _ = adapter(HumeAdapter, "octave-2", "voice-id")
+        synthesis = await hume.open_context("main")
+        hume._on_message({"type": "error", "message": "Voice not found"})
+        assert synthesis.error == "Voice not found" and synthesis.done.is_set()
+        assert "version=2" in hume.url and "format_type=pcm" in hume.url and "no_binary=true" in hume.url
+        assert HumeAdapter.native_rates == (48000,) and not HumeAdapter.supports_cancel
+        assert HumeAdapter.unsupported_reason(TTSConfig(model="octave-2", voice="v", sample_rate=24000)) is not None
+
+
+class TestLineupRates:
+    def test_a_model_that_emits_one_rate_names_it_and_the_rest_keep_the_default(self):
+        assert PROVIDERS["hume"].rate_for("octave-2") == 48000
+        assert PROVIDERS["cartesia"].rate_for("sonic-3.6") == 24000
+        assert PROVIDERS["cartesia"].rate_for("a-model-outside-the-lineup") == 24000

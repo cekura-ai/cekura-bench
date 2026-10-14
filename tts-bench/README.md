@@ -154,6 +154,7 @@ vendored):
 | `gradium` | `default` | websocket, `client_req_id` | yes | no | yes | yes | setup/ready before t0; text frames share one utterance, split on whitespace with punctuation attached; `<flush>` forces generation; no cancel message |
 | `rime` | `coda`, `mistv3` | websocket `/ws3`, JSON, sequential contexts | yes | no | yes | yes | `segment=never`: concatenated text waits for finish/flush; `done` ends that batch; `clear` only drops unsubmitted text; Coda replaces retired Arcana |
 | `fish-audio` | `s2.1-pro`, `drama-3-preview` | websocket, MessagePack, one utterance per socket | yes | no | yes | no | start before t0; `latency=balanced` (option); previous audio conditions later chunks; `flush` forces generation; `stop` drains input, `finish` ends output and closes; repeat reconnects before t0 |
+| `hume` | `octave-2` | websocket, input streaming | yes | no | yes | no | Octave 2 (preview); voice from the library by id; one utterance per socket, `close` ends it and the server closes the socket; 48 kHz PCM only, so the lineup names the rate |
 | `xai` | `grok-tts` | websocket, one utterance at a time | yes | `text.clear` | yes | yes | voice fixed per socket; the API has no model parameter |
 | `smallest` | `lightning_v3.1_pro` | websocket, `context_id` continuation | yes | no | yes | no | no end-of-utterance message: a context ends when its stream goes quiet; `cancel_request` drops only unreleased text |
 | `soniox` | `tts-rt-v2` | websocket, one stream per context | yes | `cancel` | yes | yes | |

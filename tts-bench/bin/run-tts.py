@@ -69,7 +69,7 @@ def main() -> int:
     parser.add_argument("--model")
     parser.add_argument("--all-models", action="store_true", help="one run per model in the provider's lineup, in order")
     parser.add_argument("--voice")
-    parser.add_argument("--rate", type=int, default=24000)
+    parser.add_argument("--rate", type=int, help="PCM sample rate (default: the model's lineup rate, else 24000)")
     parser.add_argument("--option", action="append", default=[], help="adapter option key=value; repeatable, recorded per cell")
     parser.add_argument("--repeats", type=int, default=3)
     parser.add_argument("--cohort", action="append", help="restrict to these cohorts")
@@ -98,11 +98,11 @@ def main() -> int:
         if not items:
             print("no corpus items selected", file=sys.stderr)
             return 2
-        models = [m.model for m in PROVIDERS[args.provider].models] if args.all_models else [args.model]
+        models = [m.model for m in PROVIDERS[args.provider].models] if args.all_models else [args.model or PROVIDERS[args.provider].default_model]
         specs = [RunSpec(
             provider=args.provider, probes=[PROBES[name]() for name in args.probe] if args.probe else SUITES[args.suite](),
             items=items, repeats=args.repeats,
-            model=model, voice=args.voice, sample_rate=args.rate, sentinel=not args.no_sentinel,
+            model=model, voice=args.voice, sample_rate=args.rate or PROVIDERS[args.provider].rate_for(model), sentinel=not args.no_sentinel,
             options=tuple(tuple(opt.split("=", 1)) for opt in args.option),
             corpus_version=version, store=args.store,
             label=args.label or ("-".join(args.probe) if args.probe else args.suite),

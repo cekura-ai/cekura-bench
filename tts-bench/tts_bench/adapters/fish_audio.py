@@ -41,8 +41,8 @@ class FishAudioAdapter(WebSocketAdapter):
 
     async def _open_context(self, context_id: str) -> None:
         if self._active is not None:
-            await super()._close()
-            await super()._connect()
+            await self._close()
+            await self._connect()
         self._active = context_id
         await self._send_json({"event": "start", "request": {
             "text": "", "reference_id": self.config.voice, "format": "pcm",

@@ -13,12 +13,12 @@ from stt_bench.providers import validate, reduce_events, transcript_at
 from stt_bench.streaming import EventLog, read_events
 from stt_bench.turn_metrics import transcript_timeline
 
-UPDATED = {'type': 'session.updated', 'model': 'zoom-asr-en-v1', 'language': 'en-US',
+UPDATED = {'type': 'session.updated', 'model': 'zoom-scribe-en', 'language': 'en-US',
            'diarization_enabled': False, 'word_time_offsets': False}
 
 
-def config():
-    return json.loads(model_config('zoom-scribe-live').read_text())
+def config(name='zoom-scribe-live'):
+    return json.loads(model_config(name).read_text())
 
 
 def msg(value, at):
@@ -40,7 +40,7 @@ def completed(item, text):
 def stream():
     # Zoom's detector closes the first segment mid-clip; its completion lands
     # after the second segment has started. The commit at speech end closes the second.
-    return [dict(kind='model_accepted', time_seconds=0, model='zoom-asr-en-v1'),
+    return [dict(kind='model_accepted', time_seconds=0, model='zoom-scribe-en'),
             msg({'type': 'session.created', 'session_id': 'ls_fixture'}, .01), msg(UPDATED, .02),
             msg(started('a', 800), .9), msg(stopped('a', 3000), 3.3), msg(started('b', 3000), 3.31),
             msg(completed('a', 'Hello there.'), 3.4),
@@ -64,6 +64,14 @@ def test_config_credentials_and_setup():
                        ('endpoint', 'wss://example.test/live')]:
         with pytest.raises(ValueError):
             validate(dict(c, **{key: value}))
+
+
+def test_pro_requests_its_model_inside_config():
+    pro = validate(config('zoom-scribe-pro-live'))
+    assert wire.Protocol(pro).setup() == {'type': 'session.update', 'language': 'en-US', 'audio': {'format': 'pcm16'},
+                                          'config': {'model': 'zoom-scribe-en-pro'}}
+    assert {k: v for k, v in pro.items() if k not in ('model_id', 'model', 'request_model', 'pricing', 'protocol_caveat')} == \
+        {k: v for k, v in config().items() if k not in ('model_id', 'model', 'pricing', 'protocol_caveat')}
 
 
 def test_segments_join_in_speech_order_and_close_completes():
@@ -139,7 +147,9 @@ async def fake_zoom(ws, text, fault=None):
             continue
         m = json.loads(raw)
         if m['type'] == 'session.update':
-            await ws.send(json.dumps(dict(UPDATED, model='other') if fault == 'model' else UPDATED))
+            # Like the live server: only config.model selects a model; anything else gets the default.
+            model = 'other' if fault == 'model' else m.get('config', {}).get('model', UPDATED['model'])
+            await ws.send(json.dumps(dict(UPDATED, model=model)))
         elif m['type'] == 'input_audio_buffer.commit' and open_item:
             open_item = False
             await ws.send(json.dumps(stopped('a', frames * 20)))
@@ -173,6 +183,15 @@ def test_local_websocket_success(text, tmp_path, monkeypatch):
     c = config()
     r = run_local(tmp_path, monkeypatch, c, lambda ws: fake_zoom(ws, text))
     assert r['transcript_complete'] and r['model_verified'] and r['transcript'] == text
+
+
+def test_local_websocket_pro_model_is_verified_only_when_requested(tmp_path, monkeypatch):
+    pro = config('zoom-scribe-pro-live')
+    r = run_local(tmp_path, monkeypatch, pro, lambda ws: fake_zoom(ws, 'hello'))
+    assert r['transcript_complete'] and r['model_verified'] and r['transcript'] == 'hello'
+    unrequested = dict(pro, request_model=False, ready_timeout_seconds=.05)
+    with pytest.raises(Exception):
+        run_local(tmp_path, monkeypatch, unrequested, lambda ws: fake_zoom(ws, 'hello'))
 
 
 @pytest.mark.parametrize('fault', ['model', 'disconnect'])

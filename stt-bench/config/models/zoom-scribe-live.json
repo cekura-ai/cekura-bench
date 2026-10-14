@@ -1,7 +1,7 @@
 {
   "model_id": "zoom-scribe-live",
   "provider": "zoom",
-  "model": "zoom-asr-en-v1",
+  "model": "zoom-scribe-en",
   "version": "server-reported-unversioned",
   "identity_policy": "server_reported_model_in_session_updated",
   "endpoint": "wss://api.zoom.us/v2/aiservices/scribe/live",
@@ -18,7 +18,7 @@
   "finalize_ack_supported": false,
   "requires_final_only_completion": true,
   "model_source": "https://developers.zoom.us/docs/ai-services/scribe/live-mode/",
-  "checked_on": "2026-10-08",
+  "checked_on": "2026-10-14",
   "pricing": {
     "usd_per_minute": 0.0041667,
     "usd_per_hour": 0.25,
@@ -28,5 +28,5 @@
     "billing_basis": "duration of audio streamed, including silence and retries; rate-dependent estimate, not an invoice",
     "checked_on": "2026-10-08"
   },
-  "protocol_caveat": "The request names only a language; the server reports the model it selected (zoom-asr-en-v1) in session.updated, and a different echo fails the attempt. Zoom segments speech with its own voice activity detection and sends one final transcript per segment, with no partials. input_audio_buffer.commit at speech end is not in the published live-mode reference but is honored: it ends the open segment at the commit point. A commit with no open segment produces no event, so there is no finalize acknowledgment; completion is session.closed after session.close, which flushes every open segment. The documented default limit is 20 concurrent sessions."
+  "protocol_caveat": "The request names only a language; the server reports the model it selected (zoom-scribe-en since 2026-10-14; zoom-asr-en-v1 on 2026-10-08) in session.updated, and a different echo fails the attempt. Zoom segments speech with its own voice activity detection and sends one final transcript per segment, with no partials. input_audio_buffer.commit at speech end is not in the published live-mode reference but is honored: it ends the open segment at the commit point. A commit with no open segment produces no event, so there is no finalize acknowledgment; completion is session.closed after session.close, which flushes every open segment. The documented default limit is 20 concurrent sessions."
 }

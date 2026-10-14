@@ -19,7 +19,7 @@ from .full_benchmark import classify
 
 MANIFEST='datasets/private-turns-v1/automatic-v1/manifest.json'
 # Profiles added after the original 23 run only when a plan names them.
-OPT_IN=frozenset({'assemblyai-universal-3-6-pro-min-latency','zoom-scribe-live'})
+OPT_IN=frozenset({'assemblyai-universal-3-6-pro-min-latency','zoom-scribe-live','zoom-scribe-pro-live'})
 
 
 def prepare(root,models=None):

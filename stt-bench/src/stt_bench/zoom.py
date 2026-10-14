@@ -6,6 +6,10 @@ also honors `input_audio_buffer.commit`, which ends the open segment at the
 commit point. A commit with no open segment produces no event at all, so it
 has no acknowledgment to wait for. `session.close` flushes every open segment
 before `session.closed`, which is the completion signal.
+
+Without a requested model the server picks one from the language. A model is
+honored only inside `config`; a top-level `model`, a query parameter,
+`transcription.model` and `session.model` are accepted and silently ignored.
 """
 from websockets.asyncio.client import connect
 from . import provider_protocol as shared
@@ -35,7 +39,10 @@ class Protocol(shared.Protocol):
         self.order = {}  # item ids in the order their speech started
 
     def setup(self):
-        return {'type': 'session.update', 'language': self.config['language'], 'audio': {'format': 'pcm16'}}
+        update = {'type': 'session.update', 'language': self.config['language'], 'audio': {'format': 'pcm16'}}
+        if self.config.get('request_model'):
+            update['config'] = {'model': self.config['model']}
+        return update
 
     def finalize(self):
         return {'type': 'input_audio_buffer.commit'}
@@ -53,8 +60,8 @@ class Protocol(shared.Protocol):
         super().feed(m)
         kind = m.get('type')
         if kind == 'session.updated':
-            # The server names the model it selected from the language; the
-            # request cannot name one, so the echo is the identity check.
+            # The server names the model it selected, requested or not;
+            # the echo is the identity check.
             self.model_mismatch |= (m.get('model') != self.config['model']
                                     or m.get('language') != self.config['language'])
             self.ready = True

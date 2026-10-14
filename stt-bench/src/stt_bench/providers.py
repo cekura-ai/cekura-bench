@@ -7,7 +7,7 @@ from . import gemini_live
 MODELS = {
     'assemblyai': {'universal-3-5-pro', 'universal-3-6-pro'},
     'reson8': {'realtime'},
-    'zoom': {'zoom-asr-en-v1'},
+    'zoom': {'zoom-asr-en-v1', 'zoom-scribe-en', 'zoom-scribe-en-pro'},
     'gradium': {'default'},
     **trial_providers.MODELS,
     'deepgram': {'nova-2', 'nova-3', 'flux-general-en', 'flux-general-multi'},

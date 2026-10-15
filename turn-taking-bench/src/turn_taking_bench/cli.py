@@ -104,6 +104,15 @@ def main() -> None:
     p = sub.add_parser("compare", help="Print two runs' scorecards side by side with CIs; flag rows whose CIs do not overlap")
     p.add_argument("--run", type=Path, action="append", required=True, help="run directory with a report.json; give exactly twice (A then B)")
 
+    p = sub.add_parser("site-export", help="Refresh the leaderboard site's data file from a full run: verify published values, add models, overall rank and breakdowns")
+    p.add_argument("--runs", type=Path, required=True, help="full-run root (t1/<condition>/SCORECARD.json, t2/<condition>/TRACK2.json, datasets/t1-<condition>/)")
+    p.add_argument("--public-runs", type=Path, required=True, help="public-set run root, same layout")
+    p.add_argument("--site", type=Path, required=True, help="the site's current turn-taking-benchmark.json")
+    p.add_argument("--add-models", type=Path, help="JSON {slug: {name, vendor, insights, setup}} for models not yet on the site")
+    p.add_argument("--alias", action="append", default=[], metavar="NAME=SLUG", help="site model name whose result rows use another name")
+    p.add_argument("--out", type=Path, required=True, help="where to write the refreshed turn-taking-benchmark.json")
+    p.add_argument("--breakdowns-out", type=Path, required=True, help="where to write turn-bench-breakdowns.json")
+
     p = sub.add_parser("s2s", help="Speech-to-speech providers: Track 2 interaction probes and the combined scorecard (Track 1 is `run --model s2s:<provider>`)")
     ssub = p.add_subparsers(dest="s2s_command", required=True)
     s = ssub.add_parser("interaction", help="Run the service bench's barge_in / backchannel_tolerance probes against one provider (Track 2)")
@@ -205,6 +214,10 @@ def main() -> None:
 
         rescore_run(args.run, args.dataset, parse_config(args.weight) or None)
         return
+    if args.command == "site-export":
+        from turn_taking_bench.site_export import run_site_export
+
+        sys.exit(run_site_export(args))
     if args.command == "compare":
         from turn_taking_bench.rescore import run_compare
 

@@ -1,9 +1,11 @@
 """PolyAI's audio-native dialog model (Dialog-RSN-1), on its realtime API.
 
-Dialog-RSN-1 hears the caller's audio directly and decides when they have
-finished, then answers in *text* or with a tool call. It does not speak: this
-row voices its replies with the cascade rows' text-to-speech, so the row is
-"this vendor's listening and reasoning, through one named voice".
+Dialog-RSN-1 hears the caller's audio directly, decides when they have
+finished, and answers with a reply or a tool call. It is run in the service's
+default mode, which speaks: the vendor's own text-to-speech runs server-side
+and the reply arrives as 24 kHz audio with its transcript, the way OpenAI's
+does. (The service also has a text-only mode for clients that bring their own
+voice; that mode would make this row a measure of someone else's voice.)
 
 The wire format is OpenAI's realtime protocol (GA shape) with a narrower
 session: the service refuses a whole ``session.update`` if any field is outside
@@ -12,22 +14,22 @@ for it, and the framework's OpenAI service sends fields this one rejects.
 
 Three things about this service decide how it is written.
 
-*A turn is text or one tool call, never both -- and speech rides on the call.*
-The model calls tools in a loop and finishes with its spoken reply, so an
-instruction to "say X, then call Y" cannot be followed as written. The vendor's
-answer is a tool argument marked ``poly_spoken``: the model writes a line to say
-while the tool runs, and it streams as reply text beside the call. Every tool
-here gets one such argument, required, and it is taken off the arguments before
-the tool runs, so the tools see exactly the published contract. See
+*A turn is a reply or one tool call, never both -- and speech rides on the
+call.* The model calls tools in a loop and finishes with its spoken reply, so
+an instruction to "say X, then call Y" cannot be followed as written. The
+vendor's answer is a tool argument marked ``poly_spoken``: the model writes a
+line to say while the tool runs, and the service speaks it. Every tool here
+gets one such argument, required, and it is taken off the arguments before the
+tool runs, so the tools see exactly the published contract. See
 ``spoken_tools``.
 
-*The service judges barge-in only while a reply is audible to it.* By default
-that is while the reply is being generated, which for a text model is a moment;
-the caller then hears it for seconds through the text-to-speech. The service's
-playback reports (``poly.output_audio.*``) tell it what the caller is hearing,
-which is what lets it tell a backchannel from an interruption during playback.
-They are sent from ``ReportsPlayback``, which sits after the output transport,
-where frames move at the pace the caller hears them.
+*The service judges barge-in only while it knows a reply is audible.* It sends
+a reply's audio faster than it is played, so by its own clock a reply is over
+long before the caller has heard it. The service's playback reports
+(``poly.output_audio.*``) tell it what the caller is hearing, which is what lets
+it tell a backchannel from an interruption during playback. They are sent from
+``ReportsPlayback``, which sits after the output transport, where frames move at
+the pace the caller hears them.
 
 *One response at a time.* A ``response.create`` sent while a response is open
 cancels it, and a tool's result is answered only when a response is asked for.
@@ -36,6 +38,7 @@ that made them has closed -- unless the caller is mid-turn, in which case the
 response the service opens for that turn carries the result.
 
 Protocol: https://dialog-rsn-1-eap-docs.pages.dev/dialog-rsn-1/reference/
+(which still describes the text-only mode).
 """
 
 from __future__ import annotations
@@ -54,6 +57,7 @@ from websockets.asyncio.client import connect as websocket_connect
 
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.frames.frames import (
+    AggregationType,
     BotStartedSpeakingFrame,
     BotStoppedSpeakingFrame,
     CancelFrame,
@@ -64,11 +68,13 @@ from pipecat.frames.frames import (
     LLMContextFrame,
     LLMFullResponseEndFrame,
     LLMFullResponseStartFrame,
-    LLMTextFrame,
     ProposedUserStartedSpeakingFrame,
     ProposedUserStoppedSpeakingFrame,
     StartFrame,
     TranscriptionFrame,
+    TTSAudioRawFrame,
+    TTSStartedFrame,
+    TTSStoppedFrame,
     TTSTextFrame,
 )
 from pipecat.metrics.metrics import LLMTokenUsage
@@ -87,6 +93,11 @@ MODEL = "dialog-rsn-1"
 
 #: The model's native input rate; the service resamples anything else.
 SAMPLE_RATE = 16000
+
+#: The rate of the reply audio: 16-bit mono PCM, the service's default output.
+#: Not sent -- the output format is left at the default rather than risk a
+#: field the schema refuses.
+OUTPUT_SAMPLE_RATE = 24000
 
 #: How long to wait for the service to accept the configuration.
 READY_TIMEOUT_S = 10.0
@@ -168,8 +179,8 @@ class PolyAIRealtimeLLMService(LLMService):
 
     The socket is opened with the pipeline; the session is configured, tools
     included, with the first context frame, and the call opens once the service
-    has accepted that configuration. Replies leave as text frames for the
-    text-to-speech that follows this service.
+    has accepted that configuration. Replies leave as the service's audio, with
+    the words it says alongside.
     """
 
     def __init__(
@@ -204,27 +215,34 @@ class PolyAIRealtimeLLMService(LLMService):
         self._response_id: str | None = None
         self._reply_owed = False
         self._responding = False
+        self._speaking = False
         self._caller_speaking = False
-        # Responses the caller talked over: text still arriving for them was
+        # Responses the caller talked over: audio still arriving for them was
         # never going to be heard.
         self._cut: set[str] = set()
+        # Responses that have made a sound, and the words of those that have
+        # not yet: words of a reply that never makes one were never heard.
+        self._voiced: set[str] = set()
+        self._held: dict[str, list[str]] = {}
         # Calls the model has made whose results have not been sent yet, and the
         # results already sent: the context is pushed again for every tool, and
         # each result must be sent exactly once.
         self._outstanding: dict[str, str] = {}
         self._delivered: set[str] = set()
-        # Spoken arguments by response, kept until the response closes: a line
-        # the service did not stream as text is voiced from here.
-        self._spoken: dict[str, list[str]] = {}
-        self._texted: set[str] = set()
-        # Playback: the text each reply sent to the voice, replies written but
-        # not yet audible, replies audible now (with when they became so), and
-        # the words the caller has heard in the current stretch of speech.
+        # Responses whose tool call carried a spoken line, kept until the
+        # response closes, to notice one the service did not speak.
+        self._spoken: set[str] = set()
+        # Playback: each reply's words and milliseconds of audio delivered,
+        # replies delivered but not yet audible, replies audible now, when the
+        # current stretch of speech began, and the words heard in it.
         self._texts: dict[str, list[str]] = {}
+        self._audio_ms: dict[str, float] = {}
         self._unplayed: list[str] = []
-        self._playing: list[tuple[str, float]] = []
+        self._playing: list[str] = []
+        self._stretch_started = 0.0
         self._heard: list[str] = []
         self._bot_speaking = False
+        self._unhandled: set[str] = set()
 
     def can_generate_metrics(self) -> bool:
         return True
@@ -300,7 +318,7 @@ class PolyAIRealtimeLLMService(LLMService):
         session: dict[str, Any] = {
             "type": "realtime",
             "model": self._model,
-            "output_modalities": ["text"],
+            "output_modalities": ["audio"],
             "instructions": self._instructions,
             "audio": {
                 "input": {
@@ -430,9 +448,10 @@ class PolyAIRealtimeLLMService(LLMService):
             # this covers one the pipeline judged first, and is a no-op otherwise.
             await self._send({"type": "response.cancel"})
         await self.playback_stopped(finished=False)
-        # Replies written but not yet audible were flushed from the voice.
+        # Replies delivered but not yet audible were flushed from the transport.
         for response_id in self._unplayed:
             self._texts.pop(response_id, None)
+            self._audio_ms.pop(response_id, None)
         self._unplayed.clear()
         await self._end_reply()
         await self.stop_all_metrics()
@@ -444,6 +463,9 @@ class PolyAIRealtimeLLMService(LLMService):
         await self.push_frame(LLMFullResponseStartFrame())
 
     async def _end_reply(self):
+        if self._speaking:
+            self._speaking = False
+            await self.push_frame(TTSStoppedFrame())
         if self._responding:
             self._responding = False
             await self.push_frame(LLMFullResponseEndFrame())
@@ -451,14 +473,14 @@ class PolyAIRealtimeLLMService(LLMService):
     # -- playback reports (see ``ReportsPlayback``) -----------------------
 
     async def playback_started(self):
-        """The caller began hearing the agent: every reply written so far is now audible."""
+        """The caller began hearing the agent: every reply delivered so far is now audible."""
         self._bot_speaking = True
+        self._stretch_started = time.monotonic()
         await self._report_audible()
 
     async def _report_audible(self):
-        now = time.monotonic()
         for response_id in self._unplayed:
-            self._playing.append((response_id, now))
+            self._playing.append(response_id)
             await self._send({"type": "poly.output_audio.started", "response_id": response_id})
         self._unplayed.clear()
 
@@ -466,23 +488,30 @@ class PolyAIRealtimeLLMService(LLMService):
         self._heard.append(text)
 
     async def playback_stopped(self, *, finished: bool):
-        """The agent fell silent: by finishing, or because the caller cut in."""
+        """The agent fell silent: by finishing, or because the caller cut in.
+
+        The replies in a stretch played back to back, so the time it lasted is
+        spent on them in order; what a cut reply had delivered beyond that
+        point was dropped unplayed.
+        """
         self._bot_speaking = False
         if not self._playing:
             self._heard.clear()
             return
-        now = time.monotonic()
-        texts = ["".join(self._texts.get(response_id, [])) for response_id, _ in self._playing]
-        spoken = heard_by_reply(texts, " ".join(self._heard), finished)
-        for (response_id, since), text in zip(self._playing, spoken):
+        remaining_ms = (time.monotonic() - self._stretch_started) * 1000
+        texts = ["".join(self._texts.get(response_id, [])) for response_id in self._playing]
+        # The transcript arrives in pieces that carry their own spacing.
+        spoken = heard_by_reply(texts, "".join(self._heard), finished)
+        for response_id, text in zip(self._playing, spoken):
+            delivered_ms = self._audio_ms.pop(response_id, 0.0)
+            played_ms = delivered_ms if finished else min(delivered_ms, remaining_ms)
+            remaining_ms = max(0.0, remaining_ms - played_ms)
             await self._send(
                 {
                     "type": "poly.output_audio.stopped",
                     "response_id": response_id,
-                    "audio_ms": int((now - since) * 1000),
-                    # Not measured: the voice does not report audio it made
-                    # but never played.
-                    "dropped_ms": 0,
+                    "audio_ms": round(played_ms),
+                    "dropped_ms": round(delivered_ms - played_ms),
                     "spoken_text": text,
                 }
             )
@@ -528,8 +557,11 @@ class PolyAIRealtimeLLMService(LLMService):
             self._response_id = (event.get("response") or {}).get("id")
             await self._start_reply()
 
-        elif kind == "response.output_text.delta":
-            await self._handle_text(event.get("response_id", "") or self._response_id or "", event.get("delta", ""))
+        elif kind == "response.output_audio.delta":
+            await self._handle_audio(event)
+
+        elif kind == "response.output_audio_transcript.delta":
+            await self._handle_transcript(event.get("response_id", "") or self._response_id or "", event.get("delta", ""))
 
         elif kind == "response.output_item.added":
             item = event.get("item") or {}
@@ -563,31 +595,58 @@ class PolyAIRealtimeLLMService(LLMService):
         elif kind == "error":
             await self.push_error(error_msg=f"Dialog-RSN-1 error: {describe_error(event.get('error') or {})}")
 
-    async def _handle_text(self, response_id: str, text: str):
-        if not text or response_id in self._cut:
+        elif kind not in self._unhandled:
+            # Once per kind: this mode is undocumented, so a reply arriving
+            # under another event name shows up here rather than as silence.
+            self._unhandled.add(kind)
+            logger.info(f"{self} ignoring event {kind!r} (first of its kind)")
+
+    async def _handle_audio(self, event: dict[str, Any]):
+        audio = base64.b64decode(event.get("delta") or "")
+        response_id = event.get("response_id", "") or self._response_id or ""
+        if not audio or response_id in self._cut:
             return
         await self._start_reply()
-        await self.stop_ttfb_metrics()
-        self._texted.add(response_id)
-        if response_id not in self._texts:
-            self._texts[response_id] = []
+        if not self._speaking:
+            self._speaking = True
+            await self.push_frame(TTSStartedFrame())
+        if response_id not in self._voiced:
+            # The reply's first sound releases the words held for it.
+            self._voiced.add(response_id)
+            for text in self._held.pop(response_id, []):
+                await self._push_text(response_id, text)
+        if response_id not in self._unplayed and response_id not in self._playing:
             self._unplayed.append(response_id)
             if self._bot_speaking:
                 # Queued behind what is playing, so audible from now on.
                 await self._report_audible()
-        self._texts[response_id].append(text)
-        await self.push_frame(LLMTextFrame(text))
+        self._audio_ms[response_id] = self._audio_ms.get(response_id, 0.0) + len(audio) / 2 / OUTPUT_SAMPLE_RATE * 1000
+        await self.stop_ttfb_metrics()
+        await self.push_frame(TTSAudioRawFrame(audio=audio, sample_rate=OUTPUT_SAMPLE_RATE, num_channels=1))
+
+    async def _handle_transcript(self, response_id: str, text: str):
+        if not text or response_id in self._cut:
+            return
+        if response_id in self._voiced:
+            await self._push_text(response_id, text)
+        else:
+            self._held.setdefault(response_id, []).append(text)
+
+    async def _push_text(self, response_id: str, text: str):
+        self._texts.setdefault(response_id, []).append(text)
+        frame = TTSTextFrame(text, aggregated_by=AggregationType.SENTENCE)
+        frame.includes_inter_frame_spaces = True
+        await self.push_frame(frame)
 
     async def _handle_response_done(self, response: dict[str, Any]):
         response_id = response.get("id", "") or self._response_id or ""
-        spoken = self._spoken.pop(response_id, [])
-        if spoken and response_id not in self._texted and response_id not in self._cut:
-            # The line a tool call carried was not streamed as reply text; voice
-            # it from the argument so the caller is not left in silence.
-            logger.warning(f"{self} response {response_id} carried a spoken line but no text; voicing the argument")
-            for line in spoken:
-                await self._handle_text(response_id, line)
-        self._texted.discard(response_id)
+        if response_id in self._spoken and response_id not in self._voiced and response_id not in self._cut:
+            # The service speaks a tool call's line itself; a response that
+            # carried one and made no sound left the caller in silence.
+            logger.warning(f"{self} response {response_id} carried a spoken line but no audio")
+        self._spoken.discard(response_id)
+        self._voiced.discard(response_id)
+        self._held.pop(response_id, None)
         self._response_id = None
         await self._end_reply()
         await self.stop_processing_metrics()
@@ -617,8 +676,7 @@ class PolyAIRealtimeLLMService(LLMService):
             # Speech, not an input: the tool sees exactly the published contract.
             line = arguments.pop(SPOKEN_ARGUMENT, None)
             if isinstance(line, str) and line.strip():
-                response_id = event.get("response_id", "") or self._response_id or ""
-                self._spoken.setdefault(response_id, []).append(line)
+                self._spoken.add(event.get("response_id", "") or self._response_id or "")
         await self.run_function_calls(
             [FunctionCallFromLLM(context=self._context, tool_call_id=call_id, function_name=name, arguments=arguments)]
         )

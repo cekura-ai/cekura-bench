@@ -239,7 +239,7 @@
       "source": null,
       "components": [],
       "unmetered": [
-        "No public price list. The ElevenLabs voicing that follows the model is billed to this deployment's ElevenLabs account, separately."
+        "No public price list."
       ]
     },
     "azure-realtime": {

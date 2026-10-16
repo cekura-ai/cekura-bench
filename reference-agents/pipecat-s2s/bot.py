@@ -724,6 +724,48 @@ def azure_disclosures(settings: Settings) -> dict[str, str]:
     }
 
 
+def _polyai(credential: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
+    """PolyAI's Dialog-RSN-1, through the service in ``polyai_realtime``.
+
+    Text out, so ``voice`` is the voice of the text-to-speech that follows it
+    (see ``Provider.speaks``), not one the vendor hosts.
+    """
+    from polyai_realtime import PROMPT_ADDENDUM, PolyAIRealtimeLLMService
+
+    return PolyAIRealtimeLLMService(
+        api_key=credential,
+        url=polyai_url(settings),
+        model=model,
+        instructions=f"{instructions.rstrip()}\n\n{PROMPT_ADDENDUM}",
+    )
+
+
+def polyai_url(settings: Settings) -> str:
+    """The realtime endpoint; the vendor documents more than one host for it."""
+    from polyai_realtime import DEFAULT_URL
+
+    return settings.get("polyai_realtime_url", DEFAULT_URL)
+
+
+def polyai_disclosures(settings: Settings) -> dict[str, str]:
+    from polyai_realtime import PROMPT_ADDENDUM, SPOKEN_ARGUMENT
+
+    return {
+        "polyai_endpoint": polyai_url(settings),
+        "polyai_turn_detection": "service, create_response true (thresholds fixed by the vendor)",
+        "tts": f"ElevenLabs {CASCADE_TTS_MODEL} in the record's voice, as on the cascade rows",
+        "tool_schema": (
+            f"every tool takes a required spoken argument {SPOKEN_ARGUMENT!r} (poly_spoken), "
+            "removed from the arguments before the tool runs"
+        ),
+        # Named and hashed, as on the GPT-Live row: ``system_prompt_sha256``
+        # covers only the prompt every row shares.
+        "prompt_addendum": "polyai-spoken-tools",
+        "prompt_addendum_sha256": _digest(PROMPT_ADDENDUM),
+        "polyai_playback_reporting": "on: started and stopped, spoken_text from the words played; dropped_ms not measured",
+    }
+
+
 def _gpt_live(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
     """The live model plus the backend it hands reasoning to.
 
@@ -1023,13 +1065,17 @@ class Provider:
     # whether it was interrupted and reports it; that service broadcasts the
     # interruption itself, when it happens.
     interruptions: bool = True
+    # Whether the service returns its own speech. One answers in text only, and
+    # is voiced here by the cascade rows' text-to-speech, named on the record --
+    # its voice is then this pipeline's, not the vendor's.
+    speaks: bool = True
 
 
 # Whether the caller's own words reach the record is a per-provider decision,
 # and it is not a detail: a scored run needs both halves of the conversation, and
 # a transcript holding only the agent reads as a caller who never spoke. Three of
 # these services transcribe the caller only when asked, and each asks
-# differently; six do it themselves. Nothing warns about the difference,
+# differently; seven do it themselves. Nothing warns about the difference,
 # because a session without transcription is a working session.
 #
 #   openai-realtime   asked for  -- an input transcription config, default model
@@ -1041,6 +1087,7 @@ class Provider:
 #   nova-sonic        automatic  -- the service emits caller transcripts natively
 #   phonic            automatic  -- the service sends each finished caller turn
 #   deepslate         automatic  -- the service transcribes each finished caller turn
+#   polyai-dialog     automatic  -- transcription streams inside the reply it answers
 #
 # The tool calls travel separately, through the context aggregator, which is why
 # a run can show resolved tools and still carry no speech.
@@ -1096,6 +1143,9 @@ DEEPSLATE_ELEVENLABS_VOICE = "21m00Tcm4TlvDq8ikWAM"
 DEEPSLATE_ELEVENLABS_MODEL = "eleven_flash_v2_5"
 # The vendor's default and recommended mode for its hosted voices.
 DEEPSLATE_HOSTED_MODE = "HIGH_QUALITY"
+# Dialog-RSN-1 answers in text; it is voiced in the cascade rows' voice for the
+# same reason (``CASCADE_TTS_VOICE``, defined with the cascade below).
+POLYAI_TTS_VOICE = "21m00Tcm4TlvDq8ikWAM"
 
 # Voice Live's semantic detector, the one the vendor recommends for this model,
 # at the values the service reports when it is asked for with nothing else:
@@ -1252,6 +1302,18 @@ PROVIDERS: dict[str, Provider] = {
         "azure_realtime",
         discloses=azure_disclosures,
     ),
+    # PolyAI's audio-native dialog model hears the caller at its native 16 kHz
+    # and answers in text, voiced by the cascade rows' text-to-speech at the
+    # same rate -- see ``polyai_realtime``. The service announces the caller's
+    # turns and transcribes them as part of each reply. A result is sent as
+    # soon as it exists, so the next reply is written while the line the tool
+    # call carried is still being said.
+    "polyai-dialog": Provider(
+        _polyai, 16000, "dialog-rsn-1", POLYAI_TTS_VOICE, ("POLY_API_KEY",),
+        "polyai_realtime",
+        discloses=polyai_disclosures,
+        results="immediate", caller_transcription="automatic", speaks=False,
+    ),
 }
 
 
@@ -1371,16 +1433,17 @@ TEXT_MODELS: dict[str, TextModel] = {
 def build_cascade(text: TextModel, credential: str, model: str, instructions: str, settings: Settings):
     """Speech-to-text, a text model, text-to-speech -- the three the native model replaces."""
     from pipecat.services.deepgram.flux.stt import DeepgramFluxSTTService
-    from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
 
     stt = DeepgramFluxSTTService(api_key=os.environ["DEEPGRAM_API_KEY"], model=CASCADE_STT_MODEL)
     llm = text.build(credential, model, text.reasoning)
-    tts = ElevenLabsTTSService(
-        api_key=os.environ["ELEVENLABS_API_KEY"],
-        voice_id=settings.get("cascade_tts_voice", CASCADE_TTS_VOICE),
-        model=CASCADE_TTS_MODEL,
-    )
-    return stt, llm, tts
+    return stt, llm, cascade_tts(settings.get("cascade_tts_voice", CASCADE_TTS_VOICE))
+
+
+def cascade_tts(voice: str):
+    """The cascade rows' text-to-speech, also the voice of a text-out realtime row."""
+    from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
+
+    return ElevenLabsTTSService(api_key=os.environ["ELEVENLABS_API_KEY"], voice_id=voice, model=CASCADE_TTS_MODEL)
 
 
 # ── the agent definition ─────────────────────────────────────────────────────
@@ -3061,6 +3124,12 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         # trimmed on the service side to reach the filter before the aggregator.
         stages = [transport.input(), aggregators.user(), restatements, llm, transport.output(),
                   hangup, DropControlTokens(), aggregators.assistant()]
+        if not provider.speaks:
+            # A text-out service: the cascade's voice follows it, and the service
+            # is told from after the output transport what the caller heard.
+            from polyai_realtime import ReportsPlayback
+
+            stages[4:5] = [cascade_tts(voice), transport.output(), ReportsPlayback(llm)]
         rate = provider.input_rate
         realtime = True
         service_answers = provider.turns == "local" and provider.answers == "provider"

@@ -592,6 +592,14 @@ def _grok(api_key: str, model: str, voice: str, instructions: str, settings: Set
     )
 
 
+def grok_disclosures(settings: Settings) -> dict[str, str]:
+    return {
+        "grok_reasoning": GROK_REASONING,
+        "grok_vad": "server_vad, " + ", ".join(f"{k} {v}" for k, v in GROK_VAD.items())
+        + ", silence_duration_ms server default",
+    }
+
+
 def _qwen_realtime(credential: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
     """Qwen's realtime audio model, through the service in ``qwen_realtime``.
 
@@ -1168,16 +1176,20 @@ PROVIDERS: dict[str, Provider] = {
         turns="local", results="immediate",
         caller_transcription="automatic",
     ),
-    # Pinned to the versioned name the vendor's ``latest`` alias resolves to:
-    # an alias is not a configuration. 24 kHz is the vendor's recommended rate.
+    # Pinned to a versioned name, never the vendor's ``latest`` alias: an alias
+    # is not a configuration, and this one moved to 3.0 on 2026-10-14 under
+    # every session that used it. 24 kHz is the vendor's recommended rate.
     "grok-realtime": Provider(
         _grok, 24000, "grok-voice-think-fast-2.0", "eve", ("XAI_API_KEY",),
         "pipecat.services.xai.realtime.llm",
-        discloses=lambda settings: {
-            "grok_reasoning": GROK_REASONING,
-            "grok_vad": "server_vad, " + ", ".join(f"{k} {v}" for k, v in GROK_VAD.items())
-            + ", silence_duration_ms server default",
-        },
+        discloses=grok_disclosures,
+    ),
+    # The vendor's next model on the same API and the same settings; a row of
+    # its own for the reason given at the mini row.
+    "grok-realtime-3": Provider(
+        _grok, 24000, "grok-voice-3.0", "eve", ("XAI_API_KEY",),
+        "pipecat.services.xai.realtime.llm",
+        discloses=grok_disclosures,
     ),
     # GPT-Live is the exception to the paragraph above: it resamples what it is
     # handed. The rate is still declared, so the record says what was sent.

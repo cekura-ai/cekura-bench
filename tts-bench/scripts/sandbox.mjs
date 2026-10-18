@@ -3,6 +3,7 @@
 //   node scripts/sandbox.mjs plan    --label campaign-a                      # what would run; no remote calls
 //   node scripts/sandbox.mjs prepare --live                                  # snapshot this commit, tests passing
 //   node scripts/sandbox.mjs launch  --live --label campaign-a --env <.env>  # run, score, pack, download, verify
+//                            [--providers p] [--voice id]               # one provider's voice other than its lineup's
 //   node scripts/sandbox.mjs status  --label campaign-a [--remote]
 //   node scripts/sandbox.mjs stop    --live --label campaign-a
 //
@@ -204,7 +205,7 @@ async function prepare(config, stateDir) {
 }
 
 async function launchGroup(ctx, group) {
-  const { config, Sandbox, account, prepared, label, keys, localStore, stateDir } = ctx;
+  const { config, Sandbox, account, prepared, label, voice, keys, localStore, stateDir } = ctx;
   const path = join(stateDir, label, `${group.name}.json`);
   const state = await loadJson(path, { group: group.name, commit: prepared.commit, models: {} });
   if (state.commit !== prepared.commit) throw new Error(`${group.name}: this label was started on ${state.commit}; one campaign, one commit`);
@@ -236,6 +237,7 @@ async function launchGroup(ctx, group) {
       const command = await sb.runCommand({ cmd: '.venv/bin/python', cwd: REMOTE, env, detached: true, args: [
         '-u', 'bin/campaign-model.py', '--provider', provider, '--model', model, '--label', label,
         '--suite', config.suite, '--repeats', String(config.repeats), '--out', REMOTE_OUT,
+        ...(voice ? ['--voice', voice] : []),
         ...(config.items ?? []).flatMap(item => ['--item', item])] });
       Object.assign(m, { status: 'dispatched', commandId: command.cmdId, sessionId: session, attempts: m.attempts + 1 });
       await saveJson(path, state);
@@ -291,7 +293,7 @@ async function mapBounded(items, count, worker) {
 
 async function main() {
   const { values: a, positionals } = parseArgs({ allowPositionals: true, options: {
-    config: { type: 'string', default: join(HERE, 'config/sandbox.json') }, label: { type: 'string' },
+    config: { type: 'string', default: join(HERE, 'config/sandbox.json') }, label: { type: 'string' }, voice: { type: 'string' },
     providers: { type: 'string' }, env: { type: 'string' }, store: { type: 'string' },
     live: { type: 'boolean', default: false }, remote: { type: 'boolean', default: false } } });
   const command = positionals[0];
@@ -340,7 +342,7 @@ async function main() {
       todo.push({ group: g, keys });
     }
     const outcomes = await mapBounded(todo, config.parallel, ({ group, keys }) =>
-      launchGroup({ config, Sandbox, account, prepared, label: a.label, keys, localStore, stateDir }, group));
+      launchGroup({ config, Sandbox, account, prepared, label: a.label, voice: a.voice, keys, localStore, stateDir }, group));
     await saveJson(join(stateDir, a.label, 'outcomes.json'), { outcomes });
     for (const o of outcomes) console.log(`${o.group}: ${o.status}${o.pending?.length ? ' pending ' + o.pending.join(',') : ''}${o.error ? ' ' + o.error : ''}`);
     if (outcomes.some(o => o.status !== 'complete')) process.exitCode = 1;

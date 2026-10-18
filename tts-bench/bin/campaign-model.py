@@ -70,6 +70,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--provider", required=True)
     parser.add_argument("--model", required=True)
+    parser.add_argument("--voice", help="a voice other than the lineup's; give each voice its own label")
     parser.add_argument("--label", required=True)
     parser.add_argument("--suite", default="full")
     parser.add_argument("--repeats", type=int, default=3)
@@ -92,6 +93,7 @@ def main() -> int:
     if run_dir is None:
         status = step("bin/run-tts.py", "--provider", args.provider, "--model", args.model, "--suite", args.suite,
                       "--repeats", str(args.repeats), "--label", args.label,
+                      *(("--voice", args.voice) if args.voice else ()),
                       *(flag for item in args.item for flag in ("--item", item)))
         run_dir = find_run(root, args.provider, args.model, args.label)
     else:

@@ -15,6 +15,7 @@ from service import events as ev
 from service.adapters.base import SessionConfig, TurnDetection
 from service.adapters.gemini_live import GeminiLiveAdapter, _flatten_usage_metadata
 from service.adapters.grok_realtime import GrokRealtimeAdapter
+from service.adapters.higgs_realtime import HiggsRealtimeAdapter
 from service.adapters.openai_realtime import OpenAIRealtimeAdapter
 from service.audio import AudioTimeline
 
@@ -96,6 +97,18 @@ class TestGrok:
         a = adapter(GrokRealtimeAdapter)
         a._handle({"type": "ping"})
         assert a.log.raw_frames == 0
+
+
+class TestHiggs:
+    def test_session_names_the_model_and_boson_transcription(self):
+        payload = adapter(HiggsRealtimeAdapter, transcribe_input=True)._session_payload()
+        assert payload["model"] == "higgs-realtime"
+        assert payload["audio"]["input"]["transcription"]["model"] == "higgs-stt-3.1"
+        assert payload["audio"]["input"]["turn_detection"]["type"] == "server_vad"
+
+    def test_semantic_turn_detection_is_passed_through(self):
+        payload = adapter(HiggsRealtimeAdapter, turn_detection=TurnDetection("semantic_vad"))._session_payload()
+        assert payload["audio"]["input"]["turn_detection"]["type"] == "semantic_vad"
 
 
 class TestReferenceClient:

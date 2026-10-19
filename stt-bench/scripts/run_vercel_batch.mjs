@@ -74,7 +74,7 @@ try {
   if (sb.region !== plan.region) throw new Error('Sandbox region differs from the plan');
   if (state.status === 'setup') {
     await stage('setup', { cmd: 'bash', args: ['-c', [
-      'python3 -m pip install --quiet --user uv', '~/.local/bin/uv sync --locked --quiet',
+      'python3 -m pip install --quiet --user uv', 'python3 -m uv sync --locked --quiet',
       `.venv/bin/python -m stt_bench.cli prepare-dataset --dataset ${plan.dataset}`,
       '.venv/bin/python -m pytest -q tests/test_batch.py'].join(' && ')] });
     state.status = 'run'; await save();

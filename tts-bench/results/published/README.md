@@ -22,7 +22,7 @@ replaces the base run's.
 
 | Models | Base run | Amended by |
 |---|---|---|
-| Inworld TTS-2 Flash, Cartesia Sonic 3.6 and 3.5, Deepgram Aura-2 and Flux, ElevenLabs Flash v2.5, Smallest Lightning v3.1 Pro | `campaign-0928` | `campaign-1004` |
+| Cartesia Sonic 3.6 and 3.5, Deepgram Aura-2 and Flux, ElevenLabs Flash v2.5, Smallest Lightning v3.1 Pro | `campaign-0928` | `campaign-1004` |
 | ElevenLabs v3 Conversational, Gemini 3.8 Flash, 3.8 Flash-Lite and 3.1 Flash, GPT-4o mini TTS, Qwen3-TTS | `campaign-0928-fix` | `campaign-1004` |
 | Grok TTS | `campaign-0928-fix` | `campaign-1004-xai` |
 | ElevenLabs v4 Turbo and v4 | `campaign-0928-v4` | `campaign-1004` |
@@ -31,10 +31,14 @@ replaces the base run's.
 | Microsoft MAI-Voice-2.1 and MAI-Voice-2.1-Flash | `campaign-1013-azure` | none |
 | Fish Audio Drama 3 (preview) | `campaign-1013-drama3` | none |
 | Hume Octave 2 (preview) | `campaign-1014-hume` | none |
+| Inworld TTS-2 Flash and TTS-2 (creative delivery) | `campaign-1019-inworld` | none |
 
 `campaign-0928-fix` re-ran the models whose recordings an early stream-end bug
 had cut short, and `campaign-0928-v4` added the two v4 models. Grok's
 `campaign-1004` run was refused on every request and was re-run as
 `campaign-1004-xai`; Soniox was first measured on 2026-10-04, as one full run.
-The `campaign-1013` runs were measured on corpus 0.3.0 from the start, so they
-need no amending run. Each summary names its runs in `run` and `amendments`.
+The `campaign-1013` runs and later were measured on corpus 0.3.0 from the start,
+so they need no amending run. `campaign-1019-inworld` re-measured Inworld after
+its new checkpoint rolled out, with the voice Sarah; it replaces the
+`campaign-0928` Flash run. Its Whisper transcripts were scored offline with
+`bin/score-tts.py`, the key the sandbox carried having been rejected. Each summary names its runs in `run` and `amendments`.

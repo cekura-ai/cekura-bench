@@ -1,23 +1,26 @@
 // Run one batch (whole-file, accuracy-only) model on Vercel Sandbox from a clean pushed commit.
-//   node scripts/run_vercel_batch.mjs --model <name> --run-id <id> [--live]
+//   node scripts/run_vercel_batch.mjs --model <name> --run-id <id> --data <prepared dataset dir> [--live]
+// --data is a dataset prepared and verified locally by `stt_bench.cli prepare-dataset`
+// (datasets/<id>/<revision>); it is uploaded whole and verified again in the sandbox.
 // Without --live nothing remote happens. Saved receipts prevent a duplicate run: a
 // launch that stopped part-way continues from its last finished stage when rerun.
-import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rename, rm } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
-import { join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
-import { digestFile, dispatchOnce } from './vercel_models.mjs';
+import { digestFile, dispatchOnce, upload } from './vercel_models.mjs';
 
 const REMOTE = '/vercel/sandbox/stt-bench-batch';
-const DATA_HOSTS = ['huggingface.co', '*.huggingface.co', '*.hf.co'];
 
 const { values: args } = parseArgs({ options: {
-  model: { type: 'string' }, 'run-id': { type: 'string' }, live: { type: 'boolean', default: false },
+  model: { type: 'string' }, 'run-id': { type: 'string' }, data: { type: 'string' }, live: { type: 'boolean', default: false },
 }});
 const runId = args['run-id'];
-if (!args.model || !runId || !/^[A-Za-z0-9_-]+$/.test(runId)) throw new Error('--model and a plain --run-id are required');
+if (!args.model || !runId || !/^[A-Za-z0-9_-]+$/.test(runId) || !args.data) throw new Error('--model, a plain --run-id and --data are required');
 const plan = JSON.parse(await readFile('config/vercel-models.json', 'utf8'));
+const dataset = JSON.parse(await readFile(join('config/datasets', plan.dataset + '.json'), 'utf8'));
+if (basename(args.data) !== dataset.revision) throw new Error('--data must be the prepared directory of the planned dataset revision');
 const config = JSON.parse(await readFile(join('config/batch-models', args.model + '.json'), 'utf8'));
 if (config.model_id !== args.model) throw new Error('Batch model config does not match selector');
 const git = (...a) => execFileSync('git', a, { encoding: 'utf8' }).trim();
@@ -25,7 +28,7 @@ const commit = git('rev-parse', 'HEAD');
 if (git('status', '--porcelain', '--', '.')) throw new Error('stt-bench has uncommitted changes; a run uses a pushed commit');
 if (!git('branch', '-r', '--contains', commit)) throw new Error('HEAD is not pushed; the sandbox clones it');
 const repo = git('remote', 'get-url', 'origin').replace(/^git@github\.com:/, 'https://github.com/');
-const allow = [...plan.setupDomains, ...DATA_HOSTS, new URL(config.endpoint).hostname];
+const allow = [...plan.setupDomains, new URL(config.endpoint).hostname];
 const name = `stt-batch-${runId}`.toLowerCase().slice(0, 60);
 if (!args.live) { console.log(JSON.stringify({ name, model: args.model, commit, region: plan.region, allow }, null, 2)); process.exit(0); }
 
@@ -67,6 +70,11 @@ try {
     const checkout = await sb.runCommand({ cmd: 'git', args: ['-C', '/vercel/sandbox/repo', 'checkout', '--quiet', commit] });
     const link = await sb.runCommand({ cmd: 'ln', args: ['-s', '/vercel/sandbox/repo/stt-bench', REMOTE] });
     if ([clone, checkout, link].some(c => c.exitCode !== 0)) throw new Error('Checkout of the pushed commit failed');
+    const archive = join(root, 'dataset.tar');
+    execFileSync('tar', ['-cf', archive, '-C', dirname(args.data), basename(args.data)]);
+    state.datasetSha256 = await digestFile(archive);
+    await upload(sb, archive, REMOTE + '/dataset-parts');
+    await rm(archive);
     state.status = 'setup'; await save();
   } else {
     sb = await Sandbox.get({ ...account, name, resume: true });   // a saved name is authoritative; never create twice
@@ -75,7 +83,9 @@ try {
   if (state.status === 'setup') {
     await stage('setup', { cmd: 'bash', args: ['-c', [
       'python3 -m pip install --quiet --user uv', 'python3 -m uv sync --locked --quiet',
-      `.venv/bin/python -m stt_bench.cli prepare-dataset --dataset ${plan.dataset}`,
+      'cat dataset-parts/part-* > dataset.tar', `echo "${state.datasetSha256}  dataset.tar" | sha256sum -c --quiet`,
+      `mkdir -p datasets/${plan.dataset}`, `tar -xf dataset.tar -C datasets/${plan.dataset}`, 'rm -r dataset.tar dataset-parts',
+      `.venv/bin/python -c "from stt_bench.catalog import dataset_definition; from stt_bench.huggingface_data import verify_prepared; verify_prepared(dataset_definition('${plan.dataset}'))"`,
       '.venv/bin/python -m pytest -q tests/test_batch.py'].join(' && ')] });
     state.status = 'run'; await save();
   }

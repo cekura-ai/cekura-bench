@@ -254,12 +254,15 @@ To run from Vercel (a service that admits only some networks, or the same site a
 the streaming runs), commit and push, then:
 
 ```bash
-node scripts/run_vercel_batch.mjs --model nemotron-3.5-transcribe-30b-a4b --run-id <id> --live
+node scripts/run_vercel_batch.mjs --model nemotron-3.5-transcribe-30b-a4b --run-id <id> \
+  --data datasets/pipecat-stt-benchmark/<revision> --live
 ```
 
-The sandbox clones the pushed commit, prepares the dataset, runs the batch tests,
-benchmarks the model and returns `reports/vercel-batch/<id>/results.tar.gz` with
-its checksum. Its network allows only setup, dataset and endpoint hosts.
+`--data` is the dataset prepared locally with `prepare-dataset`. The sandbox clones
+the pushed commit, receives the dataset and verifies its checksum and every clip
+hash, runs the batch tests, benchmarks the model and returns
+`reports/vercel-batch/<id>/results.tar.gz` with its checksum. Its network allows
+only setup and endpoint hosts.
 
 ## Timing checks and remote execution
 

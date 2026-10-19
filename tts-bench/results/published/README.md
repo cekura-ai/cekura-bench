@@ -27,10 +27,11 @@ replaces the base run's.
 | Grok TTS | `campaign-0928-fix` | `campaign-1004-xai` |
 | ElevenLabs v4 Turbo and v4 | `campaign-0928-v4` | `campaign-1004` |
 | Soniox TTS RT v2 | `campaign-1004-soniox` | none |
-| Gradium (default), Rime Coda and Mist v3, Fish Audio S2.1-Pro | `campaign-1013` | none |
+| Rime Coda and Mist v3, Fish Audio S2.1-Pro | `campaign-1013` | none |
 | Microsoft MAI-Voice-2.1 and MAI-Voice-2.1-Flash | `campaign-1013-azure` | none |
 | Fish Audio Drama 3 (preview) | `campaign-1013-drama3` | none |
 | Hume Octave 2 (preview) | `campaign-1014-hume` | none |
+| Gradium (default), voice Everly | `campaign-1018b-gradium-everly` | none |
 | Inworld TTS-2 Flash and TTS-2 (creative delivery) | `campaign-1019-inworld` | none |
 
 `campaign-0928-fix` re-ran the models whose recordings an early stream-end bug
@@ -40,5 +41,8 @@ had cut short, and `campaign-0928-v4` added the two v4 models. Grok's
 The `campaign-1013` runs and later were measured on corpus 0.3.0 from the start,
 so they need no amending run. `campaign-1019-inworld` re-measured Inworld after
 its new checkpoint rolled out, with the voice Sarah; it replaces the
-`campaign-0928` Flash run. Its Whisper transcripts were scored offline with
-`bin/score-tts.py`, the key the sandbox carried having been rejected. Each summary names its runs in `run` and `amendments`.
+`campaign-0928` Flash run. Gradium is shown with Everly, its first choice of the
+ten voices it recommended, in place of the `campaign-1013` Harper run. The
+sandbox's OpenAI key had been rejected for both campaigns, so their Whisper
+transcripts were scored offline with `bin/score-tts.py`.
+Each summary names its runs in `run` and `amendments`.

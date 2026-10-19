@@ -72,7 +72,7 @@ class ProviderEntry:
 # model string, so there the voice is the model.
 SKYLAR = "db6b0ed5-d5d3-463d-ae85-518a07d3c2b4"       # Cartesia
 RACHEL = "21m00Tcm4TlvDq8ikWAM"                       # ElevenLabs
-HARPER = "4SZHfMpw-p46Ywgs"     # Gradium, from its recommended voices
+EVERLY = "vjFyp2BcCyTlUmYb"     # Gradium, its first choice of its recommended voices
 ASTRA = "astra"                                      # Rime, female US English on Coda and Mist v3
 SARAH = "933563129e564b19a115bedd57b7406a"              # Fish Official, female US English
 DELIA = "c70cfb98867a4bfb9ae20d2401257b92"              # Fish Audio, female US English, from its Drama 3 voice cast
@@ -130,7 +130,7 @@ PROVIDERS: dict[str, ProviderEntry] = {
     ),
     "gradium": ProviderEntry(
         "gradium", GradiumAdapter, "GRADIUM_API_KEY",
-        (Model("default", HARPER),),
+        (Model("default", EVERLY),),
         notes="websocket, contexts by client_req_id; setup/ready before t0; streamed input and continuation "
               "via text frames in one request (split on whitespace, punctuation attached); <flush> forces generation; "
               "end_of_stream ends input; no cancel (unscoped end waits for active requests); "

@@ -76,10 +76,13 @@ def _extra_providers() -> dict[str, Any]:
     service bench's registry stays untouched."""
     from service.registry import ProviderEntry
 
-    from turn_taking_bench.s2s import azure_realtime, deepslate, gemini_thinking, gpt_live, nova_sonic, phonic
+    from turn_taking_bench.s2s import (
+        azure_realtime, deepslate, elevenlabs_agents, gemini_thinking, gpt_live, nova_sonic, phonic,
+    )
 
     return {
         "azure-realtime": azure_realtime.provider_entry(),
+        "elevenlabs-agents": elevenlabs_agents.provider_entry(),
         "gemini-live-thinking": gemini_thinking.provider_entry(),
         "gpt-live": gpt_live.provider_entry(),
         "nova-sonic": ProviderEntry(

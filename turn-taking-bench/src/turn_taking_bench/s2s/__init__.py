@@ -47,6 +47,7 @@ from typing import Any
 S2S_PROVIDERS: tuple[str, ...] = (
     "openai-realtime", "gemini-live", "grok-realtime", "higgs-realtime", "fake",
     "azure-realtime", "gpt-live", "nova-sonic", "phonic", "deepslate", "gemini-live-thinking",
+    "elevenlabs-agents",
 )
 
 MODEL_PREFIX = "s2s:"

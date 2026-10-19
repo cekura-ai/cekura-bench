@@ -14,3 +14,4 @@ __pycache__/
 /datasets/authored/build/
 # Hidden holdout split of the authored dataset (ids, holdout dataset): never committed.
 /datasets/authored/holdout/
+*.local.json

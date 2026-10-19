@@ -46,7 +46,7 @@ Provider keys are read from a dotenv file (`--env`); values never enter reports.
 | `turn-taking-bench site-export` | Refresh the leaderboard site's data from a full run: checks every published value reproduces, then adds new models, the overall rank (end of turn averaged over conditions, with a 95% interval) and per-scenario breakdowns |
 
 Reference systems (`adapters/`): a classic cascade's end-of-turn decision (Deepgram Flux), Smart Turn v3 and an energy VAD.
-Speech-to-speech adapters (`s2s/`): OpenAI Realtime, GPT-Live, Azure Realtime, Gemini Live (incl. extended thinking), Grok, Amazon Nova Sonic, Phonic, Deepslate and Higgs Realtime, each run at its provider's default turn settings unless a flag says otherwise. Models other than a provider's pinned default are selected with `--config model=<id>`, e.g. `--model s2s:grok-realtime --config model=grok-voice-3.0`.
+Speech-to-speech adapters (`s2s/`): OpenAI Realtime, GPT-Live, Azure Realtime, Gemini Live (incl. extended thinking), Grok, Amazon Nova Sonic, Phonic, Deepslate, Higgs Realtime and ElevenLabs Agents, each run at its provider's default turn settings unless a flag says otherwise. ElevenLabs Agents runs a saved agent: create it once with `scripts/elevenlabs_agent.py` from a local configuration file (`elevenlabs-agent.local.json`, not committed) and set `ELEVENLABS_BENCH_API_KEY` and `ELEVENLABS_AGENT_ID`. Models other than a provider's pinned default are selected with `--config model=<id>`, e.g. `--model s2s:grok-realtime --config model=grok-voice-3.0`.
 
 ## Running the public set
 

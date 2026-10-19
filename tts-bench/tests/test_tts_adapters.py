@@ -152,6 +152,19 @@ class TestInworld:
         inworld._on_message({"result": {"contextId": "main", "flushCompleted": {}, "status": {"code": 0}}})
         assert synthesis.done.is_set()
 
+    async def test_only_tts_2_is_given_a_delivery_mode(self):
+        import asyncio
+
+        from tts_bench.adapters.inworld import InworldAdapter
+
+        for model, expected in (("inworld-tts-2", "CREATIVE"), ("inworld-tts-2-flash", None)):
+            inworld, sent = adapter(InworldAdapter, model, "Sarah")
+            opening = asyncio.create_task(inworld.open_context("main"))
+            await asyncio.sleep(0.01)
+            assert sent[0]["create"].get("deliveryMode") == expected
+            inworld._on_message({"result": {"contextId": "main", "contextCreated": {}, "status": {"code": 0}}})
+            await opening
+
     def test_close_context_is_not_offered_as_a_cancel(self):
         from tts_bench.adapters.inworld import InworldAdapter
 

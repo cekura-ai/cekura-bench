@@ -11,6 +11,11 @@ Audio is requested as raw ``PCM`` (s16le, no header). ``LINEAR16`` would wrap
 every chunk in its own WAV header; a header that still arrives is stripped so
 the timeline holds samples only.
 
+TTS-2 takes a ``deliveryMode`` (stable, balanced or creative); Flash ignores it.
+TTS-2 runs in creative mode, the delivery Inworld recommended for this benchmark,
+and option ``delivery_mode`` sets another. Text normalization is left to the
+service's default, which decides per request.
+
 There is no cancel. ``close_context`` is documented as a flush followed by a
 close: whatever the context was already asked to say is still generated and
 delivered (measured: about 14 s of a 15 s answer after a close sent 300 ms into
@@ -27,6 +32,7 @@ from tts_bench.adapters._ws import WebSocketAdapter
 from tts_bench.adapters.base import AdapterError
 
 CREATE_TIMEOUT_S = 10.0
+DELIVERY_MODES = {"inworld-tts-2": "CREATIVE"}
 
 
 def pcm_from_chunk(chunk: bytes) -> bytes:
@@ -55,13 +61,13 @@ class InworldAdapter(WebSocketAdapter):
 
     async def _open_context(self, context_id: str) -> None:
         created = self._created[context_id] = asyncio.Event()
-        await self._send_json({
-            "create": {
-                "voiceId": self.config.voice, "modelId": self.config.model,
-                "audioConfig": {"audioEncoding": "PCM", "sampleRateHertz": self.config.sample_rate},
-            },
-            "contextId": context_id,
-        })
+        create: dict[str, Any] = {
+            "voiceId": self.config.voice, "modelId": self.config.model,
+            "audioConfig": {"audioEncoding": "PCM", "sampleRateHertz": self.config.sample_rate},
+        }
+        if delivery := self.config.option("delivery_mode", DELIVERY_MODES.get(self.config.model)):
+            create["deliveryMode"] = delivery
+        await self._send_json({"create": create, "contextId": context_id})
         try:
             await asyncio.wait_for(created.wait(), CREATE_TIMEOUT_S)
         except asyncio.TimeoutError as exc:

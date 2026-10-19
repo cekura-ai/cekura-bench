@@ -124,8 +124,9 @@ PROVIDERS: dict[str, ProviderEntry] = {
     ),
     "inworld": ProviderEntry(
         "inworld", InworldAdapter, "INWORLD_API_KEY",
-        (Model("inworld-tts-2-flash", "Brooke"),),
-        notes="bidirectional websocket, contexts by contextId; raw PCM; no cancel (close_context flushes first)",
+        (Model("inworld-tts-2-flash", "Sarah"), Model("inworld-tts-2", "Sarah")),
+        notes="bidirectional websocket, contexts by contextId; raw PCM; TTS-2 in creative delivery mode; "
+              "no cancel (close_context flushes first)",
     ),
     "gradium": ProviderEntry(
         "gradium", GradiumAdapter, "GRADIUM_API_KEY",

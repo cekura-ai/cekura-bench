@@ -1,0 +1,20 @@
+{
+  "model_id": "nemotron-3.5-transcribe-30b-a4b",
+  "provider": "nvidia",
+  "model": "nvidia/Nemotron-3.5-Transcribe-30B-A4B",
+  "api": "openai-chat-completions-audio",
+  "endpoint": "https://nemotron-transcribe-tjn6aagij.gobrev.dev/v1/chat/completions",
+  "deployment": "NVIDIA-hosted private preview on one H100 (Brev), BF16; the engine runs two requests at a time",
+  "user_agent": "brev-transcribe-client/1.0",
+  "prompt": "Transcribe this audio. Include all spoken words.",
+  "max_tokens": 1024,
+  "extra_body": {"chat_template_kwargs": {"enable_thinking": false}},
+  "concurrency": 2,
+  "timeout_s": 120,
+  "input_audio": "the frozen clip WAV exactly as streamed to providers (retained speech plus 1 s appended silence), base64 in the request",
+  "supported_measurements": {"accuracy": true, "entity_accuracy": true, "latency": false, "price": false},
+  "checked_on": "2026-10-19",
+  "pricing": null,
+  "pricing_note": "Private preview endpoint; NVIDIA has published no per-minute price.",
+  "measurement_caveat": "Each clip is uploaded whole and transcribed after it ends, so only transcript accuracy is comparable with the streaming providers; no streaming, deadline or completion latency is measured."
+}

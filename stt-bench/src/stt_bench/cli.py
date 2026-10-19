@@ -56,6 +56,11 @@ def main():
     p.add_argument('--model', required=True)
     p.add_argument('--run-id')
     p.add_argument('--resume', action='store_true')
+    p = sub.add_parser('batch-benchmark', help='Transcribe whole clips with a named batch endpoint; accuracy only, no latency')
+    p.add_argument('--dataset', required=True)
+    p.add_argument('--model', required=True)
+    p.add_argument('--run-id')
+    p.add_argument('--resume', action='store_true')
     p = sub.add_parser("prepare", help="Freeze a deterministic local FLEURS sample")
     p.add_argument("--tsv", type=Path, default=Path("test.tsv"))
     p.add_argument("--audio-dir", type=Path, default=Path("test"))
@@ -154,6 +159,9 @@ def main():
         elif args.command == 'benchmark':
             from .benchmark import benchmark
             asyncio.run(benchmark(args.dataset, args.model, args.run_id, args.resume))
+        elif args.command == 'batch-benchmark':
+            from .batch import batch_benchmark
+            batch_benchmark(args.dataset, args.model, args.run_id, args.resume)
         elif args.command == "prepare":
             print(prepare(args.tsv, args.audio_dir, args.out, args.count, args.seed))
         elif args.command == "prepare-expanded":

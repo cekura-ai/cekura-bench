@@ -231,6 +231,36 @@ locally supplied private recordings and transcripts. Extract the generated
 the audio folder beside it. See the [dashboard guide](scripts/BENCHMARK_DASHBOARD.md)
 for source selection, metric definitions, and export options.
 
+## Accuracy-only batch endpoints
+
+Some transcription services take a whole recording per request and answer once
+the upload ends. None of the streaming latencies is comparable for them, so
+[batch.py](src/stt_bench/batch.py) records transcripts only and scores them with
+the unchanged WER and entity scorers. Each model is a file in
+[config/batch-models](config/batch-models) naming its endpoint, prompt,
+concurrency and what it cannot measure.
+
+```bash
+.venv/bin/python -m stt_bench.cli batch-benchmark --dataset pipecat-stt-benchmark --model nemotron-3.5-transcribe-30b-a4b
+```
+
+The run sends the smoke subset first and stops unless every smoke clip returns a
+complete transcript, then the full subset. `transcripts.jsonl` is appended as
+answers arrive, so a rerun with `--run-id <id> --resume` sends only the clips not
+yet saved; an incomplete or refused answer is kept as an unusable clip. Results
+are under `runs/batch/<dataset>/<model>/<run_id>/`.
+
+To run from Vercel (a service that admits only some networks, or the same site as
+the streaming runs), commit and push, then:
+
+```bash
+node scripts/run_vercel_batch.mjs --model nemotron-3.5-transcribe-30b-a4b --run-id <id> --live
+```
+
+The sandbox clones the pushed commit, prepares the dataset, runs the batch tests,
+benchmarks the model and returns `reports/vercel-batch/<id>/results.tar.gz` with
+its checksum. Its network allows only setup, dataset and endpoint hosts.
+
 ## Timing checks and remote execution
 
 Run a local timing probe without provider requests:

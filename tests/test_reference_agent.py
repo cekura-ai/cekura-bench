@@ -1522,12 +1522,14 @@ class TestCascadeCounterparts:
         pairing is a cascade on that backend; Phonic and Deepslate offer no text
         model of their own; and the text models Voice Live serves next to Azure
         Realtime are OpenAI's, which the OpenAI cascade already covers.
+        ElevenLabs, like Phonic and Deepslate, offers no text model of its own.
         A vendor's smaller tier shares its vendor's counterpart: the question it
         answers is "the cheaper model or the flagship", not "native or cascade".
         """
         paired = {c.counterpart_to for c in bot.TEXT_MODELS.values() if c.counterpart_to}
-        tiers = {"openai-realtime-mini", "gemini-live-standard", "gemini-flash-live"}
-        unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live", "phonic", "deepslate", "azure-realtime"} - tiers
+        tiers = {"openai-realtime-mini", "gemini-live-standard", "gemini-flash-live", "elevenlabs-realtime-mini"}
+        unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live", "phonic", "deepslate", "azure-realtime",
+                                                  "elevenlabs-realtime"} - tiers
         assert not unpaired, f"native providers with no cascade counterpart: {sorted(unpaired)}"
 
     def test_a_counterpart_names_a_provider_that_exists(self):
@@ -4003,3 +4005,59 @@ class TestEachDefinitionReportsToItsOwnAgent:
         assert built["agent_id"] == 22 and built["custom_metadata"]["cekura_agent_id"] == 22
         # The record is sent again whole when the call ends, so the id has to be on it.
         assert record["cekura_agent_id"] == 22
+
+
+class TestElevenLabsRealtime:
+    """ElevenLabs' Eleven Realtime on the framework's OpenAI service: its socket, its header, its model."""
+
+    @staticmethod
+    def _service(name="elevenlabs-realtime"):
+        provider = bot.PROVIDERS[name]
+        return provider.build("k", provider.default_model, provider.default_voice, "prompt", asked())
+
+    def test_each_tier_is_its_own_row_on_its_own_model(self):
+        assert bot.PROVIDERS["elevenlabs-realtime"].default_model == "eleven_realtime_v1_max"
+        assert bot.PROVIDERS["elevenlabs-realtime-mini"].default_model == "eleven_realtime_v1_mini"
+
+    def test_the_model_is_on_the_session_because_the_url_does_not_choose_it(self):
+        for name in ("elevenlabs-realtime", "elevenlabs-realtime-mini"):
+            service = self._service(name)
+            assert service._settings.session_properties.model == bot.PROVIDERS[name].default_model
+
+    def test_the_rate_matches_the_service(self):
+        import elevenlabs_realtime
+
+        assert elevenlabs_realtime.SAMPLE_RATE == bot.PROVIDERS["elevenlabs-realtime"].input_rate
+
+    async def test_it_signs_in_with_the_elevenlabs_header_not_a_bearer_token(self, monkeypatch):
+        import elevenlabs_realtime
+
+        seen = {}
+
+        async def connect(uri, additional_headers):
+            seen["uri"], seen["headers"] = uri, additional_headers
+            return object()
+
+        monkeypatch.setattr(elevenlabs_realtime, "websocket_connect", connect)
+        service = self._service()
+        service.create_task = lambda coro: coro.close()
+        await service._connect()
+        assert seen["uri"].startswith(elevenlabs_realtime.URL)
+        assert seen["headers"] == {"xi-api-key": "k"}
+
+    async def test_delivery_tags_never_reach_the_transcript_even_when_split(self):
+        service = self._service()
+        pushed = []
+
+        async def push(text):
+            pushed.append(text)
+
+        service._push_output_transcript_text_frames = push
+
+        class Delta:
+            def __init__(self, delta):
+                self.delta = delta
+
+        for part in ["[hap", "py] Thanks, Maria! ", "Room [B] is ready."]:
+            await service._handle_evt_audio_transcript_delta(Delta(part))
+        assert "".join(pushed) == "Thanks, Maria! Room [B] is ready."

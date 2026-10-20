@@ -712,6 +712,40 @@ def _azure_realtime(credential: str, model: str, voice: str, instructions: str, 
     )
 
 
+def _elevenlabs_realtime(credential: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
+    """ElevenLabs' speech-to-speech model, through the service in ``elevenlabs_realtime``.
+
+    The same session as the OpenAI rows, without a reasoning level (the model
+    has none to set); the model goes on the session because the endpoint does
+    not read it from the URL.
+    """
+    from pipecat.services.openai.realtime.events import (
+        AudioConfiguration,
+        AudioInput,
+        AudioOutput,
+        InputAudioTranscription,
+        SessionProperties,
+    )
+    from pipecat.services.openai.realtime.llm import OpenAIRealtimeLLMSettings
+
+    from elevenlabs_realtime import ElevenLabsRealtimeLLMService
+
+    return ElevenLabsRealtimeLLMService(
+        api_key=credential,
+        settings=OpenAIRealtimeLLMSettings(
+            model=model,
+            system_instruction=instructions,
+            session_properties=SessionProperties(
+                model=model,
+                audio=AudioConfiguration(
+                    input=AudioInput(transcription=InputAudioTranscription()),
+                    output=AudioOutput(voice=voice),
+                ),
+            ),
+        ),
+    )
+
+
 def azure_disclosures(settings: Settings) -> dict[str, str]:
     from azure_realtime import API_VERSION
 
@@ -1035,6 +1069,7 @@ class Provider:
 #   openai-realtime   asked for  -- an input transcription config, default model
 #   grok-realtime     asked for  -- same shape, but only under its own ASR model
 #   azure-realtime    asked for  -- same shape, Azure's own speech-to-text
+#   elevenlabs-realtime asked for -- same shape, on ElevenLabs' socket
 #   qwen-realtime     automatic  -- documented for the audio model
 #   gemini-live       automatic  -- the service configures both directions itself
 #   gpt-live          automatic  -- the protocol is transcript-driven throughout
@@ -1251,6 +1286,19 @@ PROVIDERS: dict[str, Provider] = {
         _azure_realtime, 24000, "azure-realtime", "ava", ("AZURE_VOICE_API_KEY",),
         "azure_realtime",
         discloses=azure_disclosures,
+    ),
+    # ElevenLabs' two Eleven Realtime tiers, on its OpenAI-compatible socket at
+    # 24 kHz both ways -- see ``elevenlabs_realtime``. Two rows rather than a
+    # model override, for the reason given on the OpenAI mini row. The service
+    # announces the caller's turns as OpenAI's does; ``brian`` is the voice the
+    # endpoint applies when none is sent.
+    "elevenlabs-realtime": Provider(
+        _elevenlabs_realtime, 24000, "eleven_realtime_v1_max", "brian", ("ELEVENLABS_REALTIME_API_KEY",),
+        "elevenlabs_realtime",
+    ),
+    "elevenlabs-realtime-mini": Provider(
+        _elevenlabs_realtime, 24000, "eleven_realtime_v1_mini", "brian", ("ELEVENLABS_REALTIME_API_KEY",),
+        "elevenlabs_realtime",
     ),
 }
 

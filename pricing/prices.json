@@ -260,6 +260,42 @@
         "Voice Live's Pro rates, which apply to this model. Azure lists two Pro text-output rates, $16 and, since 1 Sep 2026, $24 per million, without saying which model each covers; the higher is used.",
         "Caller transcription is billed as Azure speech input and is not in the usage the service reports, so it is not in this figure."
       ]
+    },
+    "elevenlabs-realtime": {
+      "read_on": "2026-10-20",
+      "verified": true,
+      "source": "https://elevenlabs.io/pricing/api",
+      "components": [
+        {
+          "name": "eleven_realtime_v1_max",
+          "basis": "per_minute",
+          "measure": "call_seconds",
+          "rates": {
+            "minute": 0.08
+          }
+        }
+      ],
+      "unmetered": [
+        "ElevenLabs also lists language-model usage on top of the minute rate ($1.80 per million input tokens, $9.00 per million output tokens); the service reports no token usage, so it is not in this figure."
+      ]
+    },
+    "elevenlabs-realtime-mini": {
+      "read_on": "2026-10-20",
+      "verified": true,
+      "source": "https://elevenlabs.io/pricing/api",
+      "components": [
+        {
+          "name": "eleven_realtime_v1_mini",
+          "basis": "per_minute",
+          "measure": "call_seconds",
+          "rates": {
+            "minute": 0.08
+          }
+        }
+      ],
+      "unmetered": [
+        "ElevenLabs also lists language-model usage on top of the minute rate ($0.20 per million input tokens, $6.00 per million output tokens); the service reports no token usage, so it is not in this figure."
+      ]
     }
   },
   "cascade_speech_path": {

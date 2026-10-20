@@ -34,7 +34,7 @@ laptop work unchanged and lets a deployment carry a default:
 
 | Key | Default | Notes |
 |---|---|---|
-| `s2s_provider` | `openai-realtime` | native: also `openai-realtime-mini`, `gemini-live`, `gemini-live-standard`, `gemini-flash-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`, `phonic`, `deepslate`, `azure-realtime`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
+| `s2s_provider` | `openai-realtime` | native: also `openai-realtime-mini`, `gemini-live`, `gemini-live-standard`, `gemini-flash-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`, `phonic`, `deepslate`, `azure-realtime`, `elevenlabs-realtime`, `elevenlabs-realtime-mini`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
 | `s2s_model` | provider default | pin it for a reproducible run |
 | `s2s_voice` | provider default | |
 | `s2s_backend_model` | `gpt-6-sol` | `gpt-live` only, see below |
@@ -58,7 +58,7 @@ quotes the body.
 
 | Variable | Notes |
 |---|---|
-| provider key | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, `DASHSCOPE_API_KEY`, `PHONIC_API_KEY`, `DEEPSLATE_API_KEY` (with `DEEPSLATE_VENDOR_ID` and `DEEPSLATE_ORGANIZATION_ID`), `AZURE_VOICE_API_KEY` (with `AZURE_VOICE_ENDPOINT`, the Voice Live resource's endpoint), or for Bedrock `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`); see below for why an API key cannot work |
+| provider key | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, `DASHSCOPE_API_KEY`, `PHONIC_API_KEY`, `DEEPSLATE_API_KEY` (with `DEEPSLATE_VENDOR_ID` and `DEEPSLATE_ORGANIZATION_ID`), `AZURE_VOICE_API_KEY` (with `AZURE_VOICE_ENDPOINT`, the Voice Live resource's endpoint), `ELEVENLABS_REALTIME_API_KEY` (an ElevenLabs key for the Eleven Realtime rows; kept apart from `ELEVENLABS_API_KEY`, which voices the cascade), or for Bedrock `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`); see below for why an API key cannot work |
 | `DEEPGRAM_API_KEY`, `ELEVENLABS_API_KEY` | cascade rows; `ELEVENLABS_API_KEY` also for `deepslate`, which hands it to Deepslate to voice its replies |
 | `CEKURA_API_KEY`, `CEKURA_AGENT_ID_<DEFINITION>` | tracing is off without both; one platform agent per agent definition (`CEKURA_AGENT_ID_APPOINTMENTS`, `CEKURA_AGENT_ID_MEDICARE`), with `CEKURA_AGENT_ID` for a deployment that serves one |
 | `AGENT_COMMIT` | stamped by the build; names what was actually deployed |

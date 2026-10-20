@@ -4061,3 +4061,49 @@ class TestElevenLabsRealtime:
         for part in ["[hap", "py] Thanks, Maria! ", "Room [B] is ready."]:
             await service._handle_evt_audio_transcript_delta(Delta(part))
         assert "".join(pushed) == "Thanks, Maria! Room [B] is ready."
+
+    def test_a_response_without_status_details_still_parses(self):
+        import json
+
+        from elevenlabs_realtime import normalise
+        from pipecat.services.openai.realtime import events
+
+        message = {"type": "response.done", "event_id": "e", "response": {
+            "id": "r", "object": "realtime.response", "status": "completed", "output": [], "usage": None}}
+        event = events.parse_server_event(normalise(json.dumps(message)))
+        assert event.response.status_details is None
+
+    def test_an_event_the_framework_has_no_schema_for_is_dropped_not_fatal(self):
+        import json
+
+        from elevenlabs_realtime import normalise
+
+        assert normalise(json.dumps({"type": "output_audio_buffer.cleared", "event_id": "e"})) is None
+
+    async def test_a_response_with_no_usage_is_handled_and_its_usage_left_unrecorded(self, monkeypatch):
+        from pipecat.services.openai.realtime import events
+        from pipecat.services.openai.realtime.llm import OpenAIRealtimeLLMService
+
+        recorded, handled = [], []
+
+        async def framework_done(service, evt):
+            # Stands in for the framework's handler: it reads the usage, then records it.
+            handled.append(evt.response.usage.input_tokens)
+            await service.start_llm_usage_metrics("tokens")
+
+        async def framework_record(_service, tokens):
+            recorded.append(tokens)
+
+        monkeypatch.setattr(OpenAIRealtimeLLMService, "_handle_evt_response_done", framework_done)
+        monkeypatch.setattr(OpenAIRealtimeLLMService, "start_llm_usage_metrics", framework_record)
+        service = self._service()
+        done = {"type": "response.done", "event_id": "e", "response": {
+            "id": "r", "object": "realtime.response", "status": "completed", "status_details": None,
+            "output": [], "usage": None}}
+        await service._handle_evt_response_done(events.ResponseDone.model_validate(done))
+        assert handled == [0] and recorded == []
+
+        done["response"]["usage"] = {"total_tokens": 5, "input_tokens": 3, "output_tokens": 2,
+                                     "input_token_details": {}, "output_token_details": {}}
+        await service._handle_evt_response_done(events.ResponseDone.model_validate(done))
+        assert recorded == ["tokens"]

@@ -20,6 +20,17 @@ They are taken out of the agent's transcript here, as the bench does with
 other control tokens, so the record holds what the caller heard. A tag can be
 split across deltas, so text from an opening bracket is held until it closes.
 
+*Its events are not quite OpenAI's.* A response arrives without
+``status_details``, which the framework's event schema requires, and the
+endpoint sends events the framework has no schema for (such as
+``output_audio_buffer.cleared``). Either one fails the framework's parse, which
+ends its receive loop: the call carries on, and the agent never speaks again.
+Each message is therefore normalised before the framework reads it -- the
+missing field filled with null, an unknown event dropped and logged -- rather
+than letting one event silence the call. A finished response also reports no
+token usage, which the framework reads unconditionally; such a response is
+handled as usual with its usage left unrecorded rather than recorded as zero.
+
 Everything else -- the caller's turns, barge-in, tool calls and their results
 -- is the OpenAI service's own handling of the same events.
 
@@ -29,11 +40,13 @@ Protocol: https://elevenlabs.io/docs/eleven-agents/guides/openai-realtime-compat
 
 from __future__ import annotations
 
+import json
 import re
 
 from loguru import logger
 from websockets.asyncio.client import connect as websocket_connect
 
+from pipecat.services.openai.realtime import events
 from pipecat.services.openai.realtime.llm import OpenAIRealtimeLLMService
 
 URL = "wss://api.elevenlabs.io/v1/convai/realtime"
@@ -66,12 +79,49 @@ class DeliveryTags:
         return _TAG.sub("", text)
 
 
+def normalise(message: str | bytes) -> str | None:
+    """One server message, made readable by the framework's schema; None to drop it."""
+    event = json.loads(message)
+    kind = event.get("type")
+    if kind not in events._server_event_types:
+        logger.debug(f"Eleven Realtime: dropped {kind!r}, which the framework has no schema for")
+        return None
+    response = event.get("response")
+    if isinstance(response, dict):
+        response.setdefault("status_details", None)
+    return json.dumps(event)
+
+
+class _NormalisedSocket:
+    """The socket, as the framework uses it: send, close, and iteration over normalised messages."""
+
+    def __init__(self, socket):
+        self._socket = socket
+
+    async def send(self, message):
+        await self._socket.send(message)
+
+    async def close(self):
+        await self._socket.close()
+
+    async def __aiter__(self):
+        async for message in self._socket:
+            normalised = normalise(message)
+            if normalised is not None:
+                yield normalised
+
+
 class ElevenLabsRealtimeLLMService(OpenAIRealtimeLLMService):
     """The OpenAI realtime service, connected to ElevenLabs with ElevenLabs' header."""
 
     def __init__(self, **kwargs):
         super().__init__(base_url=URL, **kwargs)
         self._tags = DeliveryTags()
+        self._unmetered = False
+
+    async def start_llm_usage_metrics(self, tokens):
+        if not self._unmetered:
+            await super().start_llm_usage_metrics(tokens)
 
     async def _handle_evt_audio_transcript_delta(self, evt):
         if evt.delta:
@@ -83,15 +133,24 @@ class ElevenLabsRealtimeLLMService(OpenAIRealtimeLLMService):
         text = self._tags.flush()
         if text:
             await self._push_output_transcript_text_frames(text)
-        await super()._handle_evt_response_done(evt)
+        self._unmetered = evt.response.usage is None
+        if self._unmetered:
+            evt.response.usage = events.Usage(
+                total_tokens=0, input_tokens=0, output_tokens=0,
+                input_token_details=events.TokenDetails(), output_token_details=events.TokenDetails(),
+            )
+        try:
+            await super()._handle_evt_response_done(evt)
+        finally:
+            self._unmetered = False
 
     async def _connect(self):
         try:
             if self._websocket:
                 return
-            self._websocket = await websocket_connect(
+            self._websocket = _NormalisedSocket(await websocket_connect(
                 uri=self.base_url, additional_headers={"xi-api-key": self.api_key}
-            )
+            ))
             self._receive_task = self.create_task(self._receive_task_handler())
         except Exception as e:
             logger.error(f"{self} could not connect: {e}")

@@ -31,6 +31,13 @@ than letting one event silence the call. A finished response also reports no
 token usage, which the framework reads unconditionally; such a response is
 handled as usual with its usage left unrecorded rather than recorded as zero.
 
+*It refuses half a sample.* An audio append whose bytes do not divide into
+16-bit samples closes the session (1008, "Invalid message received"), where
+OpenAI's endpoint accepts it. The caller's audio reaches the service after
+resampling and can end a chunk mid-sample, so a trailing odd byte is held and
+sent at the front of the next chunk: every append is whole samples and the
+stream stays aligned.
+
 Everything else -- the caller's turns, barge-in, tool calls and their results
 -- is the OpenAI service's own handling of the same events.
 
@@ -40,6 +47,7 @@ Protocol: https://elevenlabs.io/docs/eleven-agents/guides/openai-realtime-compat
 
 from __future__ import annotations
 
+import base64
 import json
 import re
 
@@ -97,8 +105,21 @@ class _NormalisedSocket:
 
     def __init__(self, socket):
         self._socket = socket
+        self._carry = b""
 
     async def send(self, message):
+        if '"input_audio_buffer.append"' in message:
+            event = json.loads(message)
+            if event.get("type") == "input_audio_buffer.append":
+                pcm = self._carry + base64.b64decode(event.get("audio") or "")
+                whole = len(pcm) - len(pcm) % 2
+                pcm, self._carry = pcm[:whole], pcm[whole:]
+                if not pcm:
+                    return
+                event["audio"] = base64.b64encode(pcm).decode()
+                message = json.dumps(event)
+        elif '"input_audio_buffer.clear"' in message:
+            self._carry = b""
         await self._socket.send(message)
 
     async def close(self):

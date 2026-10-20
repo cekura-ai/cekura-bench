@@ -4107,3 +4107,23 @@ class TestElevenLabsRealtime:
                                      "input_token_details": {}, "output_token_details": {}}
         await service._handle_evt_response_done(events.ResponseDone.model_validate(done))
         assert recorded == ["tokens"]
+
+    async def test_every_audio_append_is_whole_samples_and_the_stream_stays_aligned(self):
+        import base64
+        import json
+
+        from elevenlabs_realtime import _NormalisedSocket
+
+        sent = []
+
+        class Socket:
+            async def send(self, message):
+                sent.append(json.loads(message))
+
+        socket = _NormalisedSocket(Socket())
+        stream = bytes(range(1, 12))
+        for chunk in (stream[:3], stream[3:4], stream[4:9], stream[9:]):
+            await socket.send(json.dumps({"type": "input_audio_buffer.append", "audio": base64.b64encode(chunk).decode()}))
+        audio = [base64.b64decode(e["audio"]) for e in sent]
+        assert all(len(a) % 2 == 0 and a for a in audio)
+        assert b"".join(audio) == stream[:10]

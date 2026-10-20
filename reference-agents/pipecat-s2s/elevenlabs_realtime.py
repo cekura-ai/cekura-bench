@@ -50,9 +50,12 @@ from __future__ import annotations
 import base64
 import json
 import re
+import time
+from collections import deque
 
 from loguru import logger
 from websockets.asyncio.client import connect as websocket_connect
+from websockets.exceptions import ConnectionClosed
 
 from pipecat.services.openai.realtime import events
 from pipecat.services.openai.realtime.llm import OpenAIRealtimeLLMService
@@ -100,12 +103,31 @@ def normalise(message: str | bytes) -> str | None:
     return json.dumps(event)
 
 
+def _summary(message: str) -> str:
+    """A sent message by type and shape, never its audio or text."""
+    try:
+        event = json.loads(message)
+    except ValueError:
+        return f"unparseable ({len(message)} chars)"
+    kind = event.get("type")
+    if kind == "input_audio_buffer.append":
+        return f"append {len(base64.b64decode(event.get('audio') or ''))} B"
+    item = event.get("item") or {}
+    detail = ", ".join(f"{k}={event[k]}" for k in ("item_id", "content_index", "audio_end_ms") if k in event)
+    if item:
+        detail = f"item {item.get('type')}/{item.get('role', '')}"
+    return f"{kind} {len(message)} chars {detail}".strip()
+
+
 class _NormalisedSocket:
     """The socket, as the framework uses it: send, close, and iteration over normalised messages."""
 
     def __init__(self, socket):
         self._socket = socket
         self._carry = b""
+        # What was last sent, by type and size only, for the log if the endpoint
+        # closes the session: it names the message it refused but not which.
+        self._sent = deque(maxlen=20)
 
     async def send(self, message):
         if '"input_audio_buffer.append"' in message:
@@ -120,16 +142,23 @@ class _NormalisedSocket:
                 message = json.dumps(event)
         elif '"input_audio_buffer.clear"' in message:
             self._carry = b""
+        self._sent.append((time.monotonic(), _summary(message)))
         await self._socket.send(message)
 
     async def close(self):
         await self._socket.close()
 
     async def __aiter__(self):
-        async for message in self._socket:
-            normalised = normalise(message)
-            if normalised is not None:
-                yield normalised
+        try:
+            async for message in self._socket:
+                normalised = normalise(message)
+                if normalised is not None:
+                    yield normalised
+        except ConnectionClosed as closed:
+            now = time.monotonic()
+            recent = "; ".join(f"-{now - at:.2f}s {what}" for at, what in self._sent)
+            logger.warning(f"Eleven Realtime closed the session ({closed}); last sent: {recent}")
+            raise
 
 
 class ElevenLabsRealtimeLLMService(OpenAIRealtimeLLMService):

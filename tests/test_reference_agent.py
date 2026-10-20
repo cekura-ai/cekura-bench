@@ -4127,3 +4127,36 @@ class TestElevenLabsRealtime:
         audio = [base64.b64decode(e["audio"]) for e in sent]
         assert all(len(a) % 2 == 0 and a for a in audio)
         assert b"".join(audio) == stream[:10]
+
+    async def test_a_closed_session_names_what_was_last_sent_without_its_content(self, caplog):
+        import base64
+        import json
+
+        from elevenlabs_realtime import _NormalisedSocket
+        from websockets.exceptions import ConnectionClosedError
+        from websockets.frames import Close
+
+        class Socket:
+            async def send(self, message):
+                pass
+
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                raise ConnectionClosedError(Close(1008, "Invalid message received"), None)
+
+        socket = _NormalisedSocket(Socket())
+        await socket.send(json.dumps({"type": "input_audio_buffer.append", "audio": base64.b64encode(b"\0\0").decode()}))
+        await socket.send(json.dumps({"type": "conversation.item.truncate", "item_id": "i", "content_index": 0, "audio_end_ms": 5}))
+        from loguru import logger
+
+        seen = []
+        handle = logger.add(lambda m: seen.append(str(m)), level="WARNING")
+        try:
+            with pytest.raises(ConnectionClosedError):
+                async for _ in socket:
+                    pass
+        finally:
+            logger.remove(handle)
+        assert any("append 2 B" in s and "conversation.item.truncate" in s and "audio_end_ms=5" in s for s in seen)

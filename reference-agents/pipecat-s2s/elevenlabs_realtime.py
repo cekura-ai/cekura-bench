@@ -27,7 +27,9 @@ endpoint sends events the framework has no schema for (such as
 ends its receive loop: the call carries on, and the agent never speaks again.
 Each message is therefore normalised before the framework reads it -- the
 missing field filled with null, an unknown event dropped and logged -- rather
-than letting one event silence the call. A finished response also reports no
+than letting one event silence the call. A failed response gets an error
+message when it arrives without one, since the framework reads it to report the
+failure. A finished response also reports no
 token usage, which the framework reads unconditionally; such a response is
 handled as usual with its usage left unrecorded rather than recorded as zero.
 
@@ -100,6 +102,15 @@ def normalise(message: str | bytes) -> str | None:
     response = event.get("response")
     if isinstance(response, dict):
         response.setdefault("status_details", None)
+        if response.get("status") == "failed":
+            # The framework reports a failed response by reading
+            # status_details["error"]["message"]; without it that read raises
+            # and ends the receive loop, so the call would go silent.
+            details = response["status_details"] if isinstance(response["status_details"], dict) else {}
+            error = details.get("error") if isinstance(details.get("error"), dict) else {}
+            if not error.get("message"):
+                error = {**error, "message": "Eleven Realtime reported a failed response without details"}
+            response["status_details"] = {**details, "error": error}
     return json.dumps(event)
 
 

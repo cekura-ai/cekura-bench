@@ -4073,6 +4073,33 @@ class TestElevenLabsRealtime:
         event = events.parse_server_event(normalise(json.dumps(message)))
         assert event.response.status_details is None
 
+    async def test_a_failed_response_without_details_is_reported_not_fatal(self):
+        import json
+        from unittest.mock import AsyncMock
+
+        from elevenlabs_realtime import normalise
+        from pipecat.services.openai.realtime import events
+
+        message = {"type": "response.done", "event_id": "e", "response": {
+            "id": "r", "object": "realtime.response", "status": "failed", "output": [], "usage": None}}
+        event = events.parse_server_event(normalise(json.dumps(message)))
+        service = self._service()
+        service.push_frame = AsyncMock()
+        service.push_error = AsyncMock()
+        service.stop_processing_metrics = AsyncMock()
+        await service._handle_evt_response_done(event)
+        service.push_error.assert_any_call(error_msg="Eleven Realtime reported a failed response without details")
+
+    def test_a_failed_response_keeps_the_message_it_was_given(self):
+        import json
+
+        from elevenlabs_realtime import normalise
+
+        message = {"type": "response.done", "event_id": "e", "response": {
+            "id": "r", "object": "realtime.response", "status": "failed", "output": [], "usage": None,
+            "status_details": {"type": "failed", "error": {"type": "server_error", "message": "boom"}}}}
+        assert json.loads(normalise(json.dumps(message)))["response"]["status_details"]["error"]["message"] == "boom"
+
     def test_an_event_the_framework_has_no_schema_for_is_dropped_not_fatal(self):
         import json
 

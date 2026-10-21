@@ -2571,6 +2571,120 @@ class TestARewrittenWordIsStillTheSameTurn:
         assert said == "I need to cancel. Actually, let me reschedule instead."
 
 
+class TestOneFinalPerItemReachesTheTranscript:
+    """A realtime service that names the item a final belongs to may send several
+    finals for it -- repeated, extended, or with a word rewritten -- and the
+    caller's message is the latest of them, said once.
+
+    Replayed through the real realtime user aggregator, with the restatement
+    filter in front of it and turn starts where the service announced them. The
+    filter's memory ends at every turn start, the aggregator's only when it
+    writes to the context, so a sequence that crosses a turn start is the one
+    that used to come out repeated.
+    """
+
+    TURN, WRITE = "turn", "write"
+
+    @staticmethod
+    async def _replay(*steps):
+        from pipecat.frames.frames import (
+            Frame, StartFrame, TranscriptionFrame, UserStartedSpeakingFrame,
+        )
+        from pipecat.pipeline.pipeline import Pipeline
+        from pipecat.pipeline.runner import PipelineRunner
+        from pipecat.pipeline.task import PipelineParams, PipelineTask
+        from pipecat.processors.aggregators.llm_context import LLMContext
+        from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
+        from pipecat.utils.time import time_now_iso8601
+
+        aggregators = bot.BenchAggregators(
+            LLMContext(), realtime_service_mode=True,
+            user_params=bot.user_aggregator_params(realtime=True),
+        )
+        user = aggregators.user()
+        written: list[str] = []
+
+        @user.event_handler("on_user_turn_message_added")
+        async def _written(_aggregator, message):
+            written.append(message.content)
+
+        class Source(FrameProcessor):
+            async def process_frame(self, frame: Frame, direction: FrameDirection):
+                await super().process_frame(frame, direction)
+                await self.push_frame(frame, direction)
+                if isinstance(frame, StartFrame):
+                    self.create_task(self._script())
+
+            async def _script(self):
+                await asyncio.sleep(0.05)
+                for step in steps:
+                    if step == TestOneFinalPerItemReachesTheTranscript.TURN:
+                        await self.push_frame(UserStartedSpeakingFrame())
+                    elif step == TestOneFinalPerItemReachesTheTranscript.WRITE:
+                        await asyncio.sleep(0.05)
+                        await user.push_aggregation()
+                    else:
+                        item, text = step
+                        result = SimpleNamespace(item_id=item) if item else None
+                        await self.push_frame(TranscriptionFrame(text, "", time_now_iso8601(), result=result))
+                    await asyncio.sleep(0.02)
+
+        task = PipelineTask(Pipeline([Source(), bot.RestatementIsNotSpeech(), user]), params=PipelineParams())
+        running = asyncio.create_task(PipelineRunner(handle_sigint=False).run(task))
+        await asyncio.sleep(0.3 + 0.1 * len(steps))
+        await task.stop_when_done()
+        await asyncio.wait_for(running, timeout=30)
+        return written
+
+    @pytest.mark.asyncio
+    async def test_repeated_finals_cross_a_turn_start_and_are_said_once(self):
+        # The service announced a new turn mid-utterance, and the one-word final
+        # before it had nothing for the filter to match against.
+        written = await self._replay(
+            self.TURN, ("a", "Hi."), self.TURN, ("a", "Hi."), ("a", "Hi, I'd like to book."),
+            ("a", "Hi, I'd like to book a check-up."), ("a", "Hi, I'd like to book a check-up."),
+            ("a", "Hi, I'd like to book a check-up."), self.WRITE,
+        )
+        assert written == ["Hi, I'd like to book a check-up."]
+
+    @pytest.mark.asyncio
+    async def test_a_one_word_final_repeated_is_one_word(self):
+        written = await self._replay(self.TURN, ("a", "Okay."), ("a", "Okay."), ("a", "Okay."), self.WRITE)
+        assert written == ["Okay."]
+
+    @pytest.mark.asyncio
+    async def test_a_rewritten_word_does_not_survive_its_rewrite(self):
+        # Appending only the new tail kept the old punctuation in the middle:
+        # "... call back. now."
+        written = await self._replay(
+            self.TURN, ("a", "Okay, I'll call"), ("a", "Okay, I'll call back."), ("a", "Okay, I'll call back now."),
+            self.WRITE,
+        )
+        assert written == ["Okay, I'll call back now."]
+
+    @pytest.mark.asyncio
+    async def test_a_final_after_the_write_does_not_open_the_next_message(self):
+        written = await self._replay(
+            self.TURN, ("a", "Yes, that's right."), self.WRITE, ("a", "Yes, that's right."),
+            self.TURN, ("b", "My name is Sam."), self.WRITE,
+        )
+        assert written == ["Yes, that's right.", "My name is Sam."]
+
+    @pytest.mark.asyncio
+    async def test_two_items_in_one_message_are_both_kept(self):
+        written = await self._replay(
+            self.TURN, ("a", "I need to cancel."), self.TURN, ("b", "Actually, let me reschedule."), self.WRITE,
+        )
+        assert written == ["I need to cancel. Actually, let me reschedule."]
+
+    @pytest.mark.asyncio
+    async def test_finals_without_an_item_are_still_trimmed_by_the_filter(self):
+        written = await self._replay(
+            self.TURN, (None, "Hi, I'd like to book"), (None, "Hi, I'd like to book a new appointment."), self.WRITE,
+        )
+        assert written == ["Hi, I'd like to book a new appointment."]
+
+
 class TestTheMiddleOutcomeSurvivesTheExport:
     """A record found after speech bent an argument is neither a hit nor a miss,
     and the payload has to say so: a bare matched flag hides it."""

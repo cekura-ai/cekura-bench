@@ -100,6 +100,7 @@ from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.aggregators.llm_response_universal import (
     LLMAssistantAggregator,
     LLMContextAggregatorPair,
+    LLMUserAggregator,
     LLMUserAggregatorParams,
 )
 from pipecat.runner.types import RunnerArguments
@@ -113,6 +114,7 @@ from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.daily.transport import DailyParams
 from pipecat.transports.websocket.fastapi import FastAPIWebsocketParams
 from pipecat.turns.user_turn_strategies import ExternalUserTurnStrategies, UserTurnStrategies
+from pipecat.utils.string import TextPartForConcatenation
 
 # The mock-tool contract is shared with the service bench rather than reimplemented here.
 # Two implementations of one contract would drift, and a difference between lanes
@@ -1786,6 +1788,11 @@ class RestatementIsNotSpeech(FrameProcessor):
     that sends one final per turn is unaffected, which is the test of a
     correction like this: it must be a statement about transcripts in general
     rather than an adjustment aimed at one service.
+
+    A final that names the conversation item it transcribes is left alone: the
+    user aggregator keeps the latest final per item (see ``OneTranscriptPerItem``),
+    which needs the whole text rather than the part this filter would pass on.
+    Guessing by words is only for services that give no such name.
     """
 
     # How much of the shorter version two finals must agree on before the later
@@ -1825,7 +1832,7 @@ class RestatementIsNotSpeech(FrameProcessor):
             # A new turn: nothing has been said in it yet. Every service on this
             # board announces this, which is what makes the reset reliable.
             self._said = []
-        elif isinstance(frame, TranscriptionFrame) and frame.text.strip():
+        elif isinstance(frame, TranscriptionFrame) and frame.text.strip() and not _item_of(frame):
             words = frame.text.split()
             said, new = self._compare(self._said), self._compare(words)
             agreed = self._agree_on(said, new)
@@ -2338,7 +2345,8 @@ class CallNarrator(BaseObserver):
         elif isinstance(frame, TranscriptionFrame):
             # One transcript can cover several turns, so it settles all of them.
             self._untranscribed_turns.clear()
-            logger.debug("caller transcript: {}", _short(frame.text))
+            item = _item_of(frame)
+            logger.debug("caller transcript{}: {}", f" (item {item})" if item else "", _short(frame.text))
         elif isinstance(frame, LLMFullResponseStartFrame):
             self.agent_turns += 1
             logger.info("agent response {} starts", self.agent_turns)
@@ -2927,13 +2935,72 @@ class DeliversToolResults(LLMAssistantAggregator):
             await self.push_context_frame(FrameDirection.UPSTREAM)
 
 
+def _item_of(frame: TranscriptionFrame) -> str | None:
+    """The conversation item a final transcribes, where the service names one."""
+    item = getattr(frame.result, "item_id", None)
+    return item if isinstance(item, str) and item else None
+
+
+class OneTranscriptPerItem(LLMUserAggregator):
+    """The caller's words are the latest final for each item, not every final.
+
+    A realtime service that names the conversation item a final belongs to may
+    send several finals for it: the same words repeated, the words so far
+    extended, or an earlier word rewritten. Each is the service's whole current
+    reading of that item, so the latest replaces the earlier ones in place
+    rather than being appended after them. A service that sends one final per
+    item is unaffected.
+
+    Once an item has been written to the context it cannot be revised, so a
+    final that arrives for it afterwards is dropped rather than starting the
+    next caller message with words already recorded.
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._parts: dict[str, TextPartForConcatenation] = {}
+        self._written: set[str] = set()
+
+    async def _handle_transcription(self, frame: TranscriptionFrame) -> None:
+        item = _item_of(frame)
+        if item is None or not frame.text.strip():
+            await super()._handle_transcription(frame)
+            return
+        if item in self._written:
+            logger.debug("a final for a caller message already written; not passed on")
+            return
+        part = self._parts.get(item)
+        if part is not None:
+            part.text = frame.text
+            return
+        held = len(self._aggregation)
+        await super()._handle_transcription(frame)
+        if len(self._aggregation) > held:
+            self._parts[item] = self._aggregation[-1]
+
+    async def reset(self) -> None:
+        # The parts belong to the aggregation being cleared; their items are
+        # either in the context now or discarded with it by a turn strategy.
+        self._written.update(self._parts)
+        self._parts = {}
+        await super().reset()
+
+
 class BenchAggregators(LLMContextAggregatorPair):
-    """The framework's pair, with an assistant half that delivers tool results."""
+    """The framework's pair, with a user half that keeps one final per item and
+    an assistant half that delivers tool results."""
 
     def __init__(self, context: LLMContext, *, deliver_immediately: bool = False, **kwargs) -> None:
         super().__init__(context, **kwargs)
-        # Built from what the pair already resolved rather than from the raw
-        # arguments, so any normalising it does is not quietly lost here.
+        # Both halves are built from what the pair already resolved rather than
+        # from the raw arguments, so any normalising it does is not quietly lost
+        # here. The user half first: the assistant half holds a reference to it.
+        built_user = self._user
+        self._user = OneTranscriptPerItem(
+            context,
+            params=built_user._params,
+            _realtime_service_mode=built_user._realtime_service_mode,
+        )
         built = self._assistant
         self._assistant = DeliversToolResults(
             context,

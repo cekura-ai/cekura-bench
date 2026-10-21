@@ -7,12 +7,16 @@ provider renames an event, this is where it should fail first.
 
 from __future__ import annotations
 
+import asyncio
 import base64
+import json
+from unittest.mock import AsyncMock
 
 import pytest
 
 from service import events as ev
-from service.adapters.base import SessionConfig, TurnDetection
+from service.adapters.base import AdapterError, SessionConfig, TurnDetection
+from service.adapters.elevenlabs_realtime import ElevenLabsRealtimeAdapter
 from service.adapters.gemini_live import GeminiLiveAdapter, _flatten_usage_metadata
 from service.adapters.grok_realtime import GrokRealtimeAdapter
 from service.adapters.higgs_realtime import HiggsRealtimeAdapter
@@ -109,6 +113,139 @@ class TestHiggs:
     def test_semantic_turn_detection_is_passed_through(self):
         payload = adapter(HiggsRealtimeAdapter, turn_detection=TurnDetection("semantic_vad"))._session_payload()
         assert payload["audio"]["input"]["turn_detection"]["type"] == "semantic_vad"
+
+
+class TestElevenLabs:
+    @pytest.mark.parametrize("model", ["eleven_realtime_v1_max", "eleven_realtime_v1_mini"])
+    def test_session_selects_model_and_preserves_audio_and_turn_settings(self, model):
+        a = ElevenLabsRealtimeAdapter(
+            model=model, api_key="unused", log=ev.EventLog(ev.Clock()),
+            config=SessionConfig(voice="brian", instructions="Answer briefly.",
+                                 turn_detection=TurnDetection("server_vad", silence_duration_ms=500)),
+        )
+        payload = a._session_payload()
+        assert payload["model"] == model
+        assert payload["instructions"] == "Answer briefly."
+        assert payload["audio"]["input"]["format"] == {"type": "audio/pcm", "rate": 24000}
+        assert payload["audio"]["output"] == {
+            "format": {"type": "audio/pcm", "rate": 24000}, "voice": "brian",
+        }
+        assert payload["audio"]["input"]["turn_detection"] == {
+            "type": "server_vad", "silence_duration_ms": 500,
+        }
+
+    def test_manual_and_text_controls(self):
+        payload = adapter(ElevenLabsRealtimeAdapter, turn_detection=TurnDetection("manual"),
+                          modality="text", transcribe_input=False)._session_payload()
+        assert payload["audio"]["input"]["turn_detection"] is None
+        assert payload["output_modalities"] == ["text"]
+        assert "output" not in payload["audio"]
+        assert "transcription" not in payload["audio"]["input"]
+
+    @pytest.mark.parametrize("model", ["eleven_realtime_v1_max", "eleven_realtime_v1_mini"])
+    def test_handshake_uses_eleven_header_and_records_applied_session(self, monkeypatch, model):
+        async def run():
+            a = ElevenLabsRealtimeAdapter(model=model, api_key="unused", log=ev.EventLog(ev.Clock()))
+            applied = {"id": "eleven-session", "model": model}
+            ws = AsyncMock()
+            ws.recv.side_effect = [
+                json.dumps({"type": "session.created", "session": {"id": "eleven-session"}}),
+                json.dumps({"type": "rate_limits.updated", "rate_limits": []}),
+                json.dumps({"type": "session.updated", "session": applied}),
+            ]
+            connect = AsyncMock(return_value=ws)
+            monkeypatch.setattr("service.adapters.elevenlabs_realtime.websockets.connect", connect)
+            await a.connect()
+            connect.assert_awaited_once_with(
+                a.url, additional_headers={"xi-api-key": "unused"}, open_timeout=20.0, max_size=None,
+            )
+            assert json.loads(ws.send.call_args_list[0].args[0])["session"]["model"] == model
+            assert a.session_id == "eleven-session"
+            assert a.session_ack == applied
+            assert a.log.first(ev.SESSION_CONFIGURED) is not None
+            await a.close()
+        asyncio.run(run())
+
+    @pytest.mark.parametrize("failure", ["connect", "initial", "update", "timeout", "update_timeout", "malformed"])
+    def test_failed_handshake_raises_adapter_error_and_closes(self, monkeypatch, failure):
+        async def run():
+            a = adapter(ElevenLabsRealtimeAdapter)
+            ws = AsyncMock()
+            error = json.dumps({"type": "error", "error": {"message": "refused"}})
+            ws.recv.side_effect = {
+                "initial": [error],
+                "update": [json.dumps({"type": "session.created", "session": {"id": "s"}}), error],
+                "timeout": [asyncio.TimeoutError()],
+                "update_timeout": [json.dumps({"type": "session.created", "session": {"id": "s"}}),
+                                   asyncio.TimeoutError()],
+                "malformed": ["not json"],
+                "connect": [],
+            }[failure]
+            connect = AsyncMock(return_value=ws)
+            if failure == "connect":
+                connect.side_effect = OSError("connection refused")
+            monkeypatch.setattr("service.adapters.elevenlabs_realtime.websockets.connect", connect)
+            with pytest.raises(AdapterError):
+                await a.connect()
+            if failure != "connect":
+                ws.close.assert_awaited_once()
+            assert a.closed.is_set()
+        asyncio.run(run())
+
+    def test_half_samples_are_carried_without_changing_audio(self):
+        async def run():
+            a = adapter(ElevenLabsRealtimeAdapter)
+            a._ws = AsyncMock()
+            for chunk in (b"a", b"bc", b"d", b"ef"):
+                await a._send_audio_chunk(chunk)
+            sent = [base64.b64decode(json.loads(c.args[0])["audio"]) for c in a._ws.send.call_args_list]
+            assert sent == [b"ab", b"cd", b"ef"]
+            await a._send_audio_chunk(b"g")
+            await a.close()
+            assert a._audio_carry == b""
+        asyncio.run(run())
+
+    def test_vendor_events_preserve_audio_vad_tools_and_unreported_usage(self):
+        a = adapter(ElevenLabsRealtimeAdapter)
+        a._handle({"type": "response.audio.delta", "delta": AUDIO})
+        a._handle({"type": "input_audio_buffer.speech_started", "audio_start_ms": 10})
+        a._handle({"type": "input_audio_buffer.speech_stopped", "audio_end_ms": 20})
+        a._handle({"type": "response.function_call_arguments.done", "name": "lookup_patient",
+                   "call_id": "fc-1", "arguments": '{"phone":"2025550188"}'})
+        a._handle({"type": "output_audio_buffer.cleared"})
+        a._handle({"type": "response.done", "response": {"status": "completed", "usage": None}})
+        assert a.agent_timeline.n_samples == 480
+        assert a.log.first(ev.VAD_SPEECH_START) is not None
+        assert a.log.first(ev.VAD_SPEECH_END) is not None
+        assert a.tool_calls == [{"name": "lookup_patient", "call_id": "fc-1",
+                                 "arguments": {"phone": "2025550188"}}]
+        assert a.log.last(ev.RESPONSE_DONE).data["usage"] is None
+        assert a.log.first(ev.SESSION_ERROR) is None
+
+    @pytest.mark.parametrize("kind", ["response.output_audio_transcript.done", "response.audio_transcript.done"])
+    def test_delivery_tags_are_removed_from_completed_transcripts(self, kind):
+        a = adapter(ElevenLabsRealtimeAdapter)
+        payload = {"type": kind, "transcript": "[happy] Hello [laughs softly] there [123]."}
+        a._handle(payload)
+        assert a.agent_text == ["Hello there [123]."]
+        assert payload["transcript"].startswith("[happy]")
+
+    def test_registry_and_turnbench_resolve_both_models(self):
+        from service.registry import PROVIDERS
+        from turn_taking_bench.s2s import S2S_PROVIDERS, default_config
+        from turn_taking_bench.s2s.model import model_provenance, provider_entry, resolve_model
+
+        entry = PROVIDERS["elevenlabs-realtime"]
+        assert entry.adapter is ElevenLabsRealtimeAdapter
+        assert entry.credential_env == "ELEVENLABS_REALTIME_API_KEY"
+        assert entry.default_voice == "brian"
+        assert "elevenlabs-realtime" in S2S_PROVIDERS
+        assert provider_entry(entry.key) is entry
+        config = default_config(entry.key)
+        assert resolve_model(config) == "eleven_realtime_v1_max"
+        config["model"] = "eleven_realtime_v1_mini"
+        assert resolve_model(config) == "eleven_realtime_v1_mini"
+        assert model_provenance(config)["model"] == "eleven_realtime_v1_mini"
 
 
 class TestReferenceClient:

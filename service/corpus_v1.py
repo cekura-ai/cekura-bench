@@ -41,7 +41,7 @@ CLIPS = (
     # one render serves every rung and the halves are bit-identical across rungs.
     ClipSpec("phone.part1", "My phone number is four one five,", note="ladder first half"),
     ClipSpec("phone.part2", "five five five, zero one two three.", note="ladder second half"),
-    ClipSpec("date.part1", "I could come in on the eighth of July,", note="second ladder first half"),
+    ClipSpec("date.part1", "I could come in on the ninth of December,", note="second ladder first half"),
     ClipSpec("date.part2", "or the ninth, if that's easier for you.", note="second ladder second half"),
 
     # ── content-free interaction tokens. Prosody carries the meaning, words carry none.
@@ -63,15 +63,15 @@ CLIPS = (
 
     # ── task replies against the appointments contract
     ClipSpec("task.reason", "It's for an annual checkup."),
-    ClipSpec("task.date", "July the eighth would work. A morning slot, if you have one."),
-    ClipSpec("task.date.anytime", "July the eighth, any time that day is fine."),
-    ClipSpec("task.date.july9", "How about July the ninth, in the morning if possible?"),
-    ClipSpec("task.date.july10", "July the tenth, please. Any time."),
-    ClipSpec("task.date.range", "Sometime the week of July sixth, whatever you have."),
-    ClipSpec("task.date.correct", "July the ninth. Sorry, no, I mean the eighth. July the eighth."),
+    ClipSpec("task.date", "December the ninth would work. A morning slot, if you have one."),
+    ClipSpec("task.date.anytime", "December the ninth, any time that day is fine."),
+    ClipSpec("task.date.july9", "How about December the tenth, in the morning if possible?"),
+    ClipSpec("task.date.july10", "December the eleventh, please. Any time."),
+    ClipSpec("task.date.range", "Sometime the week of December seventh, whatever you have."),
+    ClipSpec("task.date.correct", "December the tenth. Sorry, no, I mean the ninth. December the ninth."),
     ClipSpec("task.choose", "The nine o'clock, please."),
-    ClipSpec("task.which", "The one on July sixth with Doctor Patel."),
-    ClipSpec("task.which.consult", "The consultation on July seventh."),
+    ClipSpec("task.which", "The one on December seventh with Doctor Patel."),
+    ClipSpec("task.which.consult", "The consultation on December eighth."),
     ClipSpec("task.dob", "My date of birth is March second, nineteen ninety."),
     ClipSpec("task.confirm", "Yes, that works. Please go ahead and book it."),
     ClipSpec("task.yes", "Yes, that's right."),
@@ -98,5 +98,5 @@ CLIPS = (
 )
 
 
-def build(root: str = "corpus/service", version: str = "0.2.0") -> Corpus:
+def build(root: str = "corpus/service", version: str = "0.3.0") -> Corpus:
     return Corpus(root, version).add(*CLIPS).add_voice(*VOICES)

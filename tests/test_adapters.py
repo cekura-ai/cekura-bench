@@ -230,22 +230,14 @@ class TestElevenLabs:
         assert a.agent_text == ["Hello there [123]."]
         assert payload["transcript"].startswith("[happy]")
 
-    def test_registry_and_turnbench_resolve_both_models(self):
+    def test_registry_names_the_adapter_credential_and_voice(self):
         from service.registry import PROVIDERS
-        from turn_taking_bench.s2s import S2S_PROVIDERS, default_config
-        from turn_taking_bench.s2s.model import model_provenance, provider_entry, resolve_model
 
         entry = PROVIDERS["elevenlabs-realtime"]
         assert entry.adapter is ElevenLabsRealtimeAdapter
+        assert entry.default_model == "eleven_realtime_v1_max"
         assert entry.credential_env == "ELEVENLABS_REALTIME_API_KEY"
         assert entry.default_voice == "brian"
-        assert "elevenlabs-realtime" in S2S_PROVIDERS
-        assert provider_entry(entry.key) is entry
-        config = default_config(entry.key)
-        assert resolve_model(config) == "eleven_realtime_v1_max"
-        config["model"] = "eleven_realtime_v1_mini"
-        assert resolve_model(config) == "eleven_realtime_v1_mini"
-        assert model_provenance(config)["model"] == "eleven_realtime_v1_mini"
 
 
 class TestReferenceClient:

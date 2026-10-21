@@ -663,6 +663,138 @@ class TestAzureSpeech:
         assert "$42" not in raw and '"input": "<18 chars>"' in raw
 
 
+class TestMistral:
+    @staticmethod
+    def floats(*values: float) -> bytes:
+        import numpy as np
+
+        return np.array(values, dtype="<f4").tobytes()
+
+    def test_float32_is_converted_to_int16_and_clipped_not_wrapped(self):
+        import numpy as np
+
+        from tts_bench.adapters.mistral import to_int16
+
+        out = np.frombuffer(to_int16(self.floats(0.0, 0.5, -0.5, 1.0, -1.0, 1.5, -2.0)), dtype="<i2")
+        assert out.tolist() == [0, 16384, -16384, 32767, -32767, 32767, -32767]
+
+    async def test_a_float_split_across_two_events_is_carried_and_done_ends_the_utterance(self):
+        import base64
+
+        import numpy as np
+
+        from tts_bench.adapters.mistral import MistralTTSAdapter
+
+        mistral, _ = adapter(MistralTTSAdapter, "voxtral-mini-tts-3-0", "voice_478")
+        synthesis = await mistral.open_context("main")
+        audio = self.floats(0.25, -0.25, 0.5)
+        for part in (audio[:6], audio[6:]):                          # the second float straddles the two events
+            mistral._handle("main", {"type": "speech.audio.delta", "audio_data": base64.b64encode(part).decode()})
+        assert np.frombuffer(bytes(synthesis.pcm), dtype="<i2").tolist() == [8192, -8192, 16384]
+        assert not synthesis.done.is_set()
+        mistral._handle("main", {"type": "speech.audio.done", "usage": {"completion_tokens": 3}})
+        assert synthesis.done.is_set() and synthesis.meta["usage"] == {"completion_tokens": 3}
+        assert "trailing_bytes_dropped" not in synthesis.meta
+
+    def test_the_protocol_limits_are_declared_and_the_lineup_names_a_mistral_voice(self):
+        from tts_bench.adapters.base import TTSConfig
+        from tts_bench.adapters.mistral import MistralTTSAdapter
+
+        assert MistralTTSAdapter.transport == "http" and not MistralTTSAdapter.ends_on_quiet
+        config = TTSConfig(model="voxtral-mini-tts-3-0", voice="voice_478")
+        for need in ("streamed_input", "cancel", "continuation"):
+            assert MistralTTSAdapter.unsupported_reason(config, (need,))
+        assert MistralTTSAdapter.unsupported_reason(config) is None
+        assert PROVIDERS["mistral"].credential_env == "MISTRAL_API_KEY"
+        assert PROVIDERS["mistral"].rate_for("voxtral-mini-tts-3-0") == 24000
+
+    def test_a_filtered_text_is_the_voices_failure_not_a_refused_account(self):
+        from tts_bench.adapters.base import is_refusal
+        from tts_bench.adapters.mistral import MistralTTSAdapter
+
+        filtered = MistralTTSAdapter._http_error(403, '{"message":"Request blocked by content moderation"}')
+        assert not is_refusal(filtered) and "content filter" in filtered
+        assert is_refusal(MistralTTSAdapter._http_error(401, '{"message":"Unauthorized"}'))
+        assert is_refusal(MistralTTSAdapter._http_error(429, '{"message":"Rate limit exceeded"}'))
+
+    async def _serve(self, tmp_path, events: list[str] | None = None, status: int = 200, body: str = ""):
+        """A local stand-in for the speech endpoint; returns what it saw and the finished synthesis."""
+        from aiohttp import web
+
+        from tts_bench.adapters.mistral import MistralTTSAdapter
+
+        seen: dict = {}
+
+        async def model(request):
+            return web.json_response({"id": "voxtral-mini-tts-3-0"})
+
+        async def speech(request):
+            seen["headers"], seen["body"] = dict(request.headers), await request.json()
+            if status != 200:
+                return web.Response(status=status, text=body)
+            response = web.StreamResponse(headers={"Content-Type": "text/event-stream", "mistral-correlation-id": "c1"})
+            await response.prepare(request)
+            for event in events or ():
+                await response.write(event.encode())
+            await response.write_eof()
+            return response
+
+        app = web.Application()
+        app.router.add_get("/v1/models/voxtral-mini-tts-3-0", model)
+        app.router.add_post("/v1/audio/speech", speech)
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, "127.0.0.1", 0)
+        await site.start()
+        port = site._server.sockets[0].getsockname()[1]
+        try:
+            clock = Clock()
+            log = EventLog(clock, raw_path=tmp_path / "raw.jsonl")
+            mistral = MistralTTSAdapter(TTSConfig(model="voxtral-mini-tts-3-0", voice="voice_478"), "secret-key", log, clock)
+            mistral.base = f"http://127.0.0.1:{port}"
+            async with mistral:
+                await mistral.open_context("main")
+                await mistral.send("main", "Your total is $42.")
+                await mistral.finish("main")
+                done = await mistral.wait("main", 5.0)
+        finally:
+            await runner.cleanup()
+        return seen, done, log
+
+    async def test_one_streamed_request_records_int16_and_the_key_and_text_stay_out_of_the_log(self, tmp_path):
+        import base64
+        import json
+
+        chunk = base64.b64encode(self.floats(*([0.5] * 240))).decode()
+        delta = f"event: speech.audio.delta\ndata: {json.dumps({'type': 'speech.audio.delta', 'audio_data': chunk})}\n\n"
+        done_event = f"event: speech.audio.done\ndata: {json.dumps({'type': 'speech.audio.done', 'usage': {'completion_tokens': 720}})}\n\n"
+        seen, done, log = await self._serve(tmp_path, [delta, delta, delta, done_event])
+        assert len(done.pcm) == 3 * 240 * 2 and done.meta["ended_by"] == "provider" and done.error is None
+        assert seen["body"] == {"model": "voxtral-mini-tts-3-0", "voice_id": "voice_478", "input": "Your total is $42.",
+                                "response_format": "pcm", "stream": True}
+        assert seen["headers"]["Authorization"] == "Bearer secret-key"
+        assert done.meta["headers"]["mistral-correlation-id"] == "c1" and done.meta["usage"] == {"completion_tokens": 720}
+        raw = (tmp_path / "raw.jsonl").read_text()
+        assert "secret-key" not in raw and "secret-key" not in str(log.events)
+        assert "$42" not in raw and '"input": "<18 chars>"' in raw and chunk not in raw
+
+    async def test_a_stream_that_stops_without_done_is_an_error_not_a_finished_utterance(self, tmp_path):
+        import base64
+        import json
+
+        chunk = base64.b64encode(self.floats(0.5, 0.5)).decode()
+        delta = f"event: speech.audio.delta\ndata: {json.dumps({'type': 'speech.audio.delta', 'audio_data': chunk})}\n\n"
+        _, done, _ = await self._serve(tmp_path, [delta])
+        assert done.error == "stream ended without speech.audio.done" and len(done.pcm) == 4
+
+    async def test_an_unknown_voice_is_an_error_with_the_services_reason(self, tmp_path):
+        from tts_bench.adapters.base import is_refusal
+
+        body = '{"object":"error","message":"Voice \'x\' not found.","type":"invalid_voice","code":"1902"}'
+        _, done, _ = await self._serve(tmp_path, status=404, body=body)
+        assert done.error.startswith("HTTP 404") and "invalid_voice" in done.error and not is_refusal(done.error)
+
+
 class TestHume:
     async def test_the_voice_rides_on_the_first_frame_and_only_the_closed_socket_ends_the_utterance(self):
         from tts_bench.adapters.hume import HumeAdapter

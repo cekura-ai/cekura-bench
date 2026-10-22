@@ -324,9 +324,10 @@ it from after the output transport: when the agent became audible, and how much
 of each reply the caller heard, in milliseconds and words, when it fell silent
 or was cut off. That is
 what lets the service tell a backchannel from an interruption during a reply.
-The vendor's reference names `wss://api.us.poly.ai/v1/realtime`; its SDKs use
-another host, so `POLYAI_REALTIME_URL` overrides the endpoint, and the record
-names the one used. The vendor publishes no price.
+The row connects to `wss://api.studio.poly.ai/v1/realtime`, the self-serve
+cluster that issues keys from `poly apikey --region studio`; the vendor's
+reference names `wss://api.us.poly.ai/v1/realtime`, which refuses those keys.
+`POLYAI_REALTIME_URL` overrides the endpoint, and the record names the one used. The vendor publishes no price.
 
 ## The sample rate is not a tuning knob
 

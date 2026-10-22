@@ -1606,9 +1606,9 @@ class TestPolyAIRealtime:
         import polyai_realtime
 
         assert bot.polyai_url(asked(polyai_realtime_url="wss://elsewhere")) == polyai_realtime.DEFAULT_URL
-        monkeypatch.setenv("POLYAI_REALTIME_URL", "wss://api.studio.poly.ai/v1/realtime")
+        monkeypatch.setenv("POLYAI_REALTIME_URL", "wss://api.us.poly.ai/v1/realtime")
         service, _ = self._service()
-        assert service._url == "wss://api.studio.poly.ai/v1/realtime"
+        assert service._url == "wss://api.us.poly.ai/v1/realtime"
 
     def test_the_voice_is_the_vendors_own(self):
         provider = bot.PROVIDERS["polyai-dialog"]

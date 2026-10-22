@@ -84,8 +84,9 @@ from pipecat.services.llm_service import FunctionCallFromLLM, LLMService
 from pipecat.services.settings import LLMSettings
 from pipecat.utils.time import time_now_iso8601
 
-#: The endpoint the vendor's reference names.
-DEFAULT_URL = "wss://api.us.poly.ai/v1/realtime"
+#: The self-serve cluster's endpoint, which is where ``poly apikey --region
+#: studio`` issues keys; the regional host the reference names refuses them.
+DEFAULT_URL = "wss://api.studio.poly.ai/v1/realtime"
 
 #: Informational on the wire (the service runs Dialog-RSN-1 whatever is sent),
 #: but sent so the session the service echoes names it.

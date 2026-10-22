@@ -17,6 +17,7 @@ from typing import Type
 
 from tts_bench.adapters.azure_speech import AzureSpeechAdapter
 from tts_bench.adapters.base import TTSAdapter
+from tts_bench.adapters.boson import BosonTTSAdapter
 from tts_bench.adapters.cartesia import CartesiaAdapter
 from tts_bench.adapters.deepgram import DeepgramSpeakAdapter
 from tts_bench.adapters.deepgram_flux import DeepgramFluxAdapter
@@ -181,6 +182,12 @@ PROVIDERS: dict[str, ProviderEntry] = {
         (Model("MAI-Voice-2.1-Flash", "en-US-Harper"), Model("MAI-Voice-2.1", "en-US-Harper")),
         notes="HTTP SSML, raw PCM streamed back; the model is the voice name's suffix; whole text per request; "
               "region is the host (option region, default eastus)",
+    ),
+    "boson": ProviderEntry(
+        "boson", BosonTTSAdapter, "BOSON_API_KEY",
+        (Model("higgs-tts-3", "default"),),
+        notes="OpenAI-shaped HTTP streaming, raw 24 kHz PCM; whole text per request; Boson's text normalisation on "
+              "(enable_tn, tn_language=en), no timestamps, as Boson specified",
     ),
 }
 

@@ -566,6 +566,18 @@ class TestDeepInfra:
         assert deepinfra._prewarm_url() == "https://api.deepinfra.com/models/Qwen/Qwen3-TTS"
 
 
+class TestBoson:
+    def test_the_request_is_the_body_boson_specified(self):
+        from tts_bench.adapters.boson import BosonTTSAdapter
+
+        boson, _ = adapter(BosonTTSAdapter, "higgs-tts-3", "default")
+        assert f"{boson.base}{boson.speech_path}" == "https://api.boson.ai/v1/audio/speech"
+        assert boson._request_args("Text to synthesize.")["json"] == {
+            "model": "higgs-tts-3", "input": "Text to synthesize.", "voice": "default", "stream": True,
+            "response_format": "pcm", "enable_tn": True, "tn_language": "en", "timestamps": False}
+        assert not (boson.supports_streamed_input or boson.supports_cancel or boson.supports_continuation)
+
+
 class TestEndOfUtterance:
     async def test_a_pause_does_not_end_a_protocol_that_says_when_it_is_done(self):
         import asyncio

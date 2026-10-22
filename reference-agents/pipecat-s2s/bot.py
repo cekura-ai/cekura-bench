@@ -753,6 +753,10 @@ def polyai_disclosures(settings: Settings) -> dict[str, str]:
     return {
         "polyai_endpoint": polyai_url(settings),
         "polyai_turn_detection": "service, create_response true (thresholds fixed by the vendor)",
+        "polyai_hangup": (
+            "a closing tool asks for no reply to its result; the call ends when the response "
+            "that carried it is done and its audio has played"
+        ),
         "tts": "the vendor's own, server-side, in its default voice; 24 kHz PCM out",
         "tool_schema": (
             f"every tool takes a required spoken argument {SPOKEN_ARGUMENT!r} (poly_spoken), "
@@ -1564,6 +1568,11 @@ class HangsUpOnceHeard(FrameProcessor):
     and to ride out a pause inside one sentence -- or after ``MAX_WAIT_SECS``
     whatever the agent is still doing.
 
+    A service that knows when its closing reply has played sets
+    ``closing_reply`` (PolyAI's, whose goodbye is the closing tool's own spoken
+    line). A call-control hang-up then waits for that, and for the audio
+    already delivered to finish, with no allowance for a reply to the result.
+
     Where the transport allows it the room is left before the cancel is pushed
     (see ``leaves_the_room``), because the cancel reaches the transport only
     after the realtime service in front of it has closed its own connection.
@@ -1583,6 +1592,7 @@ class HangsUpOnceHeard(FrameProcessor):
         self.hung_up_at: float | None = None
         self.left_at: float | None = None
         self.reason: str | None = None
+        self.closing_reply: asyncio.Event | None = None
 
     def hang_up(self, reason: str) -> None:
         """Called by the tool that closes the call. A second close is the same close."""
@@ -1610,14 +1620,19 @@ class HangsUpOnceHeard(FrameProcessor):
     async def _once_quiet(self, reason: str) -> None:
         try:
             async with asyncio.timeout(self.MAX_WAIT_SECS):
-                while True:
+                if self.closing_reply is not None and reason in CALL_CONTROL:
+                    await self.closing_reply.wait()
                     await self._quiet.wait()
-                    try:
-                        async with asyncio.timeout(self.QUIET_SECS):
-                            await self._talking.wait()
-                    except TimeoutError:
-                        break
-            outcome = "the agent has finished speaking"
+                    outcome = "the closing reply has played"
+                else:
+                    while True:
+                        await self._quiet.wait()
+                        try:
+                            async with asyncio.timeout(self.QUIET_SECS):
+                                await self._talking.wait()
+                        except TimeoutError:
+                            break
+                    outcome = "the agent has finished speaking"
         except TimeoutError:
             outcome = f"the agent was still speaking {self.MAX_WAIT_SECS:.0f} s after {reason}"
         self.hung_up_at = time.monotonic()
@@ -3105,6 +3120,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         logger.info("building {} on {}", name, model)
 
         llm = provider.build(credential, model, voice, instructions, settings)
+        hangup.closing_reply = getattr(llm, "closing_reply_done", None)
         register_tools(llm, server, trace, hangup.hang_up)
         context = LLMContext(opening_messages(server.first_message), tools=build_tools(server))
         aggregators = BenchAggregators(

@@ -114,6 +114,12 @@ SPOKEN_DESCRIPTIONS = {
 }
 DEFAULT_SPOKEN_DESCRIPTION = "A short sentence to say to the caller while this runs, such as a progress update."
 
+#: The tools that end or hand over the call. Their spoken line is the goodbye,
+#: so once one is called no further reply is asked for, and the call closes when
+#: the response that carried it is done -- the service sends ``response.done``
+#: only after the line has finished playing.
+CLOSING_TOOLS = frozenset({"end_call", "transfer_call"})
+
 #: Added to the agent's prompt on this row only, in the vendor's words, so a
 #: "say X, then call Y" instruction lands in the call's spoken argument.
 PROMPT_ADDENDUM = """\
@@ -233,6 +239,11 @@ class PolyAIRealtimeLLMService(LLMService):
         # Responses whose tool call carried a spoken line, kept until the
         # response closes, to notice one the service did not speak.
         self._spoken: set[str] = set()
+        # The response that carried a closing tool, and the signal the hang-up
+        # waits for: set when that response is done, with its status.
+        self._closing_response: str | None = None
+        self.closing_reply_done = asyncio.Event()
+        self.closing_reply_status: str | None = None
         # Playback: each reply's words and milliseconds of audio delivered,
         # replies delivered but not yet audible, replies audible now, when the
         # current stretch of speech began, and the words heard in it.
@@ -348,7 +359,9 @@ class PolyAIRealtimeLLMService(LLMService):
 
     async def _request_reply(self):
         """Ask for a response, now or as soon as the open one closes."""
-        if self._outstanding:
+        if self._outstanding or self._closing_response is not None:
+            # After a closing tool the goodbye has been said in its line; a reply
+            # to its result would only say it again.
             return
         if self._caller_speaking:
             # The response the service opens when the caller's turn ends reads
@@ -645,6 +658,9 @@ class PolyAIRealtimeLLMService(LLMService):
             # The service speaks a tool call's line itself; a response that
             # carried one and made no sound left the caller in silence.
             logger.warning(f"{self} response {response_id} carried a spoken line but no audio")
+        if response_id and response_id == self._closing_response:
+            self.closing_reply_status = response.get("status")
+            self.closing_reply_done.set()
         self._spoken.discard(response_id)
         self._voiced.discard(response_id)
         self._held.pop(response_id, None)
@@ -673,6 +689,8 @@ class PolyAIRealtimeLLMService(LLMService):
             # and the tool's rejection of it belongs in the record.
             logger.warning(f"{self} could not parse arguments for {name}")
             arguments = {"_unparsed": event.get("arguments")}
+        if name in CLOSING_TOOLS and self._closing_response is None:
+            self._closing_response = event.get("response_id", "") or self._response_id
         if isinstance(arguments, dict):
             # Speech, not an input: the tool sees exactly the published contract.
             line = arguments.pop(SPOKEN_ARGUMENT, None)

@@ -1729,6 +1729,23 @@ class TestPolyAIRealtime:
         await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})
         assert [event["type"] for event in seen["sent"]] == ["conversation.item.create", "response.create"]
 
+    async def test_a_closing_tool_asks_for_no_reply_and_closes_on_its_own_response(self):
+        """Its spoken line is the goodbye: a reply to its result would say it again."""
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service, seen = self._service()
+        service._context = LLMContext([])
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch({"type": "response.function_call_arguments.done", "response_id": "r1",
+                                 "call_id": "c1", "name": "end_call", "arguments": '{"utterance": "Goodbye."}'})
+        await service._handle_context(LLMContext([{"role": "tool", "tool_call_id": "c1", "content": "{}"}]))
+        assert not service.closing_reply_done.is_set(), "the goodbye is still playing"
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})
+        assert service.closing_reply_done.is_set() and service.closing_reply_status == "completed"
+        assert [event["type"] for event in seen["sent"]] == ["conversation.item.create"], "result sent, no reply asked"
+        assert 'hangup.closing_reply = getattr(llm, "closing_reply_done", None)' in (AGENT_DIR / "bot.py").read_text()
+        assert record_for("polyai-dialog")["polyai_hangup"]
+
     async def test_a_result_landing_mid_turn_is_left_to_the_turns_own_reply(self):
         """Asking for a reply while the caller talks would answer over them."""
         from pipecat.processors.aggregators.llm_context import LLMContext
@@ -4186,6 +4203,39 @@ class TestAHangUpEndsTheCallOnceTheGoodbyeHasPlayed:
 
         marks = await self._call(script)
         assert self.MOST <= marks["hung_up"] - marks["asked"] < self.MOST + 0.1
+
+    async def test_a_closing_reply_the_service_reports_is_followed_without_waiting_for_more(self):
+        # PolyAI's goodbye is the closing tool's own line, and its response.done
+        # is the cue: no allowance is left for a reply to the tool's result.
+        import asyncio
+
+        from pipecat.frames.frames import BotStartedSpeakingFrame, BotStoppedSpeakingFrame
+
+        done = asyncio.Event()
+
+        async def script(source, hangup, mark):
+            hangup.closing_reply, hangup.QUIET_SECS = done, 0.4
+            await source.push_frame(BotStartedSpeakingFrame())
+            hangup.hang_up("end_call")
+            await asyncio.sleep(0.1)
+            done.set()
+            await asyncio.sleep(0.05)
+            mark("stopped")
+            await source.push_frame(BotStoppedSpeakingFrame())
+
+        marks = await self._call(script)
+        assert 0 <= marks["hung_up"] - marks["stopped"] < 0.2, "hung up mid-goodbye, or waited for another reply"
+
+    async def test_a_hang_up_by_the_backstop_does_not_wait_for_a_closing_reply(self):
+        import asyncio
+
+        async def script(source, hangup, mark):
+            hangup.closing_reply = asyncio.Event()
+            mark("asked")
+            hangup.hang_up("backstop")
+
+        marks = await self._call(script)
+        assert marks["hung_up"] - marks["asked"] < self.QUIET + 0.1
 
     async def test_the_room_is_left_before_the_teardown_starts(self):
         # The cancel reaches the transport only after the realtime service has

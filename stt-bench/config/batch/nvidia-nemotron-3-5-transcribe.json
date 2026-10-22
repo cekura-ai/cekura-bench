@@ -1,0 +1,20 @@
+{
+  "provider": "nvidia",
+  "endpoint_env": "NVIDIA_TRANSCRIBE_ENDPOINT",
+  "served_by": "NVIDIA-hosted vLLM deployment (Brev); the URL is supplied by NVIDIA and kept out of the repository",
+  "interface": "batch",
+  "model": "nvidia/Nemotron-3.5-Transcribe-30B-A4B",
+  "language": "en-US",
+  "audio": {"format": "wav", "sample_rate": 16000, "encoding": "linear16", "channels": 1,
+            "trailing_silence": "the frozen input's one-second tail is sent as part of the file"},
+  "prompt": "Audio transcription. Language: as spoken. Wording: verbatim, including fillers and repetitions. Formatting: punctuation and capitalization. Output: transcript only.",
+  "prompt_source": "NVIDIA's recommended single-speaker user prompt, sent to Cekura on 2026-10-22",
+  "chat_template_kwargs": {"enable_thinking": false},
+  "temperature": 0,
+  "max_tokens_per_audio_second": 12,
+  "min_max_tokens": 256,
+  "request_timeout_seconds": 600,
+  "workers": 4,
+  "pricing": null,
+  "model_id": "nvidia-nemotron-3-5-transcribe"
+}

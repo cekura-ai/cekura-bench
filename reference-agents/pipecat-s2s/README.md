@@ -304,7 +304,7 @@ the row is priced at Voice Live's Pro rates.
 Boson AI's speech-to-speech model speaks the later, GA shape of OpenAI's realtime
 protocol, so `higgs_realtime.py` runs it on Pipecat's own OpenAI service: the
 caller's turns, barge-in, truncation, tool calls and transcripts are handled by the
-same code as the OpenAI row. Three differences in Boson's server decide what the
+same code as the OpenAI row. Five differences in Boson's server decide what the
 module changes, and nothing else is changed:
 
 - **The server speaks second.** OpenAI sends `session.created` on connect and the
@@ -315,6 +315,13 @@ module changes, and nothing else is changed:
   `response.create`. On Boson's endpoint, the same caller turn that drew a tool call on
   3 of 3 bare requests drew none on 3 of 3 requests naming `["audio"]`, so the request
   is sent bare, as Boson's own tool-calling example sends it.
+- **Boson sends events OpenAI does not.** `response.output_audio_transcript.length` follows
+  every reply, and the service's parser raises on a type it does not know, which ends its
+  receive loop: on the first live calls the greeting played and the agent never heard the
+  caller. Unknown types are skipped before parsing.
+- **Boson's usage has no output breakdown.** Every `response.done` lacks the
+  `output_token_details` the service's model requires; an empty one is filled in before
+  parsing, and the totals are Boson's.
 - **The model is named in the session** as well as the URL, the form Boson documents.
 
 The server detector runs at the values the benchmark's private runs use for this

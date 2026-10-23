@@ -3,7 +3,7 @@
 Higgs Realtime speaks the GA shape of OpenAI's realtime protocol, so the
 framework's own service carries the call -- its turn handling, barge-in,
 truncation, tool calls and transcripts are the ones the OpenAI row runs on.
-Three places where Boson's server differs from OpenAI's decide what this
+Five places where Boson's server differs from OpenAI's decide what this
 subclass changes, and nothing else is changed.
 
 *The server speaks second.* OpenAI sends ``session.created`` as soon as the
@@ -22,6 +22,21 @@ drew a spoken answer and no tool call on 3 of 3 requests naming ``["audio"]``.
 A row whose model never calls a tool would be scored as one that cannot, so the
 request is sent bare, as the vendor's own tool-calling example sends it.
 
+*Boson sends events OpenAI does not.* After each reply's words it sends
+``response.output_audio_transcript.length``, and it can send
+``conversation.context.summarized``, ``session.idle_timeout`` and
+``session.max_duration_reached``. The framework's parser raises on any type it
+does not know, which ends its receive loop: on the first live calls the greeting
+played and the agent never heard the caller again. Types the framework does not
+know are logged and skipped before parsing; every known type is handled as
+before.
+
+*Boson's usage has no output breakdown.* Each ``response.done`` carries
+token totals and ``input_token_details`` but no ``output_token_details``, which
+the framework's model requires, so every reply would fail to parse and end the
+loop the same way. An empty breakdown is filled in before parsing; the totals
+the record reads are Boson's, unchanged.
+
 *The model is chosen in the session, not the URL.* The framework appends
 ``?model=`` to the socket URL, which Boson also accepts; the model is named in
 the session as well, because the vendor documents that form and the record
@@ -32,6 +47,9 @@ Protocol: https://docs.boson.ai/models/higgs-realtime/migrate-an-existing-integr
 
 from __future__ import annotations
 
+import json
+
+from loguru import logger
 from pipecat.services.openai.realtime import events
 from pipecat.services.openai.realtime.llm import OpenAIRealtimeLLMService
 
@@ -54,8 +72,39 @@ class HiggsTurnDetection(events.TurnDetection):
     interrupt_response: bool | None = None
 
 
+class _KnownEventsOnly:
+    """The socket, with what the framework cannot parse taken out or filled in.
+
+    The framework's receive loop iterates the socket and parses each message;
+    an unknown type raises and ends the loop. Wrapping the iteration is the one
+    place a message can be dropped before that, without copying the loop.
+    """
+
+    def __init__(self, websocket):
+        self._websocket = websocket
+
+    def __getattr__(self, name):
+        return getattr(self._websocket, name)
+
+    def __aiter__(self):
+        return self._known()
+
+    async def _known(self):
+        async for message in self._websocket:
+            event = json.loads(message)
+            kind = event.get("type")
+            if kind not in events._server_event_types:
+                logger.debug("higgs-realtime: skipping {} (not an OpenAI realtime event)", kind)
+                continue
+            usage = (event.get("response") or {}).get("usage") if kind == "response.done" else None
+            if isinstance(usage, dict) and "output_token_details" not in usage:
+                usage["output_token_details"] = {}
+                message = json.dumps(event)
+            yield message
+
+
 class HiggsRealtimeLLMService(OpenAIRealtimeLLMService):
-    """OpenAI's realtime service, pointed at Boson, for the three differences above."""
+    """OpenAI's realtime service, pointed at Boson, for the differences above."""
 
     def __init__(self, *, api_key: str, **kwargs):
         super().__init__(api_key=api_key, base_url=URL, **kwargs)
@@ -66,6 +115,11 @@ class HiggsRealtimeLLMService(OpenAIRealtimeLLMService):
         # anything; see the module note.
         if self._websocket:
             await self._send_session_update()
+
+    async def _receive_task_handler(self):
+        # Boson's extra event types would end the framework's loop; see the module note.
+        self._websocket = _KnownEventsOnly(self._websocket)
+        await super()._receive_task_handler()
 
     async def _handle_evt_session_created(self, evt):
         # The reply to our first session.update, carrying the settings it

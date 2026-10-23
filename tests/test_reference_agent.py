@@ -1567,6 +1567,32 @@ class TestHiggsRealtime:
         await service._handle_evt_session_created(events.SessionCreatedEvent(event_id="e", type="session.created", session=events.SessionProperties()))
         assert service._api_session_ready
 
+    async def test_events_the_framework_cannot_parse_do_not_end_the_call(self):
+        """Boson's extra event and its usage shape would raise in the framework's parser and end the receive loop."""
+        import json
+
+        from higgs_realtime import _KnownEventsOnly
+        from pipecat.services.openai.realtime import events
+
+        class Socket:
+            def __init__(self, messages):
+                self.messages = messages
+
+            async def __aiter__(self):
+                for message in self.messages:
+                    yield message
+
+        done = {"event_id": "e2", "type": "response.done", "response": {
+            "id": "r", "object": "realtime.response", "status": "completed", "status_details": None, "output": [],
+            "usage": {"total_tokens": 59, "input_tokens": 49, "output_tokens": 10, "input_token_details": {"cached_tokens": 0}},
+            "metadata": None}}
+        raw = [json.dumps({"event_id": "e1", "type": "response.output_audio_transcript.length", "delta": "Hi.", "length_ms": 900}),
+               json.dumps(done)]
+        kept = [message async for message in _KnownEventsOnly(Socket(raw))]
+        assert len(kept) == 1
+        parsed = events.parse_server_event(kept[0])
+        assert parsed.type == "response.done" and parsed.response.usage.output_tokens == 10
+
     async def test_a_reply_request_names_no_modality(self):
         """A response.create naming a modality stops Boson's model calling tools; it goes out bare."""
         from pipecat.services.openai.realtime import events

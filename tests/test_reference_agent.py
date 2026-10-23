@@ -1522,11 +1522,12 @@ class TestCascadeCounterparts:
         pairing is a cascade on that backend; Phonic and Deepslate offer no text
         model of their own; and the text models Voice Live serves next to Azure
         Realtime are OpenAI's, which the OpenAI cascade already covers.
-        A vendor's smaller tier shares its vendor's counterpart: the question it
-        answers is "the cheaper model or the flagship", not "native or cascade".
+        A vendor's smaller tier or other model shares its vendor's counterpart:
+        the question it answers is "which of the vendor's models", not "native
+        or cascade".
         """
         paired = {c.counterpart_to for c in bot.TEXT_MODELS.values() if c.counterpart_to}
-        tiers = {"openai-realtime-mini", "gemini-live-standard", "gemini-flash-live"}
+        tiers = {"openai-realtime-mini", "gemini-live-standard", "gemini-flash-live", "grok-realtime-3"}
         unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live", "phonic", "deepslate", "azure-realtime"} - tiers
         assert not unpaired, f"native providers with no cascade counterpart: {sorted(unpaired)}"
 
@@ -3296,15 +3297,17 @@ class TestVendorDefaultsAreExplicitAndOnTheRecord:
         for key, provider in bot.PROVIDERS.items():
             assert "latest" not in provider.default_model, key
 
-    def test_grok_sends_its_reasoning_effort_and_detector_settings(self):
-        provider = bot.PROVIDERS["grok-realtime"]
+    @pytest.mark.parametrize("key", ["grok-realtime", "grok-realtime-3"])
+    def test_grok_sends_its_reasoning_effort_and_detector_settings(self, key):
+        provider = bot.PROVIDERS[key]
         service = provider.build("k", provider.default_model, provider.default_voice, "p", asked())
         properties = service._settings.session_properties
         assert properties.reasoning.effort == bot.GROK_REASONING
         assert properties.turn_detection.type == "server_vad"
         for name, value in bot.GROK_VAD.items():
             assert getattr(properties.turn_detection, name) == value, name
-        record = record_for("grok-realtime")
+        record = record_for(key)
+        assert record["s2s_model"] == provider.default_model
         assert record["grok_reasoning"] == bot.GROK_REASONING
         assert "threshold 0.85" in record["grok_vad"]
 
@@ -3568,7 +3571,7 @@ class TestAResultIsDeliveredWhileTheAgentIsStillSpeaking:
         assert {k for k, p in bot.PROVIDERS.items() if p.results == "immediate"} == {
             "gemini-live", "gemini-live-standard", "gemini-flash-live", "nova-sonic", "phonic", "deepslate",
         }
-        for key in ("openai-realtime", "openai-realtime-mini", "grok-realtime"):
+        for key in ("openai-realtime", "openai-realtime-mini", "grok-realtime", "grok-realtime-3"):
             assert bot.PROVIDERS[key].results == "after_speech", key
 
 

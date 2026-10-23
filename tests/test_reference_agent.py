@@ -1511,23 +1511,93 @@ class TestAzureRealtime:
         assert seen["pushed"] == []
 
 
+class TestHiggsRealtime:
+    """Boson's model on the framework's OpenAI service, changed only where Boson's server differs."""
+
+    @staticmethod
+    def _service():
+        from higgs_realtime import HiggsRealtimeLLMService
+
+        provider = bot.PROVIDERS["higgs-realtime"]
+        service = provider.build("k", provider.default_model, provider.default_voice, "prompt", asked())
+        sent = []
+
+        async def ws_send(message):
+            sent.append(message)
+
+        service._ws_send = ws_send
+        assert isinstance(service, HiggsRealtimeLLMService)
+        return service, sent
+
+    def test_the_session_names_every_setting_the_row_depends_on(self):
+        import higgs_realtime
+
+        service, _ = self._service()
+        session = service._settings.session_properties
+        assert session.model == "higgs-realtime"
+        assert session.audio.output.voice == "default"
+        assert session.audio.input.transcription.model == higgs_realtime.TRANSCRIPTION_MODEL == "higgs-stt-3.1"
+        assert session.audio.input.turn_detection.model_dump(exclude_none=True) == bot.HIGGS_TURN_DETECTION
+        assert service.base_url.startswith(higgs_realtime.URL)
+        record = record_for("higgs-realtime")
+        for key in ("higgs_turn_detection", "higgs_caller_transcription", "higgs_response_request"):
+            assert record[key], key
+
+    async def test_the_session_is_configured_as_soon_as_the_socket_opens(self, monkeypatch):
+        """Boson says nothing until it is configured, so the update cannot wait for session.created."""
+        from pipecat.services.openai.realtime.llm import OpenAIRealtimeLLMService
+
+        service, sent = self._service()
+
+        async def opened(self):
+            self._websocket = object()
+
+        monkeypatch.setattr(OpenAIRealtimeLLMService, "_connect", opened)
+        await service._connect()
+        assert [m["type"] for m in sent] == ["session.update"]
+        assert sent[0]["session"]["model"] == "higgs-realtime"
+
+    async def test_session_created_is_the_acknowledgement(self):
+        """Boson answers the first update with session.created; that is what readies the session."""
+        from pipecat.services.openai.realtime import events
+
+        service, _ = self._service()
+        assert not service._api_session_ready
+        await service._handle_evt_session_created(events.SessionCreatedEvent(event_id="e", type="session.created", session=events.SessionProperties()))
+        assert service._api_session_ready
+
+    async def test_a_reply_request_names_no_modality(self):
+        """A response.create naming a modality stops Boson's model calling tools; it goes out bare."""
+        from pipecat.services.openai.realtime import events
+
+        service, sent = self._service()
+        await service.send_client_event(events.ResponseCreateEvent(
+            response=events.ResponseProperties(output_modalities=["audio"])))
+        assert len(sent) == 1 and sent[0]["type"] == "response.create"
+        assert "response" not in sent[0]
+        # Every other client event is the framework's, unchanged.
+        await service.send_client_event(events.InputAudioBufferAppendEvent(audio="AAAA"))
+        assert sent[1] == {"type": "input_audio_buffer.append", "audio": "AAAA", "event_id": sent[1]["event_id"]}
+
+
 class TestCascadeCounterparts:
     """The comparison the board exists to make: native against the pipeline it replaces."""
 
     def test_every_native_provider_has_a_counterpart(self):
         """A native row with nothing to compare against cannot answer the question.
 
-        Nova Sonic, GPT-Live, Phonic, Deepslate and Azure Realtime have no
-        vendor-default counterpart: GPT-Live delegates to a backend, so its fair
-        pairing is a cascade on that backend; Phonic and Deepslate offer no text
-        model of their own; and the text models Voice Live serves next to Azure
-        Realtime are OpenAI's, which the OpenAI cascade already covers.
+        Nova Sonic, GPT-Live, Phonic, Deepslate, Azure Realtime and Higgs
+        Realtime have no vendor-default counterpart: GPT-Live delegates to a
+        backend, so its fair pairing is a cascade on that backend; Phonic,
+        Deepslate and Boson offer no text model of their own on a public
+        endpoint; and the text models Voice Live serves next to Azure Realtime
+        are OpenAI's, which the OpenAI cascade already covers.
         A vendor's smaller tier shares its vendor's counterpart: the question it
         answers is "the cheaper model or the flagship", not "native or cascade".
         """
         paired = {c.counterpart_to for c in bot.TEXT_MODELS.values() if c.counterpart_to}
         tiers = {"openai-realtime-mini", "gemini-live-standard", "gemini-flash-live"}
-        unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live", "phonic", "deepslate", "azure-realtime"} - tiers
+        unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live", "phonic", "deepslate", "azure-realtime", "higgs-realtime"} - tiers
         assert not unpaired, f"native providers with no cascade counterpart: {sorted(unpaired)}"
 
     def test_a_counterpart_names_a_provider_that_exists(self):

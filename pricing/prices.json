@@ -260,6 +260,29 @@
         "Voice Live's Pro rates, which apply to this model. Azure lists two Pro text-output rates, $16 and, since 1 Sep 2026, $24 per million, without saying which model each covers; the higher is used.",
         "Caller transcription is billed as Azure speech input and is not in the usage the service reports, so it is not in this figure."
       ]
+    },
+    "higgs-realtime": {
+      "read_on": "2026-10-23",
+      "verified": true,
+      "source": "https://docs.boson.ai/pricing",
+      "components": [
+        {
+          "name": "higgs-realtime",
+          "basis": "per_million_tokens",
+          "rates": {
+            "text_input": 0.75,
+            "text_input_cached": 0.25,
+            "audio_input": 0.75,
+            "audio_input_cached": 0.25,
+            "text_output": 4.5,
+            "audio_output": 4.5
+          }
+        }
+      ],
+      "unmetered": [
+        "Boson lists one input rate and one output rate per million tokens, not separate audio and text rates, so the same rate is applied to both lanes.",
+        "Caller transcription is listed at $0.0025 a minute and is not in the usage the service reports, so it is not in this figure."
+      ]
     }
   },
   "cascade_speech_path": {

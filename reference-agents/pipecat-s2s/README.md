@@ -34,7 +34,7 @@ laptop work unchanged and lets a deployment carry a default:
 
 | Key | Default | Notes |
 |---|---|---|
-| `s2s_provider` | `openai-realtime` | native: also `openai-realtime-mini`, `gemini-live`, `gemini-live-standard`, `gemini-flash-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`, `phonic`, `deepslate`, `azure-realtime`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
+| `s2s_provider` | `openai-realtime` | native: also `openai-realtime-mini`, `gemini-live`, `gemini-live-standard`, `gemini-flash-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`, `phonic`, `deepslate`, `azure-realtime`, `higgs-realtime`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
 | `s2s_model` | provider default | pin it for a reproducible run |
 | `s2s_voice` | provider default | |
 | `s2s_backend_model` | `gpt-6-sol` | `gpt-live` only, see below |
@@ -58,7 +58,7 @@ quotes the body.
 
 | Variable | Notes |
 |---|---|
-| provider key | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, `DASHSCOPE_API_KEY`, `PHONIC_API_KEY`, `DEEPSLATE_API_KEY` (with `DEEPSLATE_VENDOR_ID` and `DEEPSLATE_ORGANIZATION_ID`), `AZURE_VOICE_API_KEY` (with `AZURE_VOICE_ENDPOINT`, the Voice Live resource's endpoint), or for Bedrock `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`); see below for why an API key cannot work |
+| provider key | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, `DASHSCOPE_API_KEY`, `PHONIC_API_KEY`, `DEEPSLATE_API_KEY` (with `DEEPSLATE_VENDOR_ID` and `DEEPSLATE_ORGANIZATION_ID`), `AZURE_VOICE_API_KEY` (with `AZURE_VOICE_ENDPOINT`, the Voice Live resource's endpoint), `BOSON_API_KEY`, or for Bedrock `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`); see below for why an API key cannot work |
 | `DEEPGRAM_API_KEY`, `ELEVENLABS_API_KEY` | cascade rows; `ELEVENLABS_API_KEY` also for `deepslate`, which hands it to Deepslate to voice its replies |
 | `CEKURA_API_KEY`, `CEKURA_AGENT_ID_<DEFINITION>` | tracing is off without both; one platform agent per agent definition (`CEKURA_AGENT_ID_APPOINTMENTS`, `CEKURA_AGENT_ID_MEDICARE`), with `CEKURA_AGENT_ID` for a deployment that serves one |
 | `AGENT_COMMIT` | stamped by the build; names what was actually deployed |
@@ -299,11 +299,34 @@ The endpoint names the Azure resource, so it is read from `AZURE_VOICE_ENDPOINT`
 rather than written here. The service reports token usage on every reply, and
 the row is priced at Voice Live's Pro rates.
 
+### Higgs Realtime
+
+Boson AI's speech-to-speech model speaks the later, GA shape of OpenAI's realtime
+protocol, so `higgs_realtime.py` runs it on Pipecat's own OpenAI service: the
+caller's turns, barge-in, truncation, tool calls and transcripts are handled by the
+same code as the OpenAI row. Three differences in Boson's server decide what the
+module changes, and nothing else is changed:
+
+- **The server speaks second.** OpenAI sends `session.created` on connect and the
+  service waits for it; Boson sends nothing until the first `session.update`, so the
+  update is sent as the socket opens and Boson's `session.created` is taken as its
+  acknowledgement.
+- **A reply request names no modality.** The service puts `output_modalities` in every
+  `response.create`. On Boson's endpoint, the same caller turn that drew a tool call on
+  3 of 3 bare requests drew none on 3 of 3 requests naming `["audio"]`, so the request
+  is sent bare, as Boson's own tool-calling example sends it.
+- **The model is named in the session** as well as the URL, the form Boson documents.
+
+The server detector runs at the values Boson documents as defaults (threshold 0.85,
+300 ms before an onset, 500 ms of silence to end a turn), sent so the record names
+them. The caller's words reach the record only when asked for, through Boson's
+`higgs-stt-3.1`. The voice is `default`.
+
 ## The sample rate is not a tuning knob
 
 These realtime services **do not resample**. Each base64-encodes the audio frame
 it is handed and declares a rate separately, so the pipeline rate must match what
-the provider expects: 24 kHz for OpenAI Realtime, Grok and Azure Realtime (the rate each
+the provider expects: 24 kHz for OpenAI Realtime, Grok, Azure Realtime and Higgs Realtime (the rate each
 recommends), 16 kHz for Gemini Live, Nova Sonic, Qwen, Phonic and Deepslate (Nova Sonic and Qwen
 reply at 24 kHz). GPT-Live is the exception: it resamples what it is given. Open it at the wrong rate and the model hears the caller sped up or slowed
 down, transcribes the words badly, and the run looks like a model failure when it

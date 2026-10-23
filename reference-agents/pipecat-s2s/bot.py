@@ -714,6 +714,50 @@ def _azure_realtime(credential: str, model: str, voice: str, instructions: str, 
     )
 
 
+def _higgs_realtime(credential: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
+    """Boson's speech-to-speech model, on the framework's OpenAI service with the differences in ``higgs_realtime``."""
+    from pipecat.services.openai.realtime.events import (
+        AudioConfiguration,
+        AudioInput,
+        AudioOutput,
+        InputAudioTranscription,
+        SessionProperties,
+        TurnDetection,
+    )
+    from pipecat.services.openai.realtime.llm import OpenAIRealtimeLLMSettings
+
+    from higgs_realtime import TRANSCRIPTION_MODEL, HiggsRealtimeLLMService
+
+    return HiggsRealtimeLLMService(
+        api_key=credential,
+        settings=OpenAIRealtimeLLMSettings(
+            model=model,
+            system_instruction=instructions,
+            session_properties=SessionProperties(
+                model=model,
+                audio=AudioConfiguration(
+                    # Asked for, under Boson's own model: see the caller-transcription note.
+                    input=AudioInput(
+                        transcription=InputAudioTranscription(model=TRANSCRIPTION_MODEL),
+                        turn_detection=TurnDetection(**HIGGS_TURN_DETECTION),
+                    ),
+                    output=AudioOutput(voice=voice),
+                ),
+            ),
+        ),
+    )
+
+
+def higgs_disclosures(settings: Settings) -> dict[str, str]:
+    from higgs_realtime import TRANSCRIPTION_MODEL
+
+    return {
+        "higgs_turn_detection": ", ".join(f"{k} {v}" for k, v in HIGGS_TURN_DETECTION.items()),
+        "higgs_caller_transcription": TRANSCRIPTION_MODEL,
+        "higgs_response_request": "bare response.create; a request naming a modality stops the model calling tools",
+    }
+
+
 def azure_disclosures(settings: Settings) -> dict[str, str]:
     from azure_realtime import API_VERSION
 
@@ -1037,6 +1081,7 @@ class Provider:
 #   openai-realtime   asked for  -- an input transcription config, default model
 #   grok-realtime     asked for  -- same shape, but only under its own ASR model
 #   azure-realtime    asked for  -- same shape, Azure's own speech-to-text
+#   higgs-realtime    asked for  -- same shape, Boson's own speech-to-text
 #   qwen-realtime     automatic  -- documented for the audio model
 #   gemini-live       automatic  -- the service configures both directions itself
 #   gpt-live          automatic  -- the protocol is transcript-driven throughout
@@ -1114,6 +1159,12 @@ AZURE_TURN_DETECTION = {
 # words in the record. Azure's own speech-to-text, pinned to the language
 # every scenario is spoken in.
 AZURE_TRANSCRIPTION = {"model": "azure-speech", "language": "en-US"}
+
+# Boson's server detector at the values its documentation gives as defaults:
+# a 0.85 speech threshold, 300 ms kept before an onset, and 500 ms of silence
+# to end a turn. Sent rather than left implicit so the record can name them;
+# the threshold is higher than OpenAI's 0.5, which is the vendor's choice.
+HIGGS_TURN_DETECTION = {"type": "server_vad", "threshold": 0.85, "prefix_padding_ms": 300, "silence_duration_ms": 500}
 
 
 # ``input_rate`` is load-bearing, not a tuning knob. These services do not
@@ -1253,6 +1304,14 @@ PROVIDERS: dict[str, Provider] = {
         _azure_realtime, 24000, "azure-realtime", "ava", ("AZURE_VOICE_API_KEY",),
         "azure_realtime",
         discloses=azure_disclosures,
+    ),
+    # Boson's model at 24 kHz both ways, on the framework's OpenAI service --
+    # see ``higgs_realtime``. The service announces the caller's turns as
+    # OpenAI's does and opens a reply on its own when a tool's result lands.
+    "higgs-realtime": Provider(
+        _higgs_realtime, 24000, "higgs-realtime", "default", ("BOSON_API_KEY",),
+        "higgs_realtime",
+        discloses=higgs_disclosures,
     ),
 }
 

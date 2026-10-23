@@ -41,6 +41,19 @@ URL = "wss://api.boson.ai/v1/realtime"
 TRANSCRIPTION_MODEL = "higgs-stt-3.1"
 
 
+class HiggsTurnDetection(events.TurnDetection):
+    """The framework's server VAD, plus the two flags Boson's server VAD accepts.
+
+    Boson documents ``create_response`` and ``interrupt_response`` as accepted
+    and inert -- it always answers at the end of a turn and always stops for a
+    barge-in -- but the configuration this row runs on names them, so they are
+    sent and the record carries them. The framework's model would drop them.
+    """
+
+    create_response: bool | None = None
+    interrupt_response: bool | None = None
+
+
 class HiggsRealtimeLLMService(OpenAIRealtimeLLMService):
     """OpenAI's realtime service, pointed at Boson, for the three differences above."""
 

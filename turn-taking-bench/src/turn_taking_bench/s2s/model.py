@@ -137,6 +137,10 @@ def session_config(config: dict[str, Any], entry: Any):
     detection = base.TurnDetection(
         mode=config.get("turn_detection") or "server_vad",
         silence_duration_ms=config.get("silence_duration_ms"),
+        threshold=config.get("threshold"),
+        prefix_padding_ms=config.get("prefix_padding_ms"),
+        create_response=config.get("create_response"),
+        interrupt_response=config.get("interrupt_response"),
     )
     if config["mode"] == "vad_only":
         return base.SessionConfig(
@@ -193,6 +197,8 @@ def model_provenance(config: dict[str, Any]) -> dict[str, Any]:
         "channels": list(config.get("channels", [1])),
         "turn_detection": config.get("turn_detection") or "server_vad",
         "silence_duration_ms": config.get("silence_duration_ms"),
+        "threshold": config.get("threshold"),
+        "prefix_padding_ms": config.get("prefix_padding_ms"),
         "voice": config.get("voice") or entry.default_voice,
         "instructions": "" if config["mode"] == "vad_only" else (config.get("instructions") or SYSTEM_PROMPT),
         "prompt_sha256": None if config["mode"] == "vad_only" else prompt_sha256(config.get("instructions") or SYSTEM_PROMPT),

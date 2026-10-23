@@ -1538,6 +1538,7 @@ class TestHiggsRealtime:
         assert session.audio.output.voice == "default"
         assert session.audio.input.transcription.model == higgs_realtime.TRANSCRIPTION_MODEL == "higgs-stt-3.1"
         assert session.audio.input.turn_detection.model_dump(exclude_none=True) == bot.HIGGS_TURN_DETECTION
+        assert bot.HIGGS_TURN_DETECTION["silence_duration_ms"] == 1000 and bot.HIGGS_TURN_DETECTION["threshold"] == 0.35
         assert service.base_url.startswith(higgs_realtime.URL)
         record = record_for("higgs-realtime")
         for key in ("higgs_turn_detection", "higgs_caller_transcription", "higgs_response_request"):

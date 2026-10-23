@@ -89,6 +89,17 @@ PINNED_MODELS: dict[str, str] = {
 }
 
 
+# Turn detection a provider runs with on the private set when it is not the
+# provider's own default. The values are sent rather than left to the server, so
+# the run record names them. Higgs Realtime runs at 1000 ms of silence and a
+# 0.35 threshold (Boson's documented defaults are 500 ms and 0.85); the two
+# flags are accepted and inert on Boson's server.
+PINNED_TURN_DETECTION: dict[str, dict[str, Any]] = {
+    "higgs-realtime": {"silence_duration_ms": 1000, "threshold": 0.35, "prefix_padding_ms": 300,
+                       "create_response": True, "interrupt_response": True},
+}
+
+
 def prompt_sha256(text: str = SYSTEM_PROMPT) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
@@ -116,6 +127,12 @@ def default_config(provider: str) -> dict[str, Any]:
         # semantic_vad where offered; silence_duration_ms to pin a duration.
         "turn_detection": "server_vad",
         "silence_duration_ms": None,
+        # Further server VAD fields; None leaves each to the provider's default.
+        "threshold": None,
+        "prefix_padding_ms": None,
+        "create_response": None,
+        "interrupt_response": None,
+        **PINNED_TURN_DETECTION.get(provider, {}),
         "voice": None,  # None = the service registry's default output voice
         "transcribe_input": True,
         # Silence streamed after the last frame so the provider can endpoint the

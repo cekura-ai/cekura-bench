@@ -317,9 +317,11 @@ module changes, and nothing else is changed:
   is sent bare, as Boson's own tool-calling example sends it.
 - **The model is named in the session** as well as the URL, the form Boson documents.
 
-The server detector runs at the values Boson documents as defaults (threshold 0.85,
-300 ms before an onset, 500 ms of silence to end a turn), sent so the record names
-them. The caller's words reach the record only when asked for, through Boson's
+The server detector runs at the values the benchmark's private runs use for this
+model: threshold 0.35, 300 ms before an onset, and a full second of silence to end a
+turn (Boson's documented defaults are 0.85 and 500 ms), with `create_response` and
+`interrupt_response` on, which Boson accepts and treats as inert. All are sent so the
+record names them. The caller's words reach the record only when asked for, through Boson's
 `higgs-stt-3.1`. The voice is `default`.
 
 ## The sample rate is not a tuning knob

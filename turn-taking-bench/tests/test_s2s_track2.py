@@ -53,6 +53,19 @@ def _speaking_point(x, rate, vad):
     raise AssertionError("no continuous-speech point in fixture")
 
 
+
+def test_higgs_runs_with_the_private_sets_turn_detection_in_both_tracks():
+    from turn_taking_bench.s2s import PINNED_TURN_DETECTION
+    from turn_taking_bench.s2s.model import session_config
+
+    config = default_config("higgs-realtime")
+    detection = session_config(config, type("Entry", (), {"default_voice": "default"})()).turn_detection
+    assert (detection.silence_duration_ms, detection.threshold, detection.prefix_padding_ms) == (1000, 0.35, 300)
+    assert detection.create_response is True and detection.interrupt_response is True
+    assert PINNED_TURN_DETECTION.keys() == {"higgs-realtime"}
+    other = session_config(default_config("openai-realtime"), type("Entry", (), {"default_voice": "marin"})()).turn_detection
+    assert (other.silence_duration_ms, other.threshold, other.prefix_padding_ms) == (None, None, None)
+
 def test_track2_prompt_is_separate_and_neutral():
     assert SYSTEM_PROMPT_TRACK2 != SYSTEM_PROMPT and "Reply briefly" in SYSTEM_PROMPT
     low = SYSTEM_PROMPT_TRACK2.lower()

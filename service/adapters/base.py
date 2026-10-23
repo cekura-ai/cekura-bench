@@ -41,6 +41,8 @@ class TurnDetection:
     silence_duration_ms: int | None = None
     threshold: float | None = None
     prefix_padding_ms: int | None = None
+    create_response: bool | None = None
+    interrupt_response: bool | None = None
 
     @property
     def is_manual(self) -> bool:

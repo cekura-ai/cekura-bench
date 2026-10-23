@@ -722,11 +722,10 @@ def _higgs_realtime(credential: str, model: str, voice: str, instructions: str, 
         AudioOutput,
         InputAudioTranscription,
         SessionProperties,
-        TurnDetection,
     )
     from pipecat.services.openai.realtime.llm import OpenAIRealtimeLLMSettings
 
-    from higgs_realtime import TRANSCRIPTION_MODEL, HiggsRealtimeLLMService
+    from higgs_realtime import TRANSCRIPTION_MODEL, HiggsRealtimeLLMService, HiggsTurnDetection
 
     return HiggsRealtimeLLMService(
         api_key=credential,
@@ -739,7 +738,7 @@ def _higgs_realtime(credential: str, model: str, voice: str, instructions: str, 
                     # Asked for, under Boson's own model: see the caller-transcription note.
                     input=AudioInput(
                         transcription=InputAudioTranscription(model=TRANSCRIPTION_MODEL),
-                        turn_detection=TurnDetection(**HIGGS_TURN_DETECTION),
+                        turn_detection=HiggsTurnDetection(**HIGGS_TURN_DETECTION),
                     ),
                     output=AudioOutput(voice=voice),
                 ),
@@ -1160,11 +1159,20 @@ AZURE_TURN_DETECTION = {
 # every scenario is spoken in.
 AZURE_TRANSCRIPTION = {"model": "azure-speech", "language": "en-US"}
 
-# Boson's server detector at the values its documentation gives as defaults:
-# a 0.85 speech threshold, 300 ms kept before an onset, and 500 ms of silence
-# to end a turn. Sent rather than left implicit so the record can name them;
-# the threshold is higher than OpenAI's 0.5, which is the vendor's choice.
-HIGGS_TURN_DETECTION = {"type": "server_vad", "threshold": 0.85, "prefix_padding_ms": 300, "silence_duration_ms": 500}
+# Boson's server detector as this row is configured to run it: a 0.35 speech
+# threshold, 300 ms kept before an onset, and a full second of silence to end
+# a turn. Boson's documented defaults are 0.85 and 500 ms; these are the values
+# the benchmark's private runs use for this model, sent so the record names
+# them. ``create_response`` and ``interrupt_response`` are accepted and inert
+# on Boson's server (see ``higgs_realtime.HiggsTurnDetection``).
+HIGGS_TURN_DETECTION = {
+    "type": "server_vad",
+    "silence_duration_ms": 1000,
+    "threshold": 0.35,
+    "prefix_padding_ms": 300,
+    "create_response": True,
+    "interrupt_response": True,
+}
 
 
 # ``input_rate`` is load-bearing, not a tuning knob. These services do not

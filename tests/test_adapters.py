@@ -100,6 +100,18 @@ class TestGrok:
 
 
 class TestHiggs:
+    def test_the_private_runs_turn_detection_is_sent_as_configured(self):
+        detection = TurnDetection("server_vad", silence_duration_ms=1000, threshold=0.35, prefix_padding_ms=300,
+                                  create_response=True, interrupt_response=True)
+        payload = adapter(HiggsRealtimeAdapter, turn_detection=detection)._session_payload()
+        assert payload["audio"]["input"]["turn_detection"] == {
+            "type": "server_vad", "silence_duration_ms": 1000, "threshold": 0.35, "prefix_padding_ms": 300,
+            "create_response": True, "interrupt_response": True}
+
+    def test_unset_fields_leave_the_providers_defaults(self):
+        payload = adapter(OpenAIRealtimeAdapter, turn_detection=TurnDetection("server_vad"))._session_payload()
+        assert payload["audio"]["input"]["turn_detection"] == {"type": "server_vad"}
+
     def test_session_names_the_model_and_boson_transcription(self):
         payload = adapter(HiggsRealtimeAdapter, transcribe_input=True)._session_payload()
         assert payload["model"] == "higgs-realtime"

@@ -132,6 +132,9 @@ class OpenAIRealtimeAdapter(RealtimeAdapter):
             payload["threshold"] = detection.threshold
         if detection.prefix_padding_ms is not None:
             payload["prefix_padding_ms"] = detection.prefix_padding_ms
+        for flag in ("create_response", "interrupt_response"):
+            if getattr(detection, flag) is not None:
+                payload[flag] = getattr(detection, flag)
         return payload
 
     async def close(self) -> None:

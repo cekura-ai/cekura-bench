@@ -52,3 +52,15 @@ def test_v3_late_duplicate_partial_does_not_reopen_committed_segment():
  assert not p.snapshot()['partial_text']
  p.feed(dict(message_type='partial_transcript',text='A new unfinished sentence'))
  assert p.snapshot()['partial_text']=='A new unfinished sentence'
+
+
+def test_v4_late_duplicate_partial_after_the_timestamp_does_not_reopen_the_turn():
+ # Observed on a live Scribe turn: commit, its timestamp annotation, then the committed text again as a partial.
+ for version,left_open in (('elevenlabs-committed-segments-v3',True),('elevenlabs-committed-segments-v4',False)):
+  p=Protocol({**CONFIG,'transcript_reconstruction':version})
+  p.requested=True;p.feed(plain('Right. Right, right.'));p.feed(timed('Right. Right, right.',0.18,1.2))
+  p.feed(dict(message_type='partial_transcript',text='Right. Right, right.'))
+  assert p.snapshot()['final_text']=='Right. Right, right.'
+  assert bool(p.snapshot()['partial_text'])==left_open
+ p.feed(dict(message_type='partial_transcript',text='And something new'))
+ assert p.snapshot()['partial_text']=='And something new'

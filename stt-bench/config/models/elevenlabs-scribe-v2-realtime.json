@@ -22,5 +22,6 @@
     "source": "https://elevenlabs.io/pricing/api",
     "status": "account_rate_unverified",
     "billing_basis": "submitted audio including silence and retries; rate-dependent estimate, not an invoice"
-  }
+  },
+  "transcript_reconstruction": "elevenlabs-committed-segments-v3"
 }

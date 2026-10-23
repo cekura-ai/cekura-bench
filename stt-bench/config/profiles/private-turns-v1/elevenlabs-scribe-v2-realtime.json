@@ -26,5 +26,6 @@
   "measurement_profile": "private-turns-controlled-v1",
   "profile_version": "private-turns-v1",
   "turn_finalization_class": "controlled",
-  "base_config": "config/models/elevenlabs-scribe-v2-realtime.json"
+  "base_config": "config/models/elevenlabs-scribe-v2-realtime.json",
+  "transcript_reconstruction": "elevenlabs-committed-segments-v3"
 }

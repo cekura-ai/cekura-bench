@@ -4,6 +4,8 @@ from stt_bench.provider_protocol import Protocol
 from stt_bench.turn_metrics import transcript_timeline
 
 BASE=json.loads(Path('config/profiles/private-turns-v1/elevenlabs-scribe-v2-realtime.json').read_text())
+# The historical reconstruction is the profile without a versioned one, as the earlier runs were recorded.
+HISTORICAL={k:v for k,v in BASE.items() if k!='transcript_reconstruction'}
 CONFIG={**BASE,'transcript_reconstruction':'elevenlabs-committed-segments-v2'}
 def plain(text):return dict(message_type='committed_transcript',text=text)
 def timed(text,start,end):return dict(message_type='committed_transcript_with_timestamps',text=text,words=[dict(start=start,end=end)])
@@ -30,7 +32,7 @@ def test_distinct_repeated_words_survive_and_changed_annotation_is_flagged():
  p.feed(timed('no',2,3));assert p.unsupported
 
 def test_historical_reconstruction_remains_unchanged():
- p=Protocol(BASE);p.feed(plain('one'));p.feed(plain('two'));assert p.unsupported
+ p=Protocol(HISTORICAL);p.feed(plain('one'));p.feed(plain('two'));assert p.unsupported
 
 def test_speechmatics_silence_ranges_do_not_conflict_with_later_words():
  c=json.loads(Path('config/profiles/private-turns-v1/speechmatics-enhanced.json').read_text())

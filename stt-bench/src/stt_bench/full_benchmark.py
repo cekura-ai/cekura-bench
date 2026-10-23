@@ -32,7 +32,7 @@ from .streaming import EventLog, read_events
 
 MODELS = ('smallest-pulse', 'gradium-default', 'reson8-realtime', 'inworld-stt-1')
 # Version 1 plans must list exactly MODELS, so later additions live separately.
-FULL_MODELS = (*MODELS, 'soniox-stt-rt-v5', 'zoom-scribe-live')
+FULL_MODELS = (*MODELS, 'soniox-stt-rt-v5', 'zoom-scribe-live', 'elevenlabs-scribe-v2-realtime')
 # Public-only runs stream the 1,000 Pipecat clips without the eight private
 # recordings. Inworld is listed again so it can be re-run on public clips alone.
 PUBLIC_LIVE_MODELS = ('gemini-3.8-live', 'gemini-3.8-live-extended-thinking', 'soniox-stt-rt-v5', 'inworld-stt-1',

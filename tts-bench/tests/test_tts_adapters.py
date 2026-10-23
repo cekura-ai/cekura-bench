@@ -566,6 +566,19 @@ class TestDeepInfra:
         assert deepinfra._prewarm_url() == "https://api.deepinfra.com/models/Qwen/Qwen3-TTS"
 
 
+class TestAssemblyAI:
+    def test_the_voice_is_sent_as_voice_id_and_never_as_voice(self):
+        from tts_bench.adapters.assemblyai import AssemblyAITTSAdapter
+
+        aai, _ = adapter(AssemblyAITTSAdapter, "assemblyai-tts-1", "110c952f-38ba-54b6-b3b4-b49e96c30eaa")
+        assert f"{aai.base}{aai.speech_path}" == "https://tts.us.assemblyai.com/v1/openai/audio/speech"
+        assert aai._prewarm_url() == "https://tts.us.assemblyai.com/v1/openai/models"
+        assert aai._request_args("Text to synthesize.")["json"] == {
+            "model": "assemblyai-tts-1", "voice_id": "110c952f-38ba-54b6-b3b4-b49e96c30eaa",
+            "input": "Text to synthesize.", "response_format": "pcm"}
+        assert not (aai.supports_streamed_input or aai.supports_cancel or aai.supports_continuation)
+
+
 class TestEndOfUtterance:
     async def test_a_pause_does_not_end_a_protocol_that_says_when_it_is_done(self):
         import asyncio

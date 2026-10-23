@@ -15,6 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Type
 
+from tts_bench.adapters.assemblyai import AssemblyAITTSAdapter
 from tts_bench.adapters.azure_speech import AzureSpeechAdapter
 from tts_bench.adapters.base import TTSAdapter
 from tts_bench.adapters.cartesia import CartesiaAdapter
@@ -77,6 +78,7 @@ ASTRA = "astra"                                      # Rime, female US English o
 SARAH = "933563129e564b19a115bedd57b7406a"              # Fish Official, female US English
 DELIA = "c70cfb98867a4bfb9ae20d2401257b92"              # Fish Audio, female US English, from its Drama 3 voice cast
 AVA = "5bb7de05-c8fe-426a-8fcc-ba4fc4ce9f9c"           # Hume "Ava Song", female US English, from its Voice Library
+SARA = "110c952f-38ba-54b6-b3b4-b49e96c30eaa"          # AssemblyAI "Sara", female US English, the voice AssemblyAI chose
 
 PROVIDERS: dict[str, ProviderEntry] = {
     "fake": ProviderEntry("fake", FakeTTSAdapter, "FAKE_KEY_UNUSED", (Model("scripted", "tone"),)),
@@ -181,6 +183,12 @@ PROVIDERS: dict[str, ProviderEntry] = {
         (Model("MAI-Voice-2.1-Flash", "en-US-Harper"), Model("MAI-Voice-2.1", "en-US-Harper")),
         notes="HTTP SSML, raw PCM streamed back; the model is the voice name's suffix; whole text per request; "
               "region is the host (option region, default eastus)",
+    ),
+    "assemblyai": ProviderEntry(
+        "assemblyai", AssemblyAITTSAdapter, "ASSEMBLY_API_KEY",
+        (Model("assemblyai-tts-1", SARA),),
+        notes="OpenAI-compatible HTTP streaming, raw 24 kHz PCM; voice by voice_id, OpenAI's voice left out; "
+              "whole text per request; US data zone",
     ),
 }
 

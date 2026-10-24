@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from typing import Type
 
 from tts_bench.adapters.assemblyai import AssemblyAITTSAdapter
+from tts_bench.adapters.assemblyai_ws import AssemblyAIStreamingAdapter
 from tts_bench.adapters.azure_speech import AzureSpeechAdapter
 from tts_bench.adapters.base import TTSAdapter
 from tts_bench.adapters.cartesia import CartesiaAdapter
@@ -189,6 +190,13 @@ PROVIDERS: dict[str, ProviderEntry] = {
         (Model("assemblyai-tts-1", SARA),),
         notes="OpenAI-compatible HTTP streaming, raw 24 kHz PCM; voice by voice_id, OpenAI's voice left out; "
               "whole text per request; US data zone",
+    ),
+    "assemblyai-streaming": ProviderEntry(
+        "assemblyai-streaming", AssemblyAIStreamingAdapter, "ASSEMBLY_API_KEY",
+        (Model("assemblyai-tts-1", SARA),),
+        notes="Streaming TTS websocket, session configured in the URL, Begin before t0; Generate appends text, "
+              "Flush ends the utterance (FlushDone), Cancel is the barge-in (Cancelled); one utterance at a time per "
+              "socket; word timings off; US data zone; new sessions per minute are limited per account",
     ),
 }
 

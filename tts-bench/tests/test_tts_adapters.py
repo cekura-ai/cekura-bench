@@ -579,6 +579,42 @@ class TestAssemblyAI:
         assert not (aai.supports_streamed_input or aai.supports_cancel or aai.supports_continuation)
 
 
+class TestAssemblyAIStreaming:
+    async def test_generate_flush_and_cancel_on_one_socket(self):
+        from tts_bench.adapters.assemblyai_ws import AssemblyAIStreamingAdapter
+
+        aai, sent = adapter(AssemblyAIStreamingAdapter, "assemblyai-tts-1", "110c952f-38ba-54b6-b3b4-b49e96c30eaa")
+        assert aai.url.startswith("wss://tts.us.assemblyai.com/v1/ws?model_id=assemblyai-tts-1&voice_id=110c952f")
+        assert "sample_rate=24000" in aai.url and "encoding=pcm_s16le" in aai.url and "word_boundaries=false" in aai.url
+        assert aai._headers() == {"Authorization": "unused"}
+        synthesis = await aai.open_context("main")
+        await aai.send("main", "Hello ")
+        await aai.send("main", "there.")
+        await aai.finish("main")
+        assert sent == [{"type": "Generate", "text": "Hello "}, {"type": "Generate", "text": "there."}, {"type": "Flush"}]
+        aai._on_message({"type": "Audio", "audio": "AAAA", "flush_id": 0})
+        aai._on_message({"type": "FlushDone", "flush_id": 0, "audio_duration_ms": 0})
+        assert synthesis.done.is_set() and synthesis.pcm == bytearray(3) and synthesis.t_cancel_ack is None
+
+        second = await aai.open_context("next")
+        await aai.send("next", "A long reply. ")
+        await aai.cancel("next")
+        assert sent[-1] == {"type": "Cancel"}
+        aai._on_message({"type": "Cancelled", "audio_duration_seconds": 0.4})
+        assert second.t_cancel_ack is not None and second.done.is_set()
+
+    async def test_a_refused_session_is_an_adapter_error_that_reads_as_a_refusal(self):
+        import asyncio
+
+        from tts_bench.adapters.assemblyai_ws import AssemblyAIStreamingAdapter
+        from tts_bench.adapters.base import is_refusal
+
+        aai, _ = adapter(AssemblyAIStreamingAdapter, "assemblyai-tts-1", "v")
+        aai._begin = asyncio.get_running_loop().create_future()
+        aai._on_message({"type": "Error", "error_code": 3009, "error_type": "rate_limited", "error": "New sessions per minute exceeded"})
+        assert "error" in aai._begin.result() and is_refusal(aai._begin.result()["error"])
+
+
 class TestEndOfUtterance:
     async def test_a_pause_does_not_end_a_protocol_that_says_when_it_is_done(self):
         import asyncio

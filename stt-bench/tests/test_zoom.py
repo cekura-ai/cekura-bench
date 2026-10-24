@@ -66,7 +66,7 @@ def test_config_credentials_and_setup():
             validate(dict(c, **{key: value}))
 
 
-@pytest.mark.parametrize('name,model', [('zoom-scribe-pro-live', 'zoom-scribe-en-pro'), ('zoom-scribe-pro-v2.1-live', 'zoom-scribe-en-pro-v2.1')])
+@pytest.mark.parametrize('name,model', [('zoom-scribe-pro-live', 'zoom-scribe-en-pro'), ('zoom-scribe-pro-v2-1-live', 'zoom-scribe-en-pro-v2.1')])
 def test_pro_requests_its_model_inside_config(name, model):
     pro = validate(config(name))
     assert wire.Protocol(pro).setup() == {'type': 'session.update', 'language': 'en-US', 'audio': {'format': 'pcm16'},

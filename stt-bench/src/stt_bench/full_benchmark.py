@@ -32,11 +32,11 @@ from .streaming import EventLog, read_events
 
 MODELS = ('smallest-pulse', 'gradium-default', 'reson8-realtime', 'inworld-stt-1')
 # Version 1 plans must list exactly MODELS, so later additions live separately.
-FULL_MODELS = (*MODELS, 'soniox-stt-rt-v5', 'zoom-scribe-live', 'zoom-scribe-pro-live', 'zoom-scribe-pro-v2.1-live')
+FULL_MODELS = (*MODELS, 'soniox-stt-rt-v5', 'zoom-scribe-live', 'zoom-scribe-pro-live', 'zoom-scribe-pro-v2-1-live')
 # Public-only runs stream the 1,000 Pipecat clips without the eight private
 # recordings. Inworld is listed again so it can be re-run on public clips alone.
 PUBLIC_LIVE_MODELS = ('gemini-3.8-live', 'gemini-3.8-live-extended-thinking', 'soniox-stt-rt-v5', 'inworld-stt-1',
-                      'zoom-scribe-live', 'zoom-scribe-pro-live', 'zoom-scribe-pro-v2.1-live')
+                      'zoom-scribe-live', 'zoom-scribe-pro-live', 'zoom-scribe-pro-v2-1-live')
 PUBLIC = Path('datasets/pipecat-stt-benchmark/3fe50170d520c951957b86996ef082a6ab87b394/full')
 PRIVATE = Path('reports/assemblyai-private-20260914/dataset')
 PRIVATE_MANIFEST = Path('workspaces/private-longform-recovery-v2/dataset/manifest.json')

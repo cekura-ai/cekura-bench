@@ -1,5 +1,5 @@
 {
-  "model_id": "zoom-scribe-pro-v2.1-live",
+  "model_id": "zoom-scribe-pro-v2-1-live",
   "provider": "zoom",
   "model": "zoom-scribe-en-pro-v2.1",
   "request_model": true,
@@ -33,5 +33,5 @@
   "measurement_profile": "private-turns-controlled-v1",
   "profile_version": "private-turns-v1",
   "turn_finalization_class": "controlled",
-  "base_config": "config/models/zoom-scribe-pro-v2.1-live.json"
+  "base_config": "config/models/zoom-scribe-pro-v2-1-live.json"
 }

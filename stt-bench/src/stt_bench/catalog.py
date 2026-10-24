@@ -30,7 +30,7 @@ MODELS = {name: Path('config/models') / (name + '.json') for name in (
     'inworld-stt-1',
     'zoom-scribe-live',
     'zoom-scribe-pro-live',
-    'zoom-scribe-pro-v2.1-live',
+    'zoom-scribe-pro-v2-1-live',
 )}
 BLOCKED_MODELS = {}
 

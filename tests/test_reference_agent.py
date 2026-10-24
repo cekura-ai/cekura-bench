@@ -1522,12 +1522,14 @@ class TestCascadeCounterparts:
         pairing is a cascade on that backend; Phonic and Deepslate offer no text
         model of their own; and the text models Voice Live serves next to Azure
         Realtime are OpenAI's, which the OpenAI cascade already covers.
+        ElevenLabs, like Phonic and Deepslate, offers no text model of its own.
         A vendor's smaller tier shares its vendor's counterpart: the question it
         answers is "the cheaper model or the flagship", not "native or cascade".
         """
         paired = {c.counterpart_to for c in bot.TEXT_MODELS.values() if c.counterpart_to}
-        tiers = {"openai-realtime-mini", "gemini-live-standard", "gemini-flash-live"}
-        unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live", "phonic", "deepslate", "azure-realtime"} - tiers
+        tiers = {"openai-realtime-mini", "gemini-live-standard", "gemini-flash-live", "elevenlabs-realtime-mini"}
+        unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live", "phonic", "deepslate", "azure-realtime",
+                                                  "elevenlabs-realtime"} - tiers
         assert not unpaired, f"native providers with no cascade counterpart: {sorted(unpaired)}"
 
     def test_a_counterpart_names_a_provider_that_exists(self):
@@ -4117,3 +4119,185 @@ class TestEachDefinitionReportsToItsOwnAgent:
         assert built["agent_id"] == 22 and built["custom_metadata"]["cekura_agent_id"] == 22
         # The record is sent again whole when the call ends, so the id has to be on it.
         assert record["cekura_agent_id"] == 22
+
+
+class TestElevenLabsRealtime:
+    """ElevenLabs' Eleven Realtime on the framework's OpenAI service: its socket, its header, its model."""
+
+    @staticmethod
+    def _service(name="elevenlabs-realtime"):
+        provider = bot.PROVIDERS[name]
+        return provider.build("k", provider.default_model, provider.default_voice, "prompt", asked())
+
+    def test_each_tier_is_its_own_row_on_its_own_model(self):
+        assert bot.PROVIDERS["elevenlabs-realtime"].default_model == "eleven_realtime_v1_max"
+        assert bot.PROVIDERS["elevenlabs-realtime-mini"].default_model == "eleven_realtime_v1_mini"
+
+    def test_the_model_is_on_the_session_because_the_url_does_not_choose_it(self):
+        for name in ("elevenlabs-realtime", "elevenlabs-realtime-mini"):
+            service = self._service(name)
+            assert service._settings.session_properties.model == bot.PROVIDERS[name].default_model
+
+    def test_the_rate_matches_the_service(self):
+        import elevenlabs_realtime
+
+        assert elevenlabs_realtime.SAMPLE_RATE == bot.PROVIDERS["elevenlabs-realtime"].input_rate
+
+    async def test_it_signs_in_with_the_elevenlabs_header_not_a_bearer_token(self, monkeypatch):
+        import elevenlabs_realtime
+
+        seen = {}
+
+        async def connect(uri, additional_headers):
+            seen["uri"], seen["headers"] = uri, additional_headers
+            return object()
+
+        monkeypatch.setattr(elevenlabs_realtime, "websocket_connect", connect)
+        service = self._service()
+        service.create_task = lambda coro: coro.close()
+        await service._connect()
+        assert seen["uri"].startswith(elevenlabs_realtime.URL)
+        assert seen["headers"] == {"xi-api-key": "k"}
+
+    async def test_delivery_tags_never_reach_the_transcript_even_when_split(self):
+        service = self._service()
+        pushed = []
+
+        async def push(text):
+            pushed.append(text)
+
+        service._push_output_transcript_text_frames = push
+
+        class Delta:
+            def __init__(self, delta):
+                self.delta = delta
+
+        for part in ["[hap", "py] Thanks, Maria! ", "Room [B] is ready."]:
+            await service._handle_evt_audio_transcript_delta(Delta(part))
+        assert "".join(pushed) == "Thanks, Maria! Room [B] is ready."
+
+    def test_a_response_without_status_details_still_parses(self):
+        import json
+
+        from elevenlabs_realtime import normalise
+        from pipecat.services.openai.realtime import events
+
+        message = {"type": "response.done", "event_id": "e", "response": {
+            "id": "r", "object": "realtime.response", "status": "completed", "output": [], "usage": None}}
+        event = events.parse_server_event(normalise(json.dumps(message)))
+        assert event.response.status_details is None
+
+    async def test_a_failed_response_without_details_is_reported_not_fatal(self):
+        import json
+        from unittest.mock import AsyncMock
+
+        from elevenlabs_realtime import normalise
+        from pipecat.services.openai.realtime import events
+
+        message = {"type": "response.done", "event_id": "e", "response": {
+            "id": "r", "object": "realtime.response", "status": "failed", "output": [], "usage": None}}
+        event = events.parse_server_event(normalise(json.dumps(message)))
+        service = self._service()
+        service.push_frame = AsyncMock()
+        service.push_error = AsyncMock()
+        service.stop_processing_metrics = AsyncMock()
+        await service._handle_evt_response_done(event)
+        service.push_error.assert_any_call(error_msg="Eleven Realtime reported a failed response without details")
+
+    def test_a_failed_response_keeps_the_message_it_was_given(self):
+        import json
+
+        from elevenlabs_realtime import normalise
+
+        message = {"type": "response.done", "event_id": "e", "response": {
+            "id": "r", "object": "realtime.response", "status": "failed", "output": [], "usage": None,
+            "status_details": {"type": "failed", "error": {"type": "server_error", "message": "boom"}}}}
+        assert json.loads(normalise(json.dumps(message)))["response"]["status_details"]["error"]["message"] == "boom"
+
+    def test_an_event_the_framework_has_no_schema_for_is_dropped_not_fatal(self):
+        import json
+
+        from elevenlabs_realtime import normalise
+
+        assert normalise(json.dumps({"type": "output_audio_buffer.cleared", "event_id": "e"})) is None
+
+    async def test_a_response_with_no_usage_is_handled_and_its_usage_left_unrecorded(self, monkeypatch):
+        from pipecat.services.openai.realtime import events
+        from pipecat.services.openai.realtime.llm import OpenAIRealtimeLLMService
+
+        recorded, handled = [], []
+
+        async def framework_done(service, evt):
+            # Stands in for the framework's handler: it reads the usage, then records it.
+            handled.append(evt.response.usage.input_tokens)
+            await service.start_llm_usage_metrics("tokens")
+
+        async def framework_record(_service, tokens):
+            recorded.append(tokens)
+
+        monkeypatch.setattr(OpenAIRealtimeLLMService, "_handle_evt_response_done", framework_done)
+        monkeypatch.setattr(OpenAIRealtimeLLMService, "start_llm_usage_metrics", framework_record)
+        service = self._service()
+        done = {"type": "response.done", "event_id": "e", "response": {
+            "id": "r", "object": "realtime.response", "status": "completed", "status_details": None,
+            "output": [], "usage": None}}
+        await service._handle_evt_response_done(events.ResponseDone.model_validate(done))
+        assert handled == [0] and recorded == []
+
+        done["response"]["usage"] = {"total_tokens": 5, "input_tokens": 3, "output_tokens": 2,
+                                     "input_token_details": {}, "output_token_details": {}}
+        await service._handle_evt_response_done(events.ResponseDone.model_validate(done))
+        assert recorded == ["tokens"]
+
+    async def test_every_audio_append_is_whole_samples_and_the_stream_stays_aligned(self):
+        import base64
+        import json
+
+        from elevenlabs_realtime import _NormalisedSocket
+
+        sent = []
+
+        class Socket:
+            async def send(self, message):
+                sent.append(json.loads(message))
+
+        socket = _NormalisedSocket(Socket())
+        stream = bytes(range(1, 12))
+        for chunk in (stream[:3], stream[3:4], stream[4:9], stream[9:]):
+            await socket.send(json.dumps({"type": "input_audio_buffer.append", "audio": base64.b64encode(chunk).decode()}))
+        audio = [base64.b64decode(e["audio"]) for e in sent]
+        assert all(len(a) % 2 == 0 and a for a in audio)
+        assert b"".join(audio) == stream[:10]
+
+    async def test_a_closed_session_names_what_was_last_sent_without_its_content(self, caplog):
+        import base64
+        import json
+
+        from elevenlabs_realtime import _NormalisedSocket
+        from websockets.exceptions import ConnectionClosedError
+        from websockets.frames import Close
+
+        class Socket:
+            async def send(self, message):
+                pass
+
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                raise ConnectionClosedError(Close(1008, "Invalid message received"), None)
+
+        socket = _NormalisedSocket(Socket())
+        await socket.send(json.dumps({"type": "input_audio_buffer.append", "audio": base64.b64encode(b"\0\0").decode()}))
+        await socket.send(json.dumps({"type": "conversation.item.truncate", "item_id": "i", "content_index": 0, "audio_end_ms": 5}))
+        from loguru import logger
+
+        seen = []
+        handle = logger.add(lambda m: seen.append(str(m)), level="WARNING")
+        try:
+            with pytest.raises(ConnectionClosedError):
+                async for _ in socket:
+                    pass
+        finally:
+            logger.remove(handle)
+        assert any("append 2 B" in s and "conversation.item.truncate" in s and "audio_end_ms=5" in s for s in seen)

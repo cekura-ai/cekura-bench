@@ -66,12 +66,13 @@ def test_config_credentials_and_setup():
             validate(dict(c, **{key: value}))
 
 
-def test_pro_requests_its_model_inside_config():
-    pro = validate(config('zoom-scribe-pro-live'))
+@pytest.mark.parametrize('name,model', [('zoom-scribe-pro-live', 'zoom-scribe-en-pro'), ('zoom-scribe-pro-v2.1-live', 'zoom-scribe-en-pro-v2.1')])
+def test_pro_requests_its_model_inside_config(name, model):
+    pro = validate(config(name))
     assert wire.Protocol(pro).setup() == {'type': 'session.update', 'language': 'en-US', 'audio': {'format': 'pcm16'},
-                                          'config': {'model': 'zoom-scribe-en-pro'}}
-    assert {k: v for k, v in pro.items() if k not in ('model_id', 'model', 'request_model', 'pricing', 'protocol_caveat')} == \
-        {k: v for k, v in config().items() if k not in ('model_id', 'model', 'pricing', 'protocol_caveat')}
+                                          'config': {'model': model}}
+    differ = ('model_id', 'model', 'request_model', 'pricing', 'protocol_caveat', 'checked_on')
+    assert {k: v for k, v in pro.items() if k not in differ} == {k: v for k, v in config().items() if k not in differ}
 
 
 def test_segments_join_in_speech_order_and_close_completes():

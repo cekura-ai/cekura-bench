@@ -260,6 +260,25 @@
         "Voice Live's Pro rates, which apply to this model. Azure lists two Pro text-output rates, $16 and, since 1 Sep 2026, $24 per million, without saying which model each covers; the higher is used.",
         "Caller transcription is billed as Azure speech input and is not in the usage the service reports, so it is not in this figure."
       ]
+    },
+    "zoom-voice-agent": {
+      "read_on": "2026-10-26",
+      "verified": true,
+      "source": "https://www.zoom.com/en/products/ai-services/voice-agent-api/",
+      "components": [
+        {
+          "name": "gemma-4",
+          "basis": "per_minute",
+          "measure": "call_seconds",
+          "rates": {
+            "minute": 0.025
+          }
+        }
+      ],
+      "unmetered": [
+        "Zoom lists $1.50 an hour of active session time for the Standard API, which serves its own text model; that is the rate used. Bring-your-own-LLM sessions are $1.08 an hour plus the customer's own model costs.",
+        "The service reports the text model's tokens on every reply, but Zoom bills by session time, not tokens."
+      ]
     }
   },
   "cascade_speech_path": {

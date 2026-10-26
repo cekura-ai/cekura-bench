@@ -4173,6 +4173,25 @@ class TestAGoodbyeLeftOpenIsClosedForTheAgent:
         assert tool_closed.closed_by == "agent"
 
 
+class TestTheImageCarriesEveryModule:
+    """A row imports its service module only when a call builds it, so a module
+    left out of the image fails every call of that row before the agent joins
+    the room, and nothing local notices: local runs read the repository."""
+
+    def test_every_sibling_module_bot_imports_is_copied_into_the_image(self):
+        import re
+
+        source = (AGENT_DIR / "bot.py").read_text()
+        dockerfile = (AGENT_DIR / "Dockerfile").read_text()
+        imported = {
+            path.stem for path in AGENT_DIR.glob("*.py")
+            if path.name != "bot.py" and re.search(rf"^\s*(from {path.stem} import|import {path.stem}\b)", source, re.M)
+        }
+        assert "polyai_realtime" in imported
+        missing = sorted(m for m in imported if f"COPY reference-agents/pipecat-s2s/{m}.py ./{m}.py" not in dockerfile)
+        assert not missing, f"imported by bot.py but not copied into the image: {missing}"
+
+
 class TestEveryRowIsToldTheSameThing:
     """What the agent should do is said once, in the same words, to every row.
     The one row with a section of its own is told only how to reach its tools."""

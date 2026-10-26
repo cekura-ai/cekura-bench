@@ -233,6 +233,15 @@
         "No public price list. The ElevenLabs voicing the service calls is billed to this deployment's ElevenLabs account, separately."
       ]
     },
+    "polyai-dialog": {
+      "read_on": null,
+      "verified": false,
+      "source": null,
+      "components": [],
+      "unmetered": [
+        "No public price list."
+      ]
+    },
     "azure-realtime": {
       "read_on": "2026-10-07",
       "verified": true,

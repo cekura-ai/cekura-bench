@@ -1511,6 +1511,369 @@ class TestAzureRealtime:
         assert seen["pushed"] == []
 
 
+class TestPolyAIRealtime:
+    """Dialog-RSN-1: OpenAI's GA realtime shape, speaking in the vendor's own server-side voice."""
+
+    @staticmethod
+    def _service(**overrides):
+        from polyai_realtime import PolyAIRealtimeLLMService
+
+        provider = bot.PROVIDERS["polyai-dialog"]
+        service = provider.build("k", provider.default_model, provider.default_voice, "prompt", asked())
+        for key, value in overrides.items():
+            setattr(service, key, value)
+        seen = {"pushed": [], "broadcast": [], "sent": [], "calls": [], "usage": []}
+
+        async def push(frame, direction=None):
+            seen["pushed"].append((type(frame).__name__, direction, frame))
+
+        async def broadcast(frame_cls, **_kwargs):
+            seen["broadcast"].append(frame_cls.__name__)
+
+        async def send(event):
+            seen["sent"].append(event)
+
+        async def run(function_calls):
+            seen["calls"].extend(function_calls)
+
+        async def usage(tokens):
+            seen["usage"].append(tokens)
+
+        async def noop(*_args, **_kwargs):
+            return None
+
+        service.push_frame = push
+        service.broadcast_frame = broadcast
+        service._send = send
+        service.run_function_calls = run
+        service.start_llm_usage_metrics = usage
+        for name in ("start_ttfb_metrics", "stop_ttfb_metrics", "start_processing_metrics",
+                     "stop_processing_metrics", "stop_all_metrics"):
+            setattr(service, name, noop)
+        assert isinstance(service, PolyAIRealtimeLLMService)
+        return service, seen
+
+    @staticmethod
+    def _text(seen):
+        return [frame.text for name, _, frame in seen["pushed"] if name == "TTSTextFrame"]
+
+    @staticmethod
+    def _sent(seen, kind):
+        return [event for event in seen["sent"] if event["type"] == kind]
+
+    @staticmethod
+    def _audio(response_id, ms):
+        """An audio delta carrying ``ms`` of 24 kHz 16-bit silence."""
+        import base64
+
+        import polyai_realtime
+
+        audio = bytes(int(polyai_realtime.OUTPUT_SAMPLE_RATE * ms / 1000) * 2)
+        return {"type": "response.output_audio.delta", "response_id": response_id,
+                "delta": base64.b64encode(audio).decode()}
+
+    @staticmethod
+    def _words(response_id, text):
+        return {"type": "response.output_audio_transcript.delta", "response_id": response_id, "delta": text}
+
+    def test_the_session_sends_only_fields_the_service_accepts(self):
+        """A field outside the service's schema makes it refuse the whole update."""
+        import polyai_realtime
+
+        service, _ = self._service()
+        session = service.session()
+        assert set(session) == {"type", "model", "output_modalities", "instructions", "audio"}
+        assert session["output_modalities"] == ["audio"]
+        assert session["audio"] == {"input": {
+            "format": {"type": "audio/pcm", "rate": bot.PROVIDERS["polyai-dialog"].input_rate},
+            "turn_detection": {"type": "server_vad", "create_response": True},
+        }}
+        assert polyai_realtime.SAMPLE_RATE == bot.PROVIDERS["polyai-dialog"].input_rate
+
+    def test_the_prompt_is_the_shared_one_plus_the_named_addendum(self):
+        import polyai_realtime
+
+        service, _ = self._service()
+        assert service.session()["instructions"] == f"prompt\n\n{polyai_realtime.PROMPT_ADDENDUM}"
+        record = record_for("polyai-dialog")
+        assert record["prompt_addendum"] == "polyai-spoken-tools"
+        assert record["prompt_addendum_sha256"] == bot._digest(polyai_realtime.PROMPT_ADDENDUM)
+        for key in ("polyai_endpoint", "polyai_turn_detection", "tts", "tool_schema", "polyai_playback_reporting"):
+            assert record[key], key
+        assert record["polyai_endpoint"] == polyai_realtime.DEFAULT_URL
+
+    def test_the_endpoint_can_be_moved_by_the_environment_only(self, monkeypatch):
+        import polyai_realtime
+
+        assert bot.polyai_url(asked(polyai_realtime_url="wss://elsewhere")) == polyai_realtime.DEFAULT_URL
+        monkeypatch.setenv("POLYAI_REALTIME_URL", "wss://api.us.poly.ai/v1/realtime")
+        service, _ = self._service()
+        assert service._url == "wss://api.us.poly.ai/v1/realtime"
+
+    def test_the_voice_is_the_vendors_own(self):
+        provider = bot.PROVIDERS["polyai-dialog"]
+        record = record_for("polyai-dialog")
+        assert record["s2s_voice"] == provider.default_voice == "service default"
+        assert "ElevenLabs" not in record["tts"]
+        assert [key for key, p in bot.PROVIDERS.items() if p.reports_playback] == ["polyai-dialog"]
+
+    def test_every_tool_keeps_its_published_schema_and_gains_a_required_spoken_line(self):
+        import polyai_realtime
+
+        server = bot.MockToolServer(suite="medicare")
+        service, _ = self._service(_tools=bot.build_tools(server))
+        declared = {tool["name"]: tool for tool in service.session()["tools"]}
+        specs = {spec.name: spec for spec in server.tool_specs()}
+        assert set(specs) | {"end_call", "transfer_call"} == set(declared)
+        spoken = polyai_realtime.SPOKEN_ARGUMENT
+        for name, tool in declared.items():
+            properties = dict(tool["parameters"]["properties"])
+            line = properties.pop(spoken)
+            assert line["type"] == "string" and line["poly_spoken"] is True, name
+            assert spoken in tool["parameters"]["required"], name
+            if name in specs:
+                assert properties == specs[name].parameters["properties"], name
+                assert tool["parameters"]["required"][:-1] == list(specs[name].parameters.get("required", [])), name
+        assert declared["end_call"]["parameters"]["properties"][spoken]["description"].startswith("Your goodbye")
+        # The published schema itself is untouched.
+        assert all(spoken not in spec.parameters.get("properties", {}) for spec in server.tool_specs())
+
+    async def test_the_call_opens_configured_with_tools_then_speaks_first(self):
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        server = bot.MockToolServer(suite="appointments")
+        service, seen = self._service()
+        service.create_task = asyncio.ensure_future
+        opening = bot.opening_messages("Thank you for calling.")
+        await service._handle_context(LLMContext(opening, tools=bot.build_tools(server)))
+        await asyncio.sleep(0)
+        assert [event["type"] for event in seen["sent"]] == ["session.update"]
+        assert seen["sent"][0]["session"]["tools"]
+        await service._dispatch({"type": "session.updated", "session": {}})
+        await service._open_task
+        assert [event["type"] for event in seen["sent"]] == [
+            "session.update", "conversation.item.create", "response.create"]
+        item = seen["sent"][1]["item"]
+        assert item["role"] == "user" and item["content"][0]["text"] == opening[0]["content"]
+
+    async def test_the_reply_is_the_services_audio_with_its_words_alongside(self):
+        """Words that arrive before the reply's first sound wait for it."""
+        import polyai_realtime
+
+        service, seen = self._service()
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch(self._words("r1", "Sure, "))
+        assert not self._text(seen), "held until the reply makes a sound"
+        await service._dispatch(self._audio("r1", 100))
+        await service._dispatch(self._words("r1", "one moment."))
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})
+        assert [name for name, _, _ in seen["pushed"]] == [
+            "LLMFullResponseStartFrame", "TTSStartedFrame", "TTSTextFrame", "TTSAudioRawFrame", "TTSTextFrame",
+            "TTSStoppedFrame", "LLMFullResponseEndFrame"]
+        assert self._text(seen) == ["Sure, ", "one moment."]
+        [audio] = [frame for name, _, frame in seen["pushed"] if name == "TTSAudioRawFrame"]
+        assert audio.sample_rate == polyai_realtime.OUTPUT_SAMPLE_RATE == 24000
+
+    async def test_words_of_a_reply_that_never_made_a_sound_never_reach_the_record(self):
+        service, seen = self._service()
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch(self._words("r1", "Never heard."))
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "cancelled"}})
+        assert not self._text(seen)
+
+    async def test_the_spoken_line_is_said_but_never_reaches_the_tool(self):
+        """The tool sees the published contract; the service speaks the line."""
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service, seen = self._service()
+        service._context = LLMContext([])
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch(self._audio("r1", 100))
+        await service._dispatch(self._words("r1", "Let me check that."))
+        await service._dispatch({"type": "response.function_call_arguments.done", "response_id": "r1",
+                                 "call_id": "c1", "name": "lookup_patient",
+                                 "arguments": '{"utterance": "Let me check that.", "patient_id": "p_1"}'})
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})
+        [call] = seen["calls"]
+        assert (call.function_name, call.arguments) == ("lookup_patient", {"patient_id": "p_1"})
+        assert self._text(seen) == ["Let me check that."]
+
+    async def test_a_spoken_line_the_service_did_not_speak_is_not_invented(self):
+        """The voice is the vendor's: a line it left silent stays silent, and the tool still runs."""
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service, seen = self._service()
+        service._context = LLMContext([])
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch({"type": "response.function_call_arguments.done", "response_id": "r1",
+                                 "call_id": "c1", "name": "end_call",
+                                 "arguments": '{"utterance": "Thanks for calling, goodbye."}'})
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})
+        assert not self._text(seen)
+        assert seen["calls"][0].arguments == {}
+
+    async def test_a_result_is_answered_once_the_response_that_asked_closes(self):
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service, seen = self._service()
+        service._context = LLMContext([])
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch({"type": "response.output_item.added", "response_id": "r1",
+                                 "item": {"type": "function_call", "call_id": "c1", "name": "lookup_patient"}})
+        await service._dispatch({"type": "response.function_call_arguments.done", "response_id": "r1",
+                                 "call_id": "c1", "name": "lookup_patient", "arguments": '{"utterance": "One sec."}'})
+        result = LLMContext([{"role": "tool", "tool_call_id": "c1", "content": '{"ok": true}'}])
+        await service._handle_context(result)
+        await service._handle_context(result)
+        assert [event["type"] for event in seen["sent"]] == ["conversation.item.create"], "the response is still open"
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})
+        assert [event["type"] for event in seen["sent"]] == ["conversation.item.create", "response.create"]
+
+    async def test_a_closing_tool_asks_for_no_reply_and_closes_on_its_own_response(self):
+        """Its spoken line is the goodbye: a reply to its result would say it again."""
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service, seen = self._service()
+        service._context = LLMContext([])
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch({"type": "response.function_call_arguments.done", "response_id": "r1",
+                                 "call_id": "c1", "name": "end_call", "arguments": '{"utterance": "Goodbye."}'})
+        await service._handle_context(LLMContext([{"role": "tool", "tool_call_id": "c1", "content": "{}"}]))
+        assert not service.closing_reply_done.is_set(), "the goodbye is still playing"
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})
+        assert service.closing_reply_done.is_set() and service.closing_reply_status == "completed"
+        assert [event["type"] for event in seen["sent"]] == ["conversation.item.create"], "result sent, no reply asked"
+        assert 'hangup.closing_reply = getattr(llm, "closing_reply_done", None)' in (AGENT_DIR / "bot.py").read_text()
+        assert record_for("polyai-dialog")["polyai_hangup"]
+
+    async def test_a_result_landing_mid_turn_is_left_to_the_turns_own_reply(self):
+        """Asking for a reply while the caller talks would answer over them."""
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service, seen = self._service()
+        service._context = LLMContext([])
+        await service._dispatch({"type": "response.function_call_arguments.done", "call_id": "c1",
+                                 "name": "lookup_patient", "arguments": "{}"})
+        await service._dispatch({"type": "input_audio_buffer.speech_started"})
+        await service._handle_context(LLMContext([{"role": "tool", "tool_call_id": "c1", "content": "{}"}]))
+        assert [event["type"] for event in seen["sent"]] == ["conversation.item.create"]
+        await service._dispatch({"type": "input_audio_buffer.speech_stopped"})
+        assert not self._sent(seen, "response.create")
+
+    async def test_the_services_detector_decides_the_callers_turn(self):
+        service, seen = self._service()
+        await service._dispatch({"type": "input_audio_buffer.speech_started"})
+        await service._dispatch({"type": "input_audio_buffer.speech_stopped"})
+        assert seen["broadcast"] == ["ProposedUserStartedSpeakingFrame", "ProposedUserStoppedSpeakingFrame"]
+        provider = bot.PROVIDERS["polyai-dialog"]
+        assert provider.turns == "provider" and provider.interruptions
+
+    async def test_the_service_hears_each_reply_played_to_the_end(self):
+        """Started when audible, stopped with all it delivered, one report pair per reply."""
+        service, seen = self._service()
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch(self._audio("r1", 800))
+        await service._dispatch(self._words("r1", "One moment."))
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})
+        await service.playback_started()
+        # The next reply is delivered while the first is still being said.
+        await service._dispatch({"type": "response.created", "response": {"id": "r2"}})
+        await service._dispatch(self._audio("r2", 1200))
+        await service._dispatch(self._words("r2", " You're booked."))
+        for piece in ("One moment.", " You're booked."):
+            service.playback_heard(piece)
+        await service.playback_stopped(finished=True)
+        started = self._sent(seen, "poly.output_audio.started")
+        stopped = self._sent(seen, "poly.output_audio.stopped")
+        assert [event["response_id"] for event in started] == ["r1", "r2"]
+        assert [(e["response_id"], e["spoken_text"], e["audio_ms"], e["dropped_ms"]) for e in stopped] == [
+            ("r1", "One moment.", 800, 0), ("r2", " You're booked.", 1200, 0)]
+
+    async def test_a_reply_cut_short_reports_only_what_was_heard(self, monkeypatch):
+        import polyai_realtime
+        from pipecat.frames.frames import InterruptionFrame
+        from pipecat.processors.frame_processor import FrameDirection
+
+        clock = [100.0]
+        monkeypatch.setattr(polyai_realtime, "time", SimpleNamespace(monotonic=lambda: clock[0]))
+        service, seen = self._service()
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch(self._audio("r1", 3000))
+        await service._dispatch(self._words("r1", "Your appointment is on Monday at noon."))
+        await service.playback_started()
+        clock[0] += 1.2
+        service.playback_heard("Your appointment is")
+        await service.process_frame(InterruptionFrame(), FrameDirection.DOWNSTREAM)
+        [stopped] = self._sent(seen, "poly.output_audio.stopped")
+        assert (stopped["response_id"], stopped["spoken_text"]) == ("r1", "Your appointment is")
+        assert (stopped["audio_ms"], stopped["dropped_ms"]) == (1200, 1800)
+        assert self._sent(seen, "response.cancel")
+        # Audio still arriving for the cut reply is never played.
+        before = len(seen["pushed"])
+        await service._dispatch(self._audio("r1", 100))
+        await service._dispatch(self._words("r1", " late"))
+        assert len(seen["pushed"]) == before
+        # The output transport's own stop after the cut reports nothing twice.
+        await service.playback_stopped(finished=True)
+        assert len(self._sent(seen, "poly.output_audio.stopped")) == 1
+
+    async def test_playback_is_reported_from_after_the_output_transport(self):
+        from pipecat.frames.frames import BotStartedSpeakingFrame, BotStoppedSpeakingFrame, TTSTextFrame
+        from pipecat.processors.frame_processor import FrameDirection
+        from polyai_realtime import ReportsPlayback
+
+        service, seen = self._service()
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch(self._audio("r1", 100))
+        reporter = ReportsPlayback(service)
+
+        async def forward(frame, direction=FrameDirection.DOWNSTREAM):
+            return None
+
+        reporter.push_frame = forward
+        for frame in (BotStartedSpeakingFrame(), TTSTextFrame("Hello there.", aggregated_by="sentence"),
+                      BotStoppedSpeakingFrame()):
+            await reporter.process_frame(frame, FrameDirection.DOWNSTREAM)
+        await reporter.process_frame(BotStartedSpeakingFrame(), FrameDirection.UPSTREAM)
+        assert [event["type"] for event in seen["sent"]] == ["poly.output_audio.started", "poly.output_audio.stopped"]
+
+    async def test_an_event_this_row_does_not_read_is_named_once(self):
+        service, seen = self._service()
+        for _ in range(2):
+            await service._dispatch({"type": "response.output_audio.done", "response_id": "r1"})
+        assert service._unhandled == {"response.output_audio.done"} and not seen["pushed"]
+
+    def test_heard_words_are_apportioned_to_replies_in_order(self):
+        from polyai_realtime import heard_by_reply
+
+        texts = ["One moment.", "Your appointment is on Monday."]
+        assert heard_by_reply(texts, "One moment. Your appointment", finished=False) == ["One moment.", "Your appointment"]
+        assert heard_by_reply(texts, "", finished=True) == texts
+
+    async def test_the_callers_words_travel_upstream_to_the_context(self):
+        from pipecat.processors.frame_processor import FrameDirection
+
+        service, seen = self._service()
+        await service._dispatch({"type": "conversation.item.input_audio_transcription.completed",
+                                 "item_id": "u1", "transcript": "I need to reschedule."})
+        [(name, direction, frame)] = seen["pushed"]
+        assert name == "TranscriptionFrame" and direction is FrameDirection.UPSTREAM
+        assert bot.PROVIDERS["polyai-dialog"].caller_transcription == "automatic"
+
+    async def test_each_replys_usage_is_reported(self):
+        service, seen = self._service()
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed", "usage": {
+            "total_tokens": 600, "input_tokens": 456, "output_tokens": 144}}})
+        [tokens] = seen["usage"]
+        assert (tokens.prompt_tokens, tokens.completion_tokens, tokens.total_tokens) == (456, 144, 600)
+
+    def test_a_refused_update_names_the_field(self):
+        from polyai_realtime import describe_error
+
+        assert describe_error({"code": "unknown_parameter", "message": "not in schema", "param": "session.voice"}) == (
+            "[unknown_parameter] not in schema (param: session.voice)")
+
+
 class TestZoomVoiceAgent:
     """A hosted cascade behind a realtime socket: Zoom's session, OpenAI's later event names, enveloped."""
 
@@ -1787,19 +2150,19 @@ class TestCascadeCounterparts:
     def test_every_native_provider_has_a_counterpart(self):
         """A native row with nothing to compare against cannot answer the question.
 
-        Nova Sonic, GPT-Live, Phonic, Deepslate, Azure Realtime and Zoom have no
-        vendor-default counterpart: GPT-Live delegates to a backend, so its fair
-        pairing is a cascade on that backend; Phonic and Deepslate offer no text
-        model of their own; the text models Voice Live serves next to Azure
-        Realtime are OpenAI's, which the OpenAI cascade already covers; and Zoom
-        is itself a cascade, whose comparison is with these rows, not a twin.
+        Nova Sonic, GPT-Live, Phonic, Deepslate, Azure Realtime, PolyAI and Zoom
+        have no vendor-default counterpart: GPT-Live delegates to a backend, so its
+        fair pairing is a cascade on that backend; Phonic, Deepslate and PolyAI offer
+        no text model of their own on an API; the text models Voice Live serves next
+        to Azure Realtime are OpenAI's, which the OpenAI cascade already covers; and
+        Zoom is itself a cascade, whose comparison is with these rows, not a twin.
         A vendor's smaller tier shares its vendor's counterpart: the question it
         answers is "the cheaper model or the flagship", not "native or cascade".
         """
         paired = {c.counterpart_to for c in bot.TEXT_MODELS.values() if c.counterpart_to}
         tiers = {"openai-realtime-mini", "gemini-live-standard", "gemini-flash-live"}
-        unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live", "phonic", "deepslate", "azure-realtime",
-                                                    "zoom-voice-agent"} - tiers
+        unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live", "phonic", "deepslate", "azure-realtime", "polyai-dialog",
+                                                  "zoom-voice-agent"} - tiers
         assert not unpaired, f"native providers with no cascade counterpart: {sorted(unpaired)}"
 
     def test_a_counterpart_names_a_provider_that_exists(self):
@@ -3839,6 +4202,7 @@ class TestAResultIsDeliveredWhileTheAgentIsStillSpeaking:
     def test_the_rows_that_only_forward_a_result_are_the_immediate_ones(self):
         assert {k for k, p in bot.PROVIDERS.items() if p.results == "immediate"} == {
             "gemini-live", "gemini-live-standard", "gemini-flash-live", "nova-sonic", "phonic", "deepslate",
+            "polyai-dialog",
         }
         for key in ("openai-realtime", "openai-realtime-mini", "grok-realtime"):
             assert bot.PROVIDERS[key].results == "after_speech", key
@@ -4081,6 +4445,25 @@ class TestAGoodbyeLeftOpenIsClosedForTheAgent:
         assert tool_closed.closed_by == "agent"
 
 
+class TestTheImageCarriesEveryModule:
+    """A row imports its service module only when a call builds it, so a module
+    left out of the image fails every call of that row before the agent joins
+    the room, and nothing local notices: local runs read the repository."""
+
+    def test_every_sibling_module_bot_imports_is_copied_into_the_image(self):
+        import re
+
+        source = (AGENT_DIR / "bot.py").read_text()
+        dockerfile = (AGENT_DIR / "Dockerfile").read_text()
+        imported = {
+            path.stem for path in AGENT_DIR.glob("*.py")
+            if path.name != "bot.py" and re.search(rf"^\s*(from {path.stem} import|import {path.stem}\b)", source, re.M)
+        }
+        assert "polyai_realtime" in imported
+        missing = sorted(m for m in imported if f"COPY reference-agents/pipecat-s2s/{m}.py ./{m}.py" not in dockerfile)
+        assert not missing, f"imported by bot.py but not copied into the image: {missing}"
+
+
 class TestEveryRowIsToldTheSameThing:
     """What the agent should do is said once, in the same words, to every row.
     The one row with a section of its own is told only how to reach its tools."""
@@ -4225,6 +4608,39 @@ class TestAHangUpEndsTheCallOnceTheGoodbyeHasPlayed:
 
         marks = await self._call(script)
         assert self.MOST <= marks["hung_up"] - marks["asked"] < self.MOST + 0.1
+
+    async def test_a_closing_reply_the_service_reports_is_followed_without_waiting_for_more(self):
+        # PolyAI's goodbye is the closing tool's own line, and its response.done
+        # is the cue: no allowance is left for a reply to the tool's result.
+        import asyncio
+
+        from pipecat.frames.frames import BotStartedSpeakingFrame, BotStoppedSpeakingFrame
+
+        done = asyncio.Event()
+
+        async def script(source, hangup, mark):
+            hangup.closing_reply, hangup.QUIET_SECS = done, 0.4
+            await source.push_frame(BotStartedSpeakingFrame())
+            hangup.hang_up("end_call")
+            await asyncio.sleep(0.1)
+            done.set()
+            await asyncio.sleep(0.05)
+            mark("stopped")
+            await source.push_frame(BotStoppedSpeakingFrame())
+
+        marks = await self._call(script)
+        assert 0 <= marks["hung_up"] - marks["stopped"] < 0.2, "hung up mid-goodbye, or waited for another reply"
+
+    async def test_a_hang_up_by_the_backstop_does_not_wait_for_a_closing_reply(self):
+        import asyncio
+
+        async def script(source, hangup, mark):
+            hangup.closing_reply = asyncio.Event()
+            mark("asked")
+            hangup.hang_up("backstop")
+
+        marks = await self._call(script)
+        assert marks["hung_up"] - marks["asked"] < self.QUIET + 0.1
 
     async def test_the_room_is_left_before_the_teardown_starts(self):
         # The cancel reaches the transport only after the realtime service has

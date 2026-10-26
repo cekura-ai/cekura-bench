@@ -34,7 +34,7 @@ laptop work unchanged and lets a deployment carry a default:
 
 | Key | Default | Notes |
 |---|---|---|
-| `s2s_provider` | `openai-realtime` | native: also `openai-realtime-mini`, `gemini-live`, `gemini-live-standard`, `gemini-flash-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`, `phonic`, `deepslate`, `azure-realtime`, `zoom-voice-agent` (a hosted cascade, see below). cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
+| `s2s_provider` | `openai-realtime` | native: also `openai-realtime-mini`, `gemini-live`, `gemini-live-standard`, `gemini-flash-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`, `phonic`, `deepslate`, `azure-realtime`, `polyai-dialog`, `zoom-voice-agent` (a hosted cascade, see below). cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
 | `s2s_model` | provider default | pin it for a reproducible run |
 | `s2s_voice` | provider default | |
 | `s2s_backend_model` | `gpt-6-sol` | `gpt-live` only, see below |
@@ -58,7 +58,7 @@ quotes the body.
 
 | Variable | Notes |
 |---|---|
-| provider key | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, `DASHSCOPE_API_KEY`, `PHONIC_API_KEY`, `DEEPSLATE_API_KEY` (with `DEEPSLATE_VENDOR_ID` and `DEEPSLATE_ORGANIZATION_ID`), `AZURE_VOICE_API_KEY` (with `AZURE_VOICE_ENDPOINT`, the Voice Live resource's endpoint), `ZOOM_AGENT_API_KEY`, or for Bedrock `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`); see below for why an API key cannot work |
+| provider key | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, `DASHSCOPE_API_KEY`, `PHONIC_API_KEY`, `DEEPSLATE_API_KEY` (with `DEEPSLATE_VENDOR_ID` and `DEEPSLATE_ORGANIZATION_ID`), `AZURE_VOICE_API_KEY` (with `AZURE_VOICE_ENDPOINT`, the Voice Live resource's endpoint), `POLY_API_KEY` (a Dialog-RSN-1 key from PolyAI's Agent Studio), `ZOOM_AGENT_API_KEY`, or for Bedrock `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`); see below for why an API key cannot work |
 | `DEEPGRAM_API_KEY`, `ELEVENLABS_API_KEY` | cascade rows; `ELEVENLABS_API_KEY` also for `deepslate`, which hands it to Deepslate to voice its replies |
 | `CEKURA_API_KEY`, `CEKURA_AGENT_ID_<DEFINITION>` | tracing is off without both; one platform agent per agent definition (`CEKURA_AGENT_ID_APPOINTMENTS`, `CEKURA_AGENT_ID_MEDICARE`), with `CEKURA_AGENT_ID` for a deployment that serves one |
 | `AGENT_COMMIT` | stamped by the build; names what was actually deployed |
@@ -210,11 +210,11 @@ are granted in some subset of those. Both failures are the same
 `AccessDeniedException` from the outside, which is why the region is recorded
 with every run.
 
-## Five providers are spoken directly
+## Six providers are spoken directly
 
 Pipecat ships a realtime service for every other model on this board and none
-for Qwen, Phonic or Zoom, so `qwen_realtime.py`, `phonic_realtime.py` and
-`zoom_voice_agent.py` speak those protocols directly. Deepslate publishes a
+for Qwen, Phonic, PolyAI or Zoom, so `qwen_realtime.py`, `phonic_realtime.py`,
+`polyai_realtime.py` and `zoom_voice_agent.py` speak those protocols directly. Deepslate publishes a
 Pipecat plugin, and `deepslate_realtime.py` does not use it, for the reason
 given below. Pipecat's Azure realtime service speaks a newer protocol than
 Azure's Voice Live, so `azure_realtime.py` speaks Voice Live's.
@@ -299,6 +299,36 @@ The endpoint names the Azure resource, so it is read from `AZURE_VOICE_ENDPOINT`
 rather than written here. The service reports token usage on every reply, and
 the row is priced at Voice Live's Pro rates.
 
+### PolyAI Dialog-RSN-1
+
+Dialog-RSN-1 hears the caller's audio directly, decides when they have finished,
+and answers with a reply or a tool call. The row runs the service's default
+mode, in which the vendor's own text-to-speech speaks server-side and the reply
+arrives as 24 kHz audio with its transcript; the service's text-only mode, for
+clients that bring their own voice, is not used. `polyai_realtime.py` speaks the
+vendor's realtime protocol, OpenAI's GA shape with a narrower session, and sends
+the caller at the model's native 16 kHz.
+
+A turn is a reply or one tool call, never both, so the prompt's "say this, then call
+that" cannot be followed as written. The vendor's mechanism is a tool argument
+marked `poly_spoken`, which the service speaks while the tool runs: every tool on this row takes a
+required `utterance`, and one sentence added to this row's prompt (named and
+hashed on the record) says to put such lines there. The argument is taken off
+before the tool runs, so the tools and the record see the published contract.
+A tool's result is sent as soon as it exists, so the next reply is written while
+the line is still being said.
+
+The service judges a barge-in only while it knows a reply is audible, and it
+sends a reply's audio faster than it is played, so the row reports playback to
+it from after the output transport: when the agent became audible, and how much
+of each reply the caller heard, in milliseconds and words, when it fell silent
+or was cut off. That is
+what lets the service tell a backchannel from an interruption during a reply.
+The row connects to `wss://api.studio.poly.ai/v1/realtime`, the self-serve
+cluster that issues keys from `poly apikey --region studio`; the vendor's
+reference names `wss://api.us.poly.ai/v1/realtime`, which refuses those keys.
+`POLYAI_REALTIME_URL` overrides the endpoint, and the record names the one used. The vendor publishes no price.
+
 ### Zoom Voice Agent
 
 This row is not a speech-to-speech model. Zoom's Voice Agent API transcribes the
@@ -329,8 +359,8 @@ row is priced per minute.
 These realtime services **do not resample**. Each base64-encodes the audio frame
 it is handed and declares a rate separately, so the pipeline rate must match what
 the provider expects: 24 kHz for OpenAI Realtime, Grok and Azure Realtime (the rate each
-recommends), 16 kHz for Gemini Live, Nova Sonic, Qwen, Phonic and Deepslate (Nova Sonic and Qwen
-reply at 24 kHz). GPT-Live is the exception: it resamples what it is given. Open it at the wrong rate and the model hears the caller sped up or slowed
+recommends), 16 kHz for Gemini Live, Nova Sonic, Qwen, Phonic, Deepslate and Dialog-RSN-1 (Nova Sonic, Qwen
+and Dialog-RSN-1 reply at 24 kHz). GPT-Live is the exception: it resamples what it is given. Open it at the wrong rate and the model hears the caller sped up or slowed
 down, transcribes the words badly, and the run looks like a model failure when it
 is a wiring failure.
 

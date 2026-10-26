@@ -42,6 +42,7 @@ COPY reference-agents/pipecat-s2s/polyai_realtime.py ./polyai_realtime.py
 COPY reference-agents/pipecat-s2s/deepgram_voice_agent.py ./deepgram_voice_agent.py
 COPY reference-agents/pipecat-s2s/smallest_hydra.py ./smallest_hydra.py
 COPY reference-agents/pipecat-s2s/rime_prism.py ./rime_prism.py
+COPY reference-agents/pipecat-s2s/zoom_voice_agent.py ./zoom_voice_agent.py
 COPY reference-agents/pipecat-s2s/bot.py ./bot.py
 
 # The agent resolves its own commit to put on every call's build record, and

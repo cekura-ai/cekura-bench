@@ -78,7 +78,7 @@ ASTRA = "astra"                                      # Rime, female US English o
 SARAH = "933563129e564b19a115bedd57b7406a"              # Fish Official, female US English
 DELIA = "c70cfb98867a4bfb9ae20d2401257b92"              # Fish Audio, female US English, from its Drama 3 voice cast
 AVA = "5bb7de05-c8fe-426a-8fcc-ba4fc4ce9f9c"           # Hume "Ava Song", female US English, from its Voice Library
-KAREN = "29158307-9893-4149-8a75-bc9ce313d64e"         # Bland "Karen", female US English, Bland Curated on BTTS_V3
+ALEXANDRA = "ae30cefc-6ba2-4883-90fb-4b221f6c5073"     # Bland "Alexandra", female US English, Bland Curated on BTTS_V3
 
 PROVIDERS: dict[str, ProviderEntry] = {
     "fake": ProviderEntry("fake", FakeTTSAdapter, "FAKE_KEY_UNUSED", (Model("scripted", "tone"),)),
@@ -186,7 +186,7 @@ PROVIDERS: dict[str, ProviderEntry] = {
     ),
     "bland": ProviderEntry(
         "bland", BlandAdapter, "BLAND_API_KEY",
-        (Model("btts-3", KAREN),),
+        (Model("btts-3", ALEXANDRA),),
         notes="/v2/tts/ws; init/ready before t0 fixes voice and format; speak deltas per context_id, end_of_turn "
               "flushes; untagged binary audio, one turn at a time; cancel answered by utterance_end cancelled; "
               "no model parameter, the voice decides it",

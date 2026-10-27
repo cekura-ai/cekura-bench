@@ -2069,6 +2069,40 @@ class TestZoomVoiceAgent:
         sent = [event["type"] for event in seen["sent"]]
         assert sent == ["conversation.item.create"] * 2 and "response.create" not in sent
 
+    @pytest.mark.parametrize(
+        ("order", "asked_again"),
+        [(("response.created", "conversation.item.created"), True),
+         (("conversation.item.created", "response.created"), False)],
+        ids=["reply-began-before-the-result", "reply-began-after-the-result"],
+    )
+    async def test_a_reply_request_crossing_one_the_service_began_is_not_an_error(self, order, asked_again):
+        """The service replies to the caller on its own; a result it added mid-reply needs one more reply."""
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service, seen = self._service()
+        errors = []
+
+        async def push_error(**kwargs):
+            errors.append(kwargs)
+
+        service.push_error = push_error
+        service._context = LLMContext([])
+        await service._dispatch({"type": "response.function_call_arguments.done", "call_id": "c1",
+                                 "name": "route_medicare_call", "arguments": "{}"})
+        await service._handle_context(LLMContext([{"role": "tool", "tool_call_id": "c1", "content": '{"ok": true}'}]))
+        assert [event["type"] for event in seen["sent"]] == ["conversation.item.create", "response.create"]
+
+        for kind in order:
+            await service._dispatch({"type": kind, "response": {"id": "r2"},
+                                     "item": {"type": "function_call_output", "call_id": "c1"}})
+        await service._dispatch({"type": "error", "error": {
+            "message": "Conversation already has an active response in progress: r2. Please wait until the "
+                       "response is finished before creating a new one.", "type": "invalid_request_error"}})
+        await service._dispatch({"type": "response.done", "response": {"id": "r2", "status": "completed"}})
+
+        assert errors == []
+        assert [event["type"] for event in seen["sent"]].count("response.create") == (2 if asked_again else 1)
+
     async def test_a_cut_reply_is_truncated_at_what_was_delivered(self):
         """The audio outruns playback, so what was delivered bounds what was heard only when it is the shorter."""
         from pipecat.frames.frames import InterruptionFrame

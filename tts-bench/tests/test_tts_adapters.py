@@ -186,6 +186,126 @@ class TestXai:
         assert "voice=carina" in xai.url and "codec=pcm" in xai.url
 
 
+class TestBland:
+    async def test_speak_deltas_go_in_per_context_and_untagged_audio_belongs_to_the_turn_in_flight(self):
+        from tts_bench.adapters.bland import BlandAdapter
+
+        bland, sent = adapter(BlandAdapter, "btts-3", "29158307-9893-4149-8a75-bc9ce313d64e")
+        bland._session = {"session_id": "s1"}
+        synthesis = await bland.open_context("main")
+        await bland.send("main", "Hello ")
+        await bland.send("main", "there.")
+        await bland.finish("main")
+        assert sent == [{"type": "speak", "context_id": "main", "text": "Hello "},
+                        {"type": "speak", "context_id": "main", "text": "there."},
+                        {"type": "end_of_turn", "context_id": "main"}]
+        bland._on_message({"type": "utterance_start", "context_id": "main"})
+        bland._on_binary(b"\x01\x00" * 2)
+        assert bytes(synthesis.pcm) == b"\x01\x00" * 2 and not synthesis.done.is_set()
+        bland._on_message({"type": "utterance_end", "context_id": "main", "reason": "complete", "frames": 1, "duration_ms": 9})
+        assert synthesis.done.is_set() and synthesis.error is None and synthesis.t_cancel_ack is None
+        assert synthesis.meta["reason"] == "complete" and synthesis.meta["session_id"] == "s1"
+        second = await bland.open_context("second")
+        bland._on_binary(b"\x02\x00")
+        assert bytes(second.pcm) == b"\x02\x00" and bytes(synthesis.pcm) == b"\x01\x00" * 2
+
+    async def test_cancel_is_answered_by_a_cancelled_utterance_end_and_late_audio_still_counts(self):
+        from tts_bench.adapters.bland import BlandAdapter
+
+        bland, sent = adapter(BlandAdapter, "btts-3", "v")
+        synthesis = await bland.open_context("main")
+        await bland.send("main", "A long answer.")
+        await bland.finish("main")
+        await bland.cancel("main")
+        assert sent[-1] == {"type": "cancel", "context_id": "main"}
+        bland._on_binary(b"\x01\x00")
+        bland._on_message({"type": "utterance_end", "context_id": "main", "reason": "cancelled", "frames": 1})
+        assert synthesis.pcm and synthesis.t_cancel_ack is not None and synthesis.done.is_set()
+        assert BlandAdapter.unsupported_reason(TTSConfig("btts-3", "v"), ("streamed_input", "cancel", "continuation")) is None
+
+    async def test_failed_turns_are_failures_and_account_errors_are_refusals(self):
+        from tts_bench.adapters.bland import BlandAdapter
+        from tts_bench.probes import ProbeResult
+        from tts_bench.runner import _refused
+
+        frames = {
+            "failed": {"type": "utterance_end", "context_id": "main", "reason": "failed", "frames": 0},
+            "overflow": {"type": "error", "code": "context_overflow", "message": "turn exceeds 4000 characters", "context_id": "main"},
+            "slots": {"type": "error", "code": "rate_limited", "message": "no free speech slot"},
+            "key": {"type": "error", "code": "AUTH_FAILED", "message": "token expired"},
+        }
+        for name, frame in frames.items():
+            bland, _ = adapter(BlandAdapter, "btts-3", "v")
+            synthesis = await bland.open_context("main")
+            await bland.send("main", "Hello.")
+            bland._on_message(frame)
+            result = _refused(ProbeResult("one_shot", verdict="fail", syntheses=[synthesis]))
+            assert synthesis.done.is_set() and synthesis.error
+            assert bool(result.void) == (name in ("slots", "key")), name
+
+    async def test_a_socket_inits_once_streams_two_turns_and_settles_before_closing_without_logging_the_key(self, tmp_path):
+        import json
+
+        import pytest
+        import websockets
+
+        from tts_bench.adapters.base import AdapterError
+        from tts_bench.adapters.bland import BlandAdapter
+
+        seen: list[dict] = []
+        auth: list[str] = []
+        pcm = b"\x01\x00" * 240
+
+        def server(ready: dict):
+            async def serve(ws):
+                auth.append(ws.request.headers["Authorization"])
+                async for raw in ws:
+                    frame = json.loads(raw)
+                    seen.append(frame)
+                    if frame["type"] == "init":
+                        await ws.send(json.dumps(ready))
+                    elif frame["type"] == "speak":
+                        await ws.send(pcm)
+                    elif frame["type"] == "end_of_turn":
+                        await ws.send(json.dumps({"type": "utterance_end", "context_id": frame["context_id"],
+                                                  "reason": "complete", "frames": 2, "duration_ms": 5}))
+                    elif frame["type"] == "close":
+                        await ws.send(json.dumps({"type": "done", "session_id": "s1"}))
+            return serve
+
+        clock = Clock()
+        log = EventLog(clock, raw_path=tmp_path / "raw.jsonl")
+        bland = BlandAdapter(TTSConfig("btts-3", "29158307-9893-4149-8a75-bc9ce313d64e"), "secret-key", log, clock)
+        ready = {"type": "ready", "session_id": "s1", "encoding": "pcm_s16le", "sample_rate": 24000}
+        async with websockets.serve(server(ready), "127.0.0.1", 0) as listening:
+            bland.url = f"ws://127.0.0.1:{listening.sockets[0].getsockname()[1]}"
+            async with bland:
+                for context_id in ("first", "repeat"):
+                    synthesis = await bland.open_context(context_id)
+                    assert synthesis.t0 is None
+                    await bland.send(context_id, "Hello ")
+                    await bland.send(context_id, "there.")
+                    await bland.finish(context_id)
+                    done = await bland.wait(context_id, 5.0)
+                    assert bytes(done.pcm) == pcm * 2 and done.meta["ended_by"] == "provider"
+        assert [frame["type"] for frame in seen] == ["init"] + ["speak", "speak", "end_of_turn"] * 2 + ["close"]
+        assert seen[0] == {"type": "init", "voice": "29158307-9893-4149-8a75-bc9ce313d64e",
+                           "audio": {"encoding": "pcm_s16le", "sample_rate": 24000}}
+        assert auth[0] == "Bearer secret-key" and bland._settled.is_set()
+        raw = (tmp_path / "raw.jsonl").read_text()
+        assert "secret-key" not in raw and "secret-key" not in str(log.events)
+
+        refusals = {"refused init: unauthorized: AUTH_FAILED": {"type": "error", "code": "AUTH_FAILED", "message": "bad key"},
+                    "serving \\('pcm_s16le', 48000\\)": {**ready, "sample_rate": 48000}}
+        for message, answer in refusals.items():
+            async with websockets.serve(server(answer), "127.0.0.1", 0) as listening:
+                refused = BlandAdapter(TTSConfig("btts-3", "v"), "secret-key", EventLog(clock), clock)
+                refused.url = f"ws://127.0.0.1:{listening.sockets[0].getsockname()[1]}"
+                with pytest.raises(AdapterError, match=message):
+                    await refused.connect()
+                assert refused._ws.state is websockets.State.CLOSED and refused._receiver.cancelled()
+
+
 class TestGradium:
     async def test_setup_waits_for_ready_and_only_end_of_stream_ends_the_utterance(self):
         import asyncio

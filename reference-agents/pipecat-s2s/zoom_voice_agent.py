@@ -104,6 +104,11 @@ READY_TIMEOUT_S = 10.0
 #: out for the second before the hang-up lands.
 CLOSING_TOOLS = frozenset({"end_call", "transfer_call"})
 
+#: How the service turns down a reply asked for while one is already running.
+#: The service starts replies itself when it hears the caller finish, so a reply
+#: asked for after a tool result can cross one it has just begun.
+REPLY_ALREADY_RUNNING = "Conversation already has an active response in progress"
+
 
 def _event_id() -> str:
     return f"event_{uuid.uuid4().hex[:24]}"
@@ -154,6 +159,9 @@ class ZoomVoiceAgentLLMService(LLMService):
         # owed once it closes.
         self._response_id: str | None = None
         self._reply_owed = False
+        # Set when the service adds a tool result, cleared when it starts a
+        # reply: a reply sees only the items added before it started.
+        self._result_unanswered = False
         # Set once a closing tool is called: the call is ending, nothing more is said.
         self._ended = False
         # The reply being voiced: its item, when its first audio arrived, and
@@ -466,8 +474,13 @@ class ZoomVoiceAgentLLMService(LLMService):
                 logger.warning(f"{self} asked for {self._model!r}, the session reports {served.get('model')!r}")
             self._updated.set()
 
+        elif kind == "conversation.item.created":
+            if (event.get("item") or {}).get("type") == "function_call_output":
+                self._result_unanswered = True
+
         elif kind == "response.created":
             self._response_id = (event.get("response") or {}).get("id")
+            self._result_unanswered = False
             await self._start_reply()
 
         elif kind == "response.output_audio.delta":
@@ -511,8 +524,24 @@ class ZoomVoiceAgentLLMService(LLMService):
             await self.broadcast_frame(ProposedUserStoppedSpeakingFrame)
 
         elif kind == "error":
+            message = str((event.get("error") or {}).get("message", ""))
+            if message.startswith(REPLY_ALREADY_RUNNING):
+                await self._handle_reply_refused()
+                return
             # Most are recoverable and leave the session open; the message says which.
             await self.push_error(error_msg=f"Zoom error: {event.get('error')}")
+
+    async def _handle_reply_refused(self):
+        """A reply asked for after a tool result crossed one the service had begun.
+
+        The running reply answers the result only if it started after the result
+        was added; otherwise one more is asked for once it closes.
+        """
+        if self._result_unanswered:
+            self._reply_owed = True
+            logger.info(f"{self} reply request crossed a running reply; asking again once it closes")
+        else:
+            logger.info(f"{self} reply request crossed a running reply that already sees the tool result")
 
     async def _handle_audio(self, event: dict[str, Any]):
         audio = base64.b64decode(event.get("delta") or "")

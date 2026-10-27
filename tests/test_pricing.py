@@ -189,6 +189,12 @@ class TestPricingACall:
         price = price_call("phonic", {"call_seconds": 90})
         assert price.usd == pytest.approx(0.14 * 1.5) and price.publishable
 
+    def test_a_row_billed_by_session_time_ignores_the_tokens_it_reports(self):
+        # Zoom reports its text model's tokens on every reply and bills the session's minutes.
+        price = price_call("zoom-voice-agent", {"call_seconds": 120, "usage_reports": 6,
+                                                "prompt_tokens": 2_400, "completion_tokens": 300})
+        assert price.usd == pytest.approx(0.05) and price.publishable
+
     def test_a_row_with_no_rate_yields_a_reason_not_a_zero(self):
         price = price_call("qwen-realtime", {"call_seconds": 60})
         assert price.usd is None and price.reason

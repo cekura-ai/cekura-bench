@@ -34,7 +34,7 @@ laptop work unchanged and lets a deployment carry a default:
 
 | Key | Default | Notes |
 |---|---|---|
-| `s2s_provider` | `openai-realtime` | native: also `openai-realtime-mini`, `gemini-live`, `gemini-live-standard`, `gemini-flash-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`, `phonic`, `deepslate`, `azure-realtime`, `polyai-dialog`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
+| `s2s_provider` | `openai-realtime` | native: also `openai-realtime-mini`, `gemini-live`, `gemini-live-standard`, `gemini-flash-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`, `phonic`, `deepslate`, `azure-realtime`, `polyai-dialog`, `zoom-voice-agent` (a hosted cascade, see below). cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
 | `s2s_model` | provider default | pin it for a reproducible run |
 | `s2s_voice` | provider default | |
 | `s2s_backend_model` | `gpt-6-sol` | `gpt-live` only, see below |
@@ -58,7 +58,7 @@ quotes the body.
 
 | Variable | Notes |
 |---|---|
-| provider key | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, `DASHSCOPE_API_KEY`, `PHONIC_API_KEY`, `DEEPSLATE_API_KEY` (with `DEEPSLATE_VENDOR_ID` and `DEEPSLATE_ORGANIZATION_ID`), `AZURE_VOICE_API_KEY` (with `AZURE_VOICE_ENDPOINT`, the Voice Live resource's endpoint), `POLY_API_KEY` (a Dialog-RSN-1 key from PolyAI's Agent Studio), or for Bedrock `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`); see below for why an API key cannot work |
+| provider key | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, `DASHSCOPE_API_KEY`, `PHONIC_API_KEY`, `DEEPSLATE_API_KEY` (with `DEEPSLATE_VENDOR_ID` and `DEEPSLATE_ORGANIZATION_ID`), `AZURE_VOICE_API_KEY` (with `AZURE_VOICE_ENDPOINT`, the Voice Live resource's endpoint), `POLY_API_KEY` (a Dialog-RSN-1 key from PolyAI's Agent Studio), `ZOOM_AGENT_API_KEY`, or for Bedrock `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`); see below for why an API key cannot work |
 | `DEEPGRAM_API_KEY`, `ELEVENLABS_API_KEY` | cascade rows; `ELEVENLABS_API_KEY` also for `deepslate`, which hands it to Deepslate to voice its replies |
 | `CEKURA_API_KEY`, `CEKURA_AGENT_ID_<DEFINITION>` | tracing is off without both; one platform agent per agent definition (`CEKURA_AGENT_ID_APPOINTMENTS`, `CEKURA_AGENT_ID_MEDICARE`), with `CEKURA_AGENT_ID` for a deployment that serves one |
 | `AGENT_COMMIT` | stamped by the build; names what was actually deployed |
@@ -210,14 +210,14 @@ are granted in some subset of those. Both failures are the same
 `AccessDeniedException` from the outside, which is why the region is recorded
 with every run.
 
-## Four providers are spoken directly
+## Six providers are spoken directly
 
 Pipecat ships a realtime service for every other model on this board and none
-for Qwen or Phonic, so `qwen_realtime.py` and `phonic_realtime.py` speak those
-protocols directly. Deepslate publishes a Pipecat plugin, and `deepslate_realtime.py`
-does not use it, for the reason given below. Pipecat's Azure realtime service
-speaks a newer protocol than Azure's Voice Live, so `azure_realtime.py` speaks
-Voice Live's.
+for Qwen, Phonic, PolyAI or Zoom, so `qwen_realtime.py`, `phonic_realtime.py`,
+`polyai_realtime.py` and `zoom_voice_agent.py` speak those protocols directly. Deepslate publishes a
+Pipecat plugin, and `deepslate_realtime.py` does not use it, for the reason
+given below. Pipecat's Azure realtime service speaks a newer protocol than
+Azure's Voice Live, so `azure_realtime.py` speaks Voice Live's.
 
 ### Qwen
 
@@ -328,6 +328,31 @@ The row connects to `wss://api.studio.poly.ai/v1/realtime`, the self-serve
 cluster that issues keys from `poly apikey --region studio`; the vendor's
 reference names `wss://api.us.poly.ai/v1/realtime`, which refuses those keys.
 `POLYAI_REALTIME_URL` overrides the endpoint, and the record names the one used. The vendor publishes no price.
+
+### Zoom Voice Agent
+
+This row is not a speech-to-speech model. Zoom's Voice Agent API transcribes the
+caller with Zoom's own speech-to-text, hands the words to a text model, and
+voices the reply with Zoom's own text-to-speech; the model hears no audio, and
+the usage the service reports is text tokens only. It is on the board because
+the whole pipeline is one vendor's hosted service, called the way the native rows
+are, and the record says `zoom_architecture: hosted cascade` so it is never read
+as one of them. The text model is `gemma-4`, served by Zoom; the service can also
+run a customer's OpenAI or Anthropic model on the customer's key, which this row
+does not do.
+
+The events carry OpenAI's later realtime names, but the session is Zoom's own
+(`listen`, `think` and `speak` groups), every server event arrives inside a
+`payload` envelope, and the socket needs Zoom's subprotocol, so
+`zoom_voice_agent.py` speaks it directly. Otherwise it behaves as Voice Live does:
+the service decides the caller's turns and cancels its own reply when talked
+over, with nothing configurable; a tool's result does not resume the reply; and a
+reply's words arrive ahead of its audio, which itself streams at about three
+times real time. English only, 16 kHz both ways.
+
+The key is `ZOOM_AGENT_API_KEY`, one scoped to the Voice Agent API; a key for
+Zoom's speech-to-text is refused there. Zoom bills by active session time, so the
+row is priced per minute.
 
 ## The sample rate is not a tuning knob
 

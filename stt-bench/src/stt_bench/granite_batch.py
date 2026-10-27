@@ -6,14 +6,16 @@ are labelled ``interface: batch`` and are not comparable with the streaming
 rows' deadline or latency columns.
 
 The model is trained on segments of up to about two minutes and its card says to
-split longer audio before decoding. Public clips and turns are sent whole. A
-private recording runs about fifteen minutes, so it is cut at pauses into
-pieces of at most ``max_chunk_seconds``: each cut is the middle of a gap of at
-least ``min_cut_gap_seconds`` between two reference words, so no word is split.
-The pieces are transcribed in order and joined with a space, and the joined text
-is scored against the recording's whole reference, exactly as a single
-transcript would be. Cut points come from the reference's word timings, which
-is a choice a deployment would make with a voice-activity detector instead.
+split longer audio before decoding; IBM advised pieces of 30 s to a minute.
+Public clips and turns are sent whole. A private recording runs about fifteen
+minutes, so it is cut at pauses into pieces of at most ``max_chunk_seconds``:
+each cut is the middle of a gap of at least ``min_cut_gap_seconds`` between two
+reference words, or, where a window has no such pause, its widest gap between
+words, so no word is split. The pieces are transcribed in order and joined with
+a space, and the joined text is scored against the recording's whole reference,
+exactly as a single transcript would be. Cut points come from the reference's
+word timings, which is a choice a deployment would make with a voice-activity
+detector instead.
 """
 import argparse
 import asyncio
@@ -60,15 +62,26 @@ def credentials(config, environ=None):
     return url, token
 
 
-def cut_points(words, seconds, max_chunk, min_gap):
-    """Chunk boundaries in seconds: the latest pause midpoint that keeps each piece within ``max_chunk``."""
-    pauses = [a['end'] + (b['start'] - a['end']) / 2 for a, b in zip(words, words[1:]) if b['start'] - a['end'] >= min_gap]
+def cut_points(words, seconds, max_chunk, min_gap, min_chunk=0.0):
+    """Chunk boundaries in seconds, always in a gap between two words.
+
+    Each cut is the latest pause of at least ``min_gap`` that keeps the piece within ``max_chunk``. A window with
+    no such pause is cut in its widest gap between words, looked for first among cuts that leave the piece at
+    least ``min_chunk`` long.
+    """
+    gaps = [(a['end'] + (b['start'] - a['end']) / 2, b['start'] - a['end']) for a, b in zip(words, words[1:])
+            if b['start'] > a['end']]
     cuts, start = [], 0.0
     while seconds - start > max_chunk:
-        within = [p for p in pauses if start < p <= start + max_chunk]
-        if not within:
-            raise ValueError(f'no pause of {min_gap}s within {max_chunk}s after {start:.1f}s')
-        start = within[-1]
+        window = [gap for gap in gaps if start < gap[0] <= start + max_chunk]
+        pauses = [mid for mid, width in window if width >= min_gap]
+        if pauses:
+            start = pauses[-1]
+        else:
+            late = [gap for gap in window if gap[0] - start >= min_chunk] or window
+            if not late:
+                raise ValueError(f'no gap between words within {max_chunk}s after {start:.1f}s')
+            start = max(late, key=lambda gap: (gap[1], gap[0]))[0]
         cuts.append(round(start, 3))
     return cuts
 
@@ -89,7 +102,8 @@ def items(scope, config, limit=None):
                             audio=str(PRIVATE / audio['path']), audio_sha256=audio['sha256'],
                             seconds=clip['submitted_seconds'],
                             cuts=cut_points(clip['words'], clip['submitted_seconds'],
-                                            config['max_chunk_seconds'], config['min_cut_gap_seconds'])))
+                                            config['max_chunk_seconds'], config['min_cut_gap_seconds'],
+                                            config.get('min_chunk_seconds', 0.0))))
     if scope in ('turns', 'all'):
         for clip in json.loads((TURNS / 'manifest.json').read_text())['clips']:
             out.append(dict(clip_id=clip['clip_id'], cohort='turns', reference=clip['reference'],
@@ -174,11 +188,14 @@ async def transcribe_one(url, token, config, item, attempt):
         piece.update(served_model=payload.get('model'), finish_reason=choice.get('finish_reason'),
                      usage=payload.get('usage'), hypothesis=choice['message'].get('content') or '')
         record['pieces'].append(piece)
-        # A transcript cut off by the token budget is incomplete, not a model answer.
-        if choice.get('finish_reason') != 'stop' or payload.get('model') != config['model']:
+        # A transcript cut off by the token budget is incomplete, not a model answer, unless the config keeps such
+        # pieces: then the text the model returned up to the cap is scored as it is, and the piece is flagged.
+        finished = choice.get('finish_reason') == 'stop'
+        if payload.get('model') != config['model'] or not (finished or config.get('keep_capped_pieces')):
             return {**record, 'round_trip_ms': (time.perf_counter() - t0) * 1000, 'valid': False,
-                    'failure_class': 'incomplete' if choice.get('finish_reason') != 'stop' else 'model_identity',
-                    'failed_piece': index}
+                    'failure_class': 'incomplete' if not finished else 'model_identity', 'failed_piece': index}
+        if not finished:
+            record.setdefault('capped_pieces', []).append(index)
         texts.append(piece['hypothesis'].strip())
     hypothesis = ' '.join(t for t in texts if t)
     return {**record, 'round_trip_ms': (time.perf_counter() - t0) * 1000, 'valid': True, 'hypothesis': hypothesis,

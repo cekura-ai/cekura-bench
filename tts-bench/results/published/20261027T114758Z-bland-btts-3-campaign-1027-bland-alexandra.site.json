@@ -1,0 +1,822 @@
+{
+ "schema": "tts-bench/site-summary/1",
+ "run": "20261027T114758Z-bland-btts-3-campaign-1027-bland-alexandra",
+ "provider": "bland",
+ "model": "btts-3",
+ "voice": "ae30cefc-6ba2-4883-90fb-4b221f6c5073",
+ "adapter": "bland-tts",
+ "sampleRateHz": 24000,
+ "capabilities": {
+  "transport": "websocket",
+  "streamed_input": true,
+  "cancel": true,
+  "continuation": true,
+  "native_rates": [
+   8000,
+   16000,
+   24000,
+   44100,
+   48000
+  ],
+  "native_mulaw_8k": true,
+  "setup_excluded_from_t0": "TCP, TLS, websocket upgrade, init frame and ready acknowledgement"
+ },
+ "site": "vercel-iad1-allowlist",
+ "harnessCommit": "2a833a9d23167c8f2cd9cc39eb98994a718400ed",
+ "harnessDirty": false,
+ "corpusVersion": "0.3.0",
+ "methodology": "tts/0.1",
+ "startedUtc": "2026-10-27T11:47:58.893797+00:00",
+ "repeats": 3,
+ "amendments": [],
+ "cells": {
+  "planned": 971,
+  "completed": 971,
+  "excludedByProbe": {},
+  "providerRefused": 0,
+  "graded": 968,
+  "failed": 0
+ },
+ "sentinel": {
+  "n": 3,
+  "p50": 318.1,
+  "p90": 340.1,
+  "p50Ci95": [
+   233.8,
+   345.6
+  ]
+ },
+ "latency": {
+  "ttfa": {
+   "n": 312,
+   "p50": 287.5,
+   "p90": 373.4,
+   "p95": 400.3,
+   "p50Ci95": [
+    280.3,
+    297.4
+   ]
+  },
+  "roundtrip": {
+   "n": 312,
+   "p50": 279.1,
+   "p90": 369.1,
+   "p95": 393.2,
+   "p50Ci95": [
+    273.8,
+    289.2
+   ]
+  },
+  "leadingSilence": {
+   "n": 312,
+   "p50": 6.0,
+   "p90": 15.0,
+   "p95": 17.0,
+   "p50Ci95": [
+    5.0,
+    8.0
+   ]
+  },
+  "warmSecondRequest": {
+   "n": 312,
+   "p50": 231.6,
+   "p90": 281.4,
+   "p95": 332.3,
+   "p50Ci95": [
+    228.2,
+    234.6
+   ]
+  },
+  "byCohort": {
+   "abbrev": {
+    "n": 15,
+    "p50": 256.3,
+    "p90": 323.9,
+    "p50Ci95": [
+     221.7,
+     297.6
+    ]
+   },
+   "alnum": {
+    "n": 18,
+    "p50": 287.5,
+    "p90": 383.4,
+    "p50Ci95": [
+     264.9,
+     319.8
+    ]
+   },
+   "contact": {
+    "n": 15,
+    "p50": 287.5,
+    "p90": 373.2,
+    "p50Ci95": [
+     233.2,
+     332.5
+    ]
+   },
+   "currency": {
+    "n": 18,
+    "p50": 319.6,
+    "p90": 346.6,
+    "p50Ci95": [
+     271.7,
+     338.1
+    ]
+   },
+   "datetime": {
+    "n": 18,
+    "p50": 293.5,
+    "p90": 350.7,
+    "p50Ci95": [
+     246.8,
+     320.8
+    ]
+   },
+   "dense": {
+    "n": 9,
+    "p50": 313.6,
+    "p90": 352.9,
+    "p50Ci95": [
+     241.6,
+     339.0
+    ]
+   },
+   "heteronym": {
+    "n": 15,
+    "p50": 288.3,
+    "p90": 403.9,
+    "p50Ci95": [
+     257.2,
+     324.4
+    ]
+   },
+   "long": {
+    "n": 12,
+    "p50": 281.0,
+    "p90": 354.8,
+    "p50Ci95": [
+     245.9,
+     326.6
+    ]
+   },
+   "names": {
+    "n": 15,
+    "p50": 279.4,
+    "p90": 345.5,
+    "p50Ci95": [
+     232.1,
+     332.9
+    ]
+   },
+   "numbers": {
+    "n": 21,
+    "p50": 278.3,
+    "p90": 368.4,
+    "p50Ci95": [
+     247.1,
+     312.6
+    ]
+   },
+   "paragraph": {
+    "n": 12,
+    "p50": 277.9,
+    "p90": 342.1,
+    "p50Ci95": [
+     250.6,
+     306.7
+    ]
+   },
+   "phone": {
+    "n": 15,
+    "p50": 322.4,
+    "p90": 416.5,
+    "p50Ci95": [
+     274.7,
+     355.3
+    ]
+   },
+   "prose": {
+    "n": 24,
+    "p50": 282.9,
+    "p90": 345.0,
+    "p50Ci95": [
+     272.7,
+     307.3
+    ]
+   },
+   "questions": {
+    "n": 12,
+    "p50": 336.5,
+    "p90": 381.5,
+    "p50Ci95": [
+     280.5,
+     370.0
+    ]
+   },
+   "repair": {
+    "n": 18,
+    "p50": 292.6,
+    "p90": 350.8,
+    "p50Ci95": [
+     275.6,
+     337.9
+    ]
+   },
+   "spelled": {
+    "n": 12,
+    "p50": 280.5,
+    "p90": 338.0,
+    "p50Ci95": [
+     251.8,
+     325.8
+    ]
+   },
+   "symbols": {
+    "n": 12,
+    "p50": 269.1,
+    "p90": 354.6,
+    "p50Ci95": [
+     223.5,
+     328.1
+    ]
+   },
+   "tech": {
+    "n": 12,
+    "p50": 351.0,
+    "p90": 407.3,
+    "p50Ci95": [
+     283.9,
+     395.5
+    ]
+   },
+   "terms": {
+    "n": 18,
+    "p50": 255.1,
+    "p90": 370.3,
+    "p50Ci95": [
+     242.3,
+     329.1
+    ]
+   },
+   "units": {
+    "n": 12,
+    "p50": 328.2,
+    "p90": 364.9,
+    "p50Ci95": [
+     246.9,
+     356.2
+    ]
+   },
+   "worded": {
+    "n": 9,
+    "p50": 283.7,
+    "p90": 415.2,
+    "p50Ci95": [
+     240.8,
+     383.0
+    ]
+   }
+  }
+ },
+ "streamedInput": {
+  "ttfaFromFirstWord": {
+   "n": 312,
+   "p50": 674.0,
+   "p90": 843.2,
+   "p95": 929.8,
+   "p50Ci95": [
+    650.7,
+    699.5
+   ]
+  },
+  "ttfaFromLastWord": {
+   "n": 312,
+   "p50": 298.1,
+   "p90": 381.5,
+   "p95": 407.5,
+   "p50Ci95": [
+    289.6,
+    309.8
+   ]
+  },
+  "startedBeforeInputDone": {
+   "n": 312,
+   "passed": 27,
+   "rate": 0.0865
+  },
+  "wordsPerSecond": 30
+ },
+ "underLoad": {
+  "streams": 8,
+  "perStreamTtfa": null,
+  "slowestStreamTtfa": null,
+  "allStreamsAnswered": null
+ },
+ "throughput": {
+  "charsPerSecondParagraph": {
+   "n": 12,
+   "p50": 174.9,
+   "p90": 188.3,
+   "p50Ci95": [
+    167.7,
+    184.2
+   ]
+  },
+  "charsPerSecond": {
+   "n": 312,
+   "p50": 100.2,
+   "p90": 143.2,
+   "p95": 164.6,
+   "p50Ci95": [
+    95.4,
+    103.3
+   ]
+  },
+  "realtimeFactor": {
+   "n": 312,
+   "p50": 0.1,
+   "p90": 0.1,
+   "p95": 0.1,
+   "p50Ci95": [
+    0.1,
+    0.1
+   ]
+  },
+  "audioMsPerChar": {
+   "n": 312,
+   "p50": 59.8,
+   "p90": 93.2,
+   "p95": 105.4,
+   "p50Ci95": [
+    55.9,
+    63.5
+   ]
+  }
+ },
+ "playout": {
+  "underrunCells": {
+   "n": 312,
+   "passed": 89,
+   "rate": 0.2853
+  },
+  "stallMs": {
+   "n": 312,
+   "p50": 0.0,
+   "p90": 34.7,
+   "p95": 50.3,
+   "p50Ci95": [
+    0.0,
+    0.0
+   ]
+  },
+  "minMarginMs": {
+   "n": 312,
+   "p50": 25.1,
+   "p90": 96.4,
+   "p95": 115.3,
+   "p50Ci95": [
+    15.0,
+    44.2
+   ]
+  }
+ },
+ "cancel": {
+  "stopped": {
+   "n": 20,
+   "passed": 20,
+   "rate": 1.0
+  },
+  "toLastChunkMs": {
+   "n": 20,
+   "p50": 92.4,
+   "p90": 103.1,
+   "p50Ci95": [
+    86.8,
+    97.2
+   ]
+  },
+  "audioAfterCancelMs": {
+   "n": 20,
+   "p50": 1280.0,
+   "p90": 2066.5,
+   "p50Ci95": [
+    1120.0,
+    1440.0
+   ]
+  },
+  "ackMs": {
+   "n": 20,
+   "p50": 97.7,
+   "p90": 110.6,
+   "p50Ci95": [
+    94.1,
+    108.3
+   ]
+  }
+ },
+ "continuation": {
+  "durationDeltaMs": {
+   "n": 12,
+   "p50": -205.4,
+   "p90": 296.5,
+   "p50Ci95": [
+    -445.4,
+    152.3
+   ]
+  },
+  "ttfaDeltaMs": {
+   "n": 12,
+   "p50": 246.0,
+   "p90": 548.6,
+   "p50Ci95": [
+    59.5,
+    394.1
+   ]
+  },
+  "framedUnderrunCells": {
+   "n": 12,
+   "passed": 1,
+   "rate": 0.0833
+  }
+ },
+ "determinism": {
+  "identicalAudio": {
+   "n": 312,
+   "passed": 0,
+   "rate": 0.0
+  },
+  "durationDeltaAbsMs": {
+   "n": 312,
+   "p50": 160.0,
+   "p90": 498.0,
+   "p95": 740.0,
+   "p50Ci95": [
+    140.0,
+    180.0
+   ]
+  }
+ },
+ "reliability": {
+  "syntheses": 1292,
+  "timeouts": 0,
+  "runaways": 0,
+  "endedBy": {
+   "provider": 1292
+  },
+  "runawayRule": "a recording over 2x and 3000 ms longer than the model's median for the same text"
+ },
+ "accuracy": {
+  "deepgram": {
+   "model": "nova-3",
+   "normalizer": {
+    "name": "whisper-normalizer",
+    "version": "0.1.15"
+   },
+   "oneShot": {
+    "wer": 0.0647,
+    "recordings": 315,
+    "referenceWords": 5458
+   },
+   "streamedInput": {
+    "wer": 0.0665,
+    "recordings": 312,
+    "referenceWords": 5416
+   },
+   "underLoad": null,
+   "byCohort": {
+    "abbrev": {
+     "wer": 0.0781,
+     "recordings": 15,
+     "referenceWords": 192
+    },
+    "alnum": {
+     "wer": 0.0476,
+     "recordings": 18,
+     "referenceWords": 210
+    },
+    "contact": {
+     "wer": 0.1887,
+     "recordings": 15,
+     "referenceWords": 159
+    },
+    "currency": {
+     "wer": 0.0622,
+     "recordings": 18,
+     "referenceWords": 225
+    },
+    "datetime": {
+     "wer": 0.1342,
+     "recordings": 18,
+     "referenceWords": 231
+    },
+    "dense": {
+     "wer": 0.1324,
+     "recordings": 9,
+     "referenceWords": 219
+    },
+    "heteronym": {
+     "wer": 0.0563,
+     "recordings": 15,
+     "referenceWords": 213
+    },
+    "long": {
+     "wer": 0.0233,
+     "recordings": 12,
+     "referenceWords": 558
+    },
+    "names": {
+     "wer": 0.2549,
+     "recordings": 15,
+     "referenceWords": 102
+    },
+    "numbers": {
+     "wer": 0.1644,
+     "recordings": 21,
+     "referenceWords": 292
+    },
+    "paragraph": {
+     "wer": 0.0118,
+     "recordings": 12,
+     "referenceWords": 1185
+    },
+    "phone": {
+     "wer": 0.1515,
+     "recordings": 15,
+     "referenceWords": 99
+    },
+    "prose": {
+     "wer": 0.036,
+     "recordings": 27,
+     "referenceWords": 417
+    },
+    "questions": {
+     "wer": 0.0732,
+     "recordings": 12,
+     "referenceWords": 123
+    },
+    "repair": {
+     "wer": 0.0087,
+     "recordings": 18,
+     "referenceWords": 345
+    },
+    "spelled": {
+     "wer": 0.058,
+     "recordings": 12,
+     "referenceWords": 69
+    },
+    "symbols": {
+     "wer": 0.1698,
+     "recordings": 12,
+     "referenceWords": 159
+    },
+    "tech": {
+     "wer": 0.0398,
+     "recordings": 12,
+     "referenceWords": 201
+    },
+    "terms": {
+     "wer": 0.0885,
+     "recordings": 18,
+     "referenceWords": 192
+    },
+    "units": {
+     "wer": 0.0784,
+     "recordings": 12,
+     "referenceWords": 153
+    },
+    "worded": {
+     "wer": 0.0088,
+     "recordings": 9,
+     "referenceWords": 114
+    }
+   },
+   "spans": {
+    "all": {
+     "passed": 143,
+     "n": 219,
+     "rate": 0.653
+    },
+    "byCategory": {
+     "context": {
+      "passed": 12,
+      "n": 24,
+      "rate": 0.5
+     },
+     "sequence": {
+      "passed": 22,
+      "n": 42,
+      "rate": 0.5238
+     },
+     "shorthand": {
+      "passed": 76,
+      "n": 117,
+      "rate": 0.6496
+     },
+     "term": {
+      "passed": 33,
+      "n": 36,
+      "rate": 0.9167
+     }
+    },
+    "forListener": 42
+   },
+   "instrumentErrors": 0
+  },
+  "openai-whisper": {
+   "model": "whisper-1",
+   "normalizer": {
+    "name": "whisper-normalizer",
+    "version": "0.1.15"
+   },
+   "oneShot": {
+    "wer": 0.0376,
+    "recordings": 315,
+    "referenceWords": 5504
+   },
+   "streamedInput": {
+    "wer": 0.0363,
+    "recordings": 312,
+    "referenceWords": 5456
+   },
+   "underLoad": null,
+   "byCohort": {
+    "abbrev": {
+     "wer": 0.1198,
+     "recordings": 15,
+     "referenceWords": 192
+    },
+    "alnum": {
+     "wer": 0.0275,
+     "recordings": 18,
+     "referenceWords": 218
+    },
+    "contact": {
+     "wer": 0.1319,
+     "recordings": 15,
+     "referenceWords": 144
+    },
+    "currency": {
+     "wer": 0.0356,
+     "recordings": 18,
+     "referenceWords": 225
+    },
+    "datetime": {
+     "wer": 0.0785,
+     "recordings": 18,
+     "referenceWords": 242
+    },
+    "dense": {
+     "wer": 0.1021,
+     "recordings": 9,
+     "referenceWords": 235
+    },
+    "heteronym": {
+     "wer": 0.0,
+     "recordings": 15,
+     "referenceWords": 213
+    },
+    "long": {
+     "wer": 0.0287,
+     "recordings": 12,
+     "referenceWords": 558
+    },
+    "names": {
+     "wer": 0.1078,
+     "recordings": 15,
+     "referenceWords": 102
+    },
+    "numbers": {
+     "wer": 0.0491,
+     "recordings": 21,
+     "referenceWords": 285
+    },
+    "paragraph": {
+     "wer": 0.0126,
+     "recordings": 12,
+     "referenceWords": 1186
+    },
+    "phone": {
+     "wer": 0.0775,
+     "recordings": 15,
+     "referenceWords": 129
+    },
+    "prose": {
+     "wer": 0.0,
+     "recordings": 27,
+     "referenceWords": 417
+    },
+    "questions": {
+     "wer": 0.0,
+     "recordings": 12,
+     "referenceWords": 123
+    },
+    "repair": {
+     "wer": 0.0116,
+     "recordings": 18,
+     "referenceWords": 345
+    },
+    "spelled": {
+     "wer": 0.0,
+     "recordings": 12,
+     "referenceWords": 69
+    },
+    "symbols": {
+     "wer": 0.0881,
+     "recordings": 12,
+     "referenceWords": 159
+    },
+    "tech": {
+     "wer": 0.0591,
+     "recordings": 12,
+     "referenceWords": 203
+    },
+    "terms": {
+     "wer": 0.0104,
+     "recordings": 18,
+     "referenceWords": 192
+    },
+    "units": {
+     "wer": 0.0327,
+     "recordings": 12,
+     "referenceWords": 153
+    },
+    "worded": {
+     "wer": 0.0439,
+     "recordings": 9,
+     "referenceWords": 114
+    }
+   },
+   "spans": {
+    "all": {
+     "passed": 137,
+     "n": 219,
+     "rate": 0.6256
+    },
+    "byCategory": {
+     "context": {
+      "passed": 17,
+      "n": 24,
+      "rate": 0.7083
+     },
+     "sequence": {
+      "passed": 25,
+      "n": 42,
+      "rate": 0.5952
+     },
+     "shorthand": {
+      "passed": 61,
+      "n": 117,
+      "rate": 0.5214
+     },
+     "term": {
+      "passed": 34,
+      "n": 36,
+      "rate": 0.9444
+     }
+    },
+    "forListener": 42
+   },
+   "instrumentErrors": 0
+  }
+ },
+ "instrumentDisagreements": 242,
+ "naturalness": {
+  "model": "utmos22-strong",
+  "scale": "1-5, a listener model's estimate of a mean opinion score",
+  "mos": {
+   "n": 312,
+   "p50": 4.4,
+   "p90": 4.5,
+   "p95": 4.5,
+   "p50Ci95": [
+    4.4,
+    4.4
+   ],
+   "mean": 4.305
+  },
+  "byCohort": {
+   "abbrev": 4.202,
+   "alnum": 4.301,
+   "contact": 4.205,
+   "currency": 4.371,
+   "datetime": 4.393,
+   "dense": 4.329,
+   "heteronym": 4.296,
+   "long": 4.281,
+   "names": 4.262,
+   "numbers": 4.37,
+   "paragraph": 4.204,
+   "phone": 4.222,
+   "prose": 4.356,
+   "questions": 4.341,
+   "repair": 4.224,
+   "spelled": 4.174,
+   "symbols": 4.392,
+   "tech": 4.395,
+   "terms": 4.312,
+   "units": 4.327,
+   "worded": 4.426
+  }
+ }
+}

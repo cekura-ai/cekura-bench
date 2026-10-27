@@ -33,6 +33,7 @@ replaces the base run's.
 | Hume Octave 2 (preview) | `campaign-1014-hume` | none |
 | Gradium (default), voice Everly | `campaign-1018b-gradium-everly` | none |
 | Inworld TTS-2 Flash and TTS-2 (creative delivery) | `campaign-1019-inworld` | none |
+| Bland TTS V3, voice Alexandra | `campaign-1027-bland-alexandra` | none |
 
 `campaign-0928-fix` re-ran the models whose recordings an early stream-end bug
 had cut short, and `campaign-0928-v4` added the two v4 models. Grok's
@@ -45,4 +46,7 @@ its new checkpoint rolled out, with the voice Sarah; it replaces the
 ten voices it recommended, in place of the `campaign-1013` Harper run. The
 sandbox's OpenAI key had been rejected for both campaigns, so their Whisper
 transcripts were scored offline with `bin/score-tts.py`.
+Bland is shown with Alexandra: a first run, `campaign-1027-bland`, used the
+featured voice Karen, which is narrow-band (no energy above 4 kHz) and so says
+more about the voice than the model.
 Each summary names its runs in `run` and `amendments`.

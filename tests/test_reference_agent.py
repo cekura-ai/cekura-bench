@@ -1522,13 +1522,16 @@ class TestPolyAIRealtime:
         service = provider.build("k", provider.default_model, provider.default_voice, "prompt", asked())
         for key, value in overrides.items():
             setattr(service, key, value)
-        seen = {"pushed": [], "broadcast": [], "sent": [], "calls": [], "usage": []}
+        seen = {"pushed": [], "broadcast": [], "sent": [], "calls": [], "usage": [], "interruptions": 0}
 
         async def push(frame, direction=None):
             seen["pushed"].append((type(frame).__name__, direction, frame))
 
         async def broadcast(frame_cls, **_kwargs):
             seen["broadcast"].append(frame_cls.__name__)
+
+        async def interrupt():
+            seen["interruptions"] += 1
 
         async def send(event):
             seen["sent"].append(event)
@@ -1544,6 +1547,7 @@ class TestPolyAIRealtime:
 
         service.push_frame = push
         service.broadcast_frame = broadcast
+        service.broadcast_interruption = interrupt
         service._send = send
         service.run_function_calls = run
         service.start_llm_usage_metrics = usage
@@ -1766,7 +1770,9 @@ class TestPolyAIRealtime:
         await service._dispatch({"type": "input_audio_buffer.speech_stopped"})
         assert seen["broadcast"] == ["ProposedUserStartedSpeakingFrame", "ProposedUserStoppedSpeakingFrame"]
         provider = bot.PROVIDERS["polyai-dialog"]
-        assert provider.turns == "provider" and provider.interruptions
+        # The service decides barge-in too, so a turn start interrupts nothing here.
+        assert provider.turns == "provider" and not provider.interruptions
+        assert record_for("polyai-dialog")["divergences"]["interruptions"] == "model"
 
     async def test_the_service_hears_each_reply_played_to_the_end(self):
         """Started when audible, stopped with all it delivered, one report pair per reply."""
@@ -1789,10 +1795,9 @@ class TestPolyAIRealtime:
         assert [(e["response_id"], e["spoken_text"], e["audio_ms"], e["dropped_ms"]) for e in stopped] == [
             ("r1", "One moment.", 800, 0), ("r2", " You're booked.", 1200, 0)]
 
-    async def test_a_reply_cut_short_reports_only_what_was_heard(self, monkeypatch):
+    async def test_a_reply_the_service_cancels_stops_here_and_reports_only_what_was_heard(self, monkeypatch):
+        """The service's barge-in: its own speech start, then the reply's cancelled close."""
         import polyai_realtime
-        from pipecat.frames.frames import InterruptionFrame
-        from pipecat.processors.frame_processor import FrameDirection
 
         clock = [100.0]
         monkeypatch.setattr(polyai_realtime, "time", SimpleNamespace(monotonic=lambda: clock[0]))
@@ -1803,11 +1808,15 @@ class TestPolyAIRealtime:
         await service.playback_started()
         clock[0] += 1.2
         service.playback_heard("Your appointment is")
-        await service.process_frame(InterruptionFrame(), FrameDirection.DOWNSTREAM)
+        await service._dispatch({"type": "input_audio_buffer.speech_started"})
+        assert seen["interruptions"] == 0, "a speech start alone is the service's to judge"
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "cancelled"}})
+        assert seen["interruptions"] == 1
         [stopped] = self._sent(seen, "poly.output_audio.stopped")
         assert (stopped["response_id"], stopped["spoken_text"]) == ("r1", "Your appointment is")
         assert (stopped["audio_ms"], stopped["dropped_ms"]) == (1200, 1800)
-        assert self._sent(seen, "response.cancel")
+        # The reply is already closed: a cancel now would only be refused.
+        assert not self._sent(seen, "response.cancel")
         # Audio still arriving for the cut reply is never played.
         before = len(seen["pushed"])
         await service._dispatch(self._audio("r1", 100))
@@ -1816,6 +1825,84 @@ class TestPolyAIRealtime:
         # The output transport's own stop after the cut reports nothing twice.
         await service.playback_stopped(finished=True)
         assert len(self._sent(seen, "poly.output_audio.stopped")) == 1
+
+    async def test_a_reply_opened_for_the_callers_turn_survives_that_turns_speech_events(self):
+        """The service may announce the caller's speech just after opening the reply to it."""
+        from pipecat.frames.frames import InterruptionFrame
+        from pipecat.processors.frame_processor import FrameDirection
+
+        service, seen = self._service()
+        proposed = service.broadcast_frame
+
+        async def as_the_pipeline_does(frame_cls, **kwargs):
+            # The turn strategy answers a speech-start proposal with an
+            # interruption whenever the row declares interruptions its own.
+            await proposed(frame_cls, **kwargs)
+            if frame_cls.__name__ == "ProposedUserStartedSpeakingFrame" and bot.PROVIDERS["polyai-dialog"].interruptions:
+                await service.process_frame(InterruptionFrame(), FrameDirection.DOWNSTREAM)
+
+        service.broadcast_frame = as_the_pipeline_does
+        await service._dispatch({"type": "response.created", "response": {"id": "r2"}})
+        await service._dispatch({"type": "input_audio_buffer.speech_started"})
+        await service._dispatch({"type": "input_audio_buffer.speech_stopped"})
+        await service._dispatch(self._audio("r2", 400))
+        await service._dispatch(self._words("r2", "Sure, let me check."))
+        assert not self._sent(seen, "response.cancel")
+        assert seen["interruptions"] == 0
+        assert [name for name, _, _ in seen["pushed"]].count("TTSAudioRawFrame") == 1
+        assert self._text(seen) == ["Sure, let me check."]
+
+    async def test_an_interruption_from_elsewhere_drops_what_is_queued_and_cancels_nothing(self):
+        from pipecat.frames.frames import InterruptionFrame
+        from pipecat.processors.frame_processor import FrameDirection
+
+        service, seen = self._service()
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch(self._audio("r1", 600))
+        await service.process_frame(InterruptionFrame(), FrameDirection.DOWNSTREAM)
+        assert not self._sent(seen, "response.cancel")
+        before = len(seen["pushed"])
+        await service._dispatch(self._audio("r1", 100))
+        assert len(seen["pushed"]) == before
+
+    async def test_a_session_the_service_closes_mid_call_ends_the_call(self):
+        """A restart (1012) raises out of the socket's iterator rather than ending it."""
+        from websockets.exceptions import ConnectionClosedError
+        from websockets.frames import Close
+
+        import polyai_realtime
+
+        class Restarted:
+            close_code, close_reason = 1012, "service restart"
+
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                raise ConnectionClosedError(Close(1012, "service restart"), None)
+
+        service, seen = self._service()
+        lost = []
+        service.add_event_handler("on_session_lost", lambda *_: lost.append(True))
+        service._websocket = Restarted()
+        await service._receive()
+        assert lost == [True]
+        [error] = [frame for name, _, frame in seen["pushed"] if name == "ErrorFrame"]
+        assert "code 1012" in error.error and "service restart" in error.error
+        # Nothing more goes to the closed socket.
+        assert service._websocket is None
+        await polyai_realtime.PolyAIRealtimeLLMService._send(service, {"type": "input_audio_buffer.append"})
+
+    async def test_the_harness_can_hang_up_on_a_lost_session(self):
+        """The harness hooks the event by name, and skips one a service does not have."""
+        import inspect
+
+        assert '_on_event(llm, "on_session_lost", lambda *_: hangup.hang_up("session_lost"))' in inspect.getsource(bot)
+        reasons = []
+        service, _ = self._service()
+        bot._on_event(service, "on_session_lost", lambda *_: reasons.append("session_lost"))
+        await service._call_event_handler("on_session_lost")
+        assert reasons == ["session_lost"], "handled before the receive loop returns"
 
     async def test_playback_is_reported_from_after_the_output_transport(self):
         from pipecat.frames.frames import BotStartedSpeakingFrame, BotStoppedSpeakingFrame, TTSTextFrame

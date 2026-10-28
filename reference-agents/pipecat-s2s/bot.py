@@ -658,8 +658,10 @@ def deepslate_tts(voice: str, settings: Settings) -> dict[str, Any]:
 
     ``elevenlabs`` (the default) has Deepslate call ElevenLabs with the voice and
     model every cascade row speaks with, on this deployment's ElevenLabs key.
-    ``hosted`` uses a voice Deepslate hosts; it has no stock voice, only voices
-    cloned into an account, so that mode needs ``s2s_voice`` set to one.
+    ``hosted`` uses a voice Deepslate hosts: one from its catalog, which every
+    organization can use, or one cloned into the account. The row's default
+    voice is an ElevenLabs id rather than one of these, so that mode needs
+    ``s2s_voice`` set.
     """
     mode = settings.get("deepslate_tts", "elevenlabs")
     if mode == "elevenlabs":
@@ -672,7 +674,7 @@ def deepslate_tts(voice: str, settings: Settings) -> dict[str, Any]:
         }
     if mode == "hosted":
         if not settings.get("s2s_voice"):
-            raise ValueError("deepslate_tts=hosted needs s2s_voice: Deepslate hosts no stock voice to default to")
+            raise ValueError("deepslate_tts=hosted needs s2s_voice: the default voice is an ElevenLabs id")
         return {"provider": "hosted", "voice_id": voice, "mode": DEEPSLATE_HOSTED_MODE}
     raise ValueError(f"unknown deepslate_tts {mode!r}; expected elevenlabs or hosted")
 
@@ -689,6 +691,7 @@ def deepslate_disclosures(settings: Settings) -> dict[str, str]:
         "deepslate_vad": ", ".join(f"{k} {v}" for k, v in DEEPSLATE_VAD.items()),
         "deepslate_temperature": str(DEEPSLATE_TEMPERATURE),
         "deepslate_playback_reporting": "off; the service estimates what a caller heard before a barge-in",
+        "deepslate_barge_in": "a caller who starts speaking cuts a reply while it is generated or still playing",
     }
 
 

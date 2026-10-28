@@ -42,7 +42,7 @@ laptop work unchanged and lets a deployment carry a default:
 | `aws_region` | `us-west-2` | `nova-sonic` only; must be a region serving the model and granted to the credentials |
 | `qwen_region` | `singapore` | `qwen-realtime` only; also `beijing` |
 | `qwen_workspace_id` | **required for `qwen-realtime`** | names the Alibaba workspace whose endpoint answers |
-| `deepslate_tts` | `elevenlabs` | `deepslate` only: what voices Opal's replies; also `hosted`, which needs `s2s_voice` set to a voice hosted in the account |
+| `deepslate_tts` | `elevenlabs` | `deepslate` only: what voices Opal's replies; also `hosted`, which needs `s2s_voice` set to a Deepslate voice (catalog or cloned) |
 | `cascade_tts_voice` | fixed voice id | cascade rows only |
 | `agent_dir` | **required** | a directory under `agent-definitions/`; no default on purpose |
 | `cekura_mode` | `track` | `observe` also uploads audio and starts evaluation |
@@ -269,13 +269,16 @@ that remembers nothing of the call. Here the session is configured once, at
 Opal produces text, and the service voices it with a configured text-to-speech
 step, which is part of the row. By default that is ElevenLabs, called by
 Deepslate with the voice and model every cascade row speaks with; `deepslate_tts=hosted`
-uses a voice Deepslate hosts instead. Deepslate has no stock hosted voice, so
-that mode needs a voice cloned into the account. The protocol takes no model, so
-the record says the model is not selectable. The service owns the caller's turns
-and barge-in, as Phonic's does, and the detector settings it is sent are the
-vendor SDK's own. Tool arguments arrive as a protobuf `Struct`, whose only number
-is a float, so whole numbers are turned back into integers before the tools see
-them.
+uses a voice Deepslate hosts instead: one from its catalog, which every
+organization can use, or one cloned into the account. That mode needs
+`s2s_voice` set, because the default is an ElevenLabs voice. The protocol takes
+no model, so the record says the model is not selectable. The service owns the
+caller's turns and barge-in, as Phonic's does, and the detector settings it is
+sent are the vendor SDK's own. Its `response_end` marks the end of generation,
+which runs far ahead of playback, so a barge-in cuts a reply for as long as the
+transport is still playing it, not only until `response_end`. Tool arguments
+arrive as a protobuf `Struct`, whose only number is a float, so whole numbers
+are turned back into integers before the tools see them.
 
 ### Azure Realtime
 

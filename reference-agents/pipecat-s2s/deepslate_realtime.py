@@ -25,7 +25,10 @@ and it tells the client to discard queued audio the moment the caller starts
 speaking. So the row follows the service's boundaries, asks the pipeline not to
 broadcast interruptions, and passes the service's own on instead -- only while
 the agent is speaking, because the service sends the same message whether or
-not anything is playing.
+not anything is playing. Speaking means audible, not generating: the service
+generates far faster than real time and sends ``response_end`` with most of a
+reply still to play, so the transport's own report of the agent speaking keeps
+a reply interruptible until its audio has played out.
 
 *Speech is text first.* Opal produces text and the service voices it with a
 configured text-to-speech step, so a reply's words arrive ahead of its audio,
@@ -56,6 +59,8 @@ from websockets.asyncio.client import connect as websocket_connect
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.frames.frames import (
     AggregationType,
+    BotStartedSpeakingFrame,
+    BotStoppedSpeakingFrame,
     CancelFrame,
     EndFrame,
     Frame,
@@ -151,6 +156,10 @@ class DeepslateRealtimeLLMService(LLMService):
         self._ready = asyncio.Event()
         self._context = None
         self._speaking = False
+        # Whether the transport is playing the agent's audio, as it reports it.
+        # A reply is generated long before it has played, so this, not
+        # ``_speaking``, is what says a barge-in has something to cut.
+        self._audible = False
         self._packet_id = 0
         # The reply being delivered, and the last one the caller talked over:
         # audio already in flight for an interrupted reply must not reopen it.
@@ -299,6 +308,10 @@ class DeepslateRealtimeLLMService(LLMService):
             await self._send_audio(frame)
         elif isinstance(frame, InterruptionFrame):
             await self._end_reply()
+        elif isinstance(frame, BotStartedSpeakingFrame):
+            self._audible = True
+        elif isinstance(frame, BotStoppedSpeakingFrame):
+            self._audible = False
 
         await self.push_frame(frame, direction)
 
@@ -444,8 +457,10 @@ class DeepslateRealtimeLLMService(LLMService):
 
         elif kind == "playback_clear_buffer":
             # Sent whenever the caller starts speaking; it interrupts only a
-            # reply that is still being delivered.
-            if self._speaking:
+            # reply that is still being delivered -- generated, or generated
+            # and still playing, which is most of every reply after
+            # ``response_end``.
+            if self._speaking or self._audible:
                 self._cut_turn = self._turn
                 self._held = []
                 await self._end_reply()

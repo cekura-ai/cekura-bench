@@ -80,6 +80,17 @@ A provider may require additional account access for a particular model.
 | Reson8 | Realtime | `RESON_API_KEY` |
 | Zoom | Scribe (live mode) | `ZOOM_API_KEY` |
 
+NVIDIA Nemotron 3.5 Transcribe is measured differently. Its endpoint takes a whole
+recording per request rather than a live stream, so it has word error rates and no
+streaming timings. Its settings are in [config/batch](config/batch), and it runs
+from its own module. `NVIDIA_TRANSCRIBE_ENDPOINT` holds the chat-completions URL
+that NVIDIA supplies; never commit it.
+
+```sh
+uv run --locked python -m stt_bench.nvidia_batch --scope smoke --out runs/nvidia-smoke
+uv run --locked python scripts/nvidia_batch_report.py runs/nvidia-smoke
+```
+
 Environment variables take precedence over `.env`. Accepted aliases are defined in
 [credentials.py](src/stt_bench/credentials.py). Keep credentials in the environment
 or the local `.env` file, which is ignored by Git. Google Cloud Speech requires

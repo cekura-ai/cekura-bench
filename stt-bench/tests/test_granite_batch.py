@@ -3,8 +3,6 @@ import io
 import json
 import wave
 
-import pytest
-
 from stt_bench import granite_batch
 
 
@@ -25,9 +23,9 @@ def test_no_cut_when_the_recording_fits():
     assert granite_batch.cut_points(words((0, 5), (6, 10)), 12.0, max_chunk=110, min_gap=0.6) == []
 
 
-def test_a_window_without_any_gap_between_words_is_refused_rather_than_cut_mid_word():
-    with pytest.raises(ValueError):
-        granite_batch.cut_points(words((0, 50), (50.1, 100)), 100.0, max_chunk=30, min_gap=0.6)
+def test_a_word_spanning_the_limit_makes_its_piece_run_long_rather_than_be_cut_mid_word():
+    # The only gap is at 50.05 s, past the 30 s limit; nothing after it.
+    assert granite_batch.cut_points(words((0, 50), (50.1, 100)), 100.0, max_chunk=30, min_gap=0.6) == [50.05]
 
 
 def test_a_window_without_a_long_pause_is_cut_in_its_widest_gap_that_leaves_a_full_piece():

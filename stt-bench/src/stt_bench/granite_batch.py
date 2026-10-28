@@ -6,12 +6,13 @@ are labelled ``interface: batch`` and are not comparable with the streaming
 rows' deadline or latency columns.
 
 The model is trained on segments of up to about two minutes and its card says to
-split longer audio before decoding; IBM advised pieces of 30 s to a minute.
+split longer audio before decoding; IBM advised 30-second pieces.
 Public clips and turns are sent whole. A private recording runs about fifteen
 minutes, so it is cut at pauses into pieces of at most ``max_chunk_seconds``:
 each cut is the middle of a gap of at least ``min_cut_gap_seconds`` between two
 reference words, or, where a window has no such pause, its widest gap between
-words, so no word is split. The pieces are transcribed in order and joined with
+words, so no word is split (a piece runs long where one word's timing spans the
+limit). The pieces are transcribed in order and joined with
 a space, and the joined text is scored against the recording's whole reference,
 exactly as a single transcript would be. Cut points come from the reference's
 word timings, which is a choice a deployment would make with a voice-activity
@@ -67,7 +68,8 @@ def cut_points(words, seconds, max_chunk, min_gap, min_chunk=0.0):
 
     Each cut is the latest pause of at least ``min_gap`` that keeps the piece within ``max_chunk``. A window with
     no such pause is cut in its widest gap between words, looked for first among cuts that leave the piece at
-    least ``min_chunk`` long.
+    least ``min_chunk`` long. A window with no gap between words at all, where one reference word's timing spans
+    it, runs on to the first gap after it: that piece is longer than ``max_chunk`` rather than cut mid-word.
     """
     gaps = [(a['end'] + (b['start'] - a['end']) / 2, b['start'] - a['end']) for a, b in zip(words, words[1:])
             if b['start'] > a['end']]
@@ -77,11 +79,14 @@ def cut_points(words, seconds, max_chunk, min_gap, min_chunk=0.0):
         pauses = [mid for mid, width in window if width >= min_gap]
         if pauses:
             start = pauses[-1]
-        else:
+        elif window:
             late = [gap for gap in window if gap[0] - start >= min_chunk] or window
-            if not late:
-                raise ValueError(f'no gap between words within {max_chunk}s after {start:.1f}s')
             start = max(late, key=lambda gap: (gap[1], gap[0]))[0]
+        else:
+            later = [mid for mid, _ in gaps if mid > start]
+            if not later:
+                break
+            start = later[0]
         cuts.append(round(start, 3))
     return cuts
 

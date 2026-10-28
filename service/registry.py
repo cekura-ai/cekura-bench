@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from typing import Type
 
 from service.adapters.base import RealtimeAdapter
+from service.adapters.elevenlabs_realtime import ElevenLabsRealtimeAdapter
 from service.adapters.fake import FakeAdapter
 from service.adapters.gemini_live import GeminiLiveAdapter
 from service.adapters.grok_realtime import GrokRealtimeAdapter
@@ -64,6 +65,13 @@ PROVIDERS: dict[str, ProviderEntry] = {
         default_model="higgs-realtime",
         credential_env="BOSON_API_KEY",
         default_voice="default",
+    ),
+    "elevenlabs-realtime": ProviderEntry(
+        key="elevenlabs-realtime",
+        adapter=ElevenLabsRealtimeAdapter,
+        default_model="eleven_realtime_v1_max",
+        credential_env="ELEVENLABS_REALTIME_API_KEY",
+        default_voice="brian",
     ),
     # Not a provider: a scripted agent with known reply timing, registered so the
     # whole harness can be run end to end with no API key and no network. Anyone

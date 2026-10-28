@@ -45,7 +45,7 @@ from typing import Any
 # interface, registered in model.EXTRA_PROVIDERS). Model variants of a provider
 # (e.g. gpt-realtime-2.1-mini) are run with --config model=<id>.
 S2S_PROVIDERS: tuple[str, ...] = (
-    "openai-realtime", "gemini-live", "grok-realtime", "higgs-realtime", "fake",
+    "openai-realtime", "gemini-live", "grok-realtime", "higgs-realtime", "elevenlabs-realtime", "fake",
     "azure-realtime", "gpt-live", "nova-sonic", "phonic", "deepslate", "gemini-live-thinking",
 )
 
@@ -86,6 +86,7 @@ PINNED_MODELS: dict[str, str] = {
     "gemini-live": "gemini-3.8-live",  # Gemini 3.8 Live (reference-agents/pipecat-s2s/bot.py, pricing/prices.json)
     "grok-realtime": "grok-voice-think-fast-2.0",  # Grok Voice Think Fast 2.0
     "higgs-realtime": "higgs-realtime",  # Boson AI Higgs Realtime
+    "elevenlabs-realtime": "eleven_realtime_v1_max",  # Eleven Realtime v1 Max; Mini via model override
 }
 
 

@@ -79,7 +79,7 @@ ASTRA = "astra"                                      # Rime, female US English o
 SARAH = "933563129e564b19a115bedd57b7406a"              # Fish Official, female US English
 DELIA = "c70cfb98867a4bfb9ae20d2401257b92"              # Fish Audio, female US English, from its Drama 3 voice cast
 AVA = "5bb7de05-c8fe-426a-8fcc-ba4fc4ce9f9c"           # Hume "Ava Song", female US English, from its Voice Library
-SARA = "110c952f-38ba-54b6-b3b4-b49e96c30eaa"          # AssemblyAI "Sara", female US English, the voice AssemblyAI chose
+AUDREY = "49c443a4-8a1d-5f7e-b70b-98bdbd9823c3"        # AssemblyAI "Audrey", female US English, the voice AssemblyAI chose
 
 PROVIDERS: dict[str, ProviderEntry] = {
     "fake": ProviderEntry("fake", FakeTTSAdapter, "FAKE_KEY_UNUSED", (Model("scripted", "tone"),)),
@@ -187,13 +187,13 @@ PROVIDERS: dict[str, ProviderEntry] = {
     ),
     "assemblyai": ProviderEntry(
         "assemblyai", AssemblyAITTSAdapter, "ASSEMBLY_API_KEY",
-        (Model("assemblyai-tts-1", SARA),),
+        (Model("assemblyai-tts-1", AUDREY),),
         notes="OpenAI-compatible HTTP streaming, raw 24 kHz PCM; voice by voice_id, OpenAI's voice left out; "
               "whole text per request; US data zone",
     ),
     "assemblyai-streaming": ProviderEntry(
         "assemblyai-streaming", AssemblyAIStreamingAdapter, "ASSEMBLY_API_KEY",
-        (Model("assemblyai-tts-1", SARA),),
+        (Model("assemblyai-tts-1", AUDREY),),
         notes="Streaming TTS websocket, session configured in the URL, Begin before t0; Generate appends text, "
               "Flush ends the utterance (FlushDone), Cancel is the barge-in (Cancelled); one utterance at a time per "
               "socket; word timings off; US data zone; new sessions per minute are limited per account",

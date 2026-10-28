@@ -29,7 +29,10 @@ long before the caller has heard it. The service's playback reports
 (``poly.output_audio.*``) tell it what the caller is hearing, which is what lets
 it tell a backchannel from an interruption during playback. They are sent from
 ``ReportsPlayback``, which sits after the output transport, where frames move at
-the pace the caller hears them.
+the pace the caller hears them. The service's judgment is the only one: when it
+decides the caller cut in, it cancels the reply and says so with nothing but
+that reply's ``response.done`` (status ``cancelled``), and that is what stops
+playback here. Nothing is cancelled from this side.
 
 *One response at a time.* A ``response.create`` sent while a response is open
 cancels it, and a tool's result is answered only when a response is asked for.
@@ -54,6 +57,7 @@ from typing import Any
 
 from loguru import logger
 from websockets.asyncio.client import connect as websocket_connect
+from websockets.exceptions import ConnectionClosedError
 
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.frames.frames import (
@@ -255,6 +259,8 @@ class PolyAIRealtimeLLMService(LLMService):
         self._heard: list[str] = []
         self._bot_speaking = False
         self._unhandled: set[str] = set()
+        # The service ended the session while the call was still up.
+        self._register_event_handler("on_session_lost", sync=True)
 
     def can_generate_metrics(self) -> bool:
         return True
@@ -456,11 +462,10 @@ class PolyAIRealtimeLLMService(LLMService):
         await self._request_reply()
 
     async def _handle_interruption(self):
+        # Only what is queued here is dropped: the service decides barge-in, and
+        # a cancel sent after it has closed the reply is answered with an error.
         if self._response_id:
             self._cut.add(self._response_id)
-            # The service cancels a reply it judges talked over on its own;
-            # this covers one the pipeline judged first, and is a no-op otherwise.
-            await self._send({"type": "response.cancel"})
         await self.playback_stopped(finished=False)
         # Replies delivered but not yet audible were flushed from the transport.
         for response_id in self._unplayed:
@@ -538,28 +543,34 @@ class PolyAIRealtimeLLMService(LLMService):
     async def _receive(self):
         ws = self._websocket
         assert ws is not None
-        async for message in ws:
-            # The socket keeps delivering through its close handshake; words
-            # nobody heard must not reach the record.
-            if self._closing:
-                break
-            try:
-                event = json.loads(message)
-            except json.JSONDecodeError:
-                logger.warning(f"{self} received a non-JSON frame")
-                continue
-            try:
-                await self._dispatch(event)
-            except Exception as exc:  # noqa: BLE001 -- one bad event must not end the call
-                logger.error(f"{self} failed on {event.get('type')}: {exc}")
+        try:
+            async for message in ws:
+                # The socket keeps delivering through its close handshake; words
+                # nobody heard must not reach the record.
+                if self._closing:
+                    break
+                try:
+                    event = json.loads(message)
+                except json.JSONDecodeError:
+                    logger.warning(f"{self} received a non-JSON frame")
+                    continue
+                try:
+                    await self._dispatch(event)
+                except Exception as exc:  # noqa: BLE001 -- one bad event must not end the call
+                    logger.error(f"{self} failed on {event.get('type')}: {exc}")
+        except ConnectionClosedError:
+            pass  # any close but a normal one (a restart is 1012); reported below
         if not self._closing:
             # Closed from the far end while the call was still up. Not retried:
             # the service has no session resumption, so a new session would not
-            # know the conversation so far.
+            # know the conversation so far. Nothing more is sent to it, and the
+            # call is ended rather than left open on a line nobody answers.
+            self._websocket = None
             await self.push_error(
                 error_msg=f"Dialog-RSN-1 closed the session "
                           f"(code {getattr(ws, 'close_code', None)}, {getattr(ws, 'close_reason', None)!r})"
             )
+            await self._call_event_handler("on_session_lost")
 
     async def _dispatch(self, event: dict[str, Any]):
         kind = event.get("type", "")
@@ -654,6 +665,14 @@ class PolyAIRealtimeLLMService(LLMService):
 
     async def _handle_response_done(self, response: dict[str, Any]):
         response_id = response.get("id", "") or self._response_id or ""
+        if response.get("status") == "cancelled":
+            # Unprompted, since nothing is cancelled from here: the service
+            # judged the caller to have cut in, which it signals in no other way.
+            # What is still queued for the caller is dropped with it.
+            logger.info(f"{self} the service cancelled response {response_id}: the caller cut in")
+            self._cut.add(response_id)
+            await self._handle_interruption()
+            await self.broadcast_interruption()
         if response_id in self._spoken and response_id not in self._voiced and response_id not in self._cut:
             # The service speaks a tool call's line itself; a response that
             # carried one and made no sound left the caller in silence.

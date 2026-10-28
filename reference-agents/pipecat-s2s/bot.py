@@ -1311,14 +1311,16 @@ PROVIDERS: dict[str, Provider] = {
     # PolyAI's audio-native dialog model hears the caller at its native 16 kHz
     # and speaks at 24 kHz in its own voice, which the output transport
     # resamples -- see ``polyai_realtime``. The service announces the caller's
-    # turns and transcribes them as part of each reply. A result is sent as
-    # soon as it exists, so the next reply is written while the line the tool
-    # call carried is still being said.
+    # turns and transcribes them as part of each reply, and decides barge-in
+    # itself: the agent stops when the service cancels the reply, not when the
+    # caller's turn starts. A result is sent as soon as it exists, so the next
+    # reply is written while the line the tool call carried is still being said.
     "polyai-dialog": Provider(
         _polyai, 16000, "dialog-rsn-1", "service default", ("POLY_API_KEY",),
         "polyai_realtime",
         discloses=polyai_disclosures,
-        results="immediate", caller_transcription="automatic", reports_playback=True,
+        results="immediate", interruptions=False, caller_transcription="automatic",
+        reports_playback=True,
     ),
 }
 
@@ -3188,6 +3190,8 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
 
         llm = provider.build(credential, model, voice, instructions, settings)
         hangup.closing_reply = getattr(llm, "closing_reply_done", None)
+        # A service that ends the session mid-call cannot answer again.
+        _on_event(llm, "on_session_lost", lambda *_: hangup.hang_up("session_lost"))
         register_tools(llm, server, trace, hangup.hang_up)
         context = LLMContext(opening_messages(server.first_message), tools=build_tools(server))
         aggregators = BenchAggregators(

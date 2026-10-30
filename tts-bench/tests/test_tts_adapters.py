@@ -691,6 +691,102 @@ class TestHume:
         assert HumeAdapter.unsupported_reason(TTSConfig(model="octave-2", voice="v", sample_rate=24000)) is not None
 
 
+class TestSpeechify:
+    async def test_settings_ride_the_url_and_only_speech_done_ends_the_utterance(self):
+        from urllib.parse import parse_qs, urlsplit
+
+        from tts_bench.adapters.speechify import SpeechifyAdapter
+        from tts_bench.probes import Continuation
+        from tts_bench.registry import HARPER
+
+        speechify, sent = adapter(SpeechifyAdapter, "simba-3.5", HARPER)
+        assert parse_qs(urlsplit(speechify.url).query) == {
+            "voice_id": [HARPER], "model": ["simba-3.5"], "output_format": ["pcm_24000"], "language": ["en-US"]}
+        synthesis = await speechify.open_context("main")
+        assert synthesis.t0 is None and sent == []
+        for frame in Continuation.frames("Hello there. How can I help?"):
+            await speechify.send("main", frame)
+        await speechify.finish("main")
+        assert sent == [{"type": "input.text", "text": "Hello there. "}, {"type": "input.text", "text": "How can I help?"},
+                        {"type": "input.close"}]
+        speechify._on_message({"type": "speech.chunk", "audio": "AQABAA=="})
+        speechify._on_message({"type": "speech.chunk", "speech_marks": []})
+        speechify._on_message({"type": "speech.flushed"})
+        assert bytes(synthesis.pcm) == b"\x01\x00" * 2 and not synthesis.done.is_set()
+        speechify._on_message({"type": "speech.done", "billable_characters_count": 28, "audio_duration_ms": 1900,
+                               "reason": "closed"})
+        assert synthesis.done.is_set() and synthesis.t_done is not None
+        assert synthesis.meta["billable_characters"] == 28 and synthesis.meta["reason"] == "closed"
+
+    async def test_errors_are_recorded_and_the_protocol_limits_are_declared(self):
+        from tts_bench.adapters.base import is_refusal
+        from tts_bench.adapters.speechify import SpeechifyAdapter
+        from tts_bench.registry import HARPER, PENDING
+
+        speechify, _ = adapter(SpeechifyAdapter, "simba-3.5", HARPER)
+        synthesis = await speechify.open_context("main")
+        speechify._on_message({"type": "speech.error", "request_id": "r1",
+                               "error": {"code": "payment_required", "message": "Your balance is exhausted."}})
+        assert synthesis.error.startswith("payment_required:") and synthesis.done.is_set() and is_refusal(synthesis.error)
+        speechify.config = TTSConfig("simba-3.5", HARPER, sample_rate=8000, language="es-MX")
+        assert "output_format=pcm_8000" in speechify.url and "language=es-MX" in speechify.url
+        assert SpeechifyAdapter.unsupported_reason(speechify.config, ("streamed_input", "continuation")) is None
+        assert SpeechifyAdapter.unsupported_reason(speechify.config, ("cancel",)) == "speechify has no cancel"
+        assert SpeechifyAdapter.native_mulaw_8k and not SpeechifyAdapter.ends_on_quiet and "speechify" not in PENDING
+
+    async def test_each_utterance_gets_its_own_session_and_the_key_stays_out_of_the_log(self, tmp_path):
+        import base64
+        import json
+
+        import websockets
+
+        from tts_bench.adapters.speechify import SpeechifyAdapter
+        from tts_bench.registry import HARPER
+
+        seen: list[list[dict]] = []
+        requests: list = []
+        pcm = b"\x01\x00" * 240
+
+        def process_response(connection, request, response):
+            response.headers["Speechify-Request-Id"] = f"req-{len(seen) + 1}"
+            response.headers["RateLimit-Remaining"] = str(9 - len(seen))
+
+        async def serve(ws):
+            frames: list[dict] = []
+            seen.append(frames)
+            requests.append(ws.request)
+            async for raw in ws:
+                frame = json.loads(raw)
+                frames.append(frame)
+                if frame["type"] == "input.text":
+                    await ws.send(json.dumps({"type": "speech.chunk", "audio": base64.b64encode(pcm).decode()}))
+                elif frame["type"] == "input.close":
+                    await ws.send(json.dumps({"type": "speech.done", "billable_characters_count": 12,
+                                              "audio_duration_ms": 20, "reason": "closed"}))
+                    await ws.close()
+
+        clock = Clock()
+        log = EventLog(clock, raw_path=tmp_path / "raw.jsonl")
+        speechify = SpeechifyAdapter(TTSConfig("simba-3.5", HARPER), "secret-key", log, clock)
+        async with websockets.serve(serve, "127.0.0.1", 0, process_response=process_response) as server:
+            speechify.base = f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}/v1/audio/stream/ws"
+            async with speechify:
+                for context_id in ("first", "repeat"):
+                    synthesis = await speechify.open_context(context_id)
+                    assert synthesis.t0 is None
+                    await speechify.send(context_id, "Hello ")
+                    await speechify.send(context_id, "there.")
+                    await speechify.finish(context_id)
+                    done = await speechify.wait(context_id, 5.0)
+                    assert bytes(done.pcm) == pcm * 2 and done.meta["ended_by"] == "provider"
+        assert [[frame["type"] for frame in frames] for frames in seen] == [["input.text", "input.text", "input.close"]] * 2
+        assert all(r.headers["Authorization"] == "Bearer secret-key" and "model=simba-3.5" in r.path for r in requests)
+        assert [speechify.contexts[c].meta["request_id"] for c in ("first", "repeat")] == ["req-1", "req-2"]
+        assert [speechify.contexts[c].meta["ratelimit_remaining"] for c in ("first", "repeat")] == ["9", "8"]
+        raw = (tmp_path / "raw.jsonl").read_text()
+        assert "secret-key" not in raw and "secret-key" not in str(log.events) and "<640 b64 chars>" in raw
+
+
 class TestLineupRates:
     def test_a_model_that_emits_one_rate_names_it_and_the_rest_keep_the_default(self):
         assert PROVIDERS["hume"].rate_for("octave-2") == 48000

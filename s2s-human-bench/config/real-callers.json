@@ -1,0 +1,590 @@
+{
+  "version": "2026-11-03",
+  "inputs": {
+    "agentRunPattern": "fullrun_a{agent_id}_fix_r*",
+    "callsPerRun": 70,
+    "maxSilentCalls": 7,
+    "minRuns": 3,
+    "healthCheckName": "simulation health",
+    "agentRolePrefix": "Main",
+    "callerRolePrefix": "Testing",
+    "endCallTool": "end_call"
+  },
+  "scoring": {
+    "outcomeInTask": 0.5,
+    "passScore": 80.0,
+    "tieMargin": 5.0,
+    "btIterations": 200,
+    "bootstrap": {
+      "draws": 1000,
+      "seed": 20261103,
+      "btIterations": 60
+    },
+    "stallSeconds": 10.0,
+    "minSkillCalls": 3,
+    "taskFamily": "task"
+  },
+  "metrics": {
+    "latency": 275642,
+    "turnLength": 275674,
+    "entity": 275303
+  },
+  "families": [
+    {
+      "key": "hearing",
+      "label": "Hearing",
+      "weight": 0.25,
+      "skills": [
+        {
+          "id": "1.2",
+          "metric": 275303,
+          "name": "Entity Extraction Accuracy",
+          "description": "Gets names, numbers and dates right as the caller says them, and reads them back before using them.",
+          "condition": "Spells names and numbers"
+        },
+        {
+          "id": "1.3",
+          "metric": 275329,
+          "name": "Low-Confidence Confirmation",
+          "description": "When part of a number is lost (a cough, a bad line), asks again instead of guessing.",
+          "condition": "Noisy line"
+        },
+        {
+          "id": "1.4",
+          "metric": 275327,
+          "name": "Side-Speech Rejection",
+          "description": "Ignores details the caller says to someone else in the room.",
+          "condition": "Background voices"
+        },
+        {
+          "id": "1.5",
+          "metric": 275650,
+          "name": "Background-Noise Robustness",
+          "description": "Waits quietly through hold music or the phone being set down, then picks up when the caller is back.",
+          "condition": "Hold music"
+        },
+        {
+          "id": "1.6",
+          "metric": 275651,
+          "name": "Prosodic Cue Understanding",
+          "description": "Hears meaning in tone of voice, such as a doubtful 'Monday?' being a question, not a yes.",
+          "condition": "Hesitant caller"
+        },
+        {
+          "id": "1.7",
+          "metric": 273449,
+          "name": "Emotion Recognition",
+          "description": "Notices when the caller is upset or anxious and still gets the task done.",
+          "condition": "Upset caller"
+        },
+        {
+          "id": "1.8",
+          "metric": 275649,
+          "name": "Degraded-Channel Robustness",
+          "description": "Copes when the phone line breaks up and words drop out.",
+          "condition": "Bad connection"
+        },
+        {
+          "id": "1.10",
+          "metric": 275330,
+          "name": "Multi-Speaker Handling",
+          "description": "Keeps track when more than one person speaks on the caller's side.",
+          "condition": "Several people"
+        }
+      ]
+    },
+    {
+      "key": "turn_taking",
+      "label": "Turn Taking",
+      "weight": 0.25,
+      "skills": [
+        {
+          "id": "2.1",
+          "metric": 275677,
+          "name": "Endpointing",
+          "description": "Waits until the caller has actually finished before replying.",
+          "condition": "Pauses mid-sentence"
+        },
+        {
+          "id": "2.2",
+          "metric": 275678,
+          "name": "Backchannel vs Barge-in Detection",
+          "description": "Keeps talking through 'mm-hmm', but stops quickly when the caller really interrupts.",
+          "condition": "Interrupts"
+        },
+        {
+          "id": "2.8",
+          "metric": 275679,
+          "name": "Premature-Response Avoidance",
+          "description": "Stays quiet during the caller's natural pauses mid-sentence."
+        },
+        {
+          "id": "2.4",
+          "metric": 275648,
+          "name": "Overlapping-Speech Recovery",
+          "description": "Recovers smoothly when both sides start talking at once.",
+          "condition": "Talks over the agent"
+        },
+        {
+          "id": "2.5",
+          "metric": 272629,
+          "name": "Tool-Latency Handling",
+          "description": "Keeps the caller informed while a slow system lookup runs.",
+          "verdict": "explanation",
+          "condition": "Slow system"
+        },
+        {
+          "id": "2.7",
+          "metric": 275640,
+          "name": "Mid-Utterance Pause Tolerance",
+          "description": "Waits when the caller says 'hold on', then picks up when they're back.",
+          "condition": "Asks to hold"
+        }
+      ]
+    },
+    {
+      "key": "task",
+      "label": "Task Handling",
+      "weight": 0.25,
+      "skills": [
+        {
+          "id": "3.2",
+          "metric": 275291,
+          "name": "Slot Update Handling",
+          "description": "Uses the new detail when the caller corrects something they said earlier.",
+          "condition": "Changes their mind"
+        },
+        {
+          "id": "3.3",
+          "metric": 275343,
+          "name": "Human Handoff",
+          "description": "Hands over to a person when the caller asks or the request needs one.",
+          "condition": "Needs a person"
+        },
+        {
+          "id": "3.4",
+          "metric": 273644,
+          "name": "Tool Error Handling",
+          "description": "Tells the caller honestly when a system action fails, instead of claiming success.",
+          "condition": "System error"
+        },
+        {
+          "id": "3.5b",
+          "metric": 275641,
+          "name": "Cancellation Handling",
+          "description": "Stops or undoes an action when the caller changes their mind, and says truthfully what happened.",
+          "condition": "Cancels"
+        },
+        {
+          "id": "3.5a",
+          "metric": 273448,
+          "name": "Consent Verification",
+          "description": "Gets a clear yes from the right person before acting on the caller's behalf.",
+          "condition": "Needs consent"
+        },
+        {
+          "id": "3.6",
+          "metric": 275645,
+          "name": "Redundant Re-prompt Avoidance",
+          "description": "Does not ask again for details the caller already gave (share of calls with none).",
+          "verdict": "count"
+        },
+        {
+          "id": "3.7",
+          "metric": 275643,
+          "name": "Hallucinated-Success Avoidance",
+          "description": "Never says an action worked when the system said it failed (share of calls with none).",
+          "verdict": "count"
+        }
+      ]
+    },
+    {
+      "key": "speaking",
+      "label": "Speaking",
+      "weight": 0.25,
+      "skills": [
+        {
+          "id": "4.1",
+          "metric": 275342,
+          "name": "Numeric Read-back",
+          "description": "Reads numbers back digit by digit, clearly enough to write down.",
+          "condition": "Asks for a number"
+        },
+        {
+          "id": "4.3",
+          "metric": 273475,
+          "name": "Style Instruction Following",
+          "description": "Follows requests about how to talk, such as shorter answers or just the numbers.",
+          "condition": "Asks for short answers"
+        },
+        {
+          "id": "4.4",
+          "metric": 273477,
+          "name": "Code-Switching",
+          "description": "Switches language when the caller does, and stays in it.",
+          "condition": "Switches language"
+        },
+        {
+          "id": "4.2",
+          "metric": 275647,
+          "name": "TTS Text Normalization",
+          "description": "Says things in a form that works out loud: no lists, symbols or markdown read aloud (share of calls with none).",
+          "verdict": "count"
+        }
+      ]
+    }
+  ],
+  "passiveMetrics": [
+    {
+      "id": "EO",
+      "name": "Task Outcome",
+      "family": "Every call",
+      "type": "passive",
+      "better": "higher",
+      "unit": "share",
+      "description": "Expected-outcome score for the call: did the agent finish the caller's task the way the scenario requires."
+    },
+    {
+      "id": "L1",
+      "name": "Median Latency",
+      "family": "Every call",
+      "type": "passive",
+      "better": "lower",
+      "unit": "ms",
+      "description": "Median of per-call average response latency."
+    },
+    {
+      "id": "P4",
+      "name": "Turn Length",
+      "family": "Every call",
+      "type": "passive",
+      "better": "lower",
+      "unit": "words",
+      "description": "Median words per agent turn."
+    }
+  ],
+  "models": [
+    {
+      "key": "gpt-realtime-2.1",
+      "name": "GPT Realtime 2.1",
+      "vendor": "OpenAI",
+      "siteId": "openai-realtime",
+      "runs": [
+        "fullrun",
+        "fullrun_r2",
+        "fullrun_r3"
+      ]
+    },
+    {
+      "key": "gemini-3.8-live",
+      "name": "Gemini 3.8 Live",
+      "vendor": "Google",
+      "siteId": "gemini-live-standard",
+      "agentId": 26000
+    },
+    {
+      "key": "azure-voice-live",
+      "name": "Azure Realtime",
+      "vendor": "Microsoft",
+      "siteId": "azure-realtime",
+      "agentId": 26155
+    },
+    {
+      "key": "phonic-v1",
+      "name": "Phonic v1",
+      "vendor": "Phonic",
+      "siteId": "phonic",
+      "agentId": 26199
+    },
+    {
+      "key": "nova-sonic",
+      "name": "Amazon Nova 2 Sonic",
+      "vendor": "Amazon",
+      "siteId": "nova-sonic",
+      "agentId": 26371
+    },
+    {
+      "key": "grok-2.0",
+      "name": "Grok Voice Think Fast 2.0",
+      "vendor": "xAI",
+      "siteId": "grok-realtime",
+      "agentId": 26139
+    },
+    {
+      "key": "grok-3.0",
+      "name": "Grok Voice 3.0",
+      "vendor": "xAI",
+      "siteId": "grok-realtime-3",
+      "agentId": 26140
+    },
+    {
+      "key": "cascade-baseline",
+      "name": "Cascade",
+      "vendor": "Cascade",
+      "siteId": "cascade-baseline",
+      "agentId": 26883,
+      "reference": true
+    },
+    {
+      "key": "gpt-live-1",
+      "name": "GPT-Live 1 + GPT-6 Sol",
+      "vendor": "OpenAI",
+      "siteId": "gpt-live",
+      "agentId": 26893
+    },
+    {
+      "key": "gpt-realtime-2.1-mini",
+      "name": "GPT Realtime 2.1 Mini",
+      "vendor": "OpenAI",
+      "siteId": "openai-realtime-mini",
+      "agentId": 26894
+    },
+    {
+      "key": "gemini-3.8-live-et",
+      "name": "Gemini 3.8 Live Extended Thinking",
+      "vendor": "Google",
+      "siteId": "gemini-live",
+      "agentId": 26895
+    },
+    {
+      "key": "gemini-3.1-flash-live",
+      "name": "Gemini 3.1 Flash Live Preview",
+      "vendor": "Google",
+      "siteId": "gemini-flash-live",
+      "agentId": 26896
+    },
+    {
+      "key": "deepslate-opal",
+      "name": "Deepslate Opal",
+      "vendor": "Deepslate",
+      "siteId": "deepslate",
+      "agentId": 26897
+    },
+    {
+      "key": "phonic-1",
+      "name": "Phonic 1",
+      "vendor": "Phonic",
+      "siteId": "phonic-1",
+      "agentId": 26898
+    }
+  ],
+  "suites": [
+    {
+      "id": "banking",
+      "prefix": "F",
+      "label": "Banking calls",
+      "description": "Real people calling their bank: blocked cards, disputes, transfers, travel notices.",
+      "scenarios": 35,
+      "domain": "Banking"
+    },
+    {
+      "id": "healthcare",
+      "prefix": "H",
+      "label": "Healthcare calls",
+      "description": "Real people calling a clinic or pharmacy: appointments, refills, records, callbacks.",
+      "scenarios": 35,
+      "domain": "Healthcare"
+    }
+  ],
+  "categories": [
+    {
+      "key": "noise",
+      "label": "Noisy / Degraded Audio",
+      "skills": [
+        "1.3",
+        "1.5",
+        "1.8"
+      ],
+      "description": "Street noise, bad lines, speakerphone"
+    },
+    {
+      "key": "people",
+      "label": "Multi-Speaker",
+      "skills": [
+        "1.4",
+        "1.10"
+      ],
+      "description": "Someone else talking in the room"
+    },
+    {
+      "key": "interruptions",
+      "label": "Barge-in & Overlap",
+      "skills": [
+        "2.2",
+        "2.4"
+      ],
+      "description": "Caller cuts in or talks over the agent"
+    },
+    {
+      "key": "pauses",
+      "label": "Pauses & Holds",
+      "skills": [
+        "2.1",
+        "2.7",
+        "2.8"
+      ],
+      "description": "Caller pauses mid-sentence or asks to hold"
+    },
+    {
+      "key": "corrections",
+      "label": "Slot Corrections",
+      "skills": [
+        "3.2",
+        "3.5b"
+      ],
+      "description": "Caller corrects a detail or changes the request"
+    },
+    {
+      "key": "system",
+      "label": "Tool Latency & Errors",
+      "skills": [
+        "2.5",
+        "3.4"
+      ],
+      "description": "Booking or account tools are slow or fail"
+    },
+    {
+      "key": "emotion",
+      "label": "Affective Speech",
+      "skills": [
+        "1.6",
+        "1.7"
+      ],
+      "description": "Upset, anxious or impatient callers"
+    },
+    {
+      "key": "numbers",
+      "label": "Entity-Heavy",
+      "skills": [
+        "1.2",
+        "4.1"
+      ],
+      "description": "Spelling names, reading out card and phone numbers"
+    },
+    {
+      "key": "rules",
+      "label": "Compliance & Handoff",
+      "skills": [
+        "3.3",
+        "3.5a"
+      ],
+      "description": "Asking consent, handing over to a person"
+    },
+    {
+      "key": "language",
+      "label": "Code-Switching",
+      "skills": [
+        "4.4"
+      ],
+      "description": "Caller switches language mid-call"
+    }
+  ],
+  "languages": {
+    "skill": "4.4",
+    "groups": [
+      {
+        "id": "all",
+        "label": "All languages",
+        "note": "Every caller, whatever language they speak.",
+        "scenarios": "all"
+      },
+      {
+        "id": "en",
+        "label": "English only",
+        "note": "Callers who speak English from start to finish.",
+        "scenarios": "rest"
+      },
+      {
+        "id": "es",
+        "label": "Switches to Spanish",
+        "note": "Callers who switch to Spanish partway through. A small set, so read close scores as a tie.",
+        "scenarios": [
+          "F23",
+          "F26",
+          "F33",
+          "H08",
+          "H10",
+          "H14",
+          "H25"
+        ]
+      },
+      {
+        "id": "hi",
+        "label": "Switches to Hindi",
+        "note": "Callers who switch to Hindi partway through. A small set, so read close scores as a tie.",
+        "scenarios": [
+          "F12",
+          "F25",
+          "F34",
+          "H04",
+          "H05",
+          "H12",
+          "H32",
+          "H34"
+        ]
+      }
+    ]
+  },
+  "benchmark": {
+    "modelDefaults": {
+      "voice": "—",
+      "setting": "—",
+      "sampleRateHz": 16000,
+      "turns": "Service turn detection"
+    },
+    "noPriceNote": "No published price for this model."
+  },
+  "insights": {
+    "note": "Real-caller benchmark: skills missed by family, scenario types from the skills each call tests.",
+    "taskNotCompleted": "Task not completed",
+    "topArguments": 8,
+    "highlights": 3,
+    "text": {
+      "families": "Strongest family: {strong} ({strong_score}). Weakest: {weak} ({weak_score}).",
+      "skill": "{name}: {rate}% ({delta:+d} pts vs average)",
+      "strength": "Biggest strength: {skill}.",
+      "gap": "Biggest gap: {skill}.",
+      "task": "Task completion rate: {rate}%."
+    }
+  },
+  "reports": {
+    "note": "Each model's calls on the Cekura platform."
+  },
+  "skills": {
+    "minReached": 3,
+    "domains": [
+      "banking",
+      "healthcare"
+    ],
+    "limits": [
+      "{scenarios} scenarios; every caller line is a recording of a real person, never a synthetic voice.",
+      "Each model ran three times on the same agent build; results pool across runs.",
+      "Task Handling counts the skills and the share of the caller's task completed, half each.",
+      "Cost per minute is the model's API cost as published on the Cekura S2S benchmark.",
+      "ELO gaps under about 50 points are within run-to-run noise."
+    ]
+  },
+  "examples": {
+    "draft": true,
+    "note": "Draft picks from the 3 Nov runs, pending human-audio check and review.",
+    "perSuite": 4,
+    "minExpectedLines": 3,
+    "maxConditions": 4,
+    "maxSkills": 3,
+    "brokenCall": "never spoke|silent throughout|no agent turns|did not connect",
+    "momentMinTimestamps": 2,
+    "momentMinChars": 160,
+    "momentMaxChars": 420,
+    "clipLeadSeconds": 4,
+    "clipTailSeconds": 5,
+    "clipMaxSeconds": 30
+  },
+  "outputs": {
+    "benchmark": "real-callers-benchmark.json",
+    "insights": "real-callers-insights.json",
+    "reports": "real-callers-reports.json",
+    "languages": "real-callers-languages.json",
+    "skills": "real-callers-skills.json",
+    "examples": "real-callers-examples.json"
+  }
+}

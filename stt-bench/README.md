@@ -79,6 +79,7 @@ A provider may require additional account access for a particular model.
 | Gradium | Default | `GRADIUM_API_KEY` |
 | Reson8 | Realtime | `RESON_API_KEY` |
 | Zoom | Scribe (live mode) | `ZOOM_API_KEY` |
+| Murf | Finch Global (beta) | `MURF_API_KEY` |
 
 Environment variables take precedence over `.env`. Accepted aliases are defined in
 [credentials.py](src/stt_bench/credentials.py). Keep credentials in the environment

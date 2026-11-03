@@ -7,11 +7,14 @@ provider renames an event, this is where it should fail first.
 
 from __future__ import annotations
 
+import asyncio
 import base64
 
 import pytest
+import websockets
 
 from service import events as ev
+from service.adapters import deepgram_voice_agent
 from service.adapters.base import AdapterError, SessionConfig, ToolSpec, TurnDetection
 from service.adapters.deepgram_voice_agent import DeepgramVoiceAgentAdapter, split_model
 from service.adapters.gemini_live import GeminiLiveAdapter, _flatten_usage_metadata
@@ -189,6 +192,16 @@ class TestDeepgramVoiceAgent:
         assert refused("server_vad", silence_duration_ms=500) is None
         assert refused("semantic_vad") is None
         assert refused() is None
+
+    async def test_keepalive_stops_quietly_when_the_socket_has_closed(self, monkeypatch):
+        class ClosedSocket:
+            async def send(self, _message):
+                raise websockets.ConnectionClosed(None, None)
+
+        monkeypatch.setattr(deepgram_voice_agent, "KEEPALIVE_S", 0.0)
+        a = adapter(DeepgramVoiceAgentAdapter)
+        a._ws = ClosedSocket()
+        await asyncio.wait_for(a._keep_alive(), 1.0)  # returns instead of raising
 
     def test_a_silence_duration_becomes_flux_eot_timeout_and_defaults_send_none(self):
         listen = adapter(DeepgramVoiceAgentAdapter, turn_detection=TurnDetection("server_vad", silence_duration_ms=500))._settings_payload()["agent"]["listen"]["provider"]

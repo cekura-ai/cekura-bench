@@ -74,7 +74,8 @@ PROVIDERS: dict[str, ProviderEntry] = {
         default_voice="aura-2-thalia-en",
         discloses=(
             "a managed pipeline, not one speech model: Flux (flux-general-en) hears the caller, "
-            "the named text model replies and an Aura voice speaks; latency and cost cover all three",
+            "the named text model replies and an Aura voice speaks; latency covers all three",
+            "billed per minute and reports no token usage, so the service bench records no cost for this row",
             "a fixed silence duration is sent as Flux's eot_timeout_ms, a ceiling: Flux may end a turn sooner",
         ),
     ),

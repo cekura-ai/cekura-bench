@@ -217,8 +217,11 @@ class DeepgramVoiceAgentAdapter(RealtimeAdapter):
         assert self._ws is not None
         while True:
             await asyncio.sleep(KEEPALIVE_S)
-            # Not logged: it carries nothing but the session's own upkeep.
-            await self._ws.send(KEEPALIVE)
+            try:
+                # Not logged: it carries nothing but the session's own upkeep.
+                await self._ws.send(KEEPALIVE)
+            except websockets.ConnectionClosed:
+                return  # the receive loop records the close
 
     # ── receiving ────────────────────────────────────────────────────────────
 

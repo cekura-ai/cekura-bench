@@ -27,5 +27,5 @@
     "checked_on": "2026-11-03",
     "billing_basis": "submitted audio seconds; Murf publishes $0.24 per hour"
   },
-  "protocol_caveat": "Beta. Murf sends no ready message, so the benchmark sends AudioConfig before binary audio. It does not end a turn on silence: Finalize at the shared speech boundary produces the manual EndOfTurn final, then CloseStream must close the session with code 1000."
+  "protocol_caveat": "Beta. Murf sends an informational SessionStarted event but no model echo, so the benchmark sends AudioConfig before binary audio. A live session reported commit_mode=vad and emitted an empty VAD final for the artificial silence tail after the manual speech final. Only the manual EndOfTurn final after Finalize is the benchmark acknowledgment; CloseStream must then close the session with code 1000."
 }

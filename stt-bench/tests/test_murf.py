@@ -17,17 +17,22 @@ def config():
     return json.loads(Path('config/models/murf-finch-global.json').read_text())
 
 
-def message(kind, text, turn=0, sequence=0):
+def message(kind, text, turn=0, sequence=0, trigger='manual'):
     return {'type': kind, 'transcript': text, 'rawEvent': {
         'type': 'TurnInfo', 'request_id': 'request-fixture',
         'event': 'EndOfTurn' if kind == 'final' else 'Update',
         'turn_index': turn, 'sequence_id': sequence, 'transcript': text,
-        **({'trigger': 'manual'} if kind == 'final' else {}),
+        **({'trigger': trigger} if kind == 'final' else {}),
     }}
 
 
 def event(value, at):
     return {'kind': 'provider_message', 'time_seconds': at, 'message': value}
+
+
+def session_started():
+    return {'type': 'SessionStarted', 'session_id': 'session-fixture',
+            'request_id': 'request-fixture', 'language': 'en'}
 
 
 def test_config_connection_and_credentials():
@@ -45,6 +50,7 @@ def test_config_connection_and_credentials():
 def test_replay_replaces_partials_and_requires_finalize_ack_then_clean_close():
     c = config()
     events = [dict(kind='model_accepted', time_seconds=0, model=c['model']),
+              event(session_started(), .05),
               event(message('partial', 'hello', sequence=1), .1),
               event(message('partial', 'hello world', sequence=2), .2),
               dict(kind='speech_end', time_seconds=.2),
@@ -52,6 +58,8 @@ def test_replay_replaces_partials_and_requires_finalize_ack_then_clean_close():
               event(message('final', 'hello world', sequence=3), .4),
               dict(kind='audio_complete', time_seconds=1.2),
               dict(kind='close_stream_requested', time_seconds=1.2),
+              event(message('partial', '', turn=1, sequence=4), 1.25),
+              event(message('final', '', turn=1, sequence=5, trigger='vad'), 1.26),
               dict(kind='provider_terminal', time_seconds=1.3)]
     assert transcript_at(events, .2, c) == {
         'text': 'hello world', 'final_text': '', 'partial_text': 'hello world',
@@ -85,11 +93,13 @@ def test_transcribe_loopback_uses_header_audio_config_finalize_and_clean_close(t
 
         async def server(ws):
             headers.append(ws.request.headers['api-key'])
+            await ws.send(json.dumps(session_started()))
             async for raw in ws:
                 received.append(json.loads(raw) if isinstance(raw, str) else raw)
                 if isinstance(raw, str) and json.loads(raw).get('type') == 'Finalize':
                     await ws.send(json.dumps(message('final', 'hello world', sequence=1)))
                 elif isinstance(raw, str) and json.loads(raw).get('type') == 'CloseStream':
+                    await ws.send(json.dumps(message('final', '', turn=1, sequence=2, trigger='vad')))
                     await ws.close(code=1000)
                     return
 

@@ -33,6 +33,7 @@ class Protocol(shared.Protocol):
         super().__init__(config)
         # Murf sends no ready message. A successful WebSocket upgrade is ready.
         self.ready = True
+        self.session_started = False
 
     def setup(self):
         return {'type': 'AudioConfig', 'codec': self.config['encoding'],
@@ -55,18 +56,26 @@ class Protocol(shared.Protocol):
         expected_events = {'EndOfTurn'} if final else {'StartOfTurn', 'Update'}
         if raw.get('event') not in expected_events:
             raise shared.ProviderError('Invalid Murf transcript event')
-        if final and raw.get('trigger') != 'manual':
-            raise shared.ProviderError('Murf final was not manually finalized')
+        if final and raw.get('trigger') not in {'manual', 'vad'}:
+            raise shared.ProviderError('Invalid Murf finalization trigger')
         return raw['turn_index']
 
     def feed(self, message):
         super().feed(message)
         kind = message.get('type')
-        if kind == 'partial':
+        if kind == 'SessionStarted':
+            if (self.session_started or not isinstance(message.get('session_id'), str)
+                    or not isinstance(message.get('request_id'), str)
+                    or message.get('language') != self.config['language']):
+                raise shared.ProviderError('Invalid Murf session-start event')
+            self.session_started = True
+        elif kind == 'partial':
             self.put(self.turn(message, final=False), message['transcript'], False)
         elif kind == 'final':
             self.put(self.turn(message, final=True), message['transcript'], True)
-            if self.requested:
+            # A trailing silent turn can close as VAD after our manual speech
+            # final. Only the explicit manual final acknowledges Finalize.
+            if self.requested and message['rawEvent']['trigger'] == 'manual':
                 self.ack = True
         elif kind == 'QuotaWarning':
             return

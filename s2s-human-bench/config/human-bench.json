@@ -580,11 +580,11 @@
     "clipMaxSeconds": 30
   },
   "outputs": {
-    "benchmark": "real-callers-benchmark.json",
-    "insights": "real-callers-insights.json",
-    "reports": "real-callers-reports.json",
-    "languages": "real-callers-languages.json",
-    "skills": "real-callers-skills.json",
-    "examples": "real-callers-examples.json"
+    "benchmark": "human-bench-benchmark.json",
+    "insights": "human-bench-insights.json",
+    "reports": "human-bench-reports.json",
+    "languages": "human-bench-languages.json",
+    "skills": "human-bench-skills.json",
+    "examples": "human-bench-examples.json"
   }
 }

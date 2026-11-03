@@ -11,7 +11,7 @@ exported runs into the website's data files.
 
 ## Scoring
 
-All settings below live in [`config/real-callers.json`](config/real-callers.json); the code
+All settings below live in [`config/human-bench.json`](config/human-bench.json); the code
 holds none of them.
 
 * **Call score (0-100)**: the weighted mean of four skill families (Hearing, Turn Taking,

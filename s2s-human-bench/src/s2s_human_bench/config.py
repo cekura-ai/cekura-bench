@@ -1,4 +1,4 @@
-"""The benchmark's settings, read from a versioned JSON file (``config/real-callers.json``).
+"""The benchmark's settings, read from a versioned JSON file (``config/human-bench.json``).
 
 Everything that names a model, a skill, a metric, a call type, a language group or a
 threshold lives in the file; the code only knows the shape.

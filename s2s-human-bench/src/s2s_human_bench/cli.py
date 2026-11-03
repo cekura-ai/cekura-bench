@@ -2,7 +2,7 @@ import argparse
 import sys
 from pathlib import Path
 
-DEFAULT_CONFIG = Path(__file__).resolve().parents[2] / "config" / "real-callers.json"
+DEFAULT_CONFIG = Path(__file__).resolve().parents[2] / "config" / "human-bench.json"
 
 
 def main() -> None:
@@ -19,7 +19,7 @@ def main() -> None:
     )
     p.add_argument("--titles", type=Path, required=True, help="the website's call list (s2s-human-bench-calls.json): scenario titles for the examples")
     p.add_argument("--out", type=Path, required=True, help="output directory")
-    p.add_argument("--config", type=Path, default=DEFAULT_CONFIG, help="benchmark config (default: config/real-callers.json)")
+    p.add_argument("--config", type=Path, default=DEFAULT_CONFIG, help="benchmark config (default: config/human-bench.json)")
     p.add_argument("--clips", type=Path, help="recorded caller clips per scenario (default: <runs>/scenario_clips.json, if present)")
     p.add_argument(
         "--name", action="append", metavar="KIND=FILE", help="output file name for one kind (benchmark, insights, reports, languages, skills, examples)"

@@ -112,9 +112,11 @@ MOMENT_FIELDS = ("model", "scenario", "finding", "tag", "audio", "start_s", "end
 
 
 def reviewed_moments(cfg: Config, entries: list[Entry], clips: dict[str, Any]) -> dict[str, Any]:
-    """Approved clip pairs by skill id, checked against the config and the models being published."""
+    """Approved clip pairs by skill id, checked against the config and the models being published; each clip
+    gains its scenario's domain from the suites."""
     skills = {s.id for s in cfg.skills}
     models = {e.model.site_id for e in entries}
+    domain = {s["prefix"]: s["domain"] for s in cfg["suites"]}
     for sid, pair in clips.items():
         if sid not in skills:
             raise ValueError(f"reviewed clips: unknown skill {sid}")
@@ -124,6 +126,7 @@ def reviewed_moments(cfg: Config, entries: list[Entry], clips: dict[str, Any]) -
                 raise ValueError(f"reviewed clips: {sid} {slot} needs {', '.join(MOMENT_FIELDS)}")
             if m["model"] not in models:
                 raise ValueError(f"reviewed clips: {sid} {slot} names unknown model {m['model']}")
+            m["domain"] = next((d for p, d in domain.items() if m["scenario"].startswith(p)), None)
     return clips
 
 

@@ -113,6 +113,7 @@ def test_reviewed_clips(cfg, tmp_path):
     clips.write_text(json.dumps({sid: {"setup": "s", "should": "w", "pass": side, "fail": side}}))
     moments = export(tmp_path, cfg, tmp_path / "out", clips=clips)["examples.json"]["moments"]
     assert list(moments) == [sid] and moments[sid]["pass"]["audio"] == "/a.mp3"
+    assert moments[sid]["pass"]["domain"] == next(s["domain"] for s in cfg["suites"] if "B01".startswith(s["prefix"]))
     clips.write_text(json.dumps({sid: {"pass": dict(side, model="nobody"), "fail": side}}))
     with pytest.raises(ValueError, match="unknown model"):
         export(tmp_path, cfg, tmp_path / "out2", clips=clips)

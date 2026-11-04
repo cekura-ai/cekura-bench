@@ -40,7 +40,10 @@ the transcriber's delay is announced to the pipeline the way a speech-to-text
 service announces its own, so the context waits for the words that long.
 
 *A tool result does not resume the reply.* A response is asked for once every
-call the model made has its result and the response that made them has closed.
+call the model made has its result. A reply that called its tools in silence is
+waited on until it closes; one that spoke while calling them is not, because
+Hydra holds such a reply open until the next one is asked for, and then carries
+on in that same reply.
 """
 
 from __future__ import annotations
@@ -330,11 +333,13 @@ class SmallestHydraLLMService(LLMService):
             self._reply_owed = False
             logger.debug(f"{self} no reply asked for after the closing tool in {self._closing_round}")
             return
-        if self._response_id is not None:
+        if self._response_id is not None and self._response_id not in self._voiced:
             self._reply_owed = True
             return
         self._reply_owed = False
         self._replied_after_closing = closing
+        if self._response_id is not None:
+            logger.debug(f"{self} reply asked for with {self._response_id} still open: it spoke while calling its tools")
         await self._send({"type": "response.create"})
 
     # -- pipeline ---------------------------------------------------------
@@ -583,9 +588,11 @@ class SmallestHydraLLMService(LLMService):
             # agent's half of the transcript goes quiet and this is where it shows.
             self.silent_replies += 1
             logger.warning(f"{self} reply {response_id} was spoken with no text ({self.silent_replies} so far)")
-        self._response_id = None
-        await self._end_reply()
-        await self.stop_processing_metrics()
+        if self._response_id in (None, response_id):
+            # A reply that closes after the next one opened must not end that one.
+            self._response_id = None
+            await self._end_reply()
+            await self.stop_processing_metrics()
         usage = response.get("usage")
         if usage:
             await self.start_llm_usage_metrics(token_usage(usage))

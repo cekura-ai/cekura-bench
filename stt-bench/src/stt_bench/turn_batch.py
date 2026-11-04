@@ -38,7 +38,9 @@ def prepare(root,models=None):
     # a bounded worker budget and permanently reduce after a rate-limit response.
     limits={'deepgram':150,'openai':50,'google':20,'speechmatics':2,'assemblyai':20,
             'gradium':3,'inworld':32,'reson8':32,'smallest':32,'soniox':32,'sarvam':16,
-            'cartesia':16,'elevenlabs':16,'gemini':10,'zoom':16}
+            'cartesia':16,'elevenlabs':16,'gemini':10,'zoom':16,
+            # Murf refused a tenth concurrent Finch stream in the full run and held at five.
+            'murf':5}
     files=[Path('pyproject.toml'),Path('uv.lock'),*Path('src/stt_bench').glob('*.py'),
            *Path('src/stt_bench').glob('*.html'),*Path('tests').glob('*.py'),
            *[p for p in Path('config/models').glob('*.json') if '3.8' not in p.stem],*paths,

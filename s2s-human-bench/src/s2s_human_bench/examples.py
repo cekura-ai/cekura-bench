@@ -1,6 +1,7 @@
 """Example moments (a good and a bad one per skill) and the reviewed example calls per model.
 
-Moments are candidates: the site plays one only once its clip is cut and approved. Example
+Moments are candidates unless a reviewed-clips file is given: then each skill's good and bad
+moment is the clip a person approved, with its audio and turns. Example
 calls are published only when listed in the reviewed-calls file, after a person has listened
 to them and confirmed the caller audio is human.
 """
@@ -97,11 +98,32 @@ def example_calls(cfg: Config, calls: list[tuple[str, Call]], titles: dict[str, 
     return out
 
 
+MOMENT_FIELDS = ("model", "scenario", "finding", "tag", "audio", "start_s", "end_s", "turns")
+
+
+def reviewed_moments(cfg: Config, entries: list[Entry], clips: dict[str, Any]) -> dict[str, Any]:
+    """Approved clip pairs by skill id, checked against the config and the models being published."""
+    skills = {s.id for s in cfg.skills}
+    models = {e.model.site_id for e in entries}
+    for sid, pair in clips.items():
+        if sid not in skills:
+            raise ValueError(f"reviewed clips: unknown skill {sid}")
+        for slot in ("pass", "fail"):
+            m = pair.get(slot)
+            if not m or any(k not in m for k in MOMENT_FIELDS):
+                raise ValueError(f"reviewed clips: {sid} {slot} needs {', '.join(MOMENT_FIELDS)}")
+            if m["model"] not in models:
+                raise ValueError(f"reviewed clips: {sid} {slot} names unknown model {m['model']}")
+    return clips
+
+
 def examples_doc(
-    cfg: Config, entries: list[Entry], titles: dict[str, str | None], reviewed: dict[str, list[str]]
+    cfg: Config, entries: list[Entry], titles: dict[str, str | None], reviewed: dict[str, list[str]], clips: dict[str, Any] | None = None
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """The examples file and the clip windows to cut for its moments."""
     calls = _candidates(cfg, entries)
     found, picks = moments(cfg, calls, titles)
+    if clips is not None:
+        found, picks = reviewed_moments(cfg, entries, clips), []
     doc = dict(moments=found, examples=example_calls(cfg, calls, titles, reviewed))
     return doc, picks

@@ -58,6 +58,11 @@ def reviewed_calls(path: Path | None) -> dict[str, list[str]]:
     return {m: [str(i) for i in ids] for m, ids in read_json(path).items()} if path else {}
 
 
+def reviewed_clips(path: Path | None) -> dict[str, Any] | None:
+    """Approved clip pairs, ``{skill id: {setup, should, pass, fail}}``; None when no file is given."""
+    return read_json(path) if path else None
+
+
 def build(
     cfg: Config,
     runs: Path,
@@ -67,13 +72,14 @@ def build(
     day: str,
     exclude_unhealthy: bool = False,
     reviewed: dict[str, list[str]] | None = None,
+    clips_reviewed: dict[str, Any] | None = None,
 ) -> tuple[dict[str, dict[str, Any]], list[dict[str, Any]]]:
     """Every output document by kind, and the clip picks."""
     entries = load_bench(cfg, runs, exclude_unhealthy)
     if not entries:
         raise ExportError(f"{runs}: no model has {cfg['inputs']['minRuns']} usable runs")
     bench, insights, reports = s2s_docs(cfg, entries, public_s2s, day)
-    examples, picks = examples_doc(cfg, entries, call_titles, reviewed or {})
+    examples, picks = examples_doc(cfg, entries, call_titles, reviewed or {}, clips_reviewed)
     docs = dict(
         benchmark=bench,
         insights=insights,
@@ -109,6 +115,7 @@ def run_site_export(args: Any) -> int:
         args.date or Date.today().isoformat(),
         args.exclude_unhealthy,
         reviewed_calls(args.reviewed_examples),
+        reviewed_clips(args.reviewed_clips),
     )
     for kind, doc in docs.items():
         write_json(args.out / names[kind], doc)

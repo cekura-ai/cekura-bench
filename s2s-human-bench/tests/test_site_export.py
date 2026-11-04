@@ -3,6 +3,8 @@
 import json
 from argparse import Namespace
 
+import pytest
+
 from conftest import BAD, write_run
 from s2s_human_bench.site_export import run_site_export
 
@@ -25,7 +27,7 @@ def make_inputs(tmp_path):
     return runs
 
 
-def export(tmp_path, cfg, out, reviewed=None):
+def export(tmp_path, cfg, out, reviewed=None, clips=None):
     args = Namespace(
         config=tmp_path / "config.json",
         runs=tmp_path / "runs",
@@ -38,6 +40,7 @@ def export(tmp_path, cfg, out, reviewed=None):
         exclude_unhealthy=False,
         clip_picks=None,
         reviewed_examples=reviewed,
+        reviewed_clips=clips,
     )
     assert run_site_export(args) == 0
     return {p.name: json.loads(p.read_text()) for p in out.iterdir()}
@@ -83,3 +86,16 @@ def test_reviewed_examples(cfg, tmp_path):
     ex = export(tmp_path, cfg, tmp_path / "out", reviewed)["examples.json"]["examples"]
     assert list(ex) == ["alpha-site"] and len(ex["alpha-site"]) == 1
     assert ex["alpha-site"][0]["url"].startswith("https://example.test/run_a1_")
+
+
+def test_reviewed_clips(cfg, tmp_path):
+    make_inputs(tmp_path)
+    sid = cfg.skills[0].id
+    side = dict(model="alpha-site", scenario="B01", finding="f", tag="t", audio="/a.mp3", start_s=1.0, end_s=9.0, turns=[])
+    clips = tmp_path / "clips.json"
+    clips.write_text(json.dumps({sid: {"setup": "s", "should": "w", "pass": side, "fail": side}}))
+    moments = export(tmp_path, cfg, tmp_path / "out", clips=clips)["examples.json"]["moments"]
+    assert list(moments) == [sid] and moments[sid]["pass"]["audio"] == "/a.mp3"
+    clips.write_text(json.dumps({sid: {"pass": dict(side, model="nobody"), "fail": side}}))
+    with pytest.raises(ValueError, match="unknown model"):
+        export(tmp_path, cfg, tmp_path / "out2", clips=clips)

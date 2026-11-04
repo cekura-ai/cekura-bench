@@ -43,6 +43,7 @@ class Model:
     reference: bool = False
     runs: tuple[str, ...] | None = None  # explicit run folders; otherwise discovered from agent_id
     agent_id: int | None = None
+    details: dict[str, Any] = field(default_factory=dict, hash=False, compare=False)  # card fields for models not on the public S2S page
 
 
 @dataclass
@@ -102,6 +103,7 @@ def load_config(path: Path) -> Config:
                 reference=m.get("reference", False),
                 runs=tuple(m["runs"]) if "runs" in m else None,
                 agent_id=m.get("agentId"),
+                details=m.get("details", {}),
             )
         )
     ids = [s.id for s in cfg.skills]

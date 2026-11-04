@@ -326,6 +326,21 @@
       "reference": true
     },
     {
+      "key": "cascade-multilingual",
+      "name": "Cascade Multilingual",
+      "vendor": "Cascade",
+      "siteId": "cascade-multilingual",
+      "agentId": 26907,
+      "reference": true,
+      "details": {
+        "modelId": "nova-3 (multi) → gpt-4.1 → eleven_flash_v2_5",
+        "voice": "ElevenLabs 21m00Tcm4TlvDq8ikWAM",
+        "setting": "No reasoning setting",
+        "sampleRateHz": 16000,
+        "turns": "VAD + Smart Turn"
+      }
+    },
+    {
       "key": "gpt-live-1",
       "name": "GPT-Live 1 + GPT-6 Sol",
       "vendor": "OpenAI",

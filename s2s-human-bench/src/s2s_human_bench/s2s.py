@@ -143,6 +143,7 @@ def s2s_docs(cfg: Config, entries: list[Entry], live: dict[str, Any], date: str)
     for e in entries:
         m = e.model
         base = dict(live_models.get(m.site_id, {}))
+        base.update(m.details)
         base.update(id=m.site_id, name=m.name, short=m.name, vendor=m.vendor)
         base.setdefault("modelId", m.key)
         for k, v in cfg["benchmark"]["modelDefaults"].items():

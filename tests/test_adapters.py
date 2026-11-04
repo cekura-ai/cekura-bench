@@ -213,6 +213,49 @@ class TestDeepgramVoiceAgent:
         a._ws = ClosedSocket()
         await asyncio.wait_for(a._keep_alive(), 1.0)  # returns instead of raising
 
+    async def test_the_text_model_runs_on_our_own_endpoint_and_only_the_wire_carries_the_key(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-test-own-key")
+        sent = []
+
+        class Socket:
+            async def send(self, message):
+                sent.append(message)
+
+        a = DeepgramVoiceAgentAdapter(api_key="unused", log=ev.EventLog(ev.Clock(), raw_path=tmp_path / "raw.jsonl"), config=SessionConfig())
+        a._ws = Socket()
+        settings = a._settings_payload()
+        assert settings["agent"]["think"]["endpoint"] == {
+            "url": "https://api.openai.com/v1/chat/completions", "headers": {"authorization": "<redacted>"},
+        }
+        await a._send_json(settings, wire=a._with_credentials(settings))
+        assert '"Bearer sk-test-own-key"' in sent[0]
+        assert settings["agent"]["think"]["endpoint"]["headers"]["authorization"] == "<redacted>"
+        a.log.close()
+        assert "sk-test-own-key" not in (tmp_path / "raw.jsonl").read_text()
+
+    async def test_without_the_text_model_key_the_session_is_refused_before_connecting(self, monkeypatch):
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        with pytest.raises(AdapterError, match="OPENAI_API_KEY"):
+            await adapter(DeepgramVoiceAgentAdapter).connect()
+
+    def test_a_text_model_with_no_wired_endpoint_is_refused(self):
+        a = DeepgramVoiceAgentAdapter(model="anthropic/claude-sonnet-5", api_key="unused", log=ev.EventLog(ev.Clock()), config=SessionConfig())
+        with pytest.raises(AdapterError, match="anthropic"):
+            a._settings_payload()
+
+    def test_the_registry_loads_the_text_model_key_from_the_env_file(self, monkeypatch, tmp_path):
+        import os
+
+        from service.registry import PROVIDERS, load_extra_credentials
+
+        env = tmp_path / ".env"
+        env.write_text("OPENAI_API_KEY=sk-test\n")
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        entry = PROVIDERS["deepgram-voice-agent"]
+        assert load_extra_credentials(entry) == ["OPENAI_API_KEY"]
+        assert load_extra_credentials(entry, str(env)) == []
+        assert os.environ["OPENAI_API_KEY"] == "sk-test"
+
     def test_a_silence_duration_becomes_flux_eot_timeout_and_defaults_send_none(self):
         listen = adapter(DeepgramVoiceAgentAdapter, turn_detection=TurnDetection("server_vad", silence_duration_ms=500))._settings_payload()["agent"]["listen"]["provider"]
         assert listen["eot_timeout_ms"] == 500

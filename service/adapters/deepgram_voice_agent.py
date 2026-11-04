@@ -6,6 +6,14 @@ replies, and an Aura voice speaks. The row therefore names all three, and the
 model id says which text model answered (``<provider type>/<model>``, e.g.
 ``open_ai/gpt-4.1``), because the same socket serves a dozen of them.
 
+The text model runs on our own OpenAI account, through the bring-your-own
+endpoint Deepgram documents, not on Deepgram's hosted copy of it. A hosted
+model's prompt is capped at 25,000 characters and Deepgram cuts whatever is
+past that with only a warning; the medicare contract's prompt is longer, so a
+hosted row would be scored against a different agent from every other row's.
+Same model, whole prompt. The key goes to Deepgram on the wire only: the
+settings the record keeps carry it redacted.
+
 What this protocol does differently from an OpenAI-shaped one:
 
 * **Audio is binary.** Both directions carry raw PCM frames, and every JSON
@@ -30,7 +38,9 @@ Input is 16 kHz (Flux's native rate), output 24 kHz.
 from __future__ import annotations
 
 import asyncio
+import copy
 import json
+import os
 from typing import Any
 
 import websockets
@@ -50,6 +60,11 @@ DEFAULT_VOICE = "aura-2-thalia-en"
 # Held fixed for every row, as the cascade's speech-to-text is: what varies
 # between Deepgram rows is the text model, not how the caller is heard.
 LISTEN = {"type": "deepgram", "version": "v2", "model": "flux-general-en"}
+# Where each text-model provider type is reached on our own account, and the
+# credential it takes. Only OpenAI is wired: it is the row's model.
+THINK_ENDPOINTS = {"open_ai": "https://api.openai.com/v1/chat/completions"}
+THINK_KEY_ENV = "OPENAI_API_KEY"
+REDACTED = "<redacted>"
 # Below this the service refuses the settings (INVALID_SETTINGS, read off the wire).
 EOT_TIMEOUT_MIN_MS = 500
 
@@ -99,7 +114,9 @@ class DeepgramVoiceAgentAdapter(RealtimeAdapter):
     # ── lifecycle ────────────────────────────────────────────────────────────
 
     async def connect(self) -> None:
-        self.session_sent = self._settings_payload()  # a malformed id is refused before connecting
+        # A malformed id or a missing text-model key is refused before connecting.
+        self.session_sent = self._settings_payload()
+        wire = self._with_credentials(self.session_sent)
         try:
             self._ws = await websockets.connect(
                 URL,
@@ -116,7 +133,7 @@ class DeepgramVoiceAgentAdapter(RealtimeAdapter):
         self.session_id = welcome.get("request_id")
         self.log.emit(ev.SESSION_OPEN, session_id=self.session_id, model=self.model)
 
-        await self._send_json(self.session_sent)
+        await self._send_json(self.session_sent, wire=wire)
         applied = await self._recv_json("never applied Settings")
         if applied.get("type") != "SettingsApplied":
             raise AdapterError(f"{self.name} refused the settings: {applied}")
@@ -146,9 +163,15 @@ class DeepgramVoiceAgentAdapter(RealtimeAdapter):
         think_provider: dict[str, Any] = {"type": kind, "model": think_model}
         if config.temperature is not None:
             think_provider["temperature"] = config.temperature
-        think: dict[str, Any] = {"provider": think_provider, "prompt": config.instructions}
+        if kind not in THINK_ENDPOINTS:
+            raise AdapterError(f"{self.name} runs its text model on our own account; no endpoint is wired for {kind!r}")
+        think: dict[str, Any] = {
+            "provider": think_provider,
+            "endpoint": {"url": THINK_ENDPOINTS[kind], "headers": {"authorization": REDACTED}},
+            "prompt": config.instructions,
+        }
         if config.tools:
-            # No ``endpoint``: a function without one is run by the client, so
+            # No function ``endpoint``: a function without one is run by the client, so
             # every call reaches the harness's mock tools.
             think["functions"] = [
                 {"name": t.name, "description": t.description, "parameters": t.parameters}
@@ -189,11 +212,21 @@ class DeepgramVoiceAgentAdapter(RealtimeAdapter):
 
     # ── sending ──────────────────────────────────────────────────────────────
 
-    async def _send_json(self, payload: dict[str, Any]) -> None:
+    def _with_credentials(self, settings: dict[str, Any]) -> dict[str, Any]:
+        """The settings as sent: the recorded copy with the text-model key filled in."""
+        key = os.environ.get(THINK_KEY_ENV)
+        if not key:
+            raise AdapterError(f"{self.name} runs its text model on our own account: {THINK_KEY_ENV} is not set")
+        wire = copy.deepcopy(settings)
+        wire["agent"]["think"]["endpoint"]["headers"]["authorization"] = f"Bearer {key}"
+        return wire
+
+    async def _send_json(self, payload: dict[str, Any], wire: dict[str, Any] | None = None) -> None:
+        """``payload`` is what the record keeps; ``wire``, when given, is what is sent."""
         if self._ws is None:
             raise AdapterError("not connected")
         self.log.raw(payload, direction="out")
-        await self._ws.send(json.dumps(payload))
+        await self._ws.send(json.dumps(wire if wire is not None else payload))
 
     async def _send_audio_chunk(self, pcm: bytes) -> None:
         if self._ws is None:

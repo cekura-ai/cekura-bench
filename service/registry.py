@@ -14,6 +14,7 @@ out of a footnote and inside the published cell.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from typing import Type
 
@@ -34,6 +35,8 @@ class ProviderEntry:
     credential_env: str
     default_voice: str | None = None
     discloses: tuple[str, ...] = field(default_factory=tuple)
+    # Credentials the adapter reads from the environment besides its own key.
+    extra_credentials: tuple[str, ...] = ()
 
 
 PROVIDERS: dict[str, ProviderEntry] = {
@@ -72,10 +75,14 @@ PROVIDERS: dict[str, ProviderEntry] = {
         default_model="open_ai/gpt-4.1",
         credential_env="DEEPGRAM_API_KEY",
         default_voice="aura-2-thalia-en",
+        extra_credentials=("OPENAI_API_KEY",),
         discloses=(
             "a managed pipeline, not one speech model: Flux (flux-general-en) hears the caller, "
             "the named text model replies and an Aura voice speaks; latency covers all three",
-            "billed per minute and reports no token usage, so the service bench records no cost for this row",
+            "the text model runs on our own OpenAI account through Deepgram's bring-your-own endpoint: "
+            "Deepgram's hosted models cut prompts past 25,000 characters, and the medicare contract's is longer",
+            "Deepgram bills per minute and OpenAI bills the text model's tokens on our account; "
+            "the service bench records no cost for this row",
             "a fixed silence duration is sent as Flux's eot_timeout_ms, a ceiling: Flux may end a turn sooner",
         ),
     ),
@@ -93,3 +100,18 @@ PROVIDERS: dict[str, ProviderEntry] = {
 
 # Not adapted here yet: gpt-live-1 (a separate /v1/live product with a delegated
 # backend), qwen-omni (needs a DashScope key) and nova-sonic (needs Bedrock).
+
+
+def load_extra_credentials(entry: ProviderEntry, env_file: str | None = None) -> list[str]:
+    """Put ``entry``'s extra credentials into this process's environment, from
+    ``env_file`` when they are not already set there. Returns the names found
+    nowhere. Values stay in-process and are never printed."""
+    missing = [name for name in entry.extra_credentials if not os.environ.get(name)]
+    if missing and env_file:
+        from dotenv import dotenv_values
+
+        values = dotenv_values(env_file)
+        for name in missing:
+            if values.get(name):
+                os.environ[name] = values[name]
+    return [name for name in entry.extra_credentials if not os.environ.get(name)]

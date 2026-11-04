@@ -33,7 +33,7 @@ from service.external import (  # noqa: E402
     sample,
     summarize,
 )
-from service.registry import PROVIDERS  # noqa: E402
+from service.registry import PROVIDERS, load_extra_credentials  # noqa: E402
 from service.runner import RunSpec, Runner  # noqa: E402
 
 
@@ -57,6 +57,10 @@ def main() -> int:
         key = dotenv_values(args.env).get(entry.credential_env)
     if not key:
         print(f"{entry.credential_env} is not set", file=sys.stderr)
+        return 2
+    missing = load_extra_credentials(entry, args.env)
+    if missing:
+        print(f"{', '.join(missing)} is not set", file=sys.stderr)
         return 2
 
     cache = Path(args.cache or f"data/external/{args.dataset.replace('/', '--')}")

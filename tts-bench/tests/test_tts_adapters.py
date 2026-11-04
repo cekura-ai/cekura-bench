@@ -422,10 +422,10 @@ class TestMurf:
 
         from tts_bench.adapters.murf import MurfAdapter
 
-        murf, sent = adapter(MurfAdapter, "falcon-2.1", "Natalie")
+        murf, sent = adapter(MurfAdapter, "falcon-2.1", "en-US-judith")
         synthesis = await murf.open_context("main")
         assert synthesis.t0 is None and sent == [{
-            "voice_config": {"voiceId": "Natalie", "locale": "en-US", "style": "Conversation", "rate": 0, "pitch": 0},
+            "voice_config": {"voiceId": "en-US-judith", "locale": "en-US", "style": "Conversational", "rate": 0, "pitch": 0},
             "context_id": "main",
         }]
         await murf.send("main", "Hello ")
@@ -444,10 +444,28 @@ class TestMurf:
         assert synthesis.meta["word_timestamps"][0]["word"] == "Hello"
         assert synthesis.meta["concurrency"]["region"] == "us-east"
 
+    async def test_style_is_the_name_the_voice_lists_and_an_option_overrides_it(self):
+        from tts_bench.adapters.murf import MurfAdapter
+
+        murf, sent = adapter(MurfAdapter, "falcon-2.1", "en-US-natalie")
+        await murf.open_context("main")
+        assert sent[0]["voice_config"]["style"] == "Conversation"
+
+        clock = Clock()
+        murf = MurfAdapter(TTSConfig("falcon-2.1", "en-US-judith", options=(("style", "Narration"),)), "unused", EventLog(clock), clock)
+        overridden: list[dict] = []
+
+        async def capture(payload):
+            overridden.append(payload)
+
+        murf._send_json = capture
+        synthesis = await murf.open_context("main")
+        assert overridden[0]["voice_config"]["style"] == "Narration" and synthesis.meta["request"]["style"] == "Narration"
+
     async def test_clear_is_the_cancel_and_final_acknowledges_it(self):
         from tts_bench.adapters.murf import MurfAdapter
 
-        murf, sent = adapter(MurfAdapter, "falcon-2.1", "Natalie")
+        murf, sent = adapter(MurfAdapter, "falcon-2.1", "en-US-judith")
         synthesis = await murf.open_context("main")
         await murf.send("main", "A long answer.")
         await murf.cancel("main")
@@ -461,7 +479,7 @@ class TestMurf:
         from tts_bench.registry import PENDING
         from tts_bench.runner import _refused
 
-        murf, _ = adapter(MurfAdapter, "falcon-2.1", "Natalie")
+        murf, _ = adapter(MurfAdapter, "falcon-2.1", "en-US-judith")
         synthesis = await murf.open_context("main")
         murf._on_closed("received 1008 (policy violation) Invalid api key used")
         result = _refused(ProbeResult("one_shot", verdict="fail", syntheses=[synthesis]))
@@ -469,8 +487,8 @@ class TestMurf:
         assert murf.url.startswith("wss://global.api.murf.ai/v1/speech/stream-input?")
         assert "api-key" not in murf.url and murf._headers() == {"api-key": "unused"}
         assert MurfAdapter.native_rates == (24000,) and not MurfAdapter.native_mulaw_8k
-        assert MurfAdapter.unsupported_reason(TTSConfig("other", "Natalie")) == "murf WebSocket serves Falcon 2.1 only"
-        assert MurfAdapter.unsupported_reason(TTSConfig("falcon-2.1", "Natalie"), ("streamed_input", "cancel", "continuation")) is None
+        assert MurfAdapter.unsupported_reason(TTSConfig("other", "en-US-judith")) == "murf WebSocket serves Falcon 2.1 only"
+        assert MurfAdapter.unsupported_reason(TTSConfig("falcon-2.1", "en-US-judith"), ("streamed_input", "cancel", "continuation")) is None
         assert "murf" not in PENDING
 
     async def test_reusable_socket_routes_contexts_and_keeps_the_key_out_of_logs(self, tmp_path):
@@ -497,7 +515,7 @@ class TestMurf:
 
         clock = Clock()
         log = EventLog(clock, raw_path=tmp_path / "raw.jsonl")
-        murf = MurfAdapter(TTSConfig("falcon-2.1", "Natalie"), "secret-key", log, clock)
+        murf = MurfAdapter(TTSConfig("falcon-2.1", "en-US-judith"), "secret-key", log, clock)
         async with websockets.serve(serve, "127.0.0.1", 0) as server:
             murf.base = f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}"
             async with murf:

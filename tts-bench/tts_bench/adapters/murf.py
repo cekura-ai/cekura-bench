@@ -26,6 +26,13 @@ from tts_bench import events as ev
 from tts_bench.adapters._ws import WebSocketAdapter
 from tts_bench.adapters.base import TTSConfig
 
+# The Falcon voice catalog (GET /v1/speech/voices?model=FALCON) names the
+# conversational style per voice: "Conversational" for some, "Conversation"
+# for others.  The socket accepts either name without a warning, so send the
+# one the voice lists; --option style=<name> overrides it and is recorded.
+VOICE_STYLES = {"en-US-judith": "Conversational"}
+DEFAULT_STYLE = "Conversation"
+
 
 class MurfAdapter(WebSocketAdapter):
     """Falcon 2.1, using one persistent socket and named contexts."""
@@ -59,11 +66,12 @@ class MurfAdapter(WebSocketAdapter):
 
     async def _open_context(self, context_id: str) -> None:
         synthesis = self.contexts[context_id]
+        style = self.config.option("style", VOICE_STYLES.get(self.config.voice, DEFAULT_STYLE))
         synthesis.meta["request"] = {
             "model": self.config.model,
             "voice_id": self.config.voice,
             "locale": self.config.language or "en-US",
-            "style": "Conversation",
+            "style": style,
             "audio_format": "pcm_s16le",
             "sample_rate": self.config.sample_rate,
         }
@@ -71,7 +79,7 @@ class MurfAdapter(WebSocketAdapter):
             "voice_config": {
                 "voiceId": self.config.voice,
                 "locale": self.config.language or "en-US",
-                "style": "Conversation",
+                "style": style,
                 "rate": 0,
                 "pitch": 0,
             },

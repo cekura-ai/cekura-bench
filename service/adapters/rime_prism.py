@@ -174,9 +174,12 @@ class RimePrismAdapter(OpenAIRealtimeAdapter):
 
     def state(self) -> dict[str, Any]:
         state = super().state()
+        # Under ``session``, the part of the state each cell record keeps.
+        state["session"]["endpoint"] = self.url
         # None is the provider's default, left unsent.
-        state["endpoint"] = self.url
-        state["turn_timing"] = {"eagerness": self.eagerness, "end_of_turn_timeout_ms": self.end_of_turn_timeout_ms}
+        state["session"]["turn_timing"] = {
+            "eagerness": self.eagerness, "end_of_turn_timeout_ms": self.end_of_turn_timeout_ms
+        }
         return state
 
     # ── sending ──────────────────────────────────────────────────────────────

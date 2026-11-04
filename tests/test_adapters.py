@@ -282,7 +282,7 @@ class TestPrism:
         assert "turn_detection" not in prism()._session_payload()
         a = prism(eagerness="low", end_of_turn_timeout_ms=2000)
         assert a._session_payload()["turn_detection"] == {"eagerness": "low", "prism_end_of_turn_timeout_ms": 2000}
-        assert a.state()["turn_timing"] == {"eagerness": "low", "end_of_turn_timeout_ms": 2000}
+        assert a.state()["session"]["turn_timing"] == {"eagerness": "low", "end_of_turn_timeout_ms": 2000}
         with pytest.raises(AdapterError):
             prism(eagerness="eager")
 
@@ -384,7 +384,7 @@ class TestPrism:
         monkeypatch.setenv(rime_prism.URL_ENV, "wss://prism.beta.example/v1/realtime")
         a = adapter(RimePrismAdapter)
         assert a.url == "wss://prism.beta.example/v1/realtime"
-        assert a.state()["endpoint"] == a.url
+        assert a.state()["session"]["endpoint"] == a.url
 
 
 class TestReferenceClient:

@@ -13,7 +13,7 @@
   "ready_timeout_seconds": 15,
   "finalize_timeout_seconds": 5,
   "close_timeout_seconds": 5,
-  "finalization": "manual_finalize_at_speech_end",
+  "finalization": "manual_at_speech_end",
   "completion_basis": "final_EndOfTurn_after_Finalize_then_CloseStream",
   "finalize_ack_supported": true,
   "requires_final_only_completion": true,
@@ -27,5 +27,5 @@
     "checked_on": "2026-11-03",
     "billing_basis": "submitted audio seconds; Murf publishes $0.24 per hour"
   },
-  "protocol_caveat": "Beta. Murf sends an informational SessionStarted event but no model echo, so the benchmark sends AudioConfig before binary audio. A live session reported commit_mode=vad and emitted an empty VAD final for the artificial silence tail after the manual speech final. Only the manual EndOfTurn final after Finalize is the benchmark acknowledgment; CloseStream must then close the session with code 1000."
+  "protocol_caveat": "Beta. Murf sends an informational SessionStarted event but no model echo, so the benchmark sends AudioConfig before binary audio. Although the documentation says a turn ends only on Finalize or CloseStream, the live service also ends turns on silence (trigger vad), sometimes just before the benchmark's Finalize, and then labels its reply to Finalize vad as well. The first final after Finalize that leaves no provisional text is therefore the benchmark acknowledgment, whatever its trigger; CloseStream must then close the session with code 1000."
 }

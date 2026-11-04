@@ -14,7 +14,7 @@ from .streaming import stream_audio
 def validate(config):
     expected = dict(model='finch_global_1.0', language='en', sample_rate=16000,
                     encoding='pcm_s16le', channels=1, frame_ms=20,
-                    finalization='manual_finalize_at_speech_end',
+                    finalization='manual_at_speech_end',
                     completion_basis='final_EndOfTurn_after_Finalize_then_CloseStream',
                     finalize_ack_supported=True, requires_final_only_completion=True)
     for key, value in expected.items():
@@ -73,9 +73,11 @@ class Protocol(shared.Protocol):
             self.put(self.turn(message, final=False), message['transcript'], False)
         elif kind == 'final':
             self.put(self.turn(message, final=True), message['transcript'], True)
-            # A trailing silent turn can close as VAD after our manual speech
-            # final. Only the explicit manual final acknowledges Finalize.
-            if self.requested and message['rawEvent']['trigger'] == 'manual':
+            # Live Finch also ends turns on silence (trigger 'vad'), at times just
+            # before our Finalize, and then labels its reply to Finalize 'vad' as
+            # well. After Finalize, the first final that leaves no provisional
+            # text is that reply, whatever its trigger label.
+            if self.requested and not any(self.partials.values()):
                 self.ack = True
         elif kind == 'QuotaWarning':
             return

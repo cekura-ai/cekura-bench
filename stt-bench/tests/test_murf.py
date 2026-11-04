@@ -7,10 +7,13 @@ from urllib.parse import parse_qs, urlsplit
 import pytest
 from websockets.asyncio.server import serve
 
-from stt_bench import murf
+from stt_bench import full_benchmark, murf
 from stt_bench.credentials import credential
 from stt_bench.providers import reduce_events, transcript_at, validate
 from stt_bench.streaming import EventLog, read_events
+from stt_bench.turn_batch import OPT_IN
+from stt_bench.turn_metrics import transcript_timeline
+from stt_bench.turn_runner import validate_profile
 
 
 def config():
@@ -45,6 +48,26 @@ def test_config_connection_and_credentials():
                        ('finalization', 'stream_end_after_tail')]:
         with pytest.raises(ValueError):
             validate(dict(c, **{key: value}))
+
+
+def test_full_benchmark_and_turn_reconstruction_use_the_murf_protocol():
+    c = config()
+    events = [event(session_started(), .05),
+              event(message('partial', 'hello', sequence=1), .1),
+              dict(kind='finalize_requested', time_seconds=.2),
+              event(message('final', 'hello world', sequence=2), .4),
+              event(message('final', '', turn=1, sequence=3, trigger='vad'), 1.0)]
+    assert [s['text'] for s in full_benchmark.final_snapshots(events, c)] == ['', 'hello world']
+    assert transcript_timeline(events, c)[-1]['text'] == 'hello world'
+
+
+def test_turn_profile_is_the_model_config_with_controlled_turn_fields():
+    profile = json.loads(Path('config/profiles/private-turns-v1/murf-finch-global.json').read_text())
+    assert {k: v for k, v in profile.items() if k in config()} == config()
+    assert profile['turn_finalization_class'] == 'controlled'
+    assert profile['base_config'] == 'config/models/murf-finch-global.json'
+    validate_profile(profile)
+    assert 'murf-finch-global' in OPT_IN and 'murf-finch-global' in full_benchmark.FULL_MODELS
 
 
 def test_replay_replaces_partials_and_requires_finalize_ack_then_clean_close():
@@ -131,3 +154,48 @@ def test_transcribe_loopback_uses_header_audio_config_finalize_and_clean_close(t
         assert 'fixture-secret' not in (tmp_path / 'events.jsonl').read_text()
 
     asyncio.run(check())
+
+
+def test_finalize_reply_labelled_vad_after_a_silence_ended_turn_completes():
+    # Live smoke: Murf ended the speech turn on silence just before Finalize,
+    # then answered Finalize with an empty final labelled vad.
+    c = config()
+    events = [dict(kind='model_accepted', time_seconds=0, model=c['model']),
+              event(session_started(), .05),
+              event(message('partial', 'concert tickets', sequence=1), .5),
+              event(message('final', 'concert tickets', sequence=2, trigger='vad'), 1.0),
+              dict(kind='speech_end', time_seconds=1.2),
+              dict(kind='finalize_requested', time_seconds=1.2),
+              event(message('partial', '', turn=1, sequence=3), 1.4),
+              event(message('final', '', turn=1, sequence=4, trigger='vad'), 1.4),
+              dict(kind='audio_complete', time_seconds=2.2),
+              dict(kind='close_stream_requested', time_seconds=2.2),
+              dict(kind='provider_terminal', time_seconds=2.3)]
+    result = reduce_events(events, c)
+    assert result['transcript'] == 'concert tickets' and result['transcript_complete']
+    assert result['finalize_latency_ms'] == pytest.approx(200)
+
+
+def test_finalize_reply_with_speech_labelled_vad_completes():
+    c = config()
+    events = [dict(kind='model_accepted', time_seconds=0, model=c['model']),
+              event(message('partial', 'hello', sequence=1), .1),
+              dict(kind='speech_end', time_seconds=.2),
+              dict(kind='finalize_requested', time_seconds=.2),
+              event(message('final', 'hello there', sequence=2, trigger='vad'), .45),
+              dict(kind='audio_complete', time_seconds=1.2),
+              dict(kind='close_stream_requested', time_seconds=1.2),
+              dict(kind='provider_terminal', time_seconds=1.3)]
+    result = reduce_events(events, c)
+    assert result['transcript'] == 'hello there' and result['transcript_complete']
+
+
+def test_pending_speech_in_a_later_turn_blocks_the_acknowledgment():
+    protocol = murf.Protocol(config())
+    protocol.feed(message('partial', 'first part', sequence=1))
+    protocol.feed(message('partial', 'second', turn=1, sequence=2))
+    protocol.requested = True
+    protocol.feed(message('final', 'first part', sequence=3, trigger='vad'))
+    assert not protocol.ack
+    protocol.feed(message('final', 'second part', turn=1, sequence=4))
+    assert protocol.ack and protocol.snapshot()['final_text'] == 'first part second part'

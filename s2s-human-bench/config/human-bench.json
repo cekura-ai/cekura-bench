@@ -220,7 +220,7 @@
         {
           "id": "4.4",
           "metric": 273477,
-          "name": "Code-Switching",
+          "name": "Language Switching",
           "description": "Switches language when the caller does, and stays in it.",
           "condition": "Switches language"
         },
@@ -487,7 +487,7 @@
     },
     {
       "key": "language",
-      "label": "Code-Switching",
+      "label": "Language Switching",
       "skills": [
         "4.4"
       ],

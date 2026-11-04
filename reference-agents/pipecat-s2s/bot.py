@@ -775,6 +775,36 @@ def polyai_disclosures(settings: Settings) -> dict[str, str]:
     }
 
 
+def _smallest_hydra(credential: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
+    """Smallest AI's Hydra, through the service in ``smallest_hydra``."""
+    from smallest_hydra import SmallestHydraLLMService
+
+    return SmallestHydraLLMService(api_key=credential, model=model, voice=voice, instructions=instructions)
+
+
+def hydra_disclosures(settings: Settings) -> dict[str, str]:
+    from smallest_hydra import OUTPUT_SAMPLE_RATE, PREROLL_S, TRANSCRIPTION_MODEL, URL
+
+    return {
+        "hydra_endpoint": URL,
+        "hydra_turn_detection": "service, no settings (the service takes none)",
+        # The words are every row's opening turn; only where they are put differs.
+        "hydra_opening": (
+            "the opening turn's instruction appended to the system prompt, with generate_initial_response "
+            "on, because the service answers no text turn"
+        ),
+        "hydra_agent_transcript": "the service's own reply text (an undocumented frame), held until the reply sounds",
+        "hydra_caller_transcription": (
+            f"{TRANSCRIPTION_MODEL} (Smallest speech-to-text, same key), each caller turn the service "
+            f"announces, from {PREROLL_S:g} s before its start to its stop"
+        ),
+        "tts": f"the vendor's own, server-side; {OUTPUT_SAMPLE_RATE // 1000} kHz PCM out",
+        "hydra_closing_tools": (
+            "no reply is asked for after a closing tool whose reply made a sound; one, at most, after a silent one"
+        ),
+    }
+
+
 def _gpt_live(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
     """The live model plus the backend it hands reasoning to.
 
@@ -1084,7 +1114,8 @@ class Provider:
 # and it is not a detail: a scored run needs both halves of the conversation, and
 # a transcript holding only the agent reads as a caller who never spoke. Three of
 # these services transcribe the caller only when asked, and each asks
-# differently; seven do it themselves. Nothing warns about the difference,
+# differently; seven do it themselves; one cannot, and its vendor's separate
+# speech-to-text is run on each caller turn. Nothing warns about the difference,
 # because a session without transcription is a working session.
 #
 #   openai-realtime   asked for  -- an input transcription config, default model
@@ -1097,6 +1128,8 @@ class Provider:
 #   phonic            automatic  -- the service sends each finished caller turn
 #   deepslate         automatic  -- the service transcribes each finished caller turn
 #   polyai-dialog     automatic  -- transcription streams inside the reply it answers
+#   smallest-hydra    pulse-pro  -- the service transcribes neither side; the
+#                                   vendor's speech-to-text runs on each caller turn
 #
 # The tool calls travel separately, through the context aggregator, which is why
 # a run can show resolved tools and still carry no speech.
@@ -1321,6 +1354,17 @@ PROVIDERS: dict[str, Provider] = {
         discloses=polyai_disclosures,
         results="immediate", interruptions=False, caller_transcription="automatic",
         reports_playback=True,
+    ),
+    # Smallest AI's Hydra hears the caller at 16 kHz and speaks at 24 kHz, which
+    # the output transport resamples -- see ``smallest_hydra``. The service
+    # announces the caller's turns and stops its own reply when talked over; it
+    # transcribes neither side, so the caller's words are Smallest's separate
+    # speech-to-text, run by the service on each finished caller turn.
+    "smallest-hydra": Provider(
+        _smallest_hydra, 16000, "hydra-v1.1", "sterling", ("SMALLEST_API_KEY",),
+        "smallest_hydra",
+        discloses=hydra_disclosures,
+        caller_transcription="pulse-pro",
     ),
 }
 

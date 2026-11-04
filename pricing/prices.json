@@ -242,6 +242,16 @@
         "No public price list."
       ]
     },
+    "smallest-hydra": {
+      "read_on": null,
+      "verified": false,
+      "source": null,
+      "components": [],
+      "unmetered": [
+        "No public price list; the vendor quotes a per-minute rate on request.",
+        "The caller's turns are transcribed by Pulse Pro, billed separately."
+      ]
+    },
     "azure-realtime": {
       "read_on": "2026-10-07",
       "verified": true,

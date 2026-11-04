@@ -1961,6 +1961,300 @@ class TestPolyAIRealtime:
             "[unknown_parameter] not in schema (param: session.voice)")
 
 
+class TestSmallestHydra:
+    """Hydra's socket, spoken directly: one configuration, an opening of its own, no transcripts."""
+
+    @staticmethod
+    def _service(**overrides):
+        from smallest_hydra import SmallestHydraLLMService
+
+        provider = bot.PROVIDERS["smallest-hydra"]
+        service = provider.build("k", provider.default_model, provider.default_voice, "prompt", asked())
+        for key, value in overrides.items():
+            setattr(service, key, value)
+        seen = {"pushed": [], "broadcast": [], "sent": [], "calls": [], "usage": [], "errors": []}
+
+        async def push(frame, direction=None):
+            seen["pushed"].append((type(frame).__name__, direction, frame))
+
+        async def broadcast(frame_cls, **_kwargs):
+            seen["broadcast"].append(frame_cls.__name__)
+
+        async def send(event):
+            seen["sent"].append(event)
+
+        async def run(function_calls):
+            seen["calls"].extend(function_calls)
+
+        async def usage(tokens):
+            seen["usage"].append(tokens)
+
+        async def error(error_msg, **_kwargs):
+            seen["errors"].append(error_msg)
+
+        async def noop(*_args, **_kwargs):
+            return None
+
+        service.push_frame = push
+        service.broadcast_frame = broadcast
+        service._send = send
+        service.run_function_calls = run
+        service.start_llm_usage_metrics = usage
+        service.push_error = error
+        for name in ("start_ttfb_metrics", "stop_ttfb_metrics", "start_processing_metrics",
+                     "stop_processing_metrics", "stop_all_metrics"):
+            setattr(service, name, noop)
+        assert isinstance(service, SmallestHydraLLMService)
+        return service, seen
+
+    @staticmethod
+    def _audio(response="r1", size=4800):
+        import base64
+
+        return {"type": "response.output_audio.delta", "response_id": response, "item_id": "i1",
+                "delta": base64.b64encode(b"\1\0" * (size // 2)).decode()}
+
+    @staticmethod
+    def _words(seen):
+        return [frame.text for name, _, frame in seen["pushed"] if name == "TTSTextFrame"]
+
+    @staticmethod
+    def _caller_turn(item_id):
+        return {"type": "input_audio_buffer.speech_stopped", "item_id": item_id, "audio_end_ms": 0}
+
+    def test_the_session_carries_no_setting_the_service_does_not_take(self):
+        import smallest_hydra
+
+        service, _ = self._service()
+        session = service.session()
+        assert set(session) == {"instructions", "voice", "output_audio_sample_rate", "generate_initial_response"}
+        assert session["voice"] == "sterling" and session["instructions"] == "prompt"
+        assert session["output_audio_sample_rate"] == smallest_hydra.OUTPUT_SAMPLE_RATE == 24000
+        assert session["generate_initial_response"] is False, "no opening yet, so nothing to open with"
+        assert smallest_hydra.SAMPLE_RATE == bot.PROVIDERS["smallest-hydra"].input_rate
+        record = record_for("smallest-hydra")
+        for key in ("hydra_endpoint", "hydra_turn_detection", "hydra_opening", "hydra_agent_transcript",
+                    "hydra_caller_transcription", "tts"):
+            assert record[key], key
+        assert smallest_hydra.TRANSCRIPTION_MODEL in record["hydra_caller_transcription"]
+        assert record["divergences"]["caller_transcription"] == "pulse-pro"
+
+    def test_the_key_is_in_the_url_and_out_of_every_error(self):
+        import urllib.parse
+
+        import smallest_hydra
+
+        key = "a/b+c=d"
+        url = smallest_hydra.session_url(key, "hydra-v1.1")
+        assert urllib.parse.parse_qs(urllib.parse.urlsplit(url).query) == {"model": ["hydra-v1.1"], "api_key": [key]}
+        for spelling in (key, urllib.parse.quote_plus(key), urllib.parse.quote(key, safe="")):
+            assert smallest_hydra.redact(f"failed on {spelling} here", key) == "failed on <redacted> here"
+
+    async def test_the_opening_goes_into_the_one_configuration_and_the_session_speaks_first(self):
+        """The service answers no text turn, so the opening is the session's own first reply."""
+        from pipecat.frames.frames import InputAudioRawFrame
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        server = bot.MockToolServer(suite="appointments")
+        service, seen = self._service()
+        service.create_task = asyncio.ensure_future
+        opening = bot.opening_messages("Thank you for calling.")
+        await service._handle_context(LLMContext(opening, tools=bot.build_tools(server)))
+        await asyncio.sleep(0)
+        assert seen["sent"] == [], "a configuration before session.created is refused"
+        await service._dispatch({"type": "session.created", "session_id": "s1"})
+        await asyncio.sleep(0)
+        [configure] = seen["sent"]
+        assert configure["type"] == "session.configure"
+        session = configure["session"]
+        assert session["tools"] and session["generate_initial_response"] is True
+        assert session["instructions"] == f"prompt\n\n{opening[0]['content']}"
+        frame = InputAudioRawFrame(audio=b"\0\0" * 160, sample_rate=16000, num_channels=1)
+        await service._send_audio(frame)
+        assert len(seen["sent"]) == 1, "audio before the tools are accepted would reach a toolless session"
+        await service._dispatch({"type": "session.configured", "session": session})
+        await service._open_task
+        await service._send_audio(frame)
+        assert [event["type"] for event in seen["sent"]] == ["session.configure", "input_audio_buffer.append"]
+        # No text turn and no reply request: the session opens on its own.
+        assert not any(event["type"] in ("conversation.item.create", "response.create") for event in seen["sent"])
+
+    async def test_a_reply_is_worded_by_its_own_text_once_it_sounds(self):
+        service, seen = self._service()
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        for word in ("Hello", " there."):
+            await service._dispatch({"type": "response.output_audio_transcript.delta", "response_id": "r1", "delta": word})
+        assert self._words(seen) == [], "words lead the audio and wait for it"
+        await service._dispatch(self._audio())
+        assert self._words(seen) == ["Hello", " there."]
+        assert not any(frame.includes_inter_frame_spaces for name, _, frame in seen["pushed"] if name == "TTSTextFrame")
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed",
+                                                                       "usage": {"input_tokens": 5, "output_tokens": 2,
+                                                                                 "total_tokens": 7}}})
+        assert service.silent_replies == 0
+        assert [(u.prompt_tokens, u.completion_tokens) for u in seen["usage"]] == [(5, 2)]
+        assert [name for name, _, _ in seen["pushed"]][-2:] == ["TTSStoppedFrame", "LLMFullResponseEndFrame"]
+
+    async def test_words_of_a_reply_that_never_sounded_are_dropped_and_a_wordless_reply_is_counted(self):
+        service, seen = self._service()
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch({"type": "response.output_audio_transcript.delta", "response_id": "r1", "delta": "unheard"})
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})
+        await service._dispatch({"type": "response.created", "response": {"id": "r2"}})
+        await service._dispatch(self._audio(response="r2"))
+        await service._dispatch({"type": "response.done", "response": {"id": "r2", "status": "completed"}})
+        assert self._words(seen) == []
+        assert service.silent_replies == 1
+
+    async def test_a_cut_reply_does_not_reopen_on_audio_in_flight(self):
+        from pipecat.frames.frames import InterruptionFrame
+        from pipecat.processors.frame_processor import FrameDirection
+
+        service, seen = self._service()
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch(self._audio())
+        await service._dispatch({"type": "input_audio_buffer.speech_started"})
+        await service.process_frame(InterruptionFrame(), FrameDirection.DOWNSTREAM)
+        before = len(seen["pushed"])
+        await service._dispatch(self._audio())
+        await service._dispatch({"type": "response.output_audio_transcript.delta", "response_id": "r1", "delta": "late"})
+        assert [name for name, _, _ in seen["pushed"][before:]] == []
+        assert not any(event["type"] == "conversation.item.truncate" for event in seen["sent"])
+        assert seen["broadcast"] == ["ProposedUserStartedSpeakingFrame"]
+
+    async def test_a_tool_round_is_resumed_once_after_every_result_and_the_responses_close(self):
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service, seen = self._service()
+        service._context = LLMContext([])
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        for call_id, name in (("c1", "lookup_patient"), ("c2", "check_availability")):
+            await service._dispatch({"type": "response.function_call_arguments.done", "response_id": "r1",
+                                     "call_id": call_id, "name": name, "arguments": '{"phone": "1"}'})
+        assert [(c.tool_call_id, c.function_name) for c in seen["calls"]] == [
+            ("c1", "lookup_patient"), ("c2", "check_availability")]
+        one = LLMContext([{"role": "tool", "tool_call_id": "c1", "content": '{"ok": true}'},
+                          {"role": "tool", "tool_call_id": "c2", "content": "IN_PROGRESS"}])
+        await service._handle_context(one)
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})
+        assert [event["type"] for event in seen["sent"]] == ["conversation.item.create"], "c2 has no result yet"
+        both = LLMContext([{"role": "tool", "tool_call_id": "c1", "content": '{"ok": true}'},
+                           {"role": "tool", "tool_call_id": "c2", "content": '{"slots": []}'}])
+        await service._handle_context(both)
+        await service._handle_context(both)
+        kinds = [event["type"] for event in seen["sent"]]
+        assert kinds == ["conversation.item.create", "conversation.item.create", "response.create"]
+        assert [event["item"]["call_id"] for event in seen["sent"][:2]] == ["c1", "c2"]
+
+    async def test_the_transcribers_delay_is_announced_to_the_context(self):
+        import smallest_hydra
+        from pipecat.frames.frames import STTMetadataFrame
+
+        service, _ = self._service()
+        sent = []
+
+        async def broadcast(frame_cls, **kwargs):
+            sent.append((frame_cls, kwargs))
+
+        async def connect():
+            return None
+
+        service.broadcast_frame = broadcast
+        service._connect = connect
+        from pipecat.frames.frames import StartFrame
+
+        await service.start(StartFrame())
+        [(frame_cls, kwargs)] = sent
+        assert frame_cls is STTMetadataFrame
+        assert kwargs["ttfs_p99_latency"] == smallest_hydra.TRANSCRIPT_P99_S > 1.0
+
+    async def test_each_caller_turn_is_transcribed_from_the_audio_since_the_last_in_order(self, monkeypatch):
+        """Hydra transcribes neither side: the caller's words are Pulse Pro's, one turn at a time."""
+        import smallest_hydra
+        from pipecat.frames.frames import InputAudioRawFrame
+        from pipecat.processors.frame_processor import FrameDirection
+
+        heard = []
+
+        def transcribe(pcm, api_key, rate=smallest_hydra.SAMPLE_RATE):
+            heard.append(len(pcm))
+            if len(heard) == 2:
+                raise TimeoutError("transcriber down")
+            return f"turn {len(heard)}"
+
+        monkeypatch.setattr(smallest_hydra, "transcribe", transcribe)
+        service, seen = self._service()
+        service._configured.set()
+        worker = asyncio.ensure_future(service._transcribe_turns())
+        try:
+            for item, samples in (("u1", 800), ("u2", 400), ("u3", 160)):
+                await service._send_audio(InputAudioRawFrame(audio=b"\0\0" * samples, sample_rate=16000, num_channels=1))
+                await service._dispatch(self._caller_turn(item))
+            # Hydra marking the turn complete later sends nothing more.
+            await service._dispatch({"type": "conversation.item.done",
+                                     "item": {"id": "u3", "type": "message", "role": "user", "status": "completed"}})
+            for _ in range(50):
+                if len(heard) == 3:
+                    break
+                await asyncio.sleep(0.01)
+            await asyncio.sleep(0.01)
+        finally:
+            worker.cancel()
+        assert heard == [1600, 800, 320]
+        finals = [(frame.text, direction, frame.result["item_id"]) for name, direction, frame in seen["pushed"]
+                  if name == "TranscriptionFrame"]
+        assert finals == [("turn 1", FrameDirection.UPSTREAM, "u1"), ("turn 3", FrameDirection.UPSTREAM, "u3")]
+
+    async def test_the_silence_before_a_caller_turn_is_not_transcribed(self, monkeypatch):
+        """Half a minute of silence before a turn makes the transcriber invent words."""
+        import smallest_hydra
+        from pipecat.frames.frames import InputAudioRawFrame
+
+        service, _ = self._service()
+        service._configured.set()
+        second = smallest_hydra.SAMPLE_RATE  # samples
+        await service._send_audio(InputAudioRawFrame(audio=b"\0\0" * 30 * second, sample_rate=16000, num_channels=1))
+        await service._dispatch({"type": "input_audio_buffer.speech_started", "item_id": "u1"})
+        await service._send_audio(InputAudioRawFrame(audio=b"\0\0" * 2 * second, sample_rate=16000, num_channels=1))
+        await service._dispatch({"type": "input_audio_buffer.speech_started", "item_id": "u1"})  # restated
+        await service._dispatch(self._caller_turn("u1"))
+        item, pcm = service._transcripts.get_nowait()
+        assert item == "u1"
+        assert len(pcm) == int((smallest_hydra.PREROLL_S + 2) * second) * 2
+
+    async def _closing_round(self, service, response_id, call_id, name, *, heard):
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service._context = service._context or LLMContext([])
+        await service._dispatch({"type": "response.created", "response": {"id": response_id}})
+        if heard:
+            await service._dispatch(self._audio(response=response_id))
+        await service._dispatch({"type": "response.function_call_arguments.done", "response_id": response_id,
+                                 "call_id": call_id, "name": name, "arguments": "{}"})
+        await service._dispatch({"type": "response.done", "response": {"id": response_id, "status": "completed"}})
+        messages = [{"role": "tool", "tool_call_id": c, "content": '{"status": "ending_call"}'}
+                    for c in sorted(service._delivered | {call_id})]
+        await service._handle_context(LLMContext(messages))
+
+    async def test_a_closing_tool_whose_reply_was_heard_gets_no_reply(self):
+        service, seen = self._service()
+        await self._closing_round(service, "r1", "c1", "transfer_call", heard=True)
+        assert [event["type"] for event in seen["sent"]] == ["conversation.item.create"]
+        assert record_for("smallest-hydra")["hydra_closing_tools"]
+
+    async def test_a_silent_closing_tool_gets_one_reply_and_never_a_second(self):
+        service, seen = self._service()
+        await self._closing_round(service, "r1", "c1", "end_call", heard=False)
+        assert [event["type"] for event in seen["sent"]] == ["conversation.item.create", "response.create"]
+        await self._closing_round(service, "r2", "c2", "end_call", heard=False)
+        assert [event["type"] for event in seen["sent"]].count("response.create") == 1
+
+    async def test_a_service_error_is_named_without_the_key(self):
+        service, seen = self._service(_api_key="secret-key")
+        await service._dispatch({"type": "error", "error": {"message": "bad request for secret-key"}})
+        assert seen["errors"] and "secret-key" not in seen["errors"][0]
+
+
 class TestCascadeCounterparts:
     """The comparison the board exists to make: native against the pipeline it replaces."""
 
@@ -1971,13 +2265,14 @@ class TestCascadeCounterparts:
         vendor-default counterpart: GPT-Live delegates to a backend, so its fair
         pairing is a cascade on that backend; Phonic, Deepslate and PolyAI offer no
         text model of their own on an API; and the text models Voice Live serves next to Azure
-        Realtime are OpenAI's, which the OpenAI cascade already covers.
+        Realtime are OpenAI's, which the OpenAI cascade already covers. Smallest's
+        Hydra has none: no text model of Smallest's is in this harness.
         A vendor's smaller tier shares its vendor's counterpart: the question it
         answers is "the cheaper model or the flagship", not "native or cascade".
         """
         paired = {c.counterpart_to for c in bot.TEXT_MODELS.values() if c.counterpart_to}
         tiers = {"openai-realtime-mini", "gemini-live-standard", "gemini-flash-live"}
-        unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live", "phonic", "deepslate", "azure-realtime", "polyai-dialog"} - tiers
+        unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live", "phonic", "deepslate", "azure-realtime", "polyai-dialog", "smallest-hydra"} - tiers
         assert not unpaired, f"native providers with no cascade counterpart: {sorted(unpaired)}"
 
     def test_a_counterpart_names_a_provider_that_exists(self):

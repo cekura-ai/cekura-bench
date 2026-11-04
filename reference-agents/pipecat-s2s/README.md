@@ -34,7 +34,7 @@ laptop work unchanged and lets a deployment carry a default:
 
 | Key | Default | Notes |
 |---|---|---|
-| `s2s_provider` | `openai-realtime` | native: also `openai-realtime-mini`, `gemini-live`, `gemini-live-standard`, `gemini-flash-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`, `phonic`, `deepslate`, `azure-realtime`, `polyai-dialog`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
+| `s2s_provider` | `openai-realtime` | native: also `openai-realtime-mini`, `gemini-live`, `gemini-live-standard`, `gemini-flash-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`, `phonic`, `deepslate`, `azure-realtime`, `polyai-dialog`, `smallest-hydra`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
 | `s2s_model` | provider default | pin it for a reproducible run |
 | `s2s_voice` | provider default | |
 | `s2s_backend_model` | `gpt-6-sol` | `gpt-live` only, see below |
@@ -58,7 +58,7 @@ quotes the body.
 
 | Variable | Notes |
 |---|---|
-| provider key | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, `DASHSCOPE_API_KEY`, `PHONIC_API_KEY`, `DEEPSLATE_API_KEY` (with `DEEPSLATE_VENDOR_ID` and `DEEPSLATE_ORGANIZATION_ID`), `AZURE_VOICE_API_KEY` (with `AZURE_VOICE_ENDPOINT`, the Voice Live resource's endpoint), `POLY_API_KEY` (a Dialog-RSN-1 key from PolyAI's Agent Studio), or for Bedrock `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`); see below for why an API key cannot work |
+| provider key | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, `DASHSCOPE_API_KEY`, `PHONIC_API_KEY`, `DEEPSLATE_API_KEY` (with `DEEPSLATE_VENDOR_ID` and `DEEPSLATE_ORGANIZATION_ID`), `AZURE_VOICE_API_KEY` (with `AZURE_VOICE_ENDPOINT`, the Voice Live resource's endpoint), `POLY_API_KEY` (a Dialog-RSN-1 key from PolyAI's Agent Studio), `SMALLEST_API_KEY` (Hydra, and Pulse Pro for its caller transcript), or for Bedrock `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`); see below for why an API key cannot work |
 | `DEEPGRAM_API_KEY`, `ELEVENLABS_API_KEY` | cascade rows; `ELEVENLABS_API_KEY` also for `deepslate`, which hands it to Deepslate to voice its replies |
 | `CEKURA_API_KEY`, `CEKURA_AGENT_ID_<DEFINITION>` | tracing is off without both; one platform agent per agent definition (`CEKURA_AGENT_ID_APPOINTMENTS`, `CEKURA_AGENT_ID_MEDICARE`), with `CEKURA_AGENT_ID` for a deployment that serves one |
 | `AGENT_COMMIT` | stamped by the build; names what was actually deployed |
@@ -331,6 +331,27 @@ The row connects to `wss://api.studio.poly.ai/v1/realtime`, the self-serve
 cluster that issues keys from `poly apikey --region studio`; the vendor's
 reference names `wss://api.us.poly.ai/v1/realtime`, which refuses those keys.
 `POLYAI_REALTIME_URL` overrides the endpoint, and the record names the one used. The vendor publishes no price.
+
+### Smallest AI Hydra
+
+Hydra hears the caller at 16 kHz, decides when they have finished, and answers
+in its own voice at 24 kHz. `smallest_hydra.py` speaks the vendor's socket
+directly: its events carry OpenAI's realtime names, but the session is
+configured once, with `session.configure`, and the key is a query parameter, so
+it is scrubbed from every error the row raises. The service takes no
+turn-detection settings, so the row runs at the vendor's defaults.
+
+The service answers caller audio and tool results only, not a text turn, so the
+opening instruction every row is given is appended to this row's system prompt
+and the session is asked to open with a reply of its own. Hydra transcribes
+neither side. The agent's words are the reply text it streams beside the audio,
+which its documentation does not list; they are held until the reply makes a
+sound. The caller's words come from Smallest's own speech-to-text, Pulse Pro,
+with the same key: each caller turn is transcribed as soon as the service hears
+it end, from a second before the service heard it start, and the caller's
+words are placed before the reply they got. After a closing tool, a reply is
+asked for only if the reply that called it made no sound, and only once. The
+vendor publishes no price.
 
 ## The sample rate is not a tuning knob
 

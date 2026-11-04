@@ -17,6 +17,9 @@ What this protocol does differently from an OpenAI-shaped one:
   ``AgentAudioDone`` that closes a finished one, in the instant after
   ``UserStartedSpeaking``. A reply that was still arriving when the caller
   started and then ends that way is recorded as the provider yielding.
+* **Tool calls can be withdrawn.** A call is sent as soon as the text model
+  emits it, before Flux has confirmed the turn. If the caller keeps talking,
+  ``FunctionCallCancelled`` withdraws it, and Deepgram drops any reply to it.
 * **No manual turn boundary.** ``ForceEndTurn`` exists, but Flux keeps
   endpointing on its own, so it cannot give the zero-error floor that manual
   mode means here.
@@ -277,6 +280,16 @@ class DeepgramVoiceAgentAdapter(RealtimeAdapter):
                 self._call_names[record["call_id"]] = record["name"]
                 self.tool_calls.append(record)
                 self.log.emit(ev.TOOL_CALL, **record)
+        elif kind == "FunctionCallCancelled":
+            # Deepgram withdrew calls it had already sent: the caller kept talking
+            # inside the speculative window, or barged in on the reply that made
+            # them. Marked in place (the tool pump reads the list by position) so
+            # the pump does not answer them and the task verdict leaves them out.
+            cancelled = {function.get("id", "") for function in payload.get("functions", [])}
+            for record in self.tool_calls:
+                if record["call_id"] in cancelled:
+                    record["cancelled"] = True
+                    self.log.emit(ev.TOOL_CANCELLED, call_id=record["call_id"], name=record["name"])
         elif kind == "Error":
             self.log.emit(ev.SESSION_ERROR, error={"code": payload.get("code"), "description": payload.get("description")})
 

@@ -193,6 +193,16 @@ class TestDeepgramVoiceAgent:
         assert refused("semantic_vad") is None
         assert refused() is None
 
+    def test_a_withdrawn_call_is_marked_and_logged_not_removed(self):
+        a = adapter(DeepgramVoiceAgentAdapter)
+        a._handle({"type": "FunctionCallRequest", "functions": [
+            {"id": "fc-1", "name": "book_appointment", "arguments": "{}", "client_side": True},
+            {"id": "fc-2", "name": "lookup_patient", "arguments": "{}", "client_side": True},
+        ]})
+        a._handle({"type": "FunctionCallCancelled", "functions": [{"id": "fc-1", "name": "book_appointment"}]})
+        assert [c.get("cancelled", False) for c in a.tool_calls] == [True, False]
+        assert a.log.last(ev.TOOL_CANCELLED).data == {"call_id": "fc-1", "name": "book_appointment"}
+
     async def test_keepalive_stops_quietly_when_the_socket_has_closed(self, monkeypatch):
         class ClosedSocket:
             async def send(self, _message):

@@ -67,20 +67,30 @@ def _lines(call: Call) -> tuple[int, int]:
     return sum(x.startswith(MET) for x in call.outcome_lines), sum(x.startswith(MISSED) for x in call.outcome_lines)
 
 
-def example_calls(cfg: Config, calls: list[tuple[str, Call]], titles: dict[str, str | None], reviewed: dict[str, list[str]]) -> dict[str, list[dict[str, Any]]]:
-    """Per model, the reviewed calls in the order listed. ``reviewed`` maps site id to call ids."""
+def example_calls(cfg: Config, calls: list[tuple[str, Call]], titles: dict[str, str | None], reviewed: dict[str, list[Any]]) -> dict[str, list[dict[str, Any]]]:
+    """Per model, the reviewed calls in the order listed. ``reviewed`` maps site id to call ids, or to
+    ``{"call": id, "hide": [skill name, ...], "url": share link}``: ``hide`` lists verdicts a reviewer found
+    inaudible or wrong on that call (left off the card, scores unchanged); ``url`` replaces the dashboard link,
+    e.g. a public share link that opens the one call."""
     x = cfg["examples"]
     by_id = {(m, str(c.call_id)): c for m, c in calls}
     domain = {s["prefix"]: s["domain"] for s in cfg["suites"]}
     out = {}
     for model, ids in reviewed.items():
         chosen = []
-        for call_id in ids:
-            c = by_id.get((model, str(call_id)))
+        for entry in ids:
+            entry = entry if isinstance(entry, dict) else {"call": entry}
+            call_id, hide, url = str(entry["call"]), set(entry.get("hide", [])), entry.get("url")
+            if url is not None and not url.startswith("https://"):
+                raise ValueError(f"reviewed call {call_id} has a non-https url")
+            c = by_id.get((model, call_id))
             if c is None:
                 raise ValueError(f"reviewed call {call_id} is not a usable {model} call in these runs")
             met, missed = _lines(c)
             v = _verdicts(cfg, c)
+            if unknown := hide - {cfg.skill(sid).name for sid, _, _ in v}:
+                raise ValueError(f"reviewed call {call_id} hides skills it has no verdict for: {', '.join(sorted(unknown))}")
+            v = [t for t in v if cfg.skill(t[0]).name not in hide]
             chosen.append(
                 dict(
                     scenario=c.code,
@@ -88,7 +98,7 @@ def example_calls(cfg: Config, calls: list[tuple[str, Call]], titles: dict[str, 
                     domain=next(d for p, d in domain.items() if c.code.startswith(p)),
                     met=met,
                     missed=missed,
-                    url=c.url,
+                    url=url or c.url,
                     conditions=[cfg.skill(sid).condition for sid, _, _ in v if cfg.skill(sid).condition][: x["maxConditions"]],
                     handled=[cfg.skill(sid).name for sid, ok, _ in v if ok][: x["maxSkills"]],
                     struggled=[cfg.skill(sid).name for sid, ok, _ in v if not ok][: x["maxSkills"]],

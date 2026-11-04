@@ -88,6 +88,23 @@ def test_reviewed_examples(cfg, tmp_path):
     assert ex["alpha-site"][0]["url"].startswith("https://example.test/run_a1_")
 
 
+def test_reviewed_example_hides_skills(cfg, tmp_path):
+    make_inputs(tmp_path)
+    reviewed = tmp_path / "reviewed.json"
+    reviewed.write_text(json.dumps({"alpha-site": ["1"]}))
+    card = export(tmp_path, cfg, tmp_path / "out", reviewed)["examples.json"]["examples"]["alpha-site"][0]
+    name = (card["handled"] + card["struggled"])[0]
+    reviewed.write_text(json.dumps({"alpha-site": [{"call": "1", "hide": [name]}]}))
+    card = export(tmp_path, cfg, tmp_path / "out2", reviewed)["examples.json"]["examples"]["alpha-site"][0]
+    assert name not in card["handled"] + card["struggled"]
+    reviewed.write_text(json.dumps({"alpha-site": [{"call": "1", "url": "https://share.test/r?call_id=1"}]}))
+    card = export(tmp_path, cfg, tmp_path / "out4", reviewed)["examples.json"]["examples"]["alpha-site"][0]
+    assert card["url"] == "https://share.test/r?call_id=1"
+    reviewed.write_text(json.dumps({"alpha-site": [{"call": "1", "hide": ["No Such Skill"]}]}))
+    with pytest.raises(ValueError, match="no verdict for"):
+        export(tmp_path, cfg, tmp_path / "out3", reviewed)
+
+
 def test_reviewed_clips(cfg, tmp_path):
     make_inputs(tmp_path)
     sid = cfg.skills[0].id

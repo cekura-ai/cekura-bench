@@ -53,9 +53,9 @@ def titles(path: Path | None) -> dict[str, str | None]:
     return {c["id"]: c.get("title") for c in read_json(path)["calls"]} if path else {}
 
 
-def reviewed_calls(path: Path | None) -> dict[str, list[str]]:
-    """Reviewed example calls, ``{site id: [call id, ...]}``; none when no file is given."""
-    return {m: [str(i) for i in ids] for m, ids in read_json(path).items()} if path else {}
+def reviewed_calls(path: Path | None) -> dict[str, list[Any]]:
+    """Reviewed example calls, ``{site id: [call id | {"call", "hide"}, ...]}``; none when no file is given."""
+    return {m: [i if isinstance(i, dict) else str(i) for i in ids] for m, ids in read_json(path).items()} if path else {}
 
 
 def reviewed_clips(path: Path | None) -> dict[str, Any] | None:
@@ -71,7 +71,7 @@ def build(
     clips: int,
     day: str,
     exclude_unhealthy: bool = False,
-    reviewed: dict[str, list[str]] | None = None,
+    reviewed: dict[str, list[Any]] | None = None,
     clips_reviewed: dict[str, Any] | None = None,
 ) -> tuple[dict[str, dict[str, Any]], list[dict[str, Any]]]:
     """Every output document by kind, and the clip picks."""

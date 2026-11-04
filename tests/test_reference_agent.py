@@ -2146,6 +2146,32 @@ class TestSmallestHydra:
         assert kinds == ["conversation.item.create", "conversation.item.create", "response.create"]
         assert [event["item"]["call_id"] for event in seen["sent"][:2]] == ["c1", "c2"]
 
+    async def test_a_reply_that_spoke_while_calling_a_tool_is_resumed_without_waiting_for_it_to_close(self):
+        """Hydra does not close a reply that spoke and called a tool until it is asked for the next one.
+
+        Waiting for that close left the caller in silence until they spoke again.
+        """
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service, seen = self._service()
+        service._context = LLMContext([])
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch(self._audio())
+        await service._dispatch({"type": "response.function_call_arguments.done", "response_id": "r1",
+                                 "call_id": "c1", "name": "check_availability", "arguments": '{"date": "x"}'})
+        await service._handle_context(LLMContext([{"role": "tool", "tool_call_id": "c1", "content": '{"slots": []}'}]))
+        assert [event["type"] for event in seen["sent"]] == ["conversation.item.create", "response.create"]
+
+        # The reply asked for opens; a late close of the one before must not end it.
+        await service._dispatch({"type": "response.created", "response": {"id": "r2"}})
+        await service._dispatch(self._audio(response="r2"))
+        pushed = len(seen["pushed"])
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})
+        assert [name for name, _, _ in seen["pushed"][pushed:]] == []
+        await service._dispatch({"type": "response.done", "response": {"id": "r2", "status": "completed"}})
+        assert [name for name, _, _ in seen["pushed"]][-2:] == ["TTSStoppedFrame", "LLMFullResponseEndFrame"]
+        assert [event["type"] for event in seen["sent"]].count("response.create") == 1
+
     async def test_the_transcribers_delay_is_announced_to_the_context(self):
         import smallest_hydra
         from pipecat.frames.frames import STTMetadataFrame

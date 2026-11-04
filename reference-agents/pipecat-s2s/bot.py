@@ -775,6 +775,42 @@ def polyai_disclosures(settings: Settings) -> dict[str, str]:
     }
 
 
+def _deepgram_voice_agent(credential: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
+    """Deepgram's Voice Agent API, through the service in ``deepgram_voice_agent``.
+
+    The text model runs on this deployment's own OpenAI account: Deepgram's
+    hosted copy truncates a prompt past 25,000 characters, and the medicare
+    contract's is longer. The second key is read here, never from a session.
+    """
+    from deepgram_voice_agent import DeepgramVoiceAgentLLMService
+
+    return DeepgramVoiceAgentLLMService(
+        api_key=credential,
+        think_api_key=_credential(("OPENAI_API_KEY",), "deepgram-voice-agent's text model on our own OpenAI account"),
+        model=model,
+        voice=voice,
+        instructions=instructions,
+    )
+
+
+def deepgram_disclosures(settings: Settings) -> dict[str, str]:
+    from deepgram_voice_agent import LISTEN, THINK_ENDPOINTS
+
+    return {
+        "deepgram_listen": f"{LISTEN['model']} ({LISTEN['version']}) at Flux's own end-of-turn defaults",
+        "deepgram_think": (
+            "on our own OpenAI account through Deepgram's bring-your-own endpoint "
+            f"({', '.join(THINK_ENDPOINTS.values())}); Deepgram's hosted models cut prompts "
+            "past 25,000 characters and the medicare contract's is longer"
+        ),
+        "tts": "Deepgram Aura, the named voice, server-side; 24 kHz PCM out",
+        "deepgram_barge_in": (
+            "the service ends its reply when Flux hears the caller start; the pipeline cuts "
+            "playback on the same announcement"
+        ),
+    }
+
+
 def _gpt_live(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
     """The live model plus the backend it hands reasoning to.
 
@@ -1084,7 +1120,7 @@ class Provider:
 # and it is not a detail: a scored run needs both halves of the conversation, and
 # a transcript holding only the agent reads as a caller who never spoke. Three of
 # these services transcribe the caller only when asked, and each asks
-# differently; seven do it themselves. Nothing warns about the difference,
+# differently; eight do it themselves. Nothing warns about the difference,
 # because a session without transcription is a working session.
 #
 #   openai-realtime   asked for  -- an input transcription config, default model
@@ -1097,6 +1133,7 @@ class Provider:
 #   phonic            automatic  -- the service sends each finished caller turn
 #   deepslate         automatic  -- the service transcribes each finished caller turn
 #   polyai-dialog     automatic  -- transcription streams inside the reply it answers
+#   deepgram-voice-agent automatic -- Flux's transcript of each caller turn
 #
 # The tool calls travel separately, through the context aggregator, which is why
 # a run can show resolved tools and still carry no speech.
@@ -1321,6 +1358,18 @@ PROVIDERS: dict[str, Provider] = {
         discloses=polyai_disclosures,
         results="immediate", interruptions=False, caller_transcription="automatic",
         reports_playback=True,
+    ),
+    # Deepgram's Voice Agent: Flux hears the caller at 16 kHz, GPT-4.1 on our own
+    # OpenAI account replies, and Aura speaks at 24 kHz, which the output
+    # transport resamples -- see ``deepgram_voice_agent``. The service announces
+    # the caller's turns and stops its own reply when the caller starts, which is
+    # when the pipeline interrupts too. A result is sent as soon as it exists;
+    # the service answers once it has it.
+    "deepgram-voice-agent": Provider(
+        _deepgram_voice_agent, 16000, "open_ai/gpt-4.1", "aura-2-thalia-en", ("DEEPGRAM_API_KEY",),
+        "deepgram_voice_agent",
+        discloses=deepgram_disclosures,
+        results="immediate", caller_transcription="automatic",
     ),
 }
 

@@ -805,6 +805,43 @@ def hydra_disclosures(settings: Settings) -> dict[str, str]:
     }
 
 
+def _rime_prism(credential: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
+    """Rime's Prism, through the service in ``rime_prism``.
+
+    No framework service speaks Prism's protocol. ``model`` is not sent: the
+    endpoint serves one model and takes no model parameter.
+    """
+    from rime_prism import RimePrismLLMService
+
+    return RimePrismLLMService(api_key=credential, model=model, voice=voice, instructions=instructions)
+
+
+def rime_prism_disclosures(settings: Settings) -> dict[str, str]:
+    from rime_prism import prism_url
+
+    return {
+        "rime_prism_endpoint": prism_url(),
+        # The release that answered is known only once connected; the service
+        # replaces this line with it then, and every rewrite of the record carries it.
+        "rime_prism_release": "pending: reported once the session opens",
+        # Not sent, so the service's defaults apply; once configured, the values
+        # the service reports in effect replace this line.
+        "rime_prism_turn_detection": (
+            "provider defaults, not sent: eagerness auto, prism_end_of_turn_timeout_ms 5000, "
+            "interrupt_response true"
+        ),
+        "rime_prism_opening": "a nudge (prism_cause proactive) carrying the opening instruction",
+        "rime_prism_tool_filler": "provider default (auto): the service says a short line while a tool runs",
+        "rime_prism_closing_tools": (
+            "no reply is asked for after a closing tool whose reply made a sound; one, at most, after a silent one"
+        ),
+        "rime_prism_playback_reporting": (
+            "on: conversation.item.truncate with the milliseconds heard when the caller cuts in, "
+            "prism.playback.drained when a reply plays out, both from after the output transport"
+        ),
+    }
+
+
 def _gpt_live(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
     """The live model plus the backend it hands reasoning to.
 
@@ -1105,8 +1142,10 @@ class Provider:
     # interruption itself, when it happens.
     interruptions: bool = True
     # Whether the service is told, from after the output transport, what the
-    # caller has actually heard. One service judges barge-in only while it
-    # knows a reply is audible, and sends audio faster than it is played.
+    # caller has actually heard. These services send audio faster than it is
+    # played, and one judges barge-in only while it knows a reply is audible;
+    # another decides from it what it keeps of a reply cut short and when the
+    # caller's next words open a new turn.
     reports_playback: bool = False
 
 
@@ -1114,7 +1153,7 @@ class Provider:
 # and it is not a detail: a scored run needs both halves of the conversation, and
 # a transcript holding only the agent reads as a caller who never spoke. Three of
 # these services transcribe the caller only when asked, and each asks
-# differently; seven do it themselves; one cannot, and its vendor's separate
+# differently; eight do it themselves; one cannot, and its vendor's separate
 # speech-to-text is run on each caller turn. Nothing warns about the difference,
 # because a session without transcription is a working session.
 #
@@ -1130,6 +1169,7 @@ class Provider:
 #   polyai-dialog     automatic  -- transcription streams inside the reply it answers
 #   smallest-hydra    pulse-pro  -- the service transcribes neither side; the
 #                                   vendor's speech-to-text runs on each caller turn
+#   rime-prism        automatic  -- the service transcribes each committed caller turn
 #
 # The tool calls travel separately, through the context aggregator, which is why
 # a run can show resolved tools and still carry no speech.
@@ -1365,6 +1405,22 @@ PROVIDERS: dict[str, Provider] = {
         "smallest_hydra",
         discloses=hydra_disclosures,
         caller_transcription="pulse-pro",
+    ),
+    # Rime's Prism hears the caller at 16 kHz and speaks at 24 kHz, which the
+    # output transport resamples -- see ``rime_prism``. The service announces
+    # the caller's turns, cancels its own reply when talked over and asks the
+    # client to stop playback then, so the pipeline follows its boundary and
+    # cuts the agent off on it. A result is sent as soon as it exists: the
+    # service continues the conversation only when asked, and accepts that once
+    # the reply that made the call has ended and the result is stored, so
+    # holding it until the agent stops speaking would only add the rest of the
+    # tool's filler line to every tool round. What the caller heard is reported
+    # back from after the output transport.
+    "rime-prism": Provider(
+        _rime_prism, 16000, "prism", "astra", ("RIME_API_KEY",),
+        "rime_prism",
+        discloses=rime_prism_disclosures,
+        results="immediate", caller_transcription="automatic", reports_playback=True,
     ),
 }
 
@@ -3236,6 +3292,10 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         hangup.closing_reply = getattr(llm, "closing_reply_done", None)
         # A service that ends the session mid-call cannot answer again.
         _on_event(llm, "on_session_lost", lambda *_: hangup.hang_up("session_lost"))
+        if hasattr(llm, "runtime_record"):
+            # A service that learns part of its configuration only once connected
+            # (Prism's release) writes it into the record every rewrite carries.
+            llm.runtime_record = record
         register_tools(llm, server, trace, hangup.hang_up)
         context = LLMContext(opening_messages(server.first_message), tools=build_tools(server))
         aggregators = BenchAggregators(
@@ -3255,9 +3315,11 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         stages = [transport.input(), aggregators.user(), restatements, llm, transport.output(),
                   hangup, DropControlTokens(), aggregators.assistant()]
         if provider.reports_playback:
-            from polyai_realtime import ReportsPlayback
+            # Each reporting service ships its own stage, so one row's reporting
+            # never changes with another's.
+            import importlib
 
-            stages.insert(5, ReportsPlayback(llm))  # right after the output transport
+            stages.insert(5, importlib.import_module(provider.module).ReportsPlayback(llm))  # after the output transport
         rate = provider.input_rate
         realtime = True
         service_answers = provider.turns == "local" and provider.answers == "provider"

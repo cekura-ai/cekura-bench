@@ -13,11 +13,12 @@ import base64
 import pytest
 
 from service import events as ev
-from service.adapters.base import SessionConfig, TurnDetection
+from service.adapters.base import AdapterError, SessionConfig, ToolSpec, TurnDetection
 from service.adapters.gemini_live import GeminiLiveAdapter, _flatten_usage_metadata
 from service.adapters.grok_realtime import GrokRealtimeAdapter
 from service.adapters.higgs_realtime import HiggsRealtimeAdapter
 from service.adapters.openai_realtime import OpenAIRealtimeAdapter
+from service.adapters.rime_prism import RimePrismAdapter
 from service.adapters.smallest_hydra import SmallestHydraAdapter
 from service.audio import AudioTimeline
 
@@ -111,6 +112,26 @@ class TestHiggs:
     def test_semantic_turn_detection_is_passed_through(self):
         payload = adapter(HiggsRealtimeAdapter, turn_detection=TurnDetection("semantic_vad"))._session_payload()
         assert payload["audio"]["input"]["turn_detection"]["type"] == "semantic_vad"
+
+
+def prism(**config):
+    """A Prism adapter whose outbound frames are captured instead of sent."""
+    kwargs = {k: config.pop(k) for k in ("eagerness", "end_of_turn_timeout_ms") if k in config}
+    a = RimePrismAdapter(api_key="unused", log=ev.EventLog(ev.Clock()), config=SessionConfig(**config), **kwargs)
+    a.sent = []
+
+    async def capture(payload):
+        a.sent.append(payload)
+
+    a._send_json = capture
+    return a
+
+
+def prism_audio(item_id, n_samples, response_id="resp_1"):
+    return {
+        "type": "response.audio.delta", "response_id": response_id, "item_id": item_id,
+        "output_index": 0, "content_index": 0, "delta": base64.b64encode(b"\x00\x01" * n_samples).decode(),
+    }
 
 
 class TestHydra:
@@ -242,6 +263,128 @@ class TestHydra:
     def test_the_key_is_scrubbed_from_errors(self):
         a = SmallestHydraAdapter(api_key="sk/secret+1", log=ev.EventLog(ev.Clock()))
         assert "secret" not in a._redact("bad uri wss://x?api_key=sk%2Fsecret%2B1 and sk/secret+1")
+
+
+
+class TestPrism:
+    def test_session_is_flat_and_carries_no_ga_fields(self):
+        tool = ToolSpec(name="lookup", description="Find a record.", parameters={"type": "object", "properties": {}})
+        payload = prism(instructions="Be brief.", voice="astra", tools=(tool,))._session_payload()
+        assert payload == {
+            "instructions": "Be brief.",
+            "voice": "astra",
+            "tools": [{"type": "function", "name": "lookup", "description": "Find a record.",
+                       "parameters": {"type": "object", "properties": {}}}],
+        }
+        assert RimePrismAdapter.input_rate == 16000 and RimePrismAdapter.output_rate == 24000
+
+    def test_turn_timing_is_absent_unless_set(self):
+        assert "turn_detection" not in prism()._session_payload()
+        a = prism(eagerness="low", end_of_turn_timeout_ms=2000)
+        assert a._session_payload()["turn_detection"] == {"eagerness": "low", "prism_end_of_turn_timeout_ms": 2000}
+        assert a.state()["session"]["turn_timing"] == {"eagerness": "low", "end_of_turn_timeout_ms": 2000}
+        with pytest.raises(AdapterError):
+            prism(eagerness="eager")
+
+    def test_unsupported_configurations_are_named_up_front(self):
+        assert RimePrismAdapter.unsupported_reason(SessionConfig()) is None
+        assert RimePrismAdapter.unsupported_reason(SessionConfig(modality="text")) is None
+        assert RimePrismAdapter.unsupported_reason(SessionConfig(turn_detection=TurnDetection("manual")))
+        assert RimePrismAdapter.unsupported_reason(SessionConfig(turn_detection=TurnDetection("semantic_vad")))
+        assert RimePrismAdapter.unsupported_reason(SessionConfig(turn_detection=TurnDetection("server_vad", silence_duration_ms=500))) is None
+        assert RimePrismAdapter.unsupported_reason(SessionConfig(turn_detection=TurnDetection("server_vad", silence_duration_ms=200)))
+        assert RimePrismAdapter.unsupported_reason(SessionConfig(turn_detection=TurnDetection("server_vad", threshold=0.6)))
+
+    def test_beta_events_map_onto_ours(self):
+        a = prism()
+        a._handle({"type": "input_audio_buffer.speech_started", "audio_start_ms": 0, "item_id": "item_c"})
+        a._handle({"type": "input_audio_buffer.speech_stopped", "audio_end_ms": 2720, "item_id": "item_c", "prism_end_reason": "semantic"})
+        a._handle(prism_audio("item_m", 480))
+        a._handle({"type": "response.text.done", "response_id": "resp_1", "item_id": "item_m", "text": "We close at four."})
+        a._handle({"type": "response.audio.done", "response_id": "resp_1", "item_id": "item_m"})
+        a._handle({"type": "conversation.item.input_audio_transcription.completed", "item_id": "item_c", "content_index": 0, "transcript": "When do you close?"})
+        assert a.log.first(ev.VAD_SPEECH_START).data["audio_ms"] == 0
+        assert a.log.first(ev.VAD_SPEECH_END).data["audio_ms"] == 2720
+        assert a.agent_timeline.n_samples == 480
+        assert a.log.first(ev.AGENT_AUDIO_END) is not None
+        assert a.agent_text == ["We close at four."]
+        assert a.caller_text == ["When do you close?"]
+
+    def test_a_reply_with_only_tool_calls_records_no_words(self):
+        a = prism()
+        a._handle({"type": "response.text.done", "response_id": "resp_1", "item_id": "item_m", "text": ""})
+        assert a.agent_text == []
+        assert a.log.first(ev.AGENT_TRANSCRIPT) is None
+
+    async def test_tool_round_continues_only_after_parent_done_and_result_acknowledged(self):
+        a = prism()
+        a._handle({"type": "response.created", "response": {"id": "resp_1", "status": "in_progress"}})
+        a._handle({"type": "response.function_call_arguments.done", "response_id": "resp_1", "item_id": "item_f",
+                   "output_index": 1, "call_id": "call_1", "name": "lookup", "arguments": "{\"id\": \"7\"}"})
+        assert a.tool_calls == [{"name": "lookup", "call_id": "call_1", "arguments": {"id": "7"}}]
+
+        await a.send_tool_result("call_1", {"found": True})
+        assert a.sent == [{"type": "conversation.item.create", "event_id": "result_call_1",
+                           "item": {"type": "function_call_output", "call_id": "call_1", "output": "{\"found\": true}"}}]
+
+        a._handle({"type": "conversation.item.created", "item": {"type": "function_call_output", "id": "item_r", "call_id": "call_1"}})
+        await asyncio.sleep(0)
+        assert len(a.sent) == 1  # the parent reply has not ended yet
+
+        a._handle({"type": "response.done", "response": {"id": "resp_1", "status": "completed", "output": [], "metadata": {}}})
+        await asyncio.sleep(0)
+        assert a.sent[-1] == {
+            "type": "response.create", "event_id": "continue_resp_1",
+            "response": {"metadata": {"prism_cause": "tool_continuation", "prism_parent_response_id": "resp_1"}},
+        }
+
+    async def test_barge_in_reports_how_much_of_the_playing_message_was_heard(self):
+        """Measured on the playout model from the start of the cut message's own audio."""
+        a = prism()
+        now = [0.0]
+        a.log.clock.now = lambda: now[0]
+        a._handle({"type": "response.created", "response": {"id": "resp_1"}})
+        a._handle(prism_audio("item_a", 12000))   # 0.5 s, plays 0.0-0.5
+        now[0] = 0.1
+        a._handle(prism_audio("item_b", 48000))   # 2.0 s, queued behind it: plays from 0.5
+        now[0] = 1.3
+        a._handle({"type": "input_audio_buffer.speech_started", "audio_start_ms": 1200, "item_id": "item_c2"})
+        await asyncio.sleep(0)
+        assert a.log.last(ev.VAD_SPEECH_START).data["cleared_playback"] is True
+        assert a.sent == [{"type": "conversation.item.truncate", "event_id": "truncate_item_b",
+                           "item_id": "item_b", "content_index": 0, "audio_end_ms": 800}]
+
+    async def test_no_report_when_nothing_was_playing(self):
+        a = prism()
+        a._handle({"type": "input_audio_buffer.speech_started", "audio_start_ms": 0, "item_id": "item_c"})
+        await asyncio.sleep(0)
+        assert a.sent == []
+
+    async def test_an_uncut_reply_is_reported_drained_when_it_plays_out(self):
+        a = prism()
+        a._handle({"type": "response.created", "response": {"id": "resp_1"}})
+        a._handle(prism_audio("item_m", 240))     # 10 ms
+        a._handle({"type": "response.done", "response": {"id": "resp_1", "status": "completed", "output": [],
+                                                         "metadata": {"prism_drain_token": "drn_1"}}})
+        await asyncio.sleep(0.05)
+        assert a.sent == [{"type": "prism.playback.drained", "drain_token": "drn_1"}]
+
+    async def test_typed_turn_waits_for_idle(self):
+        a = prism(modality="text")
+        a._handle({"type": "prism.typed_input.ready"})
+        await a.send_text("When do you close?")
+        assert a.sent == [{"type": "response.create", "event_id": "typed_1",
+                           "response": {"prism_input_text": "When do you close?", "metadata": {"prism_cause": "user_text"}}}]
+        assert not a._idle.is_set()
+
+    def test_the_endpoint_moves_only_from_the_environment_and_is_on_the_record(self, monkeypatch):
+        from service.adapters import rime_prism
+
+        assert adapter(RimePrismAdapter).url == rime_prism.URL
+        monkeypatch.setenv(rime_prism.URL_ENV, "wss://prism.beta.example/v1/realtime")
+        a = adapter(RimePrismAdapter)
+        assert a.url == "wss://prism.beta.example/v1/realtime"
+        assert a.state()["session"]["endpoint"] == a.url
 
 
 class TestReferenceClient:

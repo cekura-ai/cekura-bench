@@ -24,6 +24,7 @@ from service.adapters.grok_realtime import GrokRealtimeAdapter
 from service.adapters.higgs_realtime import HiggsRealtimeAdapter
 from service.adapters.openai_realtime import OpenAIRealtimeAdapter
 from service.adapters.smallest_hydra import SmallestHydraAdapter
+from service.adapters.rime_prism import RimePrismAdapter
 
 
 @dataclass(frozen=True)
@@ -76,6 +77,19 @@ PROVIDERS: dict[str, ProviderEntry] = {
             "agent transcript is Hydra's own undocumented reply text, Pulse Pro where a reply has none",
             "Hydra does not transcribe the caller; each caller turn is transcribed by Smallest's Pulse Pro",
             "turn detection is server-side with no settings; the 500 ms in the cell label is not applied",
+        ),
+    ),
+    "rime-prism": ProviderEntry(
+        key="rime-prism",
+        adapter=RimePrismAdapter,
+        default_model="prism",
+        credential_env="RIME_API_KEY",
+        default_voice="astra",
+        discloses=(
+            "the turn boundary is always the provider's: there is no manual commit and no VAD parameter, "
+            "so the 500 ms in the cell label is not applied",
+            "barge-in is reported to the provider: the client sends how much of the cut reply the "
+            "playout model played, and when an uncut reply finished playing",
         ),
     ),
     # Not a provider: a scripted agent with known reply timing, registered so the

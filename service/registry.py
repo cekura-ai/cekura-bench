@@ -23,6 +23,7 @@ from service.adapters.gemini_live import GeminiLiveAdapter
 from service.adapters.grok_realtime import GrokRealtimeAdapter
 from service.adapters.higgs_realtime import HiggsRealtimeAdapter
 from service.adapters.openai_realtime import OpenAIRealtimeAdapter
+from service.adapters.smallest_hydra import SmallestHydraAdapter
 
 
 @dataclass(frozen=True)
@@ -64,6 +65,18 @@ PROVIDERS: dict[str, ProviderEntry] = {
         default_model="higgs-realtime",
         credential_env="BOSON_API_KEY",
         default_voice="default",
+    ),
+    "smallest-hydra": ProviderEntry(
+        key="smallest-hydra",
+        adapter=SmallestHydraAdapter,
+        default_model="hydra-v1.1",
+        credential_env="SMALLEST_API_KEY",
+        default_voice="sterling",  # the server's default on hydra-v1.1, sent so the record names it
+        discloses=(
+            "agent transcript is Hydra's own undocumented reply text, Pulse Pro where a reply has none",
+            "Hydra does not transcribe the caller; each caller turn is transcribed by Smallest's Pulse Pro",
+            "turn detection is server-side with no settings; the 500 ms in the cell label is not applied",
+        ),
     ),
     # Not a provider: a scripted agent with known reply timing, registered so the
     # whole harness can be run end to end with no API key and no network. Anyone

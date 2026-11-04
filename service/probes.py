@@ -129,7 +129,8 @@ class ProbeContext:
                 if self._activity() != mark:
                     break
             else:
-                return True
+                if not self.adapter.transcripts_pending:
+                    return True
         return False
 
 

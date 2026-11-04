@@ -324,6 +324,9 @@ it from after the output transport: when the agent became audible, and how much
 of each reply the caller heard, in milliseconds and words, when it fell silent
 or was cut off. That is
 what lets the service tell a backchannel from an interruption during a reply.
+Its judgment is the only one: the agent stops when the service cancels the
+reply, and the row never cancels one itself. If the service ends the session
+mid-call, the row stops sending and hangs up.
 The row connects to `wss://api.studio.poly.ai/v1/realtime`, the self-serve
 cluster that issues keys from `poly apikey --region studio`; the vendor's
 reference names `wss://api.us.poly.ai/v1/realtime`, which refuses those keys.

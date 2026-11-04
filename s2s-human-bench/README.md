@@ -7,7 +7,7 @@ exported runs into the website's data files.
 
 | Command | What it does |
 | --- | --- |
-| `s2s-human-bench site-export` | Scores every call, rates the models and writes the website's data files: leaderboard, insights, reports, per-language view, per-skill view and draft example calls |
+| `s2s-human-bench site-export` | Scores every call, rates the models and writes the website's data files: leaderboard, insights, reports, per-language view, per-skill view and reviewed example calls |
 
 ## Scoring
 
@@ -39,18 +39,20 @@ git -C <website checkout> fetch origin
 uv run --locked s2s-human-bench site-export \
   --runs <exported runs dir> \
   --public-s2s <website checkout> \
-  --titles <website checkout>/data/s2s-human-bench-calls.json \
   --out <output dir>
 ```
 
 * `--runs` holds one folder per run (`<run>/calls/<scenario>/<call id>/` with `call.json`,
   `metrics.json`, `transcript.json`, `expected_outcome.json`), named as the config's models
-  list says, and optionally `scenario_clips.json` (`--clips`) for the recorded-clip count.
+  list says, and optionally `scenario_clips.json` (`--clips`) for the recorded-clip count
+  and `scenario_titles.json` (`--titles`) for the scenario titles shown with example calls.
 * `--public-s2s` is the public S2S benchmark's `s2s-benchmark.json`, or a website checkout
   to read it from at `origin/main`; it supplies model metadata and published prices.
 * `--name KIND=FILE` renames an output (defaults in the config's `outputs`), `--date` pins
   `generatedAt`, `--exclude-unhealthy` leaves out calls whose simulation-health check
-  failed, `--clip-picks` also writes the example moments' clip windows.
+  failed, `--clip-picks` also writes the example moments' clip windows, and
+  `--reviewed-examples` lists the example calls (`{site id: [call id, ...]}`) a person has
+  listened to; without it no example calls are published.
 
 Output depends only on the inputs, the config and `--date`. Run data, transcripts and clip
 picks stay out of this repository.

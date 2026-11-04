@@ -17,7 +17,7 @@ def main() -> None:
         required=True,
         help="the public S2S benchmark's s2s-benchmark.json (model metadata, published prices), or a website checkout to read it from at origin/main",
     )
-    p.add_argument("--titles", type=Path, required=True, help="the website's call list (s2s-human-bench-calls.json): scenario titles for the examples")
+    p.add_argument("--titles", type=Path, help='scenario titles, {"calls": [{"id", "title"}]} (default: <runs>/scenario_titles.json, if present)')
     p.add_argument("--out", type=Path, required=True, help="output directory")
     p.add_argument("--config", type=Path, default=DEFAULT_CONFIG, help="benchmark config (default: config/human-bench.json)")
     p.add_argument("--clips", type=Path, help="recorded caller clips per scenario (default: <runs>/scenario_clips.json, if present)")
@@ -26,6 +26,9 @@ def main() -> None:
     )
     p.add_argument("--date", help="generatedAt date, YYYY-MM-DD (default: today)")
     p.add_argument("--exclude-unhealthy", action="store_true", help="leave out calls whose simulation-health check failed")
+    p.add_argument(
+        "--reviewed-examples", type=Path, help="example calls a person has listened to, {site id: [call id, ...]}; without it no example calls are published"
+    )
     p.add_argument("--clip-picks", type=Path, help="also write the example moments' clip windows (with call ids) here; keep it out of the repo")
 
     args = parser.parse_args()

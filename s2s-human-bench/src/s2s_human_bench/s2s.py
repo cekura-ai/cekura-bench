@@ -218,7 +218,6 @@ def s2s_docs(cfg: Config, entries: list[Entry], live: dict[str, Any], date: str)
     bench = dict(
         schemaVersion=live.get("schemaVersion", 1),
         generatedAt=date,
-        build=dict(live.get("build", {})),
         repeats=max((len(e.runs) for e in entries), default=0),
         calls=sum(len(e.calls) for e in entries),
         suites=[{k: v for k, v in s.items() if k not in ("prefix", "domain")} | {"tools": []} for s in cfg["suites"]],

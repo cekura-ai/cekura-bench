@@ -88,8 +88,6 @@ def config_dict() -> dict:
         "reports": {"note": "n"},
         "skills": {"minReached": 1, "domains": ["banking", "healthcare"], "limits": ["{scenarios} scenarios."]},
         "examples": {
-            "draft": True,
-            "note": "n",
             "perSuite": 2,
             "minExpectedLines": 1,
             "maxConditions": 2,

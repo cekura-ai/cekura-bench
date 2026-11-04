@@ -557,7 +557,7 @@
       "healthcare"
     ],
     "limits": [
-      "{scenarios} scenarios; every caller line is a recording of a real person, never a synthetic voice.",
+      "{scenarios} scenarios; callers are recorded human voices.",
       "Each model ran three times on the same agent build; results pool across runs.",
       "Task Handling counts the skills and the share of the caller's task completed, half each.",
       "Cost per minute is the model's API cost as published on the Cekura S2S benchmark.",
@@ -565,8 +565,6 @@
     ]
   },
   "examples": {
-    "draft": true,
-    "note": "Draft picks from the 3 Nov runs, pending human-audio check and review.",
     "perSuite": 4,
     "minExpectedLines": 3,
     "maxConditions": 4,

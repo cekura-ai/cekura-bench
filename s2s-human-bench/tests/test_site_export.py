@@ -25,7 +25,7 @@ def make_inputs(tmp_path):
     return runs
 
 
-def export(tmp_path, cfg, out):
+def export(tmp_path, cfg, out, reviewed=None):
     args = Namespace(
         config=tmp_path / "config.json",
         runs=tmp_path / "runs",
@@ -37,6 +37,7 @@ def export(tmp_path, cfg, out):
         date="2026-01-01",
         exclude_unhealthy=False,
         clip_picks=None,
+        reviewed_examples=reviewed,
     )
     assert run_site_export(args) == 0
     return {p.name: json.loads(p.read_text()) for p in out.iterdir()}
@@ -72,5 +73,13 @@ def test_site_export(cfg, tmp_path):
     ins = docs["insights.json"]
     assert [c["key"] for c in ins["categories"]] == ["hear", "switch"] and ins["models"]["beta-site"]["byCategory"]["switch"]["scenarios"] == 1
     ex = docs["examples.json"]
-    assert set(ex["examples"]) == {"alpha-site", "beta-site", "ref-site"}
-    assert all(len(v) == 4 for v in ex["examples"].values())
+    assert ex["examples"] == {}  # nothing is published until a person has reviewed it
+
+
+def test_reviewed_examples(cfg, tmp_path):
+    make_inputs(tmp_path)
+    reviewed = tmp_path / "reviewed.json"
+    reviewed.write_text(json.dumps({"alpha-site": ["1"]}))
+    ex = export(tmp_path, cfg, tmp_path / "out", reviewed)["examples.json"]["examples"]
+    assert list(ex) == ["alpha-site"] and len(ex["alpha-site"]) == 1
+    assert ex["alpha-site"][0]["url"].startswith("https://example.test/run_a1_")

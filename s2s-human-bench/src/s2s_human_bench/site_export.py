@@ -48,19 +48,32 @@ def human_clips(path: Path | None) -> int:
     return sum(len(v) for v in read_json(path).values()) if path else 0
 
 
-def titles(path: Path) -> dict[str, str | None]:
-    return {c["id"]: c.get("title") for c in read_json(path)["calls"]}
+def titles(path: Path | None) -> dict[str, str | None]:
+    """Scenario titles from ``{"calls": [{"id", "title"}]}``; none when no file is given."""
+    return {c["id"]: c.get("title") for c in read_json(path)["calls"]} if path else {}
+
+
+def reviewed_calls(path: Path | None) -> dict[str, list[str]]:
+    """Reviewed example calls, ``{site id: [call id, ...]}``; none when no file is given."""
+    return {m: [str(i) for i in ids] for m, ids in read_json(path).items()} if path else {}
 
 
 def build(
-    cfg: Config, runs: Path, public_s2s: dict[str, Any], call_titles: dict[str, str | None], clips: int, day: str, exclude_unhealthy: bool = False
+    cfg: Config,
+    runs: Path,
+    public_s2s: dict[str, Any],
+    call_titles: dict[str, str | None],
+    clips: int,
+    day: str,
+    exclude_unhealthy: bool = False,
+    reviewed: dict[str, list[str]] | None = None,
 ) -> tuple[dict[str, dict[str, Any]], list[dict[str, Any]]]:
     """Every output document by kind, and the clip picks."""
     entries = load_bench(cfg, runs, exclude_unhealthy)
     if not entries:
         raise ExportError(f"{runs}: no model has {cfg['inputs']['minRuns']} usable runs")
     bench, insights, reports = s2s_docs(cfg, entries, public_s2s, day)
-    examples, picks = examples_doc(cfg, entries, call_titles)
+    examples, picks = examples_doc(cfg, entries, call_titles, reviewed or {})
     docs = dict(
         benchmark=bench,
         insights=insights,
@@ -86,14 +99,16 @@ def run_site_export(args: Any) -> int:
             raise ExportError(f"--name expects KIND=FILE with KIND in {sorted(names)}, got {pair!r}")
         names[kind] = file
     clips = args.clips if args.clips else (args.runs / "scenario_clips.json")
+    call_titles = args.titles if args.titles else (args.runs / "scenario_titles.json")
     docs, picks = build(
         cfg,
         args.runs,
         read_public_s2s(args.public_s2s),
-        titles(args.titles),
+        titles(call_titles if call_titles.exists() else None),
         human_clips(clips if clips.exists() else None),
         args.date or Date.today().isoformat(),
         args.exclude_unhealthy,
+        reviewed_calls(args.reviewed_examples),
     )
     for kind, doc in docs.items():
         write_json(args.out / names[kind], doc)

@@ -106,7 +106,6 @@ def skills_doc(cfg: Config, entries: list[Entry], live: dict[str, Any], human_cl
     recordings = sum(len(e.calls) for e in entries)
     conf = cfg["skills"]
     return {
-        "placeholder": False,
         "generatedAt": date,
         "minReached": conf["minReached"],
         "callSummary": {

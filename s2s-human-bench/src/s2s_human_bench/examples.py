@@ -1,6 +1,8 @@
-"""Draft example picks: a good and a bad moment per skill, and example calls per model.
+"""Example moments (a good and a bad one per skill) and the reviewed example calls per model.
 
-Picks are drafts until a person approves them and confirms the caller audio is human.
+Moments are candidates: the site plays one only once its clip is cut and approved. Example
+calls are published only when listed in the reviewed-calls file, after a person has listened
+to them and confirmed the caller audio is human.
 """
 
 from __future__ import annotations
@@ -64,42 +66,42 @@ def _lines(call: Call) -> tuple[int, int]:
     return sum(x.startswith(MET) for x in call.outcome_lines), sum(x.startswith(MISSED) for x in call.outcome_lines)
 
 
-def example_calls(cfg: Config, calls: list[tuple[str, Call]], titles: dict[str, str | None]) -> dict[str, list[dict[str, Any]]]:
-    """Per model and suite, calls spread over the range of outcomes (best, second, thirds, median, worst)."""
+def example_calls(cfg: Config, calls: list[tuple[str, Call]], titles: dict[str, str | None], reviewed: dict[str, list[str]]) -> dict[str, list[dict[str, Any]]]:
+    """Per model, the reviewed calls in the order listed. ``reviewed`` maps site id to call ids."""
     x = cfg["examples"]
+    by_id = {(m, str(c.call_id)): c for m, c in calls}
+    domain = {s["prefix"]: s["domain"] for s in cfg["suites"]}
     out = {}
-    for model in sorted({m for m, _ in calls}):
-        mine = [c for m, c in calls if m == model and sum(_lines(c)) >= x["minExpectedLines"]]
-        seen, chosen = set(), []
-        for suite in cfg["suites"]:
-            group = sorted((c for c in mine if c.code.startswith(suite["prefix"]) and c.code not in seen), key=lambda c: -_lines(c)[0] / sum(_lines(c)))
-            n = len(group)
-            idx = sorted({0, 1, n // 3, n // 2, (2 * n) // 3, n - 1}) if n >= 6 else list(range(n))
-            for i in idx[: x["perSuite"]]:
-                c = group[i]
-                seen.add(c.code)
-                met, missed = _lines(c)
-                v = _verdicts(cfg, c)
-                chosen.append(
-                    dict(
-                        scenario=c.code,
-                        title=titles.get(c.code),
-                        domain=suite["domain"],
-                        met=met,
-                        missed=missed,
-                        url=c.url,
-                        conditions=[cfg.skill(sid).condition for sid, _, _ in v if cfg.skill(sid).condition][: x["maxConditions"]],
-                        handled=[cfg.skill(sid).name for sid, ok, _ in v if ok][: x["maxSkills"]],
-                        struggled=[cfg.skill(sid).name for sid, ok, _ in v if not ok][: x["maxSkills"]],
-                    )
+    for model, ids in reviewed.items():
+        chosen = []
+        for call_id in ids:
+            c = by_id.get((model, str(call_id)))
+            if c is None:
+                raise ValueError(f"reviewed call {call_id} is not a usable {model} call in these runs")
+            met, missed = _lines(c)
+            v = _verdicts(cfg, c)
+            chosen.append(
+                dict(
+                    scenario=c.code,
+                    title=titles.get(c.code),
+                    domain=next(d for p, d in domain.items() if c.code.startswith(p)),
+                    met=met,
+                    missed=missed,
+                    url=c.url,
+                    conditions=[cfg.skill(sid).condition for sid, _, _ in v if cfg.skill(sid).condition][: x["maxConditions"]],
+                    handled=[cfg.skill(sid).name for sid, ok, _ in v if ok][: x["maxSkills"]],
+                    struggled=[cfg.skill(sid).name for sid, ok, _ in v if not ok][: x["maxSkills"]],
                 )
+            )
         out[model] = chosen
     return out
 
 
-def examples_doc(cfg: Config, entries: list[Entry], titles: dict[str, str | None]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def examples_doc(
+    cfg: Config, entries: list[Entry], titles: dict[str, str | None], reviewed: dict[str, list[str]]
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """The examples file and the clip windows to cut for its moments."""
     calls = _candidates(cfg, entries)
     found, picks = moments(cfg, calls, titles)
-    doc = dict(draft=cfg["examples"]["draft"], note=cfg["examples"]["note"], moments=found, examples=example_calls(cfg, calls, titles))
+    doc = dict(moments=found, examples=example_calls(cfg, calls, titles, reviewed))
     return doc, picks

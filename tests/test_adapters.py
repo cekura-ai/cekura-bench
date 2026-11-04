@@ -133,6 +133,11 @@ class TestHydra:
             assert SmallestHydraAdapter.unsupported_reason(SessionConfig(turn_detection=detection))
         assert SmallestHydraAdapter.unsupported_reason(SessionConfig(modality="text"))
 
+    def test_the_cell_record_says_no_turn_setting_was_applied(self):
+        from service.adapters import smallest_hydra
+
+        assert adapter(SmallestHydraAdapter).state()["session"]["turn_detection_applied"] == smallest_hydra.TURN_DETECTION_APPLIED
+
     def test_configured_is_the_acknowledgement(self):
         a = adapter(SmallestHydraAdapter)
         a._handle({"type": "session.configured", "session": {"voice": "sterling", "output_audio_sample_rate": 24000}})

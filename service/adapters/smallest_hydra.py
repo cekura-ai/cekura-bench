@@ -324,5 +324,6 @@ class SmallestHydraAdapter(OpenAIRealtimeAdapter):
             "agent": f"{PROVIDER_TEXT}; {TRANSCRIPTION_MODEL} for a reply sent without text",
             "caller": TRANSCRIPTION_MODEL,
         }
-        state["turn_detection_applied"] = TURN_DETECTION_APPLIED
+        # Under ``session``, the part of the state each cell record keeps.
+        state["session"]["turn_detection_applied"] = TURN_DETECTION_APPLIED
         return state

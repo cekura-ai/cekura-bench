@@ -30,6 +30,7 @@ from tts_bench.adapters.gemini_tts import GeminiTTSAdapter
 from tts_bench.adapters.gradium import GradiumAdapter
 from tts_bench.adapters.hume import HumeAdapter
 from tts_bench.adapters.inworld import InworldAdapter
+from tts_bench.adapters.mistral import MistralTTSAdapter
 from tts_bench.adapters.openai_tts import OpenAITTSAdapter
 from tts_bench.adapters.rime import RimeAdapter
 from tts_bench.adapters.smallest import SmallestAdapter
@@ -77,6 +78,7 @@ ASTRA = "astra"                                      # Rime, female US English o
 SARAH = "933563129e564b19a115bedd57b7406a"              # Fish Official, female US English
 DELIA = "c70cfb98867a4bfb9ae20d2401257b92"              # Fish Audio, female US English, from its Drama 3 voice cast
 AVA = "5bb7de05-c8fe-426a-8fcc-ba4fc4ce9f9c"           # Hume "Ava Song", female US English, from its Voice Library
+SHEILA = "voice_478"                                    # Mistral "Sheila", female US English, a Voxtral 3 preset
 
 PROVIDERS: dict[str, ProviderEntry] = {
     "fake": ProviderEntry("fake", FakeTTSAdapter, "FAKE_KEY_UNUSED", (Model("scripted", "tone"),)),
@@ -181,6 +183,12 @@ PROVIDERS: dict[str, ProviderEntry] = {
         (Model("MAI-Voice-2.1-Flash", "en-US-Harper"), Model("MAI-Voice-2.1", "en-US-Harper")),
         notes="HTTP SSML, raw PCM streamed back; the model is the voice name's suffix; whole text per request; "
               "region is the host (option region, default eastus)",
+    ),
+    "mistral": ProviderEntry(
+        "mistral", MistralTTSAdapter, "MISTRAL_API_KEY",
+        (Model("voxtral-mini-tts-3-0", SHEILA),),
+        notes="HTTP server-sent events, float32 PCM converted to int16; whole text per request; "
+              "speech.audio.done ends the utterance",
     ),
 }
 

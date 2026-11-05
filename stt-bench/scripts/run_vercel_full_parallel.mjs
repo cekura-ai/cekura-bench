@@ -219,7 +219,7 @@ assert not (r/'.env').exists()
 uv=shutil.which('uv') or str(pathlib.Path.home()/'.local/bin/uv')
 subprocess.run([uv,'sync','--locked','--python','3.12'],cwd=r,check=True)
 subprocess.run(['.venv/bin/python','-m','stt_bench.full_benchmark','verify','--plan-hash',${JSON.stringify(identity.plan_sha256)},'--convert'],cwd=r,check=True)
-subprocess.run(['.venv/bin/python','-m','pytest','-q','tests/test_full_benchmark.py','tests/test_gradium.py','tests/test_reson8.py','tests/test_trial_providers.py','tests/test_gemini_live.py'],cwd=r,check=True)
+subprocess.run(['.venv/bin/python','-m','pytest','-q','tests/test_full_benchmark.py','tests/test_gradium.py','tests/test_reson8.py','tests/test_rime.py','tests/test_trial_providers.py','tests/test_gemini_live.py'],cwd=r,check=True)
 print('Full inputs and adapters verified; no provider calls')`;
           const receipt=await command(sb,prep,'install',{cmd:'python3',args:['-c',code],cwd:REMOTE});
           await writeFile(join(root,'preparation.log'),await(await sb.currentSession().getCommand(receipt.commandId)).output('both'));

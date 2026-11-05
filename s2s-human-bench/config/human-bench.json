@@ -323,21 +323,13 @@
       "vendor": "Cascade",
       "siteId": "cascade-baseline",
       "agentId": 26883,
-      "reference": true
-    },
-    {
-      "key": "cascade-multilingual",
-      "name": "Cascade Multilingual",
-      "vendor": "Cascade",
-      "siteId": "cascade-multilingual",
-      "agentId": 26907,
       "reference": true,
+      "scenarioSwap": {
+        "agentId": 26907,
+        "scenarios": ["F23", "F26", "F33", "H08", "H10", "H14", "H25", "F12", "F25", "F34", "H04", "H05", "H12", "H32", "H34"]
+      },
       "details": {
-        "modelId": "nova-3 (multi) → gpt-4.1 → eleven_flash_v2_5",
-        "voice": "ElevenLabs 21m00Tcm4TlvDq8ikWAM",
-        "setting": "No reasoning setting",
-        "sampleRateHz": 16000,
-        "turns": "VAD + Smart Turn"
+        "modelId": "flux-general-en (English callers) or nova-3 multi (callers who switch language) → gpt-4.1 → eleven_flash_v2_5"
       }
     },
     {

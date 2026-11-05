@@ -1,5 +1,7 @@
 """Call score, ratings, tie margin, void-run guard, pass³ and the suite / language splits."""
 
+from dataclasses import replace
+
 import pytest
 
 from conftest import BAD, write_call, write_run
@@ -133,6 +135,17 @@ def test_pass_all_needs_every_run(cfg, tmp_path):
     assert pass_all(cfg, entry.runs, "B01")
     assert not pass_all(cfg, entry.runs, "B02")
     assert not pass_all(cfg, [entry.runs[0], {}], "B01")  # missing from a run
+
+
+def test_scenario_swap_takes_those_scenarios_from_the_other_agent(cfg, tmp_path):
+    for name in ("run_a3_r1", "run_a3_r2"):
+        write_run(tmp_path / name, {"C02": BAD})
+    for name in ("run_a2_r1", "run_a2_r2"):
+        write_run(tmp_path / name, {"B01": BAD})
+    cfg.models[3] = replace(cfg.models[3], swap=(2, ("C02",)))
+    ref = next(e for e in load_bench(cfg, tmp_path) if e.model.key == "ref")
+    assert all(pass_all(cfg, ref.runs, code) for code in ("B01", "C02"))  # B01 stays its own, C02 comes from agent 2
+    assert sorted(ref.runs[0]) == ["B01", "B02", "C01", "C02"]
 
 
 # ---- splits ----------------------------------------------------------------------

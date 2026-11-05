@@ -44,6 +44,8 @@ class Model:
     runs: tuple[str, ...] | None = None  # explicit run folders; otherwise discovered from agent_id
     agent_id: int | None = None
     details: dict[str, Any] = field(default_factory=dict, hash=False, compare=False)  # card fields for models not on the public S2S page
+    # (agent id, scenario codes): those scenarios come from that agent's runs instead, run by run (a combined cascade)
+    swap: tuple[int, tuple[str, ...]] | None = None
 
 
 @dataclass
@@ -104,6 +106,7 @@ def load_config(path: Path) -> Config:
                 runs=tuple(m["runs"]) if "runs" in m else None,
                 agent_id=m.get("agentId"),
                 details=m.get("details", {}),
+                swap=(m["scenarioSwap"]["agentId"], tuple(m["scenarioSwap"]["scenarios"])) if "scenarioSwap" in m else None,
             )
         )
     ids = [s.id for s in cfg.skills]

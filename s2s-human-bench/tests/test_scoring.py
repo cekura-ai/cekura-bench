@@ -4,8 +4,8 @@ import pytest
 
 from conftest import BAD, write_call, write_run
 from s2s_human_bench import rating
-from s2s_human_bench.bench import load_bench, pass_all, scenario_scores
-from s2s_human_bench.calls import call_score, family_scores, load_call, model_runs, usable_run, verdict
+from s2s_human_bench.bench import family_means, load_bench, pass_all, scenario_scores
+from s2s_human_bench.calls import Call, call_score, family_scores, load_call, model_runs, usable_run, verdict
 from s2s_human_bench.config import ConfigError, site_order
 from s2s_human_bench.languages import group_scenarios
 from s2s_human_bench.s2s import suite_runs
@@ -33,6 +33,32 @@ def test_unreached_family_drops_out_of_the_score(cfg):
     assert fam["task"] is None
     assert call_score(cfg.weights, fam) == 100.0
     assert call_score(cfg.weights, {"hearing": None, "task": None}) is None
+
+
+def test_model_family_is_the_mean_of_its_skill_rates(cfg):
+    def call(tested, misses, outcome):
+        return Call(
+            code="B01",
+            call_id=None,
+            url="",
+            seconds=60,
+            verdicts={},
+            explanations={},
+            families={},
+            outcome=outcome,
+            outcome_lines=[],
+            score=None,
+            latency_ms=None,
+            turn_words=None,
+            tested=tested,
+            misses=misses,
+        )
+
+    # Skill 1.1 passes on three calls, skill 1.2 fails on its one call: each skill counts once, not each call.
+    calls = [call(["1.1"], [], 100.0)] * 3 + [call(["1.2", "2.1"], ["1.2"], 0.0)]
+    fam = family_means(cfg, calls)
+    assert fam["Hearing"] == 50.0
+    assert fam["Task"] == 0.5 * 100 + 0.5 * 75
 
 
 def test_load_call(cfg, tmp_path):

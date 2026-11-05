@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import statistics
+from collections import Counter
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -40,6 +41,30 @@ def mean_or_none(values: Iterable[float], digits: int | None = 1) -> float | Non
         return None
     m = statistics.mean(vals)
     return round(m, digits) if digits is not None else m
+
+
+def skill_rates(cfg: Config, facts: list[Call]) -> dict[str, float]:
+    seen, ok = Counter(), Counter()
+    for f in facts:
+        for sid in f.tested:
+            seen[sid] += 1
+            ok[sid] += sid not in f.misses
+    return {k: ok[k] / seen[k] for k in seen if seen[k] >= cfg.scoring["minSkillCalls"]}
+
+
+def family_means(cfg: Config, calls: list[Call]) -> dict[str, float | None]:
+    """Each family's score by label: the mean of its skills' pass rates, so every skill counts once however many
+    calls tested it. The task family blends in the mean task outcome by ``outcomeInTask``, as each call's score does."""
+    rates = skill_rates(cfg, calls)
+    outcome = mean_or_none((c.outcome for c in calls if c.outcome is not None), None)
+    out: dict[str, float | None] = {}
+    for key, label in cfg.families.items():
+        fam = mean_or_none((100 * rates[s.id] for s in cfg.skills if s.family == key and s.id in rates), None)
+        if key == cfg.scoring.get("taskFamily", "task") and outcome is not None:
+            w = cfg.scoring["outcomeInTask"]
+            fam = outcome if fam is None else (1 - w) * fam + w * outcome
+        out[label] = round(fam, 1) if fam is not None else None
+    return out
 
 
 def scenario_scores(entries: list[Entry], keep: Callable[[str], bool] = lambda code: True) -> rating.Scores:

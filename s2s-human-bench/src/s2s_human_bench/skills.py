@@ -6,7 +6,7 @@ import statistics
 from typing import Any
 
 from s2s_human_bench import rating
-from s2s_human_bench.bench import Entry, elo, mean_or_none, published_price, scenario_scores
+from s2s_human_bench.bench import Entry, elo, family_means, mean_or_none, published_price, scenario_scores
 from s2s_human_bench.config import Config, site_order
 
 
@@ -98,7 +98,7 @@ def skills_doc(cfg: Config, entries: list[Entry], live: dict[str, Any], human_cl
                 "lo": lo,
                 "hi": hi,
                 "score": mean_or_none(c.score for c in calls if c.score is not None),
-                "families": {label: mean_or_none(c.families[k] for c in calls if c.families[k] is not None) for k, label in cfg.families.items()},
+                "families": family_means(cfg, calls),
             }
         )
 

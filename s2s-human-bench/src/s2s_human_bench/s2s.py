@@ -7,7 +7,7 @@ import statistics
 from collections import Counter, defaultdict
 from typing import Any
 
-from s2s_human_bench.bench import Entry, Run, elo, mean_or_none, pass_all, passed, percentile, published_price, scenario_scores
+from s2s_human_bench.bench import Entry, Run, elo, family_means, pass_all, passed, percentile, published_price, scenario_scores, skill_rates
 from s2s_human_bench.calls import Call
 from s2s_human_bench.config import Config, site_order
 
@@ -53,7 +53,7 @@ def result_row(cfg: Config, e: Entry, suite: str, sel: list[Run], price: dict[st
             toolEquivalent=0,
         ),
         stalls=dict(calls=len(facts), stalled=sum(f.stalled for f in facts)),
-        families={label: mean_or_none(f.families[k] for f in facts if f.families.get(k) is not None) for k, label in cfg.families.items()},
+        families=family_means(cfg, facts),
     )
 
 
@@ -99,15 +99,6 @@ def by_category(cfg: Config, sel: list[Run]) -> dict[str, Any]:
                 passedAll=sum(1 for c in scen if all(passed(cfg, r[c]) for r in sel if c in r)),
             )
     return out
-
-
-def skill_rates(cfg: Config, facts: list[Call]) -> dict[str, float]:
-    seen, ok = Counter(), Counter()
-    for f in facts:
-        for sid in f.tested:
-            seen[sid] += 1
-            ok[sid] += sid not in f.misses
-    return {k: ok[k] / seen[k] for k in seen if seen[k] >= cfg.scoring["minSkillCalls"]}
 
 
 def model_notes(

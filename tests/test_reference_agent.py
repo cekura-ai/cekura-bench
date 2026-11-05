@@ -1865,7 +1865,7 @@ class TestPolyAIRealtime:
         record = record_for("polyai-dialog")
         assert record["s2s_voice"] == provider.default_voice == "service default"
         assert "ElevenLabs" not in record["tts"]
-        assert [key for key, p in bot.PROVIDERS.items() if p.reports_playback] == ["polyai-dialog"]
+        assert {key for key, p in bot.PROVIDERS.items() if p.reports_playback} == {"polyai-dialog", "rime-prism"}
 
     def test_every_tool_keeps_its_published_schema_and_gains_a_required_spoken_line(self):
         import polyai_realtime
@@ -2207,6 +2207,753 @@ class TestPolyAIRealtime:
             "[unknown_parameter] not in schema (param: session.voice)")
 
 
+class TestSmallestHydra:
+    """Hydra's socket, spoken directly: one configuration, an opening of its own, no transcripts."""
+
+    @staticmethod
+    def _service(**overrides):
+        from smallest_hydra import SmallestHydraLLMService
+
+        provider = bot.PROVIDERS["smallest-hydra"]
+        service = provider.build("k", provider.default_model, provider.default_voice, "prompt", asked())
+        for key, value in overrides.items():
+            setattr(service, key, value)
+        seen = {"pushed": [], "broadcast": [], "sent": [], "calls": [], "usage": [], "errors": []}
+
+        async def push(frame, direction=None):
+            seen["pushed"].append((type(frame).__name__, direction, frame))
+
+        async def broadcast(frame_cls, **_kwargs):
+            seen["broadcast"].append(frame_cls.__name__)
+
+        async def send(event):
+            seen["sent"].append(event)
+
+        async def run(function_calls):
+            seen["calls"].extend(function_calls)
+
+        async def usage(tokens):
+            seen["usage"].append(tokens)
+
+        async def error(error_msg, **_kwargs):
+            seen["errors"].append(error_msg)
+
+        async def noop(*_args, **_kwargs):
+            return None
+
+        service.push_frame = push
+        service.broadcast_frame = broadcast
+        service._send = send
+        service.run_function_calls = run
+        service.start_llm_usage_metrics = usage
+        service.push_error = error
+        for name in ("start_ttfb_metrics", "stop_ttfb_metrics", "start_processing_metrics",
+                     "stop_processing_metrics", "stop_all_metrics"):
+            setattr(service, name, noop)
+        assert isinstance(service, SmallestHydraLLMService)
+        return service, seen
+
+    @staticmethod
+    def _audio(response="r1", size=4800):
+        import base64
+
+        return {"type": "response.output_audio.delta", "response_id": response, "item_id": "i1",
+                "delta": base64.b64encode(b"\1\0" * (size // 2)).decode()}
+
+    @staticmethod
+    def _words(seen):
+        return [frame.text for name, _, frame in seen["pushed"] if name == "TTSTextFrame"]
+
+    @staticmethod
+    def _caller_turn(item_id):
+        return {"type": "input_audio_buffer.speech_stopped", "item_id": item_id, "audio_end_ms": 0}
+
+    def test_the_session_carries_no_setting_the_service_does_not_take(self):
+        import smallest_hydra
+
+        service, _ = self._service()
+        session = service.session()
+        assert set(session) == {"instructions", "voice", "output_audio_sample_rate", "generate_initial_response"}
+        assert session["voice"] == "sterling" and session["instructions"] == "prompt"
+        assert session["output_audio_sample_rate"] == smallest_hydra.OUTPUT_SAMPLE_RATE == 24000
+        assert session["generate_initial_response"] is False, "no opening yet, so nothing to open with"
+        assert smallest_hydra.SAMPLE_RATE == bot.PROVIDERS["smallest-hydra"].input_rate
+        record = record_for("smallest-hydra")
+        for key in ("hydra_endpoint", "hydra_turn_detection", "hydra_opening", "hydra_agent_transcript",
+                    "hydra_caller_transcription", "tts"):
+            assert record[key], key
+        assert smallest_hydra.TRANSCRIPTION_MODEL in record["hydra_caller_transcription"]
+        assert record["divergences"]["caller_transcription"] == "pulse-pro"
+
+    def test_the_key_is_in_the_url_and_out_of_every_error(self):
+        import urllib.parse
+
+        import smallest_hydra
+
+        key = "a/b+c=d"
+        url = smallest_hydra.session_url(key, "hydra-v1.1")
+        assert urllib.parse.parse_qs(urllib.parse.urlsplit(url).query) == {"model": ["hydra-v1.1"], "api_key": [key]}
+        for spelling in (key, urllib.parse.quote_plus(key), urllib.parse.quote(key, safe="")):
+            assert smallest_hydra.redact(f"failed on {spelling} here", key) == "failed on <redacted> here"
+
+    async def test_the_opening_goes_into_the_one_configuration_and_the_session_speaks_first(self):
+        """The service answers no text turn, so the opening is the session's own first reply."""
+        from pipecat.frames.frames import InputAudioRawFrame
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        server = bot.MockToolServer(suite="appointments")
+        service, seen = self._service()
+        service.create_task = asyncio.ensure_future
+        opening = bot.opening_messages("Thank you for calling.")
+        await service._handle_context(LLMContext(opening, tools=bot.build_tools(server)))
+        await asyncio.sleep(0)
+        assert seen["sent"] == [], "a configuration before session.created is refused"
+        await service._dispatch({"type": "session.created", "session_id": "s1"})
+        await asyncio.sleep(0)
+        [configure] = seen["sent"]
+        assert configure["type"] == "session.configure"
+        session = configure["session"]
+        assert session["tools"] and session["generate_initial_response"] is True
+        assert session["instructions"] == f"prompt\n\n{opening[0]['content']}"
+        frame = InputAudioRawFrame(audio=b"\0\0" * 160, sample_rate=16000, num_channels=1)
+        await service._send_audio(frame)
+        assert len(seen["sent"]) == 1, "audio before the tools are accepted would reach a toolless session"
+        await service._dispatch({"type": "session.configured", "session": session})
+        await service._open_task
+        await service._send_audio(frame)
+        assert [event["type"] for event in seen["sent"]] == ["session.configure", "input_audio_buffer.append"]
+        # No text turn and no reply request: the session opens on its own.
+        assert not any(event["type"] in ("conversation.item.create", "response.create") for event in seen["sent"])
+
+    async def test_a_reply_is_worded_by_its_own_text_once_it_sounds(self):
+        service, seen = self._service()
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        for word in ("Hello", " there."):
+            await service._dispatch({"type": "response.output_audio_transcript.delta", "response_id": "r1", "delta": word})
+        assert self._words(seen) == [], "words lead the audio and wait for it"
+        await service._dispatch(self._audio())
+        assert self._words(seen) == ["Hello", " there."]
+        assert not any(frame.includes_inter_frame_spaces for name, _, frame in seen["pushed"] if name == "TTSTextFrame")
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed",
+                                                                       "usage": {"input_tokens": 5, "output_tokens": 2,
+                                                                                 "total_tokens": 7}}})
+        assert service.silent_replies == 0
+        assert [(u.prompt_tokens, u.completion_tokens) for u in seen["usage"]] == [(5, 2)]
+        assert [name for name, _, _ in seen["pushed"]][-2:] == ["TTSStoppedFrame", "LLMFullResponseEndFrame"]
+
+    async def test_words_of_a_reply_that_never_sounded_are_dropped_and_a_wordless_reply_is_counted(self):
+        service, seen = self._service()
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch({"type": "response.output_audio_transcript.delta", "response_id": "r1", "delta": "unheard"})
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})
+        await service._dispatch({"type": "response.created", "response": {"id": "r2"}})
+        await service._dispatch(self._audio(response="r2"))
+        await service._dispatch({"type": "response.done", "response": {"id": "r2", "status": "completed"}})
+        assert self._words(seen) == []
+        assert service.silent_replies == 1
+
+    async def test_a_cut_reply_does_not_reopen_on_audio_in_flight(self):
+        from pipecat.frames.frames import InterruptionFrame
+        from pipecat.processors.frame_processor import FrameDirection
+
+        service, seen = self._service()
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch(self._audio())
+        await service._dispatch({"type": "input_audio_buffer.speech_started"})
+        await service.process_frame(InterruptionFrame(), FrameDirection.DOWNSTREAM)
+        before = len(seen["pushed"])
+        await service._dispatch(self._audio())
+        await service._dispatch({"type": "response.output_audio_transcript.delta", "response_id": "r1", "delta": "late"})
+        assert [name for name, _, _ in seen["pushed"][before:]] == []
+        assert not any(event["type"] == "conversation.item.truncate" for event in seen["sent"])
+        assert seen["broadcast"] == ["ProposedUserStartedSpeakingFrame"]
+
+    async def test_a_tool_round_is_resumed_once_after_every_result_and_the_responses_close(self):
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service, seen = self._service()
+        service._context = LLMContext([])
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        for call_id, name in (("c1", "lookup_patient"), ("c2", "check_availability")):
+            await service._dispatch({"type": "response.function_call_arguments.done", "response_id": "r1",
+                                     "call_id": call_id, "name": name, "arguments": '{"phone": "1"}'})
+        assert [(c.tool_call_id, c.function_name) for c in seen["calls"]] == [
+            ("c1", "lookup_patient"), ("c2", "check_availability")]
+        one = LLMContext([{"role": "tool", "tool_call_id": "c1", "content": '{"ok": true}'},
+                          {"role": "tool", "tool_call_id": "c2", "content": "IN_PROGRESS"}])
+        await service._handle_context(one)
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})
+        assert [event["type"] for event in seen["sent"]] == ["conversation.item.create"], "c2 has no result yet"
+        both = LLMContext([{"role": "tool", "tool_call_id": "c1", "content": '{"ok": true}'},
+                           {"role": "tool", "tool_call_id": "c2", "content": '{"slots": []}'}])
+        await service._handle_context(both)
+        await service._handle_context(both)
+        kinds = [event["type"] for event in seen["sent"]]
+        assert kinds == ["conversation.item.create", "conversation.item.create", "response.create"]
+        assert [event["item"]["call_id"] for event in seen["sent"][:2]] == ["c1", "c2"]
+
+    async def test_a_reply_that_spoke_while_calling_a_tool_is_resumed_without_waiting_for_it_to_close(self):
+        """Hydra does not close a reply that spoke and called a tool until it is asked for the next one.
+
+        Waiting for that close left the caller in silence until they spoke again.
+        """
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service, seen = self._service()
+        service._context = LLMContext([])
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch(self._audio())
+        await service._dispatch({"type": "response.function_call_arguments.done", "response_id": "r1",
+                                 "call_id": "c1", "name": "check_availability", "arguments": '{"date": "x"}'})
+        await service._handle_context(LLMContext([{"role": "tool", "tool_call_id": "c1", "content": '{"slots": []}'}]))
+        assert [event["type"] for event in seen["sent"]] == ["conversation.item.create", "response.create"]
+
+        # The reply asked for opens; a late close of the one before must not end it.
+        await service._dispatch({"type": "response.created", "response": {"id": "r2"}})
+        await service._dispatch(self._audio(response="r2"))
+        pushed = len(seen["pushed"])
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})
+        assert [name for name, _, _ in seen["pushed"][pushed:]] == []
+        await service._dispatch({"type": "response.done", "response": {"id": "r2", "status": "completed"}})
+        assert [name for name, _, _ in seen["pushed"]][-2:] == ["TTSStoppedFrame", "LLMFullResponseEndFrame"]
+        assert [event["type"] for event in seen["sent"]].count("response.create") == 1
+
+    async def test_the_transcribers_delay_is_announced_to_the_context(self):
+        import smallest_hydra
+        from pipecat.frames.frames import STTMetadataFrame
+
+        service, _ = self._service()
+        sent = []
+
+        async def broadcast(frame_cls, **kwargs):
+            sent.append((frame_cls, kwargs))
+
+        async def connect():
+            return None
+
+        service.broadcast_frame = broadcast
+        service._connect = connect
+        from pipecat.frames.frames import StartFrame
+
+        await service.start(StartFrame())
+        [(frame_cls, kwargs)] = sent
+        assert frame_cls is STTMetadataFrame
+        assert kwargs["ttfs_p99_latency"] == smallest_hydra.TRANSCRIPT_P99_S > 1.0
+
+    async def test_each_caller_turn_is_transcribed_from_the_audio_since_the_last_in_order(self, monkeypatch):
+        """Hydra transcribes neither side: the caller's words are Pulse Pro's, one turn at a time."""
+        import smallest_hydra
+        from pipecat.frames.frames import InputAudioRawFrame
+        from pipecat.processors.frame_processor import FrameDirection
+
+        heard = []
+
+        def transcribe(pcm, api_key, rate=smallest_hydra.SAMPLE_RATE):
+            heard.append(len(pcm))
+            if len(heard) == 2:
+                raise TimeoutError("transcriber down")
+            return f"turn {len(heard)}"
+
+        monkeypatch.setattr(smallest_hydra, "transcribe", transcribe)
+        service, seen = self._service()
+        service._configured.set()
+        worker = asyncio.ensure_future(service._transcribe_turns())
+        try:
+            for item, samples in (("u1", 800), ("u2", 400), ("u3", 160)):
+                await service._send_audio(InputAudioRawFrame(audio=b"\0\0" * samples, sample_rate=16000, num_channels=1))
+                await service._dispatch(self._caller_turn(item))
+            # Hydra marking the turn complete later sends nothing more.
+            await service._dispatch({"type": "conversation.item.done",
+                                     "item": {"id": "u3", "type": "message", "role": "user", "status": "completed"}})
+            for _ in range(50):
+                if len(heard) == 3:
+                    break
+                await asyncio.sleep(0.01)
+            await asyncio.sleep(0.01)
+        finally:
+            worker.cancel()
+        assert heard == [1600, 800, 320]
+        finals = [(frame.text, direction, frame.result["item_id"]) for name, direction, frame in seen["pushed"]
+                  if name == "TranscriptionFrame"]
+        assert finals == [("turn 1", FrameDirection.UPSTREAM, "u1"), ("turn 3", FrameDirection.UPSTREAM, "u3")]
+
+    async def test_the_silence_before_a_caller_turn_is_not_transcribed(self, monkeypatch):
+        """Half a minute of silence before a turn makes the transcriber invent words."""
+        import smallest_hydra
+        from pipecat.frames.frames import InputAudioRawFrame
+
+        service, _ = self._service()
+        service._configured.set()
+        second = smallest_hydra.SAMPLE_RATE  # samples
+        await service._send_audio(InputAudioRawFrame(audio=b"\0\0" * 30 * second, sample_rate=16000, num_channels=1))
+        await service._dispatch({"type": "input_audio_buffer.speech_started", "item_id": "u1"})
+        await service._send_audio(InputAudioRawFrame(audio=b"\0\0" * 2 * second, sample_rate=16000, num_channels=1))
+        await service._dispatch({"type": "input_audio_buffer.speech_started", "item_id": "u1"})  # restated
+        await service._dispatch(self._caller_turn("u1"))
+        item, pcm = service._transcripts.get_nowait()
+        assert item == "u1"
+        assert len(pcm) == int((smallest_hydra.PREROLL_S + 2) * second) * 2
+
+    async def _closing_round(self, service, response_id, call_id, name, *, heard):
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service._context = service._context or LLMContext([])
+        await service._dispatch({"type": "response.created", "response": {"id": response_id}})
+        if heard:
+            await service._dispatch(self._audio(response=response_id))
+        await service._dispatch({"type": "response.function_call_arguments.done", "response_id": response_id,
+                                 "call_id": call_id, "name": name, "arguments": "{}"})
+        await service._dispatch({"type": "response.done", "response": {"id": response_id, "status": "completed"}})
+        messages = [{"role": "tool", "tool_call_id": c, "content": '{"status": "ending_call"}'}
+                    for c in sorted(service._delivered | {call_id})]
+        await service._handle_context(LLMContext(messages))
+
+    async def test_a_closing_tool_whose_reply_was_heard_gets_no_reply(self):
+        service, seen = self._service()
+        await self._closing_round(service, "r1", "c1", "transfer_call", heard=True)
+        assert [event["type"] for event in seen["sent"]] == ["conversation.item.create"]
+        assert record_for("smallest-hydra")["hydra_closing_tools"]
+
+    async def test_a_silent_closing_tool_gets_one_reply_and_never_a_second(self):
+        service, seen = self._service()
+        await self._closing_round(service, "r1", "c1", "end_call", heard=False)
+        assert [event["type"] for event in seen["sent"]] == ["conversation.item.create", "response.create"]
+        await self._closing_round(service, "r2", "c2", "end_call", heard=False)
+        assert [event["type"] for event in seen["sent"]].count("response.create") == 1
+
+    async def test_a_service_error_is_named_without_the_key(self):
+        service, seen = self._service(_api_key="secret-key")
+        await service._dispatch({"type": "error", "error": {"message": "bad request for secret-key"}})
+        assert seen["errors"] and "secret-key" not in seen["errors"][0]
+
+
+
+class TestRimePrism:
+    """Prism: the flat realtime shape, a cause on every reply asked for, and playback reported back."""
+
+    @staticmethod
+    def _service(**overrides):
+        from rime_prism import RimePrismLLMService
+
+        provider = bot.PROVIDERS["rime-prism"]
+        service = provider.build("k", provider.default_model, provider.default_voice, "prompt", asked())
+        for key, value in overrides.items():
+            setattr(service, key, value)
+        seen = {"pushed": [], "broadcast": [], "sent": [], "calls": [], "usage": [], "errors": []}
+
+        async def push(frame, direction=None):
+            seen["pushed"].append((type(frame).__name__, direction, frame))
+
+        async def broadcast(frame_cls, **_kwargs):
+            seen["broadcast"].append(frame_cls.__name__)
+
+        async def send(event):
+            seen["sent"].append(event)
+
+        async def run(function_calls):
+            seen["calls"].extend(function_calls)
+
+        async def usage(tokens):
+            seen["usage"].append(tokens)
+
+        async def error(error_msg, **_kwargs):
+            seen["errors"].append(error_msg)
+
+        async def noop(*_args, **_kwargs):
+            return None
+
+        service.push_frame = push
+        service.broadcast_frame = broadcast
+        service._send = send
+        service.run_function_calls = run
+        service.start_llm_usage_metrics = usage
+        service.push_error = error
+        for name in ("start_ttfb_metrics", "stop_ttfb_metrics", "start_processing_metrics",
+                     "stop_processing_metrics", "stop_all_metrics"):
+            setattr(service, name, noop)
+        assert isinstance(service, RimePrismLLMService)
+        return service, seen
+
+    @staticmethod
+    def _sent(seen, kind):
+        return [event for event in seen["sent"] if event["type"] == kind]
+
+    @staticmethod
+    def _text(seen):
+        return [frame.text for name, _, frame in seen["pushed"] if name == "TTSTextFrame"]
+
+    @staticmethod
+    def _audio(response_id, ms, item_id=None):
+        """An audio delta carrying ``ms`` of 24 kHz 16-bit silence."""
+        import base64
+
+        import rime_prism
+
+        audio = bytes(int(rime_prism.OUTPUT_SAMPLE_RATE * ms / 1000) * 2)
+        return {"type": "response.audio.delta", "response_id": response_id, "item_id": item_id or f"item_{response_id}",
+                "delta": base64.b64encode(audio).decode()}
+
+    @staticmethod
+    def _done(response_id, status="completed", token=None, **extra):
+        response = {"id": response_id, "status": status, **extra}
+        if token:
+            response["metadata"] = {"prism_drain_token": token}
+        return {"type": "response.done", "response": response}
+
+    @staticmethod
+    def _clock(monkeypatch):
+        import rime_prism
+
+        clock = [100.0]
+        monkeypatch.setattr(rime_prism, "time", SimpleNamespace(monotonic=lambda: clock[0]))
+        return clock
+
+    def test_the_session_sends_only_fields_the_service_accepts(self):
+        """Any field outside the service's schema makes it refuse the whole update."""
+        server = bot.MockToolServer(suite="appointments")
+        service, _ = self._service(_tools=bot.build_tools(server))
+        session = service.session()
+        assert set(session) == {"instructions", "voice", "tools"}
+        assert session["voice"] == bot.PROVIDERS["rime-prism"].default_voice == "astra"
+        for tool in session["tools"]:
+            assert set(tool) == {"type", "name", "description", "parameters"}, tool
+            assert tool["type"] == "function"
+        assert {tool["name"] for tool in session["tools"]} >= set(server.tool_names) | {"end_call", "transfer_call"}
+
+    def test_the_pipeline_rates_are_the_services(self):
+        import rime_prism
+
+        provider = bot.PROVIDERS["rime-prism"]
+        assert rime_prism.SAMPLE_RATE == provider.input_rate == 16000
+        assert rime_prism.OUTPUT_SAMPLE_RATE == 24000
+        assert (provider.default_model, provider.module, provider.credential_env) == (
+            "prism", "rime_prism", ("RIME_API_KEY",))
+
+    def test_the_record_names_the_endpoint_turn_timing_and_playback_reporting(self):
+        import rime_prism
+
+        record = record_for("rime-prism")
+        for key in ("rime_prism_endpoint", "rime_prism_release", "rime_prism_turn_detection",
+                    "rime_prism_opening", "rime_prism_tool_filler", "rime_prism_playback_reporting"):
+            assert record[key], key
+        assert record["rime_prism_endpoint"] == rime_prism.URL
+        assert record["divergences"]["caller_transcription"] == "automatic"
+        assert record["divergences"]["result_delivery"] == "immediate"
+        assert record["divergences"]["interruptions"] == "pipeline"
+
+    async def test_the_release_and_turn_settings_reach_the_record_once_connected(self):
+        record = record_for("rime-prism")
+        service, _ = self._service(runtime_record=record)
+        await service._dispatch({"type": "session.created", "session": {"id": "s1", "version": "20261027c"}})
+        assert record["rime_prism_release"] == "20261027c"
+        await service._dispatch({"type": "session.updated", "session": {"version": "20261027c", "turn_detection": {
+            "eagerness": "auto", "prism_end_of_turn_timeout_ms": 5000, "interrupt_response": True}}})
+        assert record["rime_prism_turn_detection"].startswith(
+            "eagerness auto, interrupt_response True, prism_end_of_turn_timeout_ms 5000")
+        assert "llm.runtime_record = record" in (AGENT_DIR / "bot.py").read_text()
+
+    async def test_the_call_opens_configured_then_with_a_nudge_once_idle(self):
+        """The opening instruction is a nudge, not a caller turn, and waits for the service to be idle."""
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        server = bot.MockToolServer(suite="appointments")
+        service, seen = self._service()
+        service.create_task = asyncio.ensure_future
+        opening = bot.opening_messages("Thank you for calling.")
+        await service._handle_context(LLMContext(opening, tools=bot.build_tools(server)))
+        await asyncio.sleep(0)
+        assert [event["type"] for event in seen["sent"]] == ["session.update"]
+        assert seen["sent"][0]["session"]["tools"]
+        await service._dispatch({"type": "session.updated", "session": {}})
+        await service._open_task
+        assert [event["type"] for event in seen["sent"]] == ["session.update"], "not idle yet"
+        await service._dispatch({"type": "prism.typed_input.ready"})
+        [nudge] = self._sent(seen, "response.create")
+        assert nudge["response"] == {
+            "prism_instruction": opening[0]["content"], "metadata": {"prism_cause": "proactive"}}
+        assert not self._sent(seen, "conversation.item.create"), "nothing enters the caller's side"
+        await service._dispatch({"type": "prism.typed_input.ready"})
+        assert len(self._sent(seen, "response.create")) == 1, "sent once"
+
+    async def test_audio_waits_for_the_configuration(self):
+        from pipecat.frames.frames import InputAudioRawFrame
+
+        service, seen = self._service()
+        frame = InputAudioRawFrame(audio=bytes(640), sample_rate=16000, num_channels=1)
+        await service._send_audio(frame)
+        assert not seen["sent"]
+        await service._dispatch({"type": "session.updated", "session": {}})
+        await service._send_audio(frame)
+        assert [event["type"] for event in seen["sent"]] == ["input_audio_buffer.append"]
+
+    async def test_an_opening_refused_as_busy_goes_again_unless_the_caller_was_answered(self):
+        import rime_prism
+
+        service, seen = self._service()
+        service._opening = "Open the call."
+        await service._dispatch({"type": "prism.typed_input.ready"})
+        await service._dispatch({"type": "error", "error": {
+            "code": "instructions_busy", "event_id": rime_prism.OPENING_EVENT_ID}})
+        await service._dispatch({"type": "prism.typed_input.ready"})
+        assert len(self._sent(seen, "response.create")) == 2 and not seen["errors"]
+
+        service, seen = self._service()
+        service._opening = "Open the call."
+        await service._dispatch({"type": "prism.typed_input.ready"})
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch({"type": "error", "error": {
+            "code": "instructions_busy", "event_id": rime_prism.OPENING_EVENT_ID}})
+        await service._dispatch({"type": "prism.typed_input.ready"})
+        assert len(self._sent(seen, "response.create")) == 1
+
+    async def test_a_caller_who_speaks_first_is_answered_without_the_greeting(self):
+        service, seen = self._service()
+        service._opening = "Open the call."
+        await service._dispatch({"type": "input_audio_buffer.speech_started"})
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch({"type": "prism.typed_input.ready"})
+        assert not self._sent(seen, "response.create")
+
+    async def _tool_round(self, service):
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service._context = LLMContext([])
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch({"type": "response.output_item.added", "response_id": "r1",
+                                 "item": {"type": "function_call", "call_id": "c1", "name": "lookup_patient"}})
+        await service._dispatch({"type": "response.function_call_arguments.done", "response_id": "r1",
+                                 "call_id": "c1", "name": "lookup_patient", "arguments": '{"patient_id": "p_1"}'})
+        result = LLMContext([{"role": "tool", "tool_call_id": "c1", "content": '{"ok": true}'}])
+        await service._handle_context(result)
+        await service._handle_context(result)
+
+    async def test_a_continuation_waits_for_the_parent_reply_and_the_results_acknowledgement(self):
+        """An early continuation is refused and not kept, so it is sent only once both have arrived."""
+        service, seen = self._service()
+        await self._tool_round(service)
+        [call] = seen["calls"]
+        assert (call.function_name, call.arguments) == ("lookup_patient", {"patient_id": "p_1"})
+        [result] = self._sent(seen, "conversation.item.create")
+        assert result["item"] == {"type": "function_call_output", "call_id": "c1", "output": '{"ok": true}'}
+        await service._dispatch({"type": "conversation.item.created",
+                                 "item": {"type": "function_call_output", "call_id": "c1"}})
+        assert not self._sent(seen, "response.create"), "the reply that made the call is still open"
+        await service._dispatch(self._done("r1"))
+        [continuation] = self._sent(seen, "response.create")
+        assert continuation["response"] == {"metadata": {
+            "prism_cause": "tool_continuation", "prism_parent_response_id": "r1"}}
+        await service._dispatch(self._done("r1"))
+        assert len(self._sent(seen, "response.create")) == 1, "one continuation per round"
+
+    async def test_a_continuation_also_waits_when_the_reply_ends_first(self):
+        service, seen = self._service()
+        await self._tool_round(service)
+        await service._dispatch(self._done("r1"))
+        assert not self._sent(seen, "response.create"), "the result is not stored yet"
+        await service._dispatch({"type": "conversation.item.created",
+                                 "item": {"type": "function_call_output", "call_id": "c1"}})
+        assert len(self._sent(seen, "response.create")) == 1
+
+    async def _closing_round(self, service, response_id, call_id, name, *, heard):
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service._context = service._context or LLMContext([])
+        await service._dispatch({"type": "response.created", "response": {"id": response_id}})
+        if heard:
+            await service._dispatch(self._audio(response_id, 200))
+        await service._dispatch({"type": "response.function_call_arguments.done", "response_id": response_id,
+                                 "call_id": call_id, "name": name, "arguments": "{}"})
+        messages = [{"role": "tool", "tool_call_id": c, "content": '{"status": "ending_call"}'}
+                    for c in sorted(set(service._names) | {call_id})]
+        await service._handle_context(LLMContext(messages))
+        await service._dispatch({"type": "conversation.item.created",
+                                 "item": {"type": "function_call_output", "call_id": call_id}})
+        await service._dispatch(self._done(response_id))
+
+    async def test_a_closing_tool_whose_reply_was_heard_is_not_continued(self):
+        """Its line was the goodbye; a continuation makes the model talk, or close, again."""
+        service, seen = self._service()
+        await self._closing_round(service, "r1", "c1", "transfer_call", heard=True)
+        assert not self._sent(seen, "response.create")
+        assert bot.rime_prism_disclosures(asked())["rime_prism_closing_tools"]
+
+    async def test_a_silent_closing_tool_gets_one_reply_and_never_a_second(self):
+        service, seen = self._service()
+        await self._closing_round(service, "r1", "c1", "end_call", heard=False)
+        [continuation] = self._sent(seen, "response.create")
+        assert continuation["response"]["metadata"]["prism_parent_response_id"] == "r1"
+        await self._closing_round(service, "r2", "c2", "end_call", heard=False)
+        assert len(self._sent(seen, "response.create")) == 1
+
+    async def test_a_round_the_caller_overtook_is_not_continued(self):
+        service, seen = self._service()
+        await self._tool_round(service)
+        await service._dispatch(self._done("r1"))
+        await service._dispatch({"type": "response.created", "response": {"id": "r2"}})
+        await service._dispatch({"type": "conversation.item.created",
+                                 "item": {"type": "function_call_output", "call_id": "c1"}})
+        assert not self._sent(seen, "response.create")
+
+    async def test_words_wait_for_the_replys_first_sound(self):
+        service, seen = self._service()
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch({"type": "response.text.delta", "response_id": "r1", "delta": "Sure, "})
+        assert not self._text(seen), "held until the reply makes a sound"
+        await service._dispatch(self._audio("r1", 100))
+        await service._dispatch({"type": "response.text.delta", "response_id": "r1", "delta": "one moment."})
+        await service._dispatch(self._done("r1"))
+        assert [name for name, _, _ in seen["pushed"]] == [
+            "LLMFullResponseStartFrame", "TTSStartedFrame", "TTSTextFrame", "TTSAudioRawFrame", "TTSTextFrame",
+            "TTSStoppedFrame", "LLMFullResponseEndFrame"]
+        assert self._text(seen) == ["Sure, ", "one moment."]
+        [audio] = [frame for name, _, frame in seen["pushed"] if name == "TTSAudioRawFrame"]
+        assert audio.sample_rate == 24000
+
+        service, seen = self._service()
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch({"type": "response.text.delta", "response_id": "r1", "delta": "Never heard."})
+        await service._dispatch(self._done("r1", status="cancelled"))
+        assert not self._text(seen)
+
+    async def test_a_reply_cut_short_is_truncated_at_what_was_heard(self, monkeypatch):
+        from pipecat.frames.frames import InterruptionFrame
+        from pipecat.processors.frame_processor import FrameDirection
+
+        clock = self._clock(monkeypatch)
+        service, seen = self._service()
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch(self._audio("r1", 3000, item_id="m1"))
+        await service._dispatch(self._done("r1", token="drn_1"))
+        await service.playback_started()
+        clock[0] += 1.2
+        await service.process_frame(InterruptionFrame(), FrameDirection.DOWNSTREAM)
+        [truncate] = self._sent(seen, "conversation.item.truncate")
+        assert truncate == {"type": "conversation.item.truncate", "item_id": "m1", "content_index": 0,
+                            "audio_end_ms": 1200}
+        # Audio still arriving for the cut reply is never played.
+        before = len(seen["pushed"])
+        await service._dispatch(self._audio("r1", 100, item_id="m1"))
+        assert len(seen["pushed"]) == before
+        # The output transport's own stop after the cut reports nothing more: the reply did not play out.
+        await service.playback_stopped(finished=True)
+        assert len(self._sent(seen, "conversation.item.truncate")) == 1
+        assert not self._sent(seen, "prism.playback.drained")
+
+    async def test_the_cut_falls_in_the_reply_that_was_playing(self, monkeypatch):
+        """Replies in one stretch play back to back; the one the cut fell in is the one truncated."""
+        clock = self._clock(monkeypatch)
+        service, seen = self._service()
+        await service._dispatch(self._audio("r1", 800, item_id="m1"))
+        await service.playback_started()
+        await service._dispatch(self._audio("r2", 3000, item_id="m2"))
+        clock[0] += 1.5
+        await service._handle_interruption()
+        [truncate] = self._sent(seen, "conversation.item.truncate")
+        assert (truncate["item_id"], truncate["audio_end_ms"]) == ("m2", 700)
+
+    async def test_a_reply_cut_before_it_was_audible_was_heard_not_at_all(self):
+        service, seen = self._service()
+        await service._dispatch(self._audio("r1", 800, item_id="m1"))
+        await service._handle_interruption()
+        [truncate] = self._sent(seen, "conversation.item.truncate")
+        assert (truncate["item_id"], truncate["audio_end_ms"]) == ("m1", 0)
+
+    async def test_a_reply_played_to_the_end_is_reported_drained_when_it_finishes(self):
+        service, seen = self._service()
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch(self._audio("r1", 800))
+        await service.playback_started()
+        await service._dispatch(self._done("r1", token="drn_1"))
+        assert not self._sent(seen, "prism.playback.drained"), "still playing"
+        await service.playback_stopped(finished=True)
+        assert self._sent(seen, "prism.playback.drained") == [{"type": "prism.playback.drained",
+                                                               "drain_token": "drn_1"}]
+        assert not self._sent(seen, "conversation.item.truncate")
+
+    async def test_a_reply_that_had_already_played_is_reported_drained_at_once(self):
+        service, seen = self._service()
+        await service._dispatch(self._audio("r1", 200))
+        await service.playback_started()
+        await service.playback_stopped(finished=True)
+        await service._dispatch(self._done("r1", token="drn_1"))
+        assert [event["drain_token"] for event in self._sent(seen, "prism.playback.drained")] == ["drn_1"]
+        # A cancelled reply did not play out, and gets no receipt.
+        await service._dispatch(self._done("r2", status="cancelled", token="drn_2"))
+        assert len(self._sent(seen, "prism.playback.drained")) == 1
+
+    async def test_playback_is_reported_from_after_the_output_transport(self):
+        from pipecat.frames.frames import BotStartedSpeakingFrame, BotStoppedSpeakingFrame
+        from pipecat.processors.frame_processor import FrameDirection
+        from rime_prism import ReportsPlayback
+
+        service, seen = self._service()
+        await service._dispatch(self._audio("r1", 100))
+        await service._dispatch(self._done("r1", token="drn_1"))
+        reporter = ReportsPlayback(service)
+
+        async def forward(frame, direction=FrameDirection.DOWNSTREAM):
+            return None
+
+        reporter.push_frame = forward
+        for frame in (BotStartedSpeakingFrame(), BotStoppedSpeakingFrame()):
+            await reporter.process_frame(frame, FrameDirection.DOWNSTREAM)
+        assert [event["type"] for event in seen["sent"]] == ["prism.playback.drained"]
+        assert bot.PROVIDERS["rime-prism"].reports_playback
+
+    def test_each_reporting_row_brings_its_own_playback_stage(self):
+        """One row's playback reporting never changes with another row's module."""
+        import importlib
+
+        for key, provider in bot.PROVIDERS.items():
+            if provider.reports_playback:
+                stage = importlib.import_module(provider.module).ReportsPlayback
+                assert stage.__module__ == provider.module, key
+
+    def test_the_endpoint_moves_only_from_the_environment_and_is_on_the_record(self, monkeypatch):
+        import rime_prism
+
+        assert self._service()[0]._url == rime_prism.URL
+        assert bot.rime_prism_disclosures(asked(rime_prism_url="wss://elsewhere"))["rime_prism_endpoint"] == rime_prism.URL
+        monkeypatch.setenv(rime_prism.URL_ENV, "wss://prism.beta.example/v1/realtime")
+        assert self._service()[0]._url == "wss://prism.beta.example/v1/realtime"
+        assert bot.rime_prism_disclosures(asked())["rime_prism_endpoint"] == "wss://prism.beta.example/v1/realtime"
+
+    async def test_the_services_detector_decides_the_callers_turn(self):
+        service, seen = self._service()
+        await service._dispatch({"type": "input_audio_buffer.speech_started", "item_id": "u1"})
+        await service._dispatch({"type": "input_audio_buffer.speech_stopped", "item_id": "u1"})
+        assert seen["broadcast"] == ["ProposedUserStartedSpeakingFrame", "ProposedUserStoppedSpeakingFrame"]
+        provider = bot.PROVIDERS["rime-prism"]
+        assert provider.turns == "provider" and provider.interruptions and provider.results == "immediate"
+
+    async def test_the_callers_words_travel_upstream_to_the_context(self):
+        from pipecat.processors.frame_processor import FrameDirection
+
+        service, seen = self._service()
+        await service._dispatch({"type": "conversation.item.input_audio_transcription.completed",
+                                 "item_id": "u1", "transcript": "I need to reschedule."})
+        [(name, direction, frame)] = seen["pushed"]
+        assert name == "TranscriptionFrame" and direction is FrameDirection.UPSTREAM
+        assert bot.PROVIDERS["rime-prism"].caller_transcription == "automatic"
+
+    async def test_each_replys_usage_is_reported(self):
+        service, seen = self._service()
+        await service._dispatch(self._done("r1", usage={
+            "input_tokens": 573, "output_tokens": 16, "total_tokens": 589, "context_window": 65536}))
+        [tokens] = seen["usage"]
+        assert (tokens.prompt_tokens, tokens.completion_tokens, tokens.total_tokens) == (573, 16, 589)
+
+    async def test_documented_refusals_are_logged_and_faults_are_errors(self):
+        service, seen = self._service()
+        for code in ("truncate_not_current", "response_superseded", "nudge_superseded"):
+            await service._dispatch({"type": "error", "error": {"code": code}})
+        assert not seen["errors"]
+        await service._dispatch({"type": "error", "error": {
+            "code": "invalid_client_event", "message": "not a field", "param": "session.type", "scope": "event"}})
+        assert seen["errors"] == [
+            "Prism error: [invalid_client_event] not a field (param: session.type) (scope: event)"]
+
+
 class TestCascadeCounterparts:
     """The comparison the board exists to make: native against the pipeline it replaces."""
 
@@ -2215,17 +2962,18 @@ class TestCascadeCounterparts:
 
         Nova Sonic, GPT-Live, Phonic, Deepslate and Azure Realtime have no
         vendor-default counterpart: GPT-Live delegates to a backend, so its fair
-        pairing is a cascade on that backend; Phonic, Deepslate and PolyAI offer no
+        pairing is a cascade on that backend; Phonic, Deepslate, PolyAI and Rime offer no
         text model of their own on an API; the text models Voice Live serves next to Azure
         Realtime are OpenAI's, which the OpenAI cascade already covers; and Deepgram's
-        Voice Agent is itself a cascade (Flux, GPT-4.1, Aura) behind one socket.
+        Voice Agent is itself a cascade (Flux, GPT-4.1, Aura) behind one socket. Smallest's
+        Hydra has none: no text model of Smallest's is in this harness.
         A vendor's smaller tier shares its vendor's counterpart: the question it
         answers is "the cheaper model or the flagship", not "native or cascade".
         """
         paired = {c.counterpart_to for c in bot.TEXT_MODELS.values() if c.counterpart_to}
         tiers = {"openai-realtime-mini", "gemini-live-standard", "gemini-flash-live"}
         unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live", "phonic", "deepslate", "azure-realtime", "polyai-dialog",
-                                            "deepgram-voice-agent"} - tiers
+                                         "smallest-hydra", "rime-prism", "deepgram-voice-agent"} - tiers
         assert not unpaired, f"native providers with no cascade counterpart: {sorted(unpaired)}"
 
     def test_a_counterpart_names_a_provider_that_exists(self):
@@ -4265,7 +5013,7 @@ class TestAResultIsDeliveredWhileTheAgentIsStillSpeaking:
     def test_the_rows_that_only_forward_a_result_are_the_immediate_ones(self):
         assert {k for k, p in bot.PROVIDERS.items() if p.results == "immediate"} == {
             "gemini-live", "gemini-live-standard", "gemini-flash-live", "nova-sonic", "phonic", "deepslate",
-            "polyai-dialog", "deepgram-voice-agent",
+            "polyai-dialog", "rime-prism", "deepgram-voice-agent",
         }
         for key in ("openai-realtime", "openai-realtime-mini", "grok-realtime"):
             assert bot.PROVIDERS[key].results == "after_speech", key
@@ -4522,7 +5270,7 @@ class TestTheImageCarriesEveryModule:
             path.stem for path in AGENT_DIR.glob("*.py")
             if path.name != "bot.py" and re.search(rf"^\s*(from {path.stem} import|import {path.stem}\b)", source, re.M)
         }
-        assert "polyai_realtime" in imported
+        assert {"polyai_realtime", "rime_prism"} <= imported
         missing = sorted(m for m in imported if f"COPY reference-agents/pipecat-s2s/{m}.py ./{m}.py" not in dockerfile)
         assert not missing, f"imported by bot.py but not copied into the image: {missing}"
 

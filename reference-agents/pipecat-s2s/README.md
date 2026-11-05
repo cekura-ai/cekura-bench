@@ -34,7 +34,7 @@ laptop work unchanged and lets a deployment carry a default:
 
 | Key | Default | Notes |
 |---|---|---|
-| `s2s_provider` | `openai-realtime` | native: also `openai-realtime-mini`, `gemini-live`, `gemini-live-standard`, `gemini-flash-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`, `phonic`, `deepslate`, `azure-realtime`, `polyai-dialog`, `deepgram-voice-agent`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
+| `s2s_provider` | `openai-realtime` | native: also `openai-realtime-mini`, `gemini-live`, `gemini-live-standard`, `gemini-flash-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`, `phonic`, `deepslate`, `azure-realtime`, `polyai-dialog`, `smallest-hydra`, `rime-prism`, `deepgram-voice-agent`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
 | `s2s_model` | provider default | pin it for a reproducible run |
 | `s2s_voice` | provider default | |
 | `s2s_backend_model` | `gpt-6-sol` | `gpt-live` only, see below |
@@ -58,7 +58,7 @@ quotes the body.
 
 | Variable | Notes |
 |---|---|
-| provider key | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, `DASHSCOPE_API_KEY`, `PHONIC_API_KEY`, `DEEPSLATE_API_KEY` (with `DEEPSLATE_VENDOR_ID` and `DEEPSLATE_ORGANIZATION_ID`), `AZURE_VOICE_API_KEY` (with `AZURE_VOICE_ENDPOINT`, the Voice Live resource's endpoint), `POLY_API_KEY` (a Dialog-RSN-1 key from PolyAI's Agent Studio), or for Bedrock `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`); see below for why an API key cannot work |
+| provider key | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, `DASHSCOPE_API_KEY`, `PHONIC_API_KEY`, `DEEPSLATE_API_KEY` (with `DEEPSLATE_VENDOR_ID` and `DEEPSLATE_ORGANIZATION_ID`), `AZURE_VOICE_API_KEY` (with `AZURE_VOICE_ENDPOINT`, the Voice Live resource's endpoint), `POLY_API_KEY` (a Dialog-RSN-1 key from PolyAI's Agent Studio), `SMALLEST_API_KEY` (Hydra, and Pulse Pro for its caller transcript), `RIME_API_KEY` (a Rime API key, for Prism), or for Bedrock `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`); see below for why an API key cannot work |
 | `DEEPGRAM_API_KEY`, `ELEVENLABS_API_KEY` | cascade rows; `ELEVENLABS_API_KEY` also for `deepslate`, which hands it to Deepslate to voice its replies; `DEEPGRAM_API_KEY` also for `deepgram-voice-agent`, which needs `OPENAI_API_KEY` as well: its text model runs on our own OpenAI account |
 | `CEKURA_API_KEY`, `CEKURA_AGENT_ID_<DEFINITION>` | tracing is off without both; one platform agent per agent definition (`CEKURA_AGENT_ID_APPOINTMENTS`, `CEKURA_AGENT_ID_MEDICARE`), with `CEKURA_AGENT_ID` for a deployment that serves one |
 | `AGENT_COMMIT` | stamped by the build; names what was actually deployed |
@@ -335,13 +335,67 @@ cluster that issues keys from `poly apikey --region studio`; the vendor's
 reference names `wss://api.us.poly.ai/v1/realtime`, which refuses those keys.
 `POLYAI_REALTIME_URL` overrides the endpoint, and the record names the one used. The vendor publishes no price.
 
+### Smallest AI Hydra
+
+Hydra hears the caller at 16 kHz, decides when they have finished, and answers
+in its own voice at 24 kHz. `smallest_hydra.py` speaks the vendor's socket
+directly: its events carry OpenAI's realtime names, but the session is
+configured once, with `session.configure`, and the key is a query parameter, so
+it is scrubbed from every error the row raises. The service takes no
+turn-detection settings, so the row runs at the vendor's defaults.
+
+The service answers caller audio and tool results only, not a text turn, so the
+opening instruction every row is given is appended to this row's system prompt
+and the session is asked to open with a reply of its own. Hydra transcribes
+neither side. The agent's words are the reply text it streams beside the audio,
+which its documentation does not list; they are held until the reply makes a
+sound. The caller's words come from Smallest's own speech-to-text, Pulse Pro,
+with the same key: each caller turn is transcribed as soon as the service hears
+it end, from a second before the service heard it start, and the caller's
+words are placed before the reply they got. After a closing tool, a reply is
+asked for only if the reply that called it made no sound, and only once. The
+vendor publishes no price.
+
+### Rime Prism
+
+Prism speaks the earlier, flat shape of OpenAI's realtime protocol with its own
+rules on top, and no framework service speaks it, so `rime_prism.py` does. The
+session carries only the prompt, the voice and the tools: the service refuses a
+whole update over any field outside its schema. It hears the caller at 16 kHz,
+speaks at 24 kHz, transcribes the caller unasked, and decides the caller's
+turns with one built-in detector whose settings are left at the vendor's
+defaults; the values the service reports in effect, and the release that
+answered, are written to the record once the session is open.
+
+Every reply the client asks for must name its cause. The opening turn is a
+*nudge*, the service's own form for "speak first, and say this", carrying the
+same opening instruction every row is given; it is accepted only once the
+service announces it is idle. A tool's result does not resume the reply: a
+continuation naming the reply that made the call is asked for once that reply
+has ended and the service has acknowledged every result, and not before,
+because an early one is refused and not kept. While a tool runs the service
+says a short line of its own choosing, its default, and that line is in the
+transcript.
+
+The service sends a reply's audio faster than it is played and decides from
+the client's account what the caller heard, so the row reports playback from
+after the output transport, as the PolyAI row does: how many milliseconds of a
+reply the caller heard when they cut in, which decides what the model
+remembers saying and whether its next reply acknowledges the interruption, and
+when a reply played out uncut, which decides when the caller's next words open
+a new turn rather than interrupt. The row connects to
+`wss://prism.api.rime.ai/v1/realtime`; `RIME_PRISM_URL` points it at another
+Prism endpoint, such as the vendor's beta host for a diagnostic run, and the
+record names the one used. The only published price is a third-party figure, so
+the row's cost is computed but not published.
+
 ## The sample rate is not a tuning knob
 
 These realtime services **do not resample**. Each base64-encodes the audio frame
 it is handed and declares a rate separately, so the pipeline rate must match what
 the provider expects: 24 kHz for OpenAI Realtime, Grok and Azure Realtime (the rate each
-recommends), 16 kHz for Gemini Live, Nova Sonic, Qwen, Phonic, Deepslate and Dialog-RSN-1 (Nova Sonic, Qwen
-and Dialog-RSN-1 reply at 24 kHz). GPT-Live is the exception: it resamples what it is given. Open it at the wrong rate and the model hears the caller sped up or slowed
+recommends), 16 kHz for Gemini Live, Nova Sonic, Qwen, Phonic, Deepslate, Dialog-RSN-1 and Prism (Nova Sonic, Qwen,
+Dialog-RSN-1 and Prism reply at 24 kHz). GPT-Live is the exception: it resamples what it is given. Open it at the wrong rate and the model hears the caller sped up or slowed
 down, transcribes the words badly, and the run looks like a model failure when it
 is a wiring failure.
 

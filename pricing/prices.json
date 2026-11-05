@@ -242,6 +242,34 @@
         "No public price list."
       ]
     },
+    "smallest-hydra": {
+      "read_on": null,
+      "verified": false,
+      "source": null,
+      "components": [],
+      "unmetered": [
+        "No public price list; the vendor quotes a per-minute rate on request.",
+        "The caller's turns are transcribed by Pulse Pro, billed separately."
+      ]
+    },
+    "rime-prism": {
+      "read_on": "2026-11-04",
+      "verified": false,
+      "source": "a third-party blog post, not the vendor's own page",
+      "components": [
+        {
+          "name": "prism",
+          "basis": "per_minute",
+          "measure": "call_seconds",
+          "rates": {
+            "minute": 0.08
+          }
+        }
+      ],
+      "unmetered": [
+        "The Flex rate as reported second-hand; the same source gives $0.064 a minute on the Scale plan."
+      ]
+    },
     "azure-realtime": {
       "read_on": "2026-10-07",
       "verified": true,

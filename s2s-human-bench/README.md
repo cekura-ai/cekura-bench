@@ -23,7 +23,9 @@ holds none of them.
   their scores are within 5 points, otherwise the higher wins. Ranked models get
   Bradley-Terry ratings (1000 = average) with a 95% interval from a seeded bootstrap
   over scenarios. A reference system (the cascade) is rated afterwards against the ranked
-  models with their ratings held fixed, so it moves no one else.
+  models with their ratings held fixed, so it moves no one else. A model's `scenarioSwap`
+  takes the listed scenarios from another agent's runs, run by run; the cascade uses it to
+  answer English callers with English speech-to-text and language switchers with multilingual.
 * **Runs**: a model is published only with three usable runs. A run is usable when it was
   fully exported and the agent spoke on all but at most 7 calls; a run where it stayed
   silent on more is a throttled or broken run, not model behaviour.

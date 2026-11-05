@@ -148,15 +148,6 @@ def test_scenario_swap_takes_those_scenarios_from_the_other_agent(cfg, tmp_path)
     assert sorted(ref.runs[0]) == ["B01", "B02", "C01", "C02"]
 
 
-def test_reviewed_correction_replaces_the_grader_verdict(cfg, tmp_path):
-    for name in ("run_a1_r1", "run_a1_r2"):
-        write_run(tmp_path / name, {})
-    (entry,) = load_bench(cfg, tmp_path, corrections={"1": {"1.1": False}})
-    call = entry.runs[0]["B01"]
-    assert call.verdicts["1.1"] is False and "1.1" in call.misses
-    assert call.score < load_bench(cfg, tmp_path)[0].runs[0]["B01"].score
-
-
 # ---- splits ----------------------------------------------------------------------
 
 

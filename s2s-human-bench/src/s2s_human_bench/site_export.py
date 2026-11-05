@@ -73,10 +73,9 @@ def build(
     exclude_unhealthy: bool = False,
     reviewed: dict[str, list[Any]] | None = None,
     clips_reviewed: dict[str, Any] | None = None,
-    corrections: dict[str, dict[str, bool | None]] | None = None,
 ) -> tuple[dict[str, dict[str, Any]], list[dict[str, Any]]]:
     """Every output document by kind, and the clip picks."""
-    entries = load_bench(cfg, runs, exclude_unhealthy, corrections)
+    entries = load_bench(cfg, runs, exclude_unhealthy)
     if not entries:
         raise ExportError(f"{runs}: no model has {cfg['inputs']['minRuns']} usable runs")
     bench, insights, reports = s2s_docs(cfg, entries, public_s2s, day)
@@ -90,18 +89,6 @@ def build(
         examples=examples,
     )
     return docs, picks
-
-
-def verdict_corrections(path: Path | None) -> dict[str, dict[str, bool | None]] | None:
-    """Reviewed verdicts, {call id: {skill id: verdict, "why": reason}}; each needs a reason. None when no file is given."""
-    if not path:
-        return None
-    out = {}
-    for call_id, fix in read_json(path).items():
-        if not str(fix.get("why") or "").strip():
-            raise ExportError(f"verdict corrections: call {call_id} has no reason")
-        out[str(call_id)] = {k: v for k, v in fix.items() if k != "why"}
-    return out
 
 
 def write_json(path: Path, doc: Any) -> None:
@@ -129,7 +116,6 @@ def run_site_export(args: Any) -> int:
         args.exclude_unhealthy,
         reviewed_calls(args.reviewed_examples),
         reviewed_clips(args.reviewed_clips),
-        verdict_corrections(getattr(args, "verdict_corrections", None)),
     )
     for kind, doc in docs.items():
         write_json(args.out / names[kind], doc)

@@ -9,7 +9,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from s2s_human_bench import rating
-from s2s_human_bench.calls import Call, corrected, load_run, model_runs
+from s2s_human_bench.calls import Call, load_run, model_runs
 from s2s_human_bench.config import Config, Model
 
 Run = dict[str, Call]
@@ -25,9 +25,8 @@ class Entry:
         return [c for run in self.runs for c in run.values()]
 
 
-def load_bench(cfg: Config, root: Path, exclude_unhealthy: bool = False, corrections: dict[str, dict[str, bool | None]] | None = None) -> list[Entry]:
-    """Models with at least ``minRuns`` usable runs, in config order: pass³ and ELO need every run.
-    ``corrections`` holds reviewed verdicts, {call id: {skill id: verdict}}, applied in place of the grader's."""
+def load_bench(cfg: Config, root: Path, exclude_unhealthy: bool = False) -> list[Entry]:
+    """Models with at least ``minRuns`` usable runs, in config order: pass³ and ELO need every run."""
     out = []
     for model in cfg.models:
         runs = model_runs(cfg, model, root)
@@ -39,10 +38,8 @@ def load_bench(cfg: Config, root: Path, exclude_unhealthy: bool = False, correct
                 # Run i takes the swapped scenarios from the other agent's run i; runs without a partner are dropped.
                 loaded = [
                     {**{k: c for k, c in mine.items() if k not in codes}, **{k: c for k, c in load_run(cfg, theirs, exclude_unhealthy).items() if k in codes}}
-                    for mine, theirs in zip(loaded, other)
+                    for mine, theirs in zip(loaded, other, strict=False)
                 ]
-            if corrections:
-                loaded = [{k: corrected(cfg, c, corrections[str(c.call_id)]) if str(c.call_id) in corrections else c for k, c in run.items()} for run in loaded]
             if len(loaded) >= cfg["inputs"]["minRuns"]:
                 out.append(Entry(model, loaded))
     return out

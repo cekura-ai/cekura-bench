@@ -970,7 +970,7 @@ class TestDeepslateRealtime:
         assert tts.eleven_labs.api_key == "el-key"
 
     def test_a_hosted_voice_must_be_named(self):
-        """Deepslate hosts no stock voice, so the default voice id is not one of its own."""
+        """The default voice id is an ElevenLabs one, not one Deepslate hosts."""
         with pytest.raises(ValueError, match="s2s_voice"):
             self._service(asked(deepslate_tts="hosted"))
         service, _ = self._service(asked(deepslate_tts="hosted", s2s_voice="cloned-voice"))
@@ -1096,6 +1096,27 @@ class TestDeepslateRealtime:
         assert seen["interruptions"] == 1
         assert [name for name, _, _ in seen["pushed"]][-2:] == ["TTSStoppedFrame", "LLMFullResponseEndFrame"]
         assert not bot.PROVIDERS["deepslate"].interruptions
+
+    async def test_a_reply_still_playing_after_response_end_can_be_talked_over(self):
+        """response_end is the end of generation; most of the reply has yet to play when it arrives."""
+        from deepslate.core.proto import realtime_pb2 as proto
+        from pipecat.frames.frames import BotStartedSpeakingFrame, BotStoppedSpeakingFrame
+        from pipecat.processors.frame_processor import FrameDirection
+
+        service, seen = self._service()
+        await service._dispatch(self._message(response_begin=proto.ResponseBegin(turn_id=0)))
+        await service._dispatch(self._message(model_audio_chunk=proto.ModelAudioChunk(
+            audio=proto.AudioData(data=b"\1\0" * 160), turn_id=0)))
+        await service.process_frame(BotStartedSpeakingFrame(), FrameDirection.UPSTREAM)
+        await service._dispatch(self._message(response_end=proto.ResponseEnd(turn_id=0)))
+        # Generated, still playing: the caller's barge-in clears it.
+        await service._dispatch(self._message(playback_clear_buffer=proto.PlaybackClearBuffer()))
+        assert seen["interruptions"] == 1
+        # Played out: the service's clear-buffer for the caller's next turn cuts nothing.
+        await service.process_frame(BotStoppedSpeakingFrame(), FrameDirection.UPSTREAM)
+        await service._dispatch(self._message(playback_clear_buffer=proto.PlaybackClearBuffer()))
+        assert seen["interruptions"] == 1
+        assert "generated or still playing" in record_for("deepslate")["deepslate_barge_in"]
 
     async def test_audio_still_in_flight_for_a_cut_reply_does_not_reopen_it(self):
         from deepslate.core.proto import realtime_pb2 as proto

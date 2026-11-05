@@ -30,6 +30,7 @@ from tts_bench.adapters.fake import FakeTTSAdapter
 from tts_bench.adapters.fish_audio import FishAudioAdapter
 from tts_bench.adapters.gemini_tts import GeminiTTSAdapter
 from tts_bench.adapters.gradium import GradiumAdapter
+from tts_bench.adapters.heygen import HeyGenTTSAdapter
 from tts_bench.adapters.hume import HumeAdapter
 from tts_bench.adapters.inworld import InworldAdapter
 from tts_bench.adapters.openai_tts import OpenAITTSAdapter
@@ -80,6 +81,7 @@ SARAH = "933563129e564b19a115bedd57b7406a"              # Fish Official, female 
 DELIA = "c70cfb98867a4bfb9ae20d2401257b92"              # Fish Audio, female US English, from its Drama 3 voice cast
 AVA = "5bb7de05-c8fe-426a-8fcc-ba4fc4ce9f9c"           # Hume "Ava Song", female US English, from its Voice Library
 AUDREY = "49c443a4-8a1d-5f7e-b70b-98bdbd9823c3"        # AssemblyAI "Audrey", female US English, the voice AssemblyAI chose
+NADINE = "83548de556df48ba8c09c42a57c51d85"            # HeyGen "Nadine - Calm & Gentle", female English, the public voice HeyGen's docs start with
 
 PROVIDERS: dict[str, ProviderEntry] = {
     "fake": ProviderEntry("fake", FakeTTSAdapter, "FAKE_KEY_UNUSED", (Model("scripted", "tone"),)),
@@ -197,6 +199,14 @@ PROVIDERS: dict[str, ProviderEntry] = {
         notes="Streaming TTS websocket, session configured in the URL, Begin before t0; Generate appends text, "
               "Flush ends the utterance (FlushDone), Cancel is the barge-in (Cancelled); one utterance at a time per "
               "socket; word timings off; US data zone; new sessions per minute are limited per account",
+    ),
+    "heygen": ProviderEntry(
+        "heygen", HeyGenTTSAdapter, "HEYGEN_API_KEY",
+        (Model("heygen-voice-1-turbo", NADINE), Model("heygen-voice-1", NADINE)),
+        notes="HeyGen Voice over HTTP /v3/models/audio/tts/stream, raw PCM streamed back; whole text per request; "
+              "language sent (en); voice read and checked ACTIVE before t0; cells paced under the documented "
+              "30 requests a minute (option requests_per_minute); Turbo Free left out (shared capacity, "
+              "no latency guarantee)",
     ),
 }
 

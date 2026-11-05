@@ -2,14 +2,25 @@
 
 from __future__ import annotations
 
-from tts_bench.adapters.base import TTSConfig
+import asyncio
+import time
+from collections import deque
+from urllib.parse import urlsplit
+
+import pytest
+from aiohttp import web
+
+from tts_bench import corpus
+from tts_bench.adapters import heygen
+from tts_bench.adapters.base import AdapterError, TTSConfig, is_refusal
 from tts_bench.adapters.deepgram_flux import DeepgramFluxAdapter
 from tts_bench.adapters.elevenlabs_dialogue import ElevenLabsDialogueAdapter
 from tts_bench.adapters.elevenlabs_dialogue_multi import ElevenLabsDialogueMultiAdapter
+from tts_bench.adapters.heygen import HeyGenTTSAdapter, wait_for_room
 from tts_bench.common.events import Clock, EventLog
-from tts_bench.registry import PROVIDERS, lineup
+from tts_bench.registry import NADINE, PROVIDERS, lineup
 from tts_bench.runner import RunSpec, Runner
-from tts_bench.probes import OneShot
+from tts_bench.probes import OneShot, Repeat, StreamedInput
 
 
 def adapter(cls, model: str, voice: str):
@@ -745,3 +756,238 @@ class TestLineupRates:
         assert PROVIDERS["hume"].rate_for("octave-2") == 48000
         assert PROVIDERS["cartesia"].rate_for("sonic-3.6") == 24000
         assert PROVIDERS["cartesia"].rate_for("a-model-outside-the-lineup") == 24000
+
+
+# -- HeyGen ------------------------------------------------------------------
+
+# Odd chunk sizes, so a chunk ends inside a sample the way a TCP read can.
+HEYGEN_PCM = bytes(range(256)) * 40                     # 10240 bytes: 5120 samples at 24 kHz
+HEYGEN_CHUNKS = (1001, 2047, 3, 4095, 3094)
+assert sum(HEYGEN_CHUNKS) == len(HEYGEN_PCM)
+
+
+class FakeHeyGen:
+    """The two HeyGen endpoints the adapter calls, scripted per test.
+
+    ``speech`` maps the request text to a mode: ``ok`` streams ``HEYGEN_PCM``
+    as raw PCM in ``HEYGEN_CHUNKS``; ``rate`` labels it 44.1 kHz; ``sse`` sends
+    events instead of PCM; ``half`` ends inside a sample; ``429`` and ``503``
+    answer with HeyGen's error envelope.
+    """
+
+    def __init__(self) -> None:
+        self.voice_status, self.voice_state = 200, "ACTIVE"
+        self.speech = lambda text: "ok"
+        self.requests: list[dict] = []
+        self.base = ""
+
+    def _seen(self, request: web.Request, body: dict | None = None) -> None:
+        self.requests.append({"method": request.method, "path": request.path, "body": body,
+                              "key": request.headers.get("X-Api-Key"),
+                              "client_port": request.transport.get_extra_info("peername")[1]})
+
+    async def voice(self, request: web.Request) -> web.Response:
+        self._seen(request)
+        if request.headers.get("X-Api-Key") != "secret-key":
+            return web.json_response({"error": {"code": "unauthorized", "message": "Unauthorized"}}, status=401)
+        if self.voice_status != 200:
+            return web.json_response({"error": {"code": "voice_not_found", "message": "Voice not found"}}, status=self.voice_status)
+        return web.json_response({"data": {"voice_id": request.match_info["voice_id"], "status": self.voice_state}})
+
+    async def speak(self, request: web.Request) -> web.StreamResponse:
+        body = await request.json()
+        self._seen(request, body)
+        mode = self.speech(body["text"])
+        if mode in ("429", "503"):
+            code = {"429": "rate_limit_exceeded", "503": "service_unavailable"}[mode]
+            return web.json_response({"error": {"code": code, "message": code.replace("_", " ")}}, status=int(mode),
+                                     headers={"Retry-After": "2"} if mode == "429" else None)
+        rate = "44100" if mode == "rate" else str(body["output_format"]["sample_rate_hertz"])
+        response = web.StreamResponse(headers={
+            "Content-Type": "text/event-stream" if mode == "sse" else "audio/pcm",
+            "X-Audio-Sample-Rate": rate, "X-Audio-Channels": "1", "X-Request-Id": "req-1", "Content-Language": "en"})
+        await response.prepare(request)
+        start = 0
+        for size in HEYGEN_CHUNKS:
+            await response.write(HEYGEN_PCM[start:start + size])
+            start += size
+            await asyncio.sleep(0.01)                         # separate reads on the client
+        if mode == "half":
+            await response.write(b"\x07")
+        await response.write_eof()
+        return response
+
+
+@pytest.fixture
+async def fake_heygen():
+    fake = FakeHeyGen()
+    app = web.Application()
+    app.router.add_get("/v3/models/audio/voices/{voice_id}", fake.voice)
+    app.router.add_post("/v3/models/audio/tts/stream", fake.speak)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "127.0.0.1", 0)
+    await site.start()
+    fake.base = f"http://127.0.0.1:{site._server.sockets[0].getsockname()[1]}"
+    try:
+        yield fake
+    finally:
+        await runner.cleanup()
+
+
+@pytest.fixture(autouse=True)
+def empty_heygen_request_window():
+    """Each test starts with no HeyGen requests in the last minute, so none of them is paced by another."""
+    heygen._SENT.clear()
+    yield
+    heygen._SENT.clear()
+
+
+def heygen_adapter(base: str, tmp_path=None, model: str = "heygen-voice-1-turbo", **options: str) -> HeyGenTTSAdapter:
+    clock = Clock()
+    log = EventLog(clock, raw_path=tmp_path / "raw.jsonl") if tmp_path else EventLog(clock)
+    instance = HeyGenTTSAdapter(TTSConfig(model=model, voice=NADINE, options=tuple(options.items())), "secret-key", log, clock)
+    instance.base = base
+    return instance
+
+
+async def speak(instance: HeyGenTTSAdapter, text: str = "Your total is $42."):
+    async with instance:
+        await instance.open_context("main")
+        await instance.send("main", text)
+        await instance.finish("main")
+        return await instance.wait("main", 5.0)
+
+
+class TestHeyGen:
+    def test_the_request_asks_for_raw_pcm_at_the_configured_rate_and_names_the_language(self):
+        turbo = heygen_adapter(HeyGenTTSAdapter.base)
+        assert f"{turbo.base}{turbo.speech_path}" == "https://api.heygen.com/v3/models/audio/tts/stream"
+        assert turbo._prewarm_url() == f"https://api.heygen.com/v3/models/audio/voices/{NADINE}"
+        assert turbo._headers() == {"X-Api-Key": "secret-key"}
+        assert turbo._request_args("Your total is $42.")["json"] == {
+            "model": "heygen-voice-1-turbo", "voice_id": NADINE, "text": "Your total is $42.", "language": "en",
+            "output_format": {"encoding": "pcm", "sample_rate_hertz": 24000}}
+
+        clock = Clock()
+        tuned = HeyGenTTSAdapter(TTSConfig(model="heygen-voice-1", voice=NADINE, sample_rate=16000,
+                                           options=(("expressiveness_boost", "0.5"), ("language", "es"))),
+                                 "secret-key", EventLog(clock), clock)
+        body = tuned._request_args("Hola.")["json"]
+        assert body["expressiveness_boost"] == 0.5 and body["language"] == "es"
+        assert body["output_format"] == {"encoding": "pcm", "sample_rate_hertz": 16000}
+
+    def test_what_the_protocol_cannot_do_is_declared(self):
+        config = TTSConfig(model="heygen-voice-1-turbo", voice=NADINE)
+        assert HeyGenTTSAdapter.unsupported_reason(config, (StreamedInput.needs)) == "heygen-speech has no streamed input"
+        assert HeyGenTTSAdapter.unsupported_reason(config, ("cancel",)) == "heygen-speech has no cancel"
+        assert HeyGenTTSAdapter.unsupported_reason(config, ("continuation",)) == "heygen-speech has no continuation"
+        assert HeyGenTTSAdapter.unsupported_reason(config) is None
+        assert HeyGenTTSAdapter.unsupported_reason(TTSConfig("heygen-voice-1-turbo", NADINE, sample_rate=23000)) is not None
+        assert HeyGenTTSAdapter.native_mulaw_8k and HeyGenTTSAdapter.transport == "http"
+
+    async def test_one_request_streams_whole_samples_on_the_connection_the_prewarm_opened(self, fake_heygen, tmp_path):
+        done = await speak(heygen_adapter(fake_heygen.base, tmp_path))
+        assert done.error is None and done.meta["ended_by"] == "provider"
+        assert bytes(done.pcm) == HEYGEN_PCM
+        # An odd byte waits for the sample it starts, so the timeline counts exactly the samples received.
+        assert done.timeline.n_samples * 2 == len(HEYGEN_PCM)
+        assert len(done.timeline.chunks) >= 3 and done.t_first_chunk < done.t_last_chunk
+        prewarm, speech = fake_heygen.requests
+        assert (prewarm["method"], speech["method"]) == ("GET", "POST")
+        assert prewarm["client_port"] == speech["client_port"]          # the handshake stayed before t0
+        assert speech["key"] == "secret-key" and speech["body"]["language"] == "en"
+        assert done.meta["headers"]["x-request-id"] == "req-1" and done.meta["headers"]["x-audio-sample-rate"] == "24000"
+        raw = (tmp_path / "raw.jsonl").read_text()
+        assert "secret-key" not in raw and "$42" not in raw and '"text": "<18 chars>"' in raw
+
+    @pytest.mark.parametrize("mode, error", [
+        ("rate", "asked for 24000 Hz, got 44100 Hz"),
+        ("sse", "expected audio/pcm, got text/event-stream"),
+        ("half", "stream ended inside a sample (1 trailing byte)"),
+    ])
+    async def test_audio_other_than_what_was_asked_for_is_an_error_not_a_measurement(self, fake_heygen, mode, error):
+        fake_heygen.speech = lambda text: mode
+        done = await speak(heygen_adapter(fake_heygen.base))
+        assert done.error == error and done.done.is_set()
+        assert not is_refusal(done.error)                     # the service's fault, not the account's
+
+    async def test_a_rate_limit_is_a_refusal_and_a_busy_service_is_a_failure(self, fake_heygen):
+        fake_heygen.speech = lambda text: "429"
+        limited = await speak(heygen_adapter(fake_heygen.base))
+        assert limited.error.startswith("HTTP 429") and "rate_limit_exceeded" in limited.error and is_refusal(limited.error)
+        assert limited.meta["headers"]["retry-after"] == "2" and not limited.pcm
+
+        fake_heygen.speech = lambda text: "503"
+        busy = await speak(heygen_adapter(fake_heygen.base))
+        assert busy.error.startswith("HTTP 503") and not is_refusal(busy.error)
+
+    @pytest.mark.parametrize("voice_status, voice_state, key, message", [
+        (200, "ACTIVE", "wrong-key", "rejected the key: HTTP 401"),
+        (404, "ACTIVE", "secret-key", "is not available to this key"),
+        (200, "PENDING", "secret-key", "is PENDING, not ACTIVE"),
+    ])
+    async def test_a_refused_key_or_an_unusable_voice_stops_the_cell_before_t0(self, fake_heygen, voice_status,
+                                                                               voice_state, key, message):
+        fake_heygen.voice_status, fake_heygen.voice_state = voice_status, voice_state
+        instance = heygen_adapter(fake_heygen.base)
+        instance.api_key = key
+        with pytest.raises(AdapterError, match=message):
+            await instance.connect()
+        assert [r["method"] for r in fake_heygen.requests] == ["GET"]   # no speech request was sent
+        assert instance._session.closed
+
+    def test_a_cell_waits_until_two_more_requests_fit_in_the_last_minute(self):
+        assert wait_for_room(deque(), 2, 30, now=100.0) == 0.0
+        assert wait_for_room(deque(float(t) for t in range(28)), 2, 30, now=30.0) == 0.0          # 28 + 2 fit
+        full = deque(float(t) for t in range(29))                                                 # sent at 0..28 s
+        assert wait_for_room(full, 2, 30, now=30.0) == pytest.approx(31.0)                       # until 0 s leaves the window
+        assert wait_for_room(full, 2, 30, now=61.0) == 0.0 and full[0] == 1.0                     # 0 s has left: 28 remain
+        assert wait_for_room(deque([0.0] * 50), 2, 0, now=1.0) == 0.0                             # 0 turns pacing off
+        assert wait_for_room(deque([10.0]), 2, 1, now=20.0) == pytest.approx(51.0)               # a limit of 1 still paces
+
+    async def test_the_pacing_wait_happens_before_t0(self, fake_heygen, tmp_path, monkeypatch):
+        monkeypatch.setattr(heygen, "WINDOW_S", 0.3)
+        heygen._SENT.extend([time.monotonic()] * 29)          # the limit is all but used, and frees up in 0.3 s
+        started = time.monotonic()
+        done = await speak(heygen_adapter(fake_heygen.base, tmp_path))
+        assert time.monotonic() - started >= 0.25
+        assert done.error is None and (done.t_first_chunk - done.t0) < 0.25   # the wait is not in first audio
+        assert '"paced_s"' in (tmp_path / "raw.jsonl").read_text()
+        assert len(heygen._SENT) == 1                          # the expired 29 are gone; this request is recorded
+
+    async def test_a_run_measures_what_heygen_can_do_excludes_the_rest_and_retries_refusals(self, fake_heygen,
+                                                                                         tmp_path, monkeypatch):
+        greet, hold = corpus.by_id()["prose.greet"], corpus.by_id()["prose.hold"]
+        fake_heygen.speech = lambda text: "429" if text == hold.text else "ok"
+        monkeypatch.setattr(HeyGenTTSAdapter, "base", fake_heygen.base)
+        spec = RunSpec(provider="heygen", probes=[OneShot(), Repeat(), StreamedInput()], items=[greet, hold],
+                       repeats=1, sentinel=False, store=str(tmp_path))
+        runner = Runner(spec, api_key="secret-key")
+        await runner.run()
+        cells = {(c.probe, c.item): c for c in runner.cells}
+
+        shot = cells[("one_shot", "prose.greet")]
+        assert shot.verdict == "pass" and shot.values["ttfa_ms"] is not None
+        assert shot.values["audio_ms"] == pytest.approx(len(HEYGEN_PCM) / 2 / 24000 * 1000, abs=1)
+        repeat = cells[("repeat", "prose.greet")]
+        assert repeat.verdict == "pass" and repeat.values["identical_pcm"] is True
+        assert cells[("streamed_input", "prose.greet")].void == "configuration not supported: heygen-speech has no streamed input"
+        refused = cells[("one_shot", "prose.hold")]
+        assert refused.void.startswith("provider refused: HTTP 429")
+        assert "one_shot/prose.hold/r1" in {p.cell_id for p in runner.pending()}          # a resume runs it again
+        assert "one_shot/prose.greet/r1" not in {p.cell_id for p in runner.pending()}
+        assert runner.config.model == "heygen-voice-1-turbo" and runner.config.voice == NADINE
+        speech = [r for r in fake_heygen.requests if r["method"] == "POST"]
+        assert len(speech) == 6                              # one_shot once per item, repeat twice per item
+
+    def test_the_lineup_and_the_sandbox_allowlist(self):
+        entry = PROVIDERS["heygen"]
+        assert entry.credential_env == "HEYGEN_API_KEY" and entry.default_model == "heygen-voice-1-turbo"
+        assert [(m.model, m.voice, m.rate) for m in entry.models] == [
+            ("heygen-voice-1-turbo", NADINE, 24000), ("heygen-voice-1", NADINE, 24000)]
+        assert "heygen-voice-1-turbo-free" not in {m.model for m in entry.models}
+        assert urlsplit(heygen_adapter(HeyGenTTSAdapter.base).base).hostname == "api.heygen.com"   # what sandbox.mjs allows
+
+    def test_no_corpus_item_carries_text_heygen_reads_as_an_audio_tag_or_a_break(self):
+        assert not [item.id for item in corpus.ITEMS if any(mark in item.text for mark in "[]<>")]

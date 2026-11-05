@@ -59,7 +59,7 @@
         {
           "id": "1.5",
           "metric": 275650,
-          "name": "Background-Noise Robustness",
+          "name": "Waiting Through Hold",
           "description": "Waits quietly through hold music or the phone being set down, then picks up when the caller is back.",
           "condition": "Hold music"
         },

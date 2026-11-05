@@ -407,7 +407,6 @@
       "label": "Noisy / Degraded Audio",
       "skills": [
         "1.3",
-        "1.5",
         "1.8"
       ],
       "description": "Street noise, bad lines, speakerphone"
@@ -434,11 +433,12 @@
       "key": "pauses",
       "label": "Pauses & Holds",
       "skills": [
+        "1.5",
         "2.1",
         "2.7",
         "2.8"
       ],
-      "description": "Caller pauses mid-sentence or asks to hold"
+      "description": "Caller pauses mid-sentence, asks to hold or steps away"
     },
     {
       "key": "corrections",

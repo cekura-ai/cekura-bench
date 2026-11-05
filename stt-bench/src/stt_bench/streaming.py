@@ -59,8 +59,9 @@ def transmitted_silence_frames(config):
                             config.get('stream_ending_profile') == 'gradium-no-tail-v1')
     versioned_reson8 = (config.get('provider') == 'reson8' and
                        config.get('transport_profile') == 'reson8-stop-after-flush-v2')
-    if count != 50 and config.get('provider') != 'inworld' and not (experimental_gradium or versioned_reson8):
-        raise ValueError('Only Inworld or an explicit Gradium or Reson8 profile may omit silence')
+    # Rime refuses audio after `end`, which the bench sends at speech end.
+    if count != 50 and config.get('provider') not in ('inworld', 'rime') and not (experimental_gradium or versioned_reson8):
+        raise ValueError('Only Inworld, Rime or an explicit Gradium or Reson8 profile may omit silence')
     return count
 
 

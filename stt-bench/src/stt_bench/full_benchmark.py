@@ -6,6 +6,7 @@ import argparse
 import asyncio
 from collections import Counter
 from datetime import datetime, timezone
+from functools import partial
 import hashlib
 import html
 import io
@@ -18,7 +19,7 @@ import tarfile
 import numpy as np
 import soundfile as sf
 
-from . import gradium, reson8, trial_providers, zoom
+from . import gradium, reson8, rime, trial_providers, zoom
 from .audio_formats import derivative, resample_24k
 from .credentials import redact
 from .data import sha256, write_json
@@ -32,7 +33,8 @@ from .streaming import EventLog, read_events
 
 MODELS = ('smallest-pulse', 'gradium-default', 'reson8-realtime', 'inworld-stt-1')
 # Version 1 plans must list exactly MODELS, so later additions live separately.
-FULL_MODELS = (*MODELS, 'soniox-stt-rt-v5', 'zoom-scribe-live', 'zoom-scribe-pro-live', 'zoom-scribe-pro-v2-1-live')
+FULL_MODELS = (*MODELS, 'soniox-stt-rt-v5', 'zoom-scribe-live', 'zoom-scribe-pro-live', 'zoom-scribe-pro-v2-1-live',
+               'rime-stt')
 # Public-only runs stream the 1,000 Pipecat clips without the eight private
 # recordings. Inworld is listed again so it can be re-run on public clips alone.
 PUBLIC_LIVE_MODELS = ('gemini-3.8-live', 'gemini-3.8-live-extended-thinking', 'soniox-stt-rt-v5', 'inworld-stt-1',
@@ -41,6 +43,17 @@ PUBLIC = Path('datasets/pipecat-stt-benchmark/3fe50170d520c951957b86996ef082a6ab
 PRIVATE = Path('reports/assemblyai-private-20260914/dataset')
 PRIVATE_MANIFEST = Path('workspaces/private-longform-recovery-v2/dataset/manifest.json')
 GRADIUM_SESSION_FRAMES=13500
+GRADIUM_VARIANTS=('gradium-consecutive-v1','gradium-consecutive-v2')
+# A Rime stream ends at 120 seconds and its context fills after about 90-110 seconds
+# of speech; Rime advises ending each utterance at a pause after about a minute.
+RIME_SESSION_MAX_FRAMES=3000
+RIME_SESSION_MIN_FRAMES=1500
+RIME_FINAL_SESSION_MIN_FRAMES=50
+RIME_PRIVATE_NOTE=('Rime private uses consecutive sessions of 30 to 60 seconds, each cut mid-pause at reference word '
+                   'boundaries, because a Rime stream ends at 120 seconds. All original source frames are sent once in '
+                   'order. Context resets and reconnect gaps are explicit; timing gates apply within each session. It is '
+                   'not an uninterrupted-session comparison. Rime returns a final transcript only when a session ends, '
+                   'so its private word-finalization delay reflects the session length, not recognition speed.')
 
 
 def now():
@@ -196,31 +209,102 @@ class SessionLog:
     def emit(self,kind,**fields):return self.parent.emit(kind,session_index=self.index,**fields)
 
 
-async def gradium_sessions(pcm,speech_frames,config,key,log):
+async def consecutive_sessions(pcm,windows,config,key,log,transcribe_session,*,variant,**header):
     """Consecutive sessions; all source frames occur once, in order.
 
     Provider-required session tails and reconnect gaps are explicit. Timing gates
     apply inside each session; this is a separate, user-approved private variant.
     """
     frame_bytes=config['sample_rate']//50*2
-    windows=[dict(index=i,offset=offset,frames=min(GRADIUM_SESSION_FRAMES,speech_frames-offset))
-             for i,offset in enumerate(range(0,speech_frames,GRADIUM_SESSION_FRAMES))]
-    log.emit('longform_sessions',variant=config.get('private_variant','gradium-consecutive-v1'),windows=windows,
-             session_seconds=GRADIUM_SESSION_FRAMES/50,additional_tail_seconds=len(windows)-1,
-             context_policy='Reset at each session; full recording reference scored once; transition gaps reported separately')
+    log.emit('longform_sessions',variant=variant,windows=windows,**header)
     for window in windows:
         session=SessionLog(log,window['index'])
         lo=window['offset']*frame_bytes;hi=lo+window['frames']*frame_bytes
         payload=pcm[lo:hi]+bytes(config['sample_rate']*2)
         session.emit('clip_start')
         try:
-            await gradium.transcribe(payload,window['frames'],config,key,session)
+            await transcribe_session(payload,window['frames'],config,key,session)
         except Exception as exc:
             session.emit('error',error_type=type(exc).__name__,error_message=redact(str(exc),key)[:500])
             raise
         finally:
             session.emit('clip_end')
     log.emit('longform_complete')
+
+
+async def gradium_sessions(pcm,speech_frames,config,key,log):
+    windows=[dict(index=i,offset=offset,frames=min(GRADIUM_SESSION_FRAMES,speech_frames-offset))
+             for i,offset in enumerate(range(0,speech_frames,GRADIUM_SESSION_FRAMES))]
+    await consecutive_sessions(pcm,windows,config,key,log,gradium.transcribe,
+             variant=config.get('private_variant','gradium-consecutive-v1'),
+             session_seconds=GRADIUM_SESSION_FRAMES/50,additional_tail_seconds=len(windows)-1,
+             context_policy='Reset at each session; full recording reference scored once; transition gaps reported separately')
+
+
+def word_pauses(words,total_seconds):
+    """Stretches with no annotated word: before the first, between words, after the last.
+
+    A word without valid timing makes the stretch around it unknown, so no pause is
+    claimed there.
+    """
+    pauses,previous,known=[],0.0,True
+    for w in words:
+        if not w.get('timing_valid'):
+            known=False;continue
+        if known and w['start']>previous:pauses.append((previous,w['start']))
+        previous,known=max(previous,w['end']),True
+    if known and total_seconds>previous:pauses.append((previous,total_seconds))
+    return pauses
+
+
+def rime_windows(words,speech_frames):
+    """Pause-aligned sessions of 30-60 seconds; a cut never falls inside an annotated word.
+
+    Each cut is the middle of the longest word-free stretch within the allowed
+    range (the later one on a tie). Only when no such stretch exists is the window
+    cut at 60 seconds, and the window records it.
+    """
+    pauses=word_pauses(words,speech_frames/50)
+    windows,offset=[],0
+    while speech_frames-offset>RIME_SESSION_MAX_FRAMES:
+        lo=(offset+RIME_SESSION_MIN_FRAMES)/50
+        hi=min(offset+RIME_SESSION_MAX_FRAMES,speech_frames-RIME_FINAL_SESSION_MIN_FRAMES)/50
+        best=None
+        for start,end in pauses:
+            a,b=max(start,lo),min(end,hi)
+            if b>a and (best is None or (b-a,a)>(best[1]-best[0],best[0])):best=(a,b)
+        if best:
+            cut=min(max(round((best[0]+best[1])/2*50),offset+1),offset+RIME_SESSION_MAX_FRAMES)
+        else:
+            cut=offset+RIME_SESSION_MAX_FRAMES
+        windows.append(dict(index=len(windows),offset=offset,frames=cut-offset,
+                            cut_pause_seconds=round(best[1]-best[0],3) if best else None,forced_cut=best is None))
+        offset=cut
+    windows.append(dict(index=len(windows),offset=offset,frames=speech_frames-offset,cut_pause_seconds=None,forced_cut=False))
+    return windows
+
+
+async def rime_sessions(pcm,speech_frames,config,key,log,*,words):
+    if config.get('private_variant')!=rime.PRIVATE_VARIANT:
+        raise ValueError('Rime private recordings require the pause-session variant')
+    windows=rime_windows(words,speech_frames)
+    await consecutive_sessions(pcm,windows,config,key,log,rime.transcribe,variant=config['private_variant'],
+             session_seconds=RIME_SESSION_MAX_FRAMES/50,additional_tail_seconds=0,
+             context_policy='Reset at each session; cuts mid-pause at reference word boundaries; full recording reference scored once; transition gaps reported separately')
+
+
+def transport_for(assignment,clip,config):
+    """One stream per item, or consecutive sessions for a private recording."""
+    if clip['cohort']!='private':
+        return transcribe,config
+    variant=assignment.get('private_variant')
+    if config['provider']=='rime':
+        if variant not in (None,config['private_variant']):
+            raise ValueError('Rime private recordings use only their configured pause sessions')
+        return partial(rime_sessions,words=clip['words']),config
+    if variant in GRADIUM_VARIANTS:
+        return gradium_sessions,{**config,'private_variant':variant}
+    return transcribe,config
 
 
 def session_assessment(events,clip,config):
@@ -255,7 +339,7 @@ def session_assessment(events,clip,config):
 
 
 def final_snapshots(events, config):
-    factory = {'gradium': gradium.Protocol, 'reson8': reson8.Protocol, 'zoom': zoom.Protocol}.get(config['provider'], trial_providers.Protocol)
+    factory = {'gradium': gradium.Protocol, 'reson8': reson8.Protocol, 'rime': rime.Protocol, 'zoom': zoom.Protocol}.get(config['provider'], trial_providers.Protocol)
     protocol = factory(config)
     snapshots, previous = [], None
     for e in events:
@@ -352,9 +436,7 @@ async def worker(args):
             log = EventLog(raw)
             log.emit('clip_start', clip_id=clip['clip_id'], attempt=number, model=assignment['model'], plan_hash=args.plan_hash, wall_time=now())
             try:
-                segmented=assignment.get('private_variant') in ('gradium-consecutive-v1','gradium-consecutive-v2') and clip['cohort']=='private'
-                transport=gradium_sessions if segmented else transcribe
-                transport_config={**config,'private_variant':assignment['private_variant']} if segmented else config
+                transport,transport_config=transport_for(assignment,clip,config)
                 await asyncio.wait_for(transport(pcm.astype('<i2').tobytes(), clip['speech_frames'], transport_config, key, log), 1.2*clip['submitted_seconds']+60)
             except Exception as exc:
                 status = getattr(getattr(exc, 'response', None), 'status_code', None)
@@ -547,6 +629,9 @@ def main():
                   'Final WER uses valid completed results, allowing one recovery. Missing coverage remains explicit.']
         if plan.get('private_variants'):
             lines += ['', 'Gradium private uses consecutive sessions of up to 270 seconds. All original source frames are sent once in order. Context resets, per-session silence tails and reconnect gaps are explicit; timing gates apply within each session. This is a separate variant from uninterrupted private streams. Earlier transport-validation failures remain in previous_private_transport_attempts and total submitted audio.']
+        rime_private=not plan.get('public_only') and any(c.get('provider')=='rime' for c in plan['configs'].values())
+        if rime_private:
+            lines += ['', RIME_PRIVATE_NOTE]
         (root/'RESULTS.md').write_text('\n'.join(lines)+'\n')
         tables=[]
         for model,data in report['models'].items():
@@ -561,6 +646,7 @@ def main():
         page+=f'<h1>Full concurrent STT benchmark</h1><p>Status: <strong>{status}</strong>. Each model: 1,000 public clips and eight intact private recordings.</p><p>{report["methodology"]}</p><p><a href="results.json">Complete metrics and per-item evidence index</a> · <a href="RESULTS.md">Report</a></p>'+''.join(tables)
         page+='<p>Final WER is the ratio of total word errors to reference words among valid completed results. Recovery never replaces first-attempt latency. Missing observations stay unavailable.</p>'
         if plan.get('private_variants'):page+='<p>Gradium private uses consecutive 270-second sessions with context resets, additional session tails, and measured reconnect gaps. It is not an uninterrupted-session latency comparison. Previous transport attempts are retained separately in the JSON.</p>'
+        if rime_private:page+=f'<p>{html.escape(RIME_PRIVATE_NOTE)}</p>'
         (root/'index.html').write_text(page)
 
 

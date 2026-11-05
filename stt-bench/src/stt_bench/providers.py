@@ -1,5 +1,5 @@
 """Provider registry used by capture, replay and readiness checks."""
-from . import deepgram, provider_protocol, chirp, trial_providers, gradium, reson8, zoom, assemblyai, assemblyai_min_latency, speechmatics_agent
+from . import deepgram, provider_protocol, chirp, trial_providers, gradium, reson8, zoom, assemblyai, assemblyai_min_latency, speechmatics_agent, rime
 from .credentials import credential
 from .streaming import transmitted_silence_frames
 from . import gemini_live
@@ -7,6 +7,7 @@ from . import gemini_live
 MODELS = {
     'assemblyai': {'universal-3-5-pro', 'universal-3-6-pro'},
     'reson8': {'realtime'},
+    'rime': {'default'},
     'zoom': {'zoom-asr-en-v1', 'zoom-scribe-en', 'zoom-scribe-en-pro', 'zoom-scribe-en-pro-v2.1'},
     'gradium': {'default'},
     **trial_providers.MODELS,
@@ -21,6 +22,7 @@ MODELS = {
 ENDPOINTS = {
     'assemblyai': {'wss://streaming.assemblyai.com/v3/ws'},
     'reson8': {'wss://api.reson8.dev/v1/speech-to-text/realtime'},
+    'rime': {'wss://stt.api.rime.ai/ws'},
     'zoom': {zoom.ENDPOINT},
     'gradium': {'wss://api.gradium.ai/api/speech/asr'},
     **trial_providers.ENDPOINTS,
@@ -58,6 +60,8 @@ def validate(config):
         gradium.validate(config)
     if p == 'reson8':
         reson8.validate(config)
+    if p == 'rime':
+        rime.validate(config)
     if p == 'zoom':
         zoom.validate(config)
     if p in trial_providers.MODELS:
@@ -89,6 +93,7 @@ async def transcribe(pcm, speech_frames, config, key, log):
                else assembly_adapter(config) if config['provider'] == 'assemblyai'
                else gradium if config['provider'] == 'gradium'
                else reson8 if config['provider'] == 'reson8'
+               else rime if config['provider'] == 'rime'
                else zoom if config['provider'] == 'zoom'
                else trial_providers if config['provider'] in trial_providers.MODELS else provider_protocol)
     await adapter.transcribe(pcm, speech_frames, config, key, log)
@@ -107,6 +112,8 @@ def reduce_events(events, config):
         return assembly_adapter(config).replay(events, config)[1]
     if config['provider'] == 'reson8':
         return reson8.replay(events, config)[1]
+    if config['provider'] == 'rime':
+        return rime.replay(events, config)[1]
     if config['provider'] == 'zoom':
         return zoom.replay(events, config)[1]
     if config['provider'] == 'gradium':
@@ -130,6 +137,8 @@ def transcript_at(events, cutoff, config=None):
         return deepgram.transcript_at(events, cutoff)
     if config['provider'] == 'reson8':
         return reson8.replay(events, config, cutoff)[0]
+    if config['provider'] == 'rime':
+        return rime.replay(events, config, cutoff)[0]
     if config['provider'] == 'zoom':
         return zoom.replay(events, config, cutoff)[0]
     if config['provider'] == 'gradium':

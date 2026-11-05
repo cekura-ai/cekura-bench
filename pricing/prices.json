@@ -297,6 +297,25 @@
         "Voice Live's Pro rates, which apply to this model. Azure lists two Pro text-output rates, $16 and, since 1 Sep 2026, $24 per million, without saying which model each covers; the higher is used.",
         "Caller transcription is billed as Azure speech input and is not in the usage the service reports, so it is not in this figure."
       ]
+    },
+    "deepgram-voice-agent": {
+      "read_on": "2026-11-04",
+      "verified": true,
+      "source": "https://deepgram.com/pricing",
+      "components": [
+        {
+          "name": "voice agent, custom (BYO LLM)",
+          "basis": "per_minute",
+          "measure": "call_seconds",
+          "rates": {
+            "minute": 0.065
+          }
+        }
+      ],
+      "unmetered": [
+        "Pay-as-you-go rate; Growth lists $0.059 a minute. Billed on WebSocket connection time.",
+        "The text model (GPT-4.1) runs on this deployment's OpenAI account and is billed there by token; the session reports no token usage, so it is not priced here."
+      ]
     }
   },
   "cascade_speech_path": {

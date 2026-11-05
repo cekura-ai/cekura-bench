@@ -11,9 +11,12 @@ import asyncio
 import base64
 
 import pytest
+import websockets
 
 from service import events as ev
+from service.adapters import deepgram_voice_agent
 from service.adapters.base import AdapterError, SessionConfig, ToolSpec, TurnDetection
+from service.adapters.deepgram_voice_agent import DeepgramVoiceAgentAdapter, split_model
 from service.adapters.gemini_live import GeminiLiveAdapter, _flatten_usage_metadata
 from service.adapters.grok_realtime import GrokRealtimeAdapter
 from service.adapters.higgs_realtime import HiggsRealtimeAdapter
@@ -112,6 +115,153 @@ class TestHiggs:
     def test_semantic_turn_detection_is_passed_through(self):
         payload = adapter(HiggsRealtimeAdapter, turn_detection=TurnDetection("semantic_vad"))._session_payload()
         assert payload["audio"]["input"]["turn_detection"]["type"] == "semantic_vad"
+
+
+class TestDeepgramVoiceAgent:
+    def test_settings_name_the_text_model_voice_and_client_side_tools(self):
+        tool = ToolSpec(name="lookup_patient", description="Find a patient", parameters={"type": "object", "properties": {}})
+        a = adapter(DeepgramVoiceAgentAdapter, instructions="p", voice="aura-2-orion-en", tools=(tool,), temperature=0.2)
+        settings = a._settings_payload()
+        assert settings["audio"]["input"] == {"encoding": "linear16", "sample_rate": 16000}
+        assert settings["audio"]["output"]["sample_rate"] == 24000
+        think = settings["agent"]["think"]
+        assert think["provider"] == {"type": "open_ai", "model": "gpt-4.1", "temperature": 0.2}
+        assert think["prompt"] == "p"
+        assert think["functions"] == [{"name": "lookup_patient", "description": "Find a patient", "parameters": {"type": "object", "properties": {}}}]
+        assert settings["agent"]["listen"]["provider"]["model"] == "flux-general-en"
+        assert settings["agent"]["speak"]["provider"]["model"] == "aura-2-orion-en"
+
+    def test_the_opening_line_is_history_not_a_spoken_greeting(self):
+        agent = adapter(DeepgramVoiceAgentAdapter, first_message="Thanks for calling.")._settings_payload()["agent"]
+        assert "greeting" not in agent
+        assert agent["context"]["messages"] == [{"type": "History", "role": "assistant", "content": "Thanks for calling."}]
+
+    def test_only_the_first_slash_splits_the_model_id(self):
+        assert split_model("groq/openai/gpt-oss-20b") == ("groq", "openai/gpt-oss-20b")
+        with pytest.raises(AdapterError):
+            split_model("gpt-4.1")
+
+    def test_reply_sentences_become_one_transcript_and_the_caller_is_heard(self):
+        a = adapter(DeepgramVoiceAgentAdapter)
+        a._handle({"type": "ConversationText", "role": "user", "content": "I'd like to book."})
+        a._handle({"type": "ConversationText", "role": "assistant", "content": "Sure."})
+        a._handle({"type": "ConversationText", "role": "assistant", "content": "What day works?"})
+        assert a.agent_text == []
+        a._on_agent_audio(b"\x00\x01" * 480)
+        a._handle({"type": "AgentAudioDone"})
+        assert a.agent_text == ["Sure. What day works?"]
+        assert a.caller_text == ["I'd like to book."]
+        assert a.log.last(ev.AGENT_AUDIO_END) is not None
+        assert a.log.last(ev.RESPONSE_DONE) is not None
+
+    def test_a_tool_call_carries_the_name_for_its_reply(self):
+        a = adapter(DeepgramVoiceAgentAdapter)
+        a._handle({"type": "FunctionCallRequest", "functions": [
+            {"id": "fc-1", "name": "lookup_patient", "arguments": "{\"phone\": \"2025550188\"}", "client_side": True},
+        ]})
+        assert a.tool_calls == [{"name": "lookup_patient", "call_id": "fc-1", "arguments": {"phone": "2025550188"}}]
+        assert a._call_names["fc-1"] == "lookup_patient"
+
+    def test_a_reply_ended_by_the_caller_starting_is_the_provider_yielding(self):
+        a = adapter(DeepgramVoiceAgentAdapter)
+        a._on_agent_audio(b"\x00\x01" * 48000)
+        a._handle({"type": "UserStartedSpeaking"})
+        assert a.log.last(ev.VAD_SPEECH_START).data["cleared_playback"] is True
+        assert a.log.first(ev.AGENT_INTERRUPTED) is None
+        a._handle({"type": "AgentAudioDone"})
+        assert a.log.first(ev.AGENT_INTERRUPTED) is not None
+        assert a.log.last(ev.RESPONSE_DONE).data["status"] == "cancelled"
+        assert a.agent_timeline.cuts[0] == a.log.last(ev.VAD_SPEECH_START).t
+        a._handle({"type": "EndOfTurn", "trigger": "model"})
+        assert a.log.last(ev.VAD_SPEECH_END).data["trigger"] == "model"
+
+    def test_speech_start_between_replies_is_not_a_cancel(self):
+        a = adapter(DeepgramVoiceAgentAdapter)
+        a._on_agent_audio(b"\x00\x01" * 480)
+        a._handle({"type": "AgentAudioDone"})
+        a._handle({"type": "UserStartedSpeaking"})
+        a._on_agent_audio(b"\x00\x01" * 480)
+        a._handle({"type": "AgentAudioDone"})
+        assert a.log.first(ev.AGENT_INTERRUPTED) is None
+
+    def test_unsupported_configurations_are_named_up_front(self):
+        def refused(*args, **kwargs):
+            return DeepgramVoiceAgentAdapter.unsupported_reason(SessionConfig(turn_detection=TurnDetection(*args, **kwargs)))
+
+        assert refused("manual")
+        assert refused("server_vad", threshold=0.6)
+        assert refused("server_vad", silence_duration_ms=200)
+        assert refused("server_vad", silence_duration_ms=500) is None
+        assert refused("semantic_vad") is None
+        assert refused() is None
+
+    def test_a_withdrawn_call_is_marked_and_logged_not_removed(self):
+        a = adapter(DeepgramVoiceAgentAdapter)
+        a._handle({"type": "FunctionCallRequest", "functions": [
+            {"id": "fc-1", "name": "book_appointment", "arguments": "{}", "client_side": True},
+            {"id": "fc-2", "name": "lookup_patient", "arguments": "{}", "client_side": True},
+        ]})
+        a._handle({"type": "FunctionCallCancelled", "functions": [{"id": "fc-1", "name": "book_appointment"}]})
+        assert [c.get("cancelled", False) for c in a.tool_calls] == [True, False]
+        assert a.log.last(ev.TOOL_CANCELLED).data == {"call_id": "fc-1", "name": "book_appointment"}
+
+    async def test_keepalive_stops_quietly_when_the_socket_has_closed(self, monkeypatch):
+        class ClosedSocket:
+            async def send(self, _message):
+                raise websockets.ConnectionClosed(None, None)
+
+        monkeypatch.setattr(deepgram_voice_agent, "KEEPALIVE_S", 0.0)
+        a = adapter(DeepgramVoiceAgentAdapter)
+        a._ws = ClosedSocket()
+        await asyncio.wait_for(a._keep_alive(), 1.0)  # returns instead of raising
+
+    async def test_the_text_model_runs_on_our_own_endpoint_and_only_the_wire_carries_the_key(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-test-own-key")
+        sent = []
+
+        class Socket:
+            async def send(self, message):
+                sent.append(message)
+
+        a = DeepgramVoiceAgentAdapter(api_key="unused", log=ev.EventLog(ev.Clock(), raw_path=tmp_path / "raw.jsonl"), config=SessionConfig())
+        a._ws = Socket()
+        settings = a._settings_payload()
+        assert settings["agent"]["think"]["endpoint"] == {
+            "url": "https://api.openai.com/v1/chat/completions", "headers": {"authorization": "<redacted>"},
+        }
+        await a._send_json(settings, wire=a._with_credentials(settings))
+        assert '"Bearer sk-test-own-key"' in sent[0]
+        assert settings["agent"]["think"]["endpoint"]["headers"]["authorization"] == "<redacted>"
+        a.log.close()
+        assert "sk-test-own-key" not in (tmp_path / "raw.jsonl").read_text()
+
+    async def test_without_the_text_model_key_the_session_is_refused_before_connecting(self, monkeypatch):
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        with pytest.raises(AdapterError, match="OPENAI_API_KEY"):
+            await adapter(DeepgramVoiceAgentAdapter).connect()
+
+    def test_a_text_model_with_no_wired_endpoint_is_refused(self):
+        a = DeepgramVoiceAgentAdapter(model="anthropic/claude-sonnet-5", api_key="unused", log=ev.EventLog(ev.Clock()), config=SessionConfig())
+        with pytest.raises(AdapterError, match="anthropic"):
+            a._settings_payload()
+
+    def test_the_registry_loads_the_text_model_key_from_the_env_file(self, monkeypatch, tmp_path):
+        import os
+
+        from service.registry import PROVIDERS, load_extra_credentials
+
+        env = tmp_path / ".env"
+        env.write_text("OPENAI_API_KEY=sk-test\n")
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        entry = PROVIDERS["deepgram-voice-agent"]
+        assert load_extra_credentials(entry) == ["OPENAI_API_KEY"]
+        assert load_extra_credentials(entry, str(env)) == []
+        assert os.environ["OPENAI_API_KEY"] == "sk-test"
+
+    def test_a_silence_duration_becomes_flux_eot_timeout_and_defaults_send_none(self):
+        listen = adapter(DeepgramVoiceAgentAdapter, turn_detection=TurnDetection("server_vad", silence_duration_ms=500))._settings_payload()["agent"]["listen"]["provider"]
+        assert listen["eot_timeout_ms"] == 500
+        assert "eot_timeout_ms" not in adapter(DeepgramVoiceAgentAdapter)._settings_payload()["agent"]["listen"]["provider"]
 
 
 def prism(**config):

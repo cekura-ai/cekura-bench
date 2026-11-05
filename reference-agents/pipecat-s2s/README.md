@@ -34,7 +34,7 @@ laptop work unchanged and lets a deployment carry a default:
 
 | Key | Default | Notes |
 |---|---|---|
-| `s2s_provider` | `openai-realtime` | native: also `openai-realtime-mini`, `gemini-live`, `gemini-live-standard`, `gemini-flash-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`, `phonic`, `deepslate`, `azure-realtime`, `polyai-dialog`, `smallest-hydra`, `rime-prism`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
+| `s2s_provider` | `openai-realtime` | native: also `openai-realtime-mini`, `gemini-live`, `gemini-live-standard`, `gemini-flash-live`, `grok-realtime`, `gpt-live`, `nova-sonic`, `qwen-realtime`, `phonic`, `deepslate`, `azure-realtime`, `polyai-dialog`, `smallest-hydra`, `rime-prism`, `deepgram-voice-agent`. cascade: `cascade-baseline`, `cascade-openai`, `cascade-google`, `cascade-grok`, `cascade-qwen` |
 | `s2s_model` | provider default | pin it for a reproducible run |
 | `s2s_voice` | provider default | |
 | `s2s_backend_model` | `gpt-6-sol` | `gpt-live` only, see below |
@@ -42,7 +42,7 @@ laptop work unchanged and lets a deployment carry a default:
 | `aws_region` | `us-west-2` | `nova-sonic` only; must be a region serving the model and granted to the credentials |
 | `qwen_region` | `singapore` | `qwen-realtime` only; also `beijing` |
 | `qwen_workspace_id` | **required for `qwen-realtime`** | names the Alibaba workspace whose endpoint answers |
-| `deepslate_tts` | `elevenlabs` | `deepslate` only: what voices Opal's replies; also `hosted`, which needs `s2s_voice` set to a voice hosted in the account |
+| `deepslate_tts` | `elevenlabs` | `deepslate` only: what voices Opal's replies; also `hosted`, which needs `s2s_voice` set to a Deepslate voice (catalog or cloned) |
 | `cascade_tts_voice` | fixed voice id | cascade rows only |
 | `agent_dir` | **required** | a directory under `agent-definitions/`; no default on purpose |
 | `cekura_mode` | `track` | `observe` also uploads audio and starts evaluation |
@@ -59,7 +59,7 @@ quotes the body.
 | Variable | Notes |
 |---|---|
 | provider key | `OPENAI_API_KEY`, `GEMINI_API_KEY` (or `GEMINI_AUTHORIZATION`), `XAI_API_KEY`, `DASHSCOPE_API_KEY`, `PHONIC_API_KEY`, `DEEPSLATE_API_KEY` (with `DEEPSLATE_VENDOR_ID` and `DEEPSLATE_ORGANIZATION_ID`), `AZURE_VOICE_API_KEY` (with `AZURE_VOICE_ENDPOINT`, the Voice Live resource's endpoint), `POLY_API_KEY` (a Dialog-RSN-1 key from PolyAI's Agent Studio), `SMALLEST_API_KEY` (Hydra, and Pulse Pro for its caller transcript), `RIME_API_KEY` (a Rime API key, for Prism), or for Bedrock `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (+ `AWS_SESSION_TOKEN`); see below for why an API key cannot work |
-| `DEEPGRAM_API_KEY`, `ELEVENLABS_API_KEY` | cascade rows; `ELEVENLABS_API_KEY` also for `deepslate`, which hands it to Deepslate to voice its replies |
+| `DEEPGRAM_API_KEY`, `ELEVENLABS_API_KEY` | cascade rows; `ELEVENLABS_API_KEY` also for `deepslate`, which hands it to Deepslate to voice its replies; `DEEPGRAM_API_KEY` also for `deepgram-voice-agent`, which needs `OPENAI_API_KEY` as well: its text model runs on our own OpenAI account |
 | `CEKURA_API_KEY`, `CEKURA_AGENT_ID_<DEFINITION>` | tracing is off without both; one platform agent per agent definition (`CEKURA_AGENT_ID_APPOINTMENTS`, `CEKURA_AGENT_ID_MEDICARE`), with `CEKURA_AGENT_ID` for a deployment that serves one |
 | `AGENT_COMMIT` | stamped by the build; names what was actually deployed |
 
@@ -210,7 +210,7 @@ are granted in some subset of those. Both failures are the same
 `AccessDeniedException` from the outside, which is why the region is recorded
 with every run.
 
-## Four providers are spoken directly
+## Several providers are spoken directly
 
 Pipecat ships a realtime service for every other model on this board and none
 for Qwen or Phonic, so `qwen_realtime.py` and `phonic_realtime.py` speak those
@@ -218,6 +218,9 @@ protocols directly. Deepslate publishes a Pipecat plugin, and `deepslate_realtim
 does not use it, for the reason given below. Pipecat's Azure realtime service
 speaks a newer protocol than Azure's Voice Live, so `azure_realtime.py` speaks
 Voice Live's.
+Nor is there one for Deepgram's Voice Agent API, so `deepgram_voice_agent.py` speaks
+it; its module docstring covers the protocol, and why the row's text model runs on
+our own OpenAI account.
 
 ### Qwen
 
@@ -269,13 +272,16 @@ that remembers nothing of the call. Here the session is configured once, at
 Opal produces text, and the service voices it with a configured text-to-speech
 step, which is part of the row. By default that is ElevenLabs, called by
 Deepslate with the voice and model every cascade row speaks with; `deepslate_tts=hosted`
-uses a voice Deepslate hosts instead. Deepslate has no stock hosted voice, so
-that mode needs a voice cloned into the account. The protocol takes no model, so
-the record says the model is not selectable. The service owns the caller's turns
-and barge-in, as Phonic's does, and the detector settings it is sent are the
-vendor SDK's own. Tool arguments arrive as a protobuf `Struct`, whose only number
-is a float, so whole numbers are turned back into integers before the tools see
-them.
+uses a voice Deepslate hosts instead: one from its catalog, which every
+organization can use, or one cloned into the account. That mode needs
+`s2s_voice` set, because the default is an ElevenLabs voice. The protocol takes
+no model, so the record says the model is not selectable. The service owns the
+caller's turns and barge-in, as Phonic's does, and the detector settings it is
+sent are the vendor SDK's own. Its `response_end` marks the end of generation,
+which runs far ahead of playback, so a barge-in cuts a reply for as long as the
+transport is still playing it, not only until `response_end`. Tool arguments
+arrive as a protobuf `Struct`, whose only number is a float, so whole numbers
+are turned back into integers before the tools see them.
 
 ### Azure Realtime
 

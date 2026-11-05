@@ -877,6 +877,252 @@ class TestPhonicRealtime:
         assert [m["type"] for m in seen["sent"]] == ["audio_chunk"]
 
 
+class TestDeepgramVoiceAgent:
+    """Deepgram's managed pipeline, spoken directly, with its text model on our own account."""
+
+    @staticmethod
+    def _service(**overrides):
+        from deepgram_voice_agent import DeepgramVoiceAgentLLMService
+
+        provider = bot.PROVIDERS["deepgram-voice-agent"]
+        service = DeepgramVoiceAgentLLMService(
+            api_key="dg", think_api_key="sk-own", model=provider.default_model, voice=provider.default_voice,
+            instructions="prompt",
+        )
+        for key, value in overrides.items():
+            setattr(service, key, value)
+        seen = {"pushed": [], "broadcast": [], "sent": [], "ran": []}
+
+        async def push(frame, direction=None):
+            seen["pushed"].append((type(frame).__name__, direction, frame))
+
+        async def broadcast(frame_cls, **_kwargs):
+            seen["broadcast"].append(frame_cls.__name__)
+
+        async def send(message):
+            seen["sent"].append(message)
+
+        async def run(calls):
+            seen["ran"].extend(calls)
+
+        async def noop(*_args, **_kwargs):
+            return None
+
+        service.push_frame = push
+        service.broadcast_frame = broadcast
+        service._send = send
+        service.run_function_calls = run
+        for name in ("start_ttfb_metrics", "stop_ttfb_metrics", "start_processing_metrics", "stop_all_metrics"):
+            setattr(service, name, noop)
+        return service, seen
+
+    def test_the_row_builds_from_the_session_with_both_keys_from_the_environment(self, monkeypatch):
+        from deepgram_voice_agent import DeepgramVoiceAgentLLMService
+
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-own")
+        provider = bot.PROVIDERS["deepgram-voice-agent"]
+        service = provider.build("dg", provider.default_model, provider.default_voice, "prompt", asked())
+        assert isinstance(service, DeepgramVoiceAgentLLMService)
+        assert service._think_api_key == "sk-own"
+        monkeypatch.delenv("OPENAI_API_KEY")
+        with pytest.raises(ValueError, match="OPENAI_API_KEY"):
+            provider.build("dg", provider.default_model, provider.default_voice, "prompt", asked())
+
+    def test_the_settings_run_the_text_model_on_our_own_endpoint(self):
+        """Deepgram's hosted copy cuts a prompt past 25,000 characters; the medicare prompt is longer."""
+        medicare = bot.MockToolServer(suite="medicare").system_prompt
+        assert len(medicare) > 25000
+        service, _ = self._service(_instructions=medicare)
+        think = service.settings()["agent"]["think"]
+        assert think["provider"] == {"type": "open_ai", "model": "gpt-4.1"}
+        assert think["endpoint"] == {"url": "https://api.openai.com/v1/chat/completions",
+                                     "headers": {"authorization": "Bearer sk-own"}}
+        assert think["prompt"] == medicare
+
+    def test_the_settings_name_the_pipeline_and_its_rates(self):
+        import deepgram_voice_agent
+
+        service, _ = self._service()
+        settings = service.settings()
+        assert settings["audio"]["input"] == {"encoding": "linear16", "sample_rate": 16000}
+        assert settings["audio"]["output"]["sample_rate"] == 24000
+        assert settings["agent"]["listen"]["provider"]["model"] == "flux-general-en"
+        assert settings["agent"]["speak"]["provider"]["model"] == "aura-2-thalia-en"
+        assert deepgram_voice_agent.INPUT_RATE == bot.PROVIDERS["deepgram-voice-agent"].input_rate
+
+    def test_tools_are_declared_without_an_endpoint_so_every_call_is_run_here(self):
+        server = bot.MockToolServer(suite="appointments")
+        service, _ = self._service(_tools=bot.build_tools(server))
+        functions = {f["name"]: f for f in service.settings()["agent"]["think"]["functions"]}
+        assert {spec.name for spec in server.tool_specs()} <= set(functions)
+        assert all("endpoint" not in f for f in functions.values())
+
+    def test_a_text_model_with_no_wired_endpoint_is_refused(self):
+        from deepgram_voice_agent import split_model
+
+        assert split_model("open_ai/gpt-4.1") == ("open_ai", "gpt-4.1")
+        for bad in ("gpt-4.1", "anthropic/claude-sonnet-5"):
+            with pytest.raises(ValueError):
+                split_model(bad)
+
+    async def test_the_call_opens_on_the_instruction_every_row_is_given_and_its_echo_is_not_the_caller(self):
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service, seen = self._service(_websocket=object())  # an open socket; sends are captured
+        service._ready.set()
+        service.create_task = lambda coro: coro.close()  # no keep-alive loop in a unit test
+        opening = bot.opening_messages("Thank you for calling.")
+        await service._open(service._opening(LLMContext(opening)))
+        assert seen["sent"][0]["type"] == "Settings"
+        assert seen["sent"][1] == {"type": "InjectUserMessage", "content": opening[0]["content"]}
+        await service._dispatch({"type": "ConversationText", "role": "user", "content": opening[0]["content"]})
+        assert seen["pushed"] == []
+        await service._dispatch({"type": "ConversationText", "role": "user", "content": "I need to reschedule."})
+        [(name, direction, frame)] = seen["pushed"]
+        from pipecat.processors.frame_processor import FrameDirection
+
+        assert name == "TranscriptionFrame" and direction is FrameDirection.UPSTREAM
+        assert frame.text == "I need to reschedule."
+
+    async def test_a_reply_runs_from_its_first_sound_to_audio_done(self):
+        service, seen = self._service()
+        await service._handle_audio(b"\1\0" * 480)
+        await service._dispatch({"type": "ConversationText", "role": "assistant", "content": "Sure."})
+        await service._dispatch({"type": "AgentAudioDone"})
+        names = [name for name, _, _ in seen["pushed"]]
+        assert names[:3] == ["LLMFullResponseStartFrame", "TTSStartedFrame", "TTSAudioRawFrame"]
+        assert "TTSTextFrame" in names and names[-2:] == ["TTSStoppedFrame", "LLMFullResponseEndFrame"]
+        audio = next(frame for name, _, frame in seen["pushed"] if name == "TTSAudioRawFrame")
+        assert audio.sample_rate == 24000
+
+    async def test_audio_for_a_reply_the_caller_cut_in_on_is_dropped(self):
+        """The service stops on the caller's first sound; what is still in flight must not play."""
+        service, seen = self._service()
+        await service._dispatch({"type": "AgentStartedSpeaking"})
+        await service._handle_audio(b"\1\0" * 480)
+        await service._dispatch({"type": "UserStartedSpeaking"})
+        assert seen["broadcast"] == ["ProposedUserStartedSpeakingFrame"]
+        before = len(seen["pushed"])
+        await service._handle_audio(b"\1\0" * 480)
+        await service._dispatch({"type": "ConversationText", "role": "assistant", "content": "as I was"})
+        assert len(seen["pushed"]) == before
+        await service._dispatch({"type": "AgentAudioDone"})
+        await service._handle_audio(b"\1\0" * 480)  # the next reply plays
+        assert [name for name, _, _ in seen["pushed"]][-1] == "TTSAudioRawFrame"
+        assert bot.PROVIDERS["deepgram-voice-agent"].interruptions
+
+    async def test_a_function_call_is_run_here_and_its_result_sent_once(self):
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service, seen = self._service(_context=LLMContext([]))
+        await service._dispatch({"type": "FunctionCallRequest", "functions": [
+            {"id": "f1", "name": "lookup_patient", "arguments": '{"phone": "2025550188"}', "client_side": True},
+        ]})
+        [call] = seen["ran"]
+        assert (call.tool_call_id, call.function_name, call.arguments) == ("f1", "lookup_patient", {"phone": "2025550188"})
+        context = LLMContext([
+            {"role": "tool", "tool_call_id": "f1", "content": '{"patient_id": "p_1"}'},
+            {"role": "tool", "tool_call_id": "f2", "content": "IN_PROGRESS"},
+        ])
+        await service._handle_context(context)
+        await service._handle_context(context)
+        assert seen["sent"] == [{"type": "FunctionCallResponse", "id": "f1", "name": "lookup_patient",
+                                 "content": '{"patient_id": "p_1"}'}]
+
+    async def test_a_withdrawn_call_gets_no_result_and_is_reported_cancelled(self):
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service, seen = self._service(_context=LLMContext([]))
+        reported = []
+
+        async def cancel_tasks(predicate, reason):
+            return []
+
+        async def settle(item, run_llm=None):
+            return item.tool_call_id
+
+        async def event(name, items):
+            reported.append((name, items))
+
+        service._cancel_function_call_tasks = cancel_tasks
+        service._broadcast_function_call_cancelled = settle
+        service._call_event_handler = event
+        await service._dispatch({"type": "FunctionCallRequest", "functions": [
+            {"id": "f1", "name": "book_appointment", "arguments": "{}", "client_side": True},
+        ]})
+        await service._dispatch({"type": "FunctionCallCancelled", "functions": [{"id": "f1", "name": "book_appointment"}]})
+        assert reported == [("on_function_calls_cancelled", ["f1"])]
+        await service._handle_context(LLMContext([{"role": "tool", "tool_call_id": "f1", "content": '{"ok": true}'}]))
+        assert seen["sent"] == []
+
+    async def test_audio_before_the_settings_are_applied_is_dropped(self):
+        from pipecat.frames.frames import InputAudioRawFrame
+
+        sent = []
+
+        class Socket:
+            async def send(self, message):
+                sent.append(message)
+
+        service, _ = self._service(_websocket=Socket())
+        frame = InputAudioRawFrame(audio=b"\0\0" * 160, sample_rate=16000, num_channels=1)
+        await service._send_audio(frame)
+        service._ready.set()
+        await service._send_audio(frame)
+        assert sent == [frame.audio]
+
+    def test_the_record_says_where_the_text_model_runs(self):
+        record = record_for("deepgram-voice-agent")
+        assert "own OpenAI account" in record["deepgram_think"]
+        assert "flux-general-en" in record["deepgram_listen"]
+
+    @staticmethod
+    def _errors(service):
+        errors = []
+
+        async def push_error(error_msg="", **_kwargs):
+            errors.append(error_msg)
+
+        service.push_error = push_error
+        return errors
+
+    async def test_a_failed_connect_is_reported_once_not_again_as_a_settings_timeout(self):
+        service, seen = self._service()
+        errors = self._errors(service)
+        await service._open("Say the greeting.")
+        assert seen["sent"] == [] and errors == []
+
+    async def test_keepalive_ends_quietly_when_the_far_end_closed(self, monkeypatch):
+        import deepgram_voice_agent
+        from websockets.exceptions import ConnectionClosed
+
+        monkeypatch.setattr(deepgram_voice_agent, "KEEPALIVE_S", 0)
+        service, _ = self._service()
+
+        async def closed(_message):
+            raise ConnectionClosed(None, None)
+
+        service._send = closed
+        await service._keep_alive()  # returns rather than raising into the task
+
+    async def test_an_abnormal_close_is_reported_with_its_code(self):
+        from websockets.exceptions import ConnectionClosedError
+
+        class Socket:
+            close_code, close_reason = 1011, "internal error"
+
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                raise ConnectionClosedError(None, None)
+
+        service, _ = self._service(_websocket=Socket())
+        errors = self._errors(service)
+        await service._receive()
+        assert len(errors) == 1 and "code 1011" in errors[0]
+
+
 class TestDeepslateRealtime:
     """The third provider whose protocol we speak ourselves, in protobuf this time."""
 
@@ -970,7 +1216,7 @@ class TestDeepslateRealtime:
         assert tts.eleven_labs.api_key == "el-key"
 
     def test_a_hosted_voice_must_be_named(self):
-        """Deepslate hosts no stock voice, so the default voice id is not one of its own."""
+        """The default voice id is an ElevenLabs one, not one Deepslate hosts."""
         with pytest.raises(ValueError, match="s2s_voice"):
             self._service(asked(deepslate_tts="hosted"))
         service, _ = self._service(asked(deepslate_tts="hosted", s2s_voice="cloned-voice"))
@@ -1096,6 +1342,27 @@ class TestDeepslateRealtime:
         assert seen["interruptions"] == 1
         assert [name for name, _, _ in seen["pushed"]][-2:] == ["TTSStoppedFrame", "LLMFullResponseEndFrame"]
         assert not bot.PROVIDERS["deepslate"].interruptions
+
+    async def test_a_reply_still_playing_after_response_end_can_be_talked_over(self):
+        """response_end is the end of generation; most of the reply has yet to play when it arrives."""
+        from deepslate.core.proto import realtime_pb2 as proto
+        from pipecat.frames.frames import BotStartedSpeakingFrame, BotStoppedSpeakingFrame
+        from pipecat.processors.frame_processor import FrameDirection
+
+        service, seen = self._service()
+        await service._dispatch(self._message(response_begin=proto.ResponseBegin(turn_id=0)))
+        await service._dispatch(self._message(model_audio_chunk=proto.ModelAudioChunk(
+            audio=proto.AudioData(data=b"\1\0" * 160), turn_id=0)))
+        await service.process_frame(BotStartedSpeakingFrame(), FrameDirection.UPSTREAM)
+        await service._dispatch(self._message(response_end=proto.ResponseEnd(turn_id=0)))
+        # Generated, still playing: the caller's barge-in clears it.
+        await service._dispatch(self._message(playback_clear_buffer=proto.PlaybackClearBuffer()))
+        assert seen["interruptions"] == 1
+        # Played out: the service's clear-buffer for the caller's next turn cuts nothing.
+        await service.process_frame(BotStoppedSpeakingFrame(), FrameDirection.UPSTREAM)
+        await service._dispatch(self._message(playback_clear_buffer=proto.PlaybackClearBuffer()))
+        assert seen["interruptions"] == 1
+        assert "generated or still playing" in record_for("deepslate")["deepslate_barge_in"]
 
     async def test_audio_still_in_flight_for_a_cut_reply_does_not_reopen_it(self):
         from deepslate.core.proto import realtime_pb2 as proto
@@ -2717,8 +2984,9 @@ class TestCascadeCounterparts:
         Nova Sonic, GPT-Live, Phonic, Deepslate and Azure Realtime have no
         vendor-default counterpart: GPT-Live delegates to a backend, so its fair
         pairing is a cascade on that backend; Phonic, Deepslate, PolyAI and Rime offer no
-        text model of their own on an API; and the text models Voice Live serves next to Azure
-        Realtime are OpenAI's, which the OpenAI cascade already covers. Smallest's
+        text model of their own on an API; the text models Voice Live serves next to Azure
+        Realtime are OpenAI's, which the OpenAI cascade already covers; and Deepgram's
+        Voice Agent is itself a cascade (Flux, GPT-4.1, Aura) behind one socket. Smallest's
         Hydra has none: no text model of Smallest's is in this harness.
         A vendor's smaller tier shares its vendor's counterpart: the question it
         answers is "the cheaper model or the flagship", not "native or cascade".
@@ -2726,7 +2994,7 @@ class TestCascadeCounterparts:
         paired = {c.counterpart_to for c in bot.TEXT_MODELS.values() if c.counterpart_to}
         tiers = {"openai-realtime-mini", "gemini-live-standard", "gemini-flash-live"}
         unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live", "phonic", "deepslate", "azure-realtime", "polyai-dialog",
-                                         "smallest-hydra", "rime-prism"} - tiers
+                                         "smallest-hydra", "rime-prism", "deepgram-voice-agent"} - tiers
         assert not unpaired, f"native providers with no cascade counterpart: {sorted(unpaired)}"
 
     def test_a_counterpart_names_a_provider_that_exists(self):
@@ -4766,7 +5034,7 @@ class TestAResultIsDeliveredWhileTheAgentIsStillSpeaking:
     def test_the_rows_that_only_forward_a_result_are_the_immediate_ones(self):
         assert {k for k, p in bot.PROVIDERS.items() if p.results == "immediate"} == {
             "gemini-live", "gemini-live-standard", "gemini-flash-live", "nova-sonic", "phonic", "deepslate",
-            "polyai-dialog", "rime-prism",
+            "polyai-dialog", "rime-prism", "deepgram-voice-agent",
         }
         for key in ("openai-realtime", "openai-realtime-mini", "grok-realtime"):
             assert bot.PROVIDERS[key].results == "after_speech", key

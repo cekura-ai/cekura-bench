@@ -25,7 +25,9 @@ from .credentials import redact
 from .streaming import stream_audio, transmitted_silence_frames
 
 OUTPUT_CONTRACT = 'STREAMING_OUTPUT_CONTRACT_REVISED_HYPOTHESES'
-MODE = 'TRANSCRIPTION_MODE_WRITTEN'
+# The references are word-for-word, so ask for word-for-word output where a provider
+# offers it, as Gemini (VERBATIM) and Reson8 (filler_mode verbatim) are configured.
+MODE = 'TRANSCRIPTION_MODE_VERBATIM'
 PRIVATE_VARIANT = 'rime-pause-sessions-v1'
 UTTERANCE = 'utterance'
 

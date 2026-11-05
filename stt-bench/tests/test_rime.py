@@ -59,11 +59,11 @@ def test_config_contract_credentials_and_wire_messages():
     p = wire.Protocol(c)
     assert not p.ready
     assert p.setup() == {'start': {'outputContract': 'STREAMING_OUTPUT_CONTRACT_REVISED_HYPOTHESES',
-                                   'language': 'en', 'mode': 'TRANSCRIPTION_MODE_WRITTEN'}}
+                                   'language': 'en', 'mode': 'TRANSCRIPTION_MODE_VERBATIM'}}
     assert base64.b64decode(p.audio(SPEECH)['audio']) == SPEECH and list(p.audio(SPEECH)) == ['audio']
     assert p.finalize() == {'end': {}} and p.finish(55) is None
     for key, value in [('sample_rate', 24000), ('channels', 2), ('frame_ms', 80), ('model', 'other'),
-                       ('endpoint', 'wss://other.example/ws'), ('language', 'es'), ('mode', 'TRANSCRIPTION_MODE_VERBATIM'),
+                       ('endpoint', 'wss://other.example/ws'), ('language', 'es'), ('mode', 'TRANSCRIPTION_MODE_WRITTEN'),
                        ('output_contract', 'STREAMING_OUTPUT_CONTRACT_APPEND_FRAGMENTS'), ('transmitted_silence_frames', 50),
                        ('private_variant', None), ('ready_timeout_seconds', 0), ('finalization', 'stream_end_after_tail'),
                        ('requires_final_only_completion', False)]:

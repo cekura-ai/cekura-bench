@@ -11,7 +11,7 @@
   "channels": 1,
   "frame_ms": 20,
   "output_contract": "STREAMING_OUTPUT_CONTRACT_REVISED_HYPOTHESES",
-  "mode": "TRANSCRIPTION_MODE_WRITTEN",
+  "mode": "TRANSCRIPTION_MODE_VERBATIM",
   "transmitted_silence_frames": 0,
   "private_variant": "rime-pause-sessions-v1",
   "ready_timeout_seconds": 10,
@@ -31,5 +31,5 @@
     "checked_on": "2026-11-05",
     "billing_basis": "audio duration; Flex plan $0.002 per minute from 2026-11-20, free on every plan through 2026-11-19"
   },
-  "protocol_caveat": "Rime has no end-of-speech detection and no model selector or version: the client sends end at speech end, done is the final transcript and closes the session, and audio after end is refused, so no silence tail is sent. Revised hypotheses carry the whole transcript so far. One utterance per connection with a 120-second limit, so the eight private recordings run as consecutive sessions of 30-60 seconds cut mid-pause at reference word boundaries (private_variant); each session resets the model's context and the reconnect gaps are reported."
+  "protocol_caveat": "Rime has no end-of-speech detection and no model selector or version: the client sends end at speech end, word-for-word mode is requested to match the references (as for Gemini and Reson8), done is the final transcript and closes the session, and audio after end is refused, so no silence tail is sent. Revised hypotheses carry the whole transcript so far. One utterance per connection with a 120-second limit, so the eight private recordings run as consecutive sessions of 30-60 seconds cut mid-pause at reference word boundaries (private_variant); each session resets the model's context and the reconnect gaps are reported."
 }

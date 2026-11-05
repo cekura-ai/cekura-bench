@@ -881,7 +881,7 @@ class TestDeepgramVoiceAgent:
     """Deepgram's managed pipeline, spoken directly, with its text model on our own account."""
 
     @staticmethod
-    def _service(monkeypatch=None, **overrides):
+    def _service(**overrides):
         from deepgram_voice_agent import DeepgramVoiceAgentLLMService
 
         provider = bot.PROVIDERS["deepgram-voice-agent"]
@@ -891,7 +891,7 @@ class TestDeepgramVoiceAgent:
         )
         for key, value in overrides.items():
             setattr(service, key, value)
-        seen = {"pushed": [], "broadcast": [], "sent": [], "audio": [], "ran": [], "cancelled": []}
+        seen = {"pushed": [], "broadcast": [], "sent": [], "ran": []}
 
         async def push(frame, direction=None):
             seen["pushed"].append((type(frame).__name__, direction, frame))
@@ -938,7 +938,6 @@ class TestDeepgramVoiceAgent:
         assert think["endpoint"] == {"url": "https://api.openai.com/v1/chat/completions",
                                      "headers": {"authorization": "Bearer sk-own"}}
         assert think["prompt"] == medicare
-        assert service.settings(redacted=True)["agent"]["think"]["endpoint"]["headers"]["authorization"] == "<redacted>"
 
     def test_the_settings_name_the_pipeline_and_its_rates(self):
         import deepgram_voice_agent
@@ -969,7 +968,7 @@ class TestDeepgramVoiceAgent:
     async def test_the_call_opens_on_the_instruction_every_row_is_given_and_its_echo_is_not_the_caller(self):
         from pipecat.processors.aggregators.llm_context import LLMContext
 
-        service, seen = self._service()
+        service, seen = self._service(_websocket=object())  # an open socket; sends are captured
         service._ready.set()
         service.create_task = lambda coro: coro.close()  # no keep-alive loop in a unit test
         opening = bot.opening_messages("Thank you for calling.")
@@ -1076,6 +1075,52 @@ class TestDeepgramVoiceAgent:
         record = record_for("deepgram-voice-agent")
         assert "own OpenAI account" in record["deepgram_think"]
         assert "flux-general-en" in record["deepgram_listen"]
+
+    @staticmethod
+    def _errors(service):
+        errors = []
+
+        async def push_error(error_msg="", **_kwargs):
+            errors.append(error_msg)
+
+        service.push_error = push_error
+        return errors
+
+    async def test_a_failed_connect_is_reported_once_not_again_as_a_settings_timeout(self):
+        service, seen = self._service()
+        errors = self._errors(service)
+        await service._open("Say the greeting.")
+        assert seen["sent"] == [] and errors == []
+
+    async def test_keepalive_ends_quietly_when_the_far_end_closed(self, monkeypatch):
+        import deepgram_voice_agent
+        from websockets.exceptions import ConnectionClosed
+
+        monkeypatch.setattr(deepgram_voice_agent, "KEEPALIVE_S", 0)
+        service, _ = self._service()
+
+        async def closed(_message):
+            raise ConnectionClosed(None, None)
+
+        service._send = closed
+        await service._keep_alive()  # returns rather than raising into the task
+
+    async def test_an_abnormal_close_is_reported_with_its_code(self):
+        from websockets.exceptions import ConnectionClosedError
+
+        class Socket:
+            close_code, close_reason = 1011, "internal error"
+
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                raise ConnectionClosedError(None, None)
+
+        service, _ = self._service(_websocket=Socket())
+        errors = self._errors(service)
+        await service._receive()
+        assert len(errors) == 1 and "code 1011" in errors[0]
 
 
 class TestDeepslateRealtime:

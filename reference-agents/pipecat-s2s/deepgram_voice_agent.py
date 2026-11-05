@@ -39,11 +39,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 from dataclasses import fields
 from typing import Any
 
 from loguru import logger
 from websockets.asyncio.client import connect as websocket_connect
+from websockets.exceptions import ConnectionClosed
 
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.frames.frames import (
@@ -135,7 +137,6 @@ class DeepgramVoiceAgentLLMService(LLMService):
         self._think_kind, self._think_model = split_model(model)
         self._api_key = api_key
         self._think_api_key = think_api_key
-        self._model = model
         self._voice = voice
         self._instructions = instructions
         self._tools = tools
@@ -151,6 +152,7 @@ class DeepgramVoiceAgentLLMService(LLMService):
         # flight is dropped until the service closes it.
         self._cut = False
         self._session_id: str | None = None
+        self._settings_sent_at: float | None = None
         # The opening instruction, until the service echoes it back as the user's words.
         self._opening_echo: str | None = None
         # Results already handed over, calls the service withdrew, and each call's name.
@@ -224,16 +226,13 @@ class DeepgramVoiceAgentLLMService(LLMService):
             })
         return functions
 
-    def settings(self, *, redacted: bool = False) -> dict[str, Any]:
-        """The one message that configures the session; nothing is changed after it.
-
-        ``redacted`` replaces the text-model key, for anything that is logged.
-        """
+    def settings(self) -> dict[str, Any]:
+        """The one message that configures the session; it carries the text-model key, so it is never logged."""
         think: dict[str, Any] = {
             "provider": {"type": self._think_kind, "model": self._think_model},
             "endpoint": {
                 "url": THINK_ENDPOINTS[self._think_kind],
-                "headers": {"authorization": "<redacted>" if redacted else f"Bearer {self._think_api_key}"},
+                "headers": {"authorization": f"Bearer {self._think_api_key}"},
             },
             "prompt": self._instructions,
         }
@@ -261,9 +260,12 @@ class DeepgramVoiceAgentLLMService(LLMService):
         await self._websocket.send(frame.audio)
 
     async def _keep_alive(self):
-        while True:
-            await asyncio.sleep(KEEPALIVE_S)
-            await self._send({"type": "KeepAlive"})
+        try:
+            while True:
+                await asyncio.sleep(KEEPALIVE_S)
+                await self._send({"type": "KeepAlive"})
+        except ConnectionClosed:
+            logger.debug(f"{self} keepalive stopped: the socket closed")
 
     # -- pipeline ---------------------------------------------------------
 
@@ -297,12 +299,16 @@ class DeepgramVoiceAgentLLMService(LLMService):
             if tool_call_id in self._withdrawn:
                 logger.info(f"{self} result for withdrawn tool call {tool_call_id} not sent")
                 continue
+            name = self._names.get(tool_call_id, "")
+            if not name:
+                logger.warning(f"{self} result for tool call {tool_call_id} the service never requested; sent unnamed")
             await self._send({
                 "type": "FunctionCallResponse",
                 "id": tool_call_id,
-                "name": self._names.get(tool_call_id, ""),
+                "name": name,
                 "content": output if isinstance(output, str) else json.dumps(output),
             })
+            logger.debug(f"{self} sent the result of tool call {name} ({tool_call_id})")
 
     @staticmethod
     def _results(context) -> dict[str, Any]:
@@ -327,11 +333,17 @@ class DeepgramVoiceAgentLLMService(LLMService):
         return None
 
     async def _open(self, opening: str | None):
+        if not self._websocket:
+            logger.debug(f"{self} no socket to open the call on; the connect error was reported")
+            return
+        self._settings_sent_at = time.monotonic()
         await self._send(self.settings())
         try:
             await asyncio.wait_for(self._ready.wait(), READY_TIMEOUT_S)
         except asyncio.TimeoutError:
-            await self.push_error(error_msg=f"Deepgram did not apply the settings in {READY_TIMEOUT_S:.0f}s")
+            await self.push_error(
+                error_msg=f"Deepgram did not apply the settings in {READY_TIMEOUT_S:.0f}s (session {self._session_id})"
+            )
             return
         self._keepalive_task = self.create_task(self._keep_alive())
         if opening:
@@ -358,16 +370,22 @@ class DeepgramVoiceAgentLLMService(LLMService):
     async def _receive(self):
         ws = self._websocket
         assert ws is not None
-        async for message in ws:
-            try:
-                if isinstance(message, bytes):
-                    await self._handle_audio(message)
-                else:
-                    await self._dispatch(json.loads(message))
-            except json.JSONDecodeError:
-                logger.warning(f"{self} received a text frame that is not JSON")
-            except Exception as exc:  # noqa: BLE001 -- one bad event must not end the call
-                logger.error(f"{self} failed on a message: {exc}")
+        try:
+            async for message in ws:
+                kind = "audio"
+                try:
+                    if isinstance(message, bytes):
+                        await self._handle_audio(message)
+                    else:
+                        event = json.loads(message)
+                        kind = event.get("type", "")
+                        await self._dispatch(event)
+                except json.JSONDecodeError:
+                    logger.warning(f"{self} received a text frame that is not JSON")
+                except Exception as exc:  # noqa: BLE001 -- one bad event must not end the call
+                    logger.error(f"{self} failed on a {kind} message: {exc}")
+        except ConnectionClosed:
+            pass  # an abnormal close; reported below with its code, as a clean one is
         if not self._closing:
             # Closed from the far end while the call was still up.
             await self.push_error(
@@ -380,15 +398,23 @@ class DeepgramVoiceAgentLLMService(LLMService):
 
         if kind == "Welcome":
             self._session_id = event.get("request_id")
-            logger.info(f"{self} session {self._session_id}")
+            logger.debug(f"{self} session {self._session_id}")
 
         elif kind == "SettingsApplied":
             self._ready.set()
+            waited_ms = (time.monotonic() - self._settings_sent_at) * 1000 if self._settings_sent_at else 0.0
+            logger.info(
+                f"{self} settings applied in {waited_ms:.0f} ms: session {self._session_id}, "
+                f"think {self._think_kind}/{self._think_model}, voice {self._voice}, "
+                f"{len(self._declared_functions())} functions, prompt {len(self._instructions)} chars"
+            )
 
         elif kind == "UserStartedSpeaking":
             # The service has already stopped any reply; the pipeline stops its
             # own playback on this proposal, and what is still in flight is dropped.
             self._cut = self._speaking
+            if self._cut:
+                logger.debug(f"{self} caller cut in; dropping the reply's audio still in flight")
             await self.broadcast_frame(ProposedUserStartedSpeakingFrame)
 
         elif kind == "EndOfTurn":
@@ -413,6 +439,10 @@ class DeepgramVoiceAgentLLMService(LLMService):
         elif kind == "FunctionCallCancelled":
             await self._handle_withdrawn([f.get("id", "") for f in event.get("functions") or []])
 
+        elif kind == "InjectionRefused":
+            # The opening instruction refused leaves the call silent until the caller speaks.
+            logger.warning(f"{self} injected message refused: {event.get('message')}")
+
         elif kind == "Warning":
             logger.warning(f"{self} warning {event.get('code')}: {event.get('description')}")
 
@@ -422,8 +452,7 @@ class DeepgramVoiceAgentLLMService(LLMService):
     async def _handle_audio(self, audio: bytes):
         if self._cut or not audio:
             return
-        if not self._speaking:
-            await self._start_reply()
+        await self._start_reply()
         await self.stop_ttfb_metrics()
         await self.push_frame(TTSAudioRawFrame(audio=audio, sample_rate=OUTPUT_RATE, num_channels=1))
 
@@ -452,9 +481,10 @@ class DeepgramVoiceAgentLLMService(LLMService):
     async def _handle_function_calls(self, functions: list[dict[str, Any]]):
         calls = []
         for function in functions:
-            if not function.get("client_side", True):
-                continue  # one Deepgram runs itself; nothing here to answer
             name, tool_call_id = function.get("name", ""), function.get("id", "")
+            if not function.get("client_side", True):
+                logger.debug(f"{self} tool call {name} ({tool_call_id}) is run by Deepgram; nothing to answer")
+                continue
             if not name or not tool_call_id:
                 logger.warning(f"{self} function call without a name or id: {function}")
                 continue

@@ -160,11 +160,11 @@ class DeepgramVoiceAgentAdapter(RealtimeAdapter):
     def _settings_payload(self) -> dict[str, Any]:
         config = self.config
         kind, think_model = split_model(self.model)
+        if kind not in THINK_ENDPOINTS:
+            raise AdapterError(f"{self.name} runs its text model on our own account; no endpoint is wired for {kind!r}")
         think_provider: dict[str, Any] = {"type": kind, "model": think_model}
         if config.temperature is not None:
             think_provider["temperature"] = config.temperature
-        if kind not in THINK_ENDPOINTS:
-            raise AdapterError(f"{self.name} runs its text model on our own account; no endpoint is wired for {kind!r}")
         think: dict[str, Any] = {
             "provider": think_provider,
             "endpoint": {"url": THINK_ENDPOINTS[kind], "headers": {"authorization": REDACTED}},
@@ -297,10 +297,11 @@ class DeepgramVoiceAgentAdapter(RealtimeAdapter):
             self.log.emit(ev.AGENT_THOUGHT, text=payload.get("content", ""))
         elif kind == "AgentAudioDone":
             cut_in, self._caller_cut_in = self._caller_cut_in, False
-            if cut_in:
-                self._on_agent_interrupted()
             status = "cancelled" if cut_in else "completed"
-            self._on_agent_audio_done(reason=status)
+            if cut_in:
+                self._on_agent_interrupted()  # also closes the reply, as cancelled
+            else:
+                self._on_agent_audio_done(reason=status)
             self._flush_agent_text()
             self.log.emit(ev.RESPONSE_DONE, status=status, usage=None)
         elif kind == "FunctionCallRequest":

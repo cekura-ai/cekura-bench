@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from typing import Type
 
 from service.adapters.base import RealtimeAdapter
-from service.adapters.deepgram_voice_agent import DeepgramVoiceAgentAdapter
+from service.adapters.deepgram_voice_agent import THINK_KEY_ENV, DeepgramVoiceAgentAdapter
 from service.adapters.fake import FakeAdapter
 from service.adapters.gemini_live import GeminiLiveAdapter
 from service.adapters.grok_realtime import GrokRealtimeAdapter
@@ -75,7 +75,7 @@ PROVIDERS: dict[str, ProviderEntry] = {
         default_model="open_ai/gpt-4.1",
         credential_env="DEEPGRAM_API_KEY",
         default_voice="aura-2-thalia-en",
-        extra_credentials=("OPENAI_API_KEY",),
+        extra_credentials=(THINK_KEY_ENV,),
         discloses=(
             "a managed pipeline, not one speech model: Flux (flux-general-en) hears the caller, "
             "the named text model replies and an Aura voice speaks; latency covers all three",

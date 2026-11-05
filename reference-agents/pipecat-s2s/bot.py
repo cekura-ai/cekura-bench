@@ -776,12 +776,7 @@ def polyai_disclosures(settings: Settings) -> dict[str, str]:
 
 
 def _deepgram_voice_agent(credential: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
-    """Deepgram's Voice Agent API, through the service in ``deepgram_voice_agent``.
-
-    The text model runs on this deployment's own OpenAI account: Deepgram's
-    hosted copy truncates a prompt past 25,000 characters, and the medicare
-    contract's is longer. The second key is read here, never from a session.
-    """
+    """Deepgram's Voice Agent API; the text model's own OpenAI key is read here, never from a session."""
     from deepgram_voice_agent import DeepgramVoiceAgentLLMService
 
     return DeepgramVoiceAgentLLMService(

@@ -228,6 +228,10 @@ Runs are written to one store: the directory in `TTS_BENCH_STORE`, or
 `data/runs/` in this subproject when it is unset. Point the variable outside
 any checkout, so deleting a working copy never deletes a measurement.
 
+Finished runs are archived in `s3://cet-sbx-aps1-workspaces-shared-s3-bucket/tts-bench-runs/`,
+one folder per run as in the store; the speech-to-text README ("Archiving runs") covers
+access from a Claude workspace.
+
 - **Resume.** Each cell is written under `.partial/` and moved into place only
   when complete, then appended to `cells.jsonl`. A killed run keeps every
   finished cell. `--resume <run>` rebuilds the run's own plan, corpus and

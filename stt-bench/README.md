@@ -292,6 +292,9 @@ Gradium can process long private recordings as consecutive sessions of at most
 recording is scored as one item. Recognition context resets between sessions;
 reconnect gaps and extra silence tails are recorded. Timing checks apply within
 each session, so these results are labeled separately from uninterrupted streams.
+Rime always runs the private recordings this way, because a Rime stream ends at 120
+seconds: sessions of 30 to 60 seconds, each cut in the middle of a pause taken from
+the recording's word timings (`private_variant` in its model config).
 
 Runtime amendments bind code corrections and provider limits to saved hashes.
 Previously dispatched commands retain their original identities. Credit or
@@ -336,6 +339,38 @@ The Vercel commands require the Sandbox SDK and preparation records described in
 the [script guide](scripts/README.md#vercel). Prepare each run root once and retain
 its checkpoint files when resuming. Audit, concurrency, and report commands read
 saved evidence without submitting audio.
+
+## Archiving runs
+
+A run folder is the only copy of each item's transcript and timing, and Vercel
+deletes a run's sandboxes 30 days after they are created. Keep every finished run
+in the team archive, `s3://cet-sbx-aps1-workspaces-shared-s3-bucket/stt-bench-runs/`
+(ap-south-1):
+
+- `README.md` there is the index, with one row per benchmark folder.
+- One folder per benchmark, `<model>-<date>/`, with its own `README.md`: model, code
+  commit, where it was measured, inputs, which runs the website uses, and results.
+  Upload run folders whole, `input.tar.gz` included, and keep superseded runs with a
+  `-not-used` suffix. `murf-finch-20261104/` and `rime-stt-20261105/` are examples.
+- The frozen inputs a new run needs are there too. Restore them to these paths under
+  `stt-bench/`:
+
+  | Bench path | Archive path (under `stt-bench-runs/`) |
+  | --- | --- |
+  | `datasets/pipecat-stt-benchmark/` | `datasets/pipecat-stt-benchmark/` |
+  | `datasets/private-turns-v1/` | `datasets/private-turns-v1/` |
+  | `reports/assemblyai-private-20260914/dataset/` | `assemblyai-private-20260914/dataset/` |
+  | `workspaces/private-longform-recovery-v2/` | `datasets/private-longform-recovery-v2/` |
+  | `reports/vercel-models/preparation.json` | `vercel-models/preparation.json` |
+
+  The archive has no FLEURS audio, only its manifests, so the offline tests that
+  read FLEURS clips fail without them.
+- Every Claude workspace can read and write it through its EC2 instance role or AWS
+  SSO (vocera.backend `deployment/claude_workspaces/README.md`, "Shared workspace S3
+  buckets"). Provider keys in a dotenv file are not enough: leave `AWS_ACCESS_KEY_ID`
+  and `AWS_SECRET_ACCESS_KEY` unset so the instance role is used. Workspaces have no
+  AWS CLI; `uv run --no-project --with boto3 python` works.
+- Private audio and transcripts are internal-only: never publish them or commit them.
 
 ## Development
 

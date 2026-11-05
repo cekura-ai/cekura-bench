@@ -75,6 +75,8 @@ def test_site_export(cfg, tmp_path):
     assert docs["reports.json"]["reports"]["alpha-site"] == {k: "https://example.test/run_a1_r1" for k in ("all", "bank", "clinic")}
     ins = docs["insights.json"]
     assert [c["key"] for c in ins["categories"]] == ["hear", "switch"] and ins["models"]["beta-site"]["byCategory"]["switch"]["scenarios"] == 1
+    rate = {(r["model"], r["metric"]): r["rate"] for r in skills["results"]}
+    assert ins["models"]["beta-site"]["byCategory"]["switch"]["score"] == round(100 * rate["beta-site", "2.1"], 1)  # mean of its one skill
     ex = docs["examples.json"]
     assert ex["examples"] == {}  # nothing is published until a person has reviewed it
 

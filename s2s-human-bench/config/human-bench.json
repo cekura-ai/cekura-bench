@@ -150,7 +150,7 @@
         {
           "id": "3.2",
           "metric": 275291,
-          "name": "Slot Update Handling",
+          "name": "Correction Handling",
           "description": "Uses the new detail when the caller corrects something they said earlier.",
           "condition": "Changes their mind"
         },
@@ -442,7 +442,7 @@
     },
     {
       "key": "corrections",
-      "label": "Slot Corrections",
+      "label": "Corrections & Changes",
       "skills": [
         "3.2",
         "3.5b"

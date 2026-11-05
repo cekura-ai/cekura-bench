@@ -7,7 +7,7 @@ import statistics
 from collections import Counter, defaultdict
 from typing import Any
 
-from s2s_human_bench.bench import Entry, Run, elo, family_means, pass_all, passed, percentile, published_price, scenario_scores, skill_rates
+from s2s_human_bench.bench import Entry, Run, elo, family_means, mean_or_none, pass_all, passed, percentile, published_price, scenario_scores, skill_rates
 from s2s_human_bench.calls import Call
 from s2s_human_bench.config import Config, site_order
 
@@ -85,8 +85,11 @@ def consistency(sel: list[Run], cfg: Config) -> dict[str, int]:
 
 
 def by_category(cfg: Config, sel: list[Run]) -> dict[str, Any]:
+    """Per call type: the calls that tested its skills and how many passed, plus ``score``, the mean of its
+    skills' pass rates (each skill counts once, however many calls tested it)."""
     out = {}
     codes = sorted({c for r in sel for c in r})
+    rates = skill_rates(cfg, [f for r in sel for f in r.values()])
     for cat in cfg["categories"]:
         skills = set(cat["skills"])
         scen = [c for c in codes if any(set(r[c].tested) & skills for r in sel if c in r)]
@@ -97,6 +100,7 @@ def by_category(cfg: Config, sel: list[Run]) -> dict[str, Any]:
                 passed=sum(passed(cfg, f) for f in fs),
                 scenarios=len(scen),
                 passedAll=sum(1 for c in scen if all(passed(cfg, r[c]) for r in sel if c in r)),
+                score=mean_or_none(100 * rates[s] for s in cat["skills"] if s in rates),
             )
     return out
 

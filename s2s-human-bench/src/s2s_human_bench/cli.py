@@ -30,6 +30,9 @@ def main() -> None:
         "--reviewed-examples", type=Path, help="example calls a person has listened to, {site id: [call id, ...]}; without it no example calls are published"
     )
     p.add_argument("--reviewed-clips", type=Path, help="approved clip pairs per skill, {skill id: {setup, should, pass, fail}}; replaces the candidate moments")
+    p.add_argument(
+        "--verdict-corrections", type=Path, help='reviewed verdicts that replace the grader\'s, {call id: {skill id: verdict, "why": reason}}'
+    )
     p.add_argument("--clip-picks", type=Path, help="also write the example moments' clip windows (with call ids) here; keep it out of the repo")
 
     args = parser.parse_args()

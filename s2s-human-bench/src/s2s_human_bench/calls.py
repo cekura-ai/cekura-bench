@@ -12,7 +12,7 @@ reached, is left out).
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -145,6 +145,21 @@ def load_call(cfg: Config, call_json: Path) -> Call:
         replies=len(agent),
         words=sum(len((a.get("content") or "").split()) for a in agent),
         unhealthy=any(health in (r.get("name") or "") and r.get("score") is False for r in results.values()),
+        tested=[s.id for s in site if verdicts[s.id] is not None],
+        misses=[s.id for s in site if verdicts[s.id] is False],
+    )
+
+
+def corrected(cfg: Config, call: Call, fixes: dict[str, bool | None]) -> Call:
+    """The call with reviewed verdicts in place of the grader's, and its family scores and call score redone."""
+    verdicts = {**call.verdicts, **{k: v for k, v in fixes.items() if k in call.verdicts}}
+    families = family_scores(cfg, verdicts, call.outcome)
+    site = cfg.skills_by_site
+    return replace(
+        call,
+        verdicts=verdicts,
+        families=families,
+        score=call_score(cfg.weights, families),
         tested=[s.id for s in site if verdicts[s.id] is not None],
         misses=[s.id for s in site if verdicts[s.id] is False],
     )

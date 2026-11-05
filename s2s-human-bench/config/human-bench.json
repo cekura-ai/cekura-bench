@@ -290,13 +290,6 @@
       "agentId": 26155
     },
     {
-      "key": "phonic-v1",
-      "name": "Phonic 1",
-      "vendor": "Phonic",
-      "siteId": "phonic",
-      "agentId": 26199
-    },
-    {
       "key": "nova-sonic",
       "name": "Amazon Nova 2 Sonic",
       "vendor": "Amazon",
@@ -369,7 +362,7 @@
     },
     {
       "key": "phonic-1",
-      "name": "Phonic 1 (phonic-1)",
+      "name": "Phonic-1",
       "vendor": "Phonic",
       "siteId": "phonic-1",
       "agentId": 26898

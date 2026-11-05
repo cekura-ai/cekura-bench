@@ -7,9 +7,10 @@ Wire contract, probed live on 2026-11-04:
   the applied settings. Both name the served build: the requested `-3-0` name
   resolves to a build such as `-3-0-4`, and requesting a build directly is
   refused, so the echo is the identity check.
-- `transcription.text.delta` appends text to the open segment and is never
-  revised. Only `transcription.done` tells a client that a segment is complete,
-  so deltas count as provisional text and `done` as final text.
+- `transcription.text.delta` appends text to the open segment. Mistral documents
+  each delta as final when received and never revised, so deltas count as final
+  text. Every `transcription.done` repeated its segment's deltas exactly in the
+  live runs; a done that differs fails closed rather than revising final text.
 - `input_audio.flush` closes the open segment and is answered by one
   `transcription.done` holding that segment's text alone. Server turn detection
   stays off unless requested, so segments end only on flush or end. Mistral's
@@ -107,19 +108,24 @@ class Protocol(shared.Protocol):
         elif kind == 'transcription.text.delta':
             if not isinstance(m.get('text'), str):
                 raise shared.ProviderError('Invalid Mistral text delta')
-            self.put(self.sequence, self.partials.get(self.sequence, '') + m['text'], False)
+            # Final on receipt: Mistral never revises a delta.
+            self.finals[self.sequence] = self.finals.get(self.sequence, '') + m['text']
         elif kind == 'transcription.done':
             text = m.get('text')
             if not isinstance(text, str):
                 raise shared.ProviderError('Invalid Mistral transcription.done')
             self.served(m.get('model'))
-            earlier = words(self.snapshot()['final_text'])
+            streamed = self.finals.get(self.sequence, '')
+            earlier = words(' '.join(self.finals[k] for k in sorted(self.finals) if k != self.sequence))
             if earlier and words(text)[:len(earlier)] == earlier:
                 # Live segments hold only their own text. A done that repeats
                 # every earlier segment is a whole-session transcript; joining
                 # it would count the speech twice, so fail closed instead.
                 self.unsupported = True
-            self.put(self.sequence, text, True)
+            if ' '.join(text.split()) != ' '.join(streamed.split()):
+                # The done must confirm the words already counted as final.
+                self.unsupported = True
+            self.finals[self.sequence] = text
             self.sequence += 1
             if self.closing:
                 self.terminal = True

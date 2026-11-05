@@ -57,15 +57,21 @@ def event(value, at):
 
 
 def clip_events(*, flush_reply='hello world', tail=''):
-    """One clip as the live service answers it; None leaves a reply out."""
+    """One clip as the live service answers it; None leaves a reply out.
+
+    The last word arrives after speech end, as in live sessions, and any tail
+    text streams as a delta before the done that answers input_audio.end.
+    """
     events = [dict(kind='model_accepted', time_seconds=0, model=config()['model']),
-              event(created(), .01), event(updated(), .02),
-              event(delta('hello'), .1), event(delta(' world'), .2),
-              dict(kind='speech_end', time_seconds=.3), dict(kind='finalize_requested', time_seconds=.3)]
+              event(created(), .01), event(updated(), .02), event(delta('hello'), .1),
+              dict(kind='speech_end', time_seconds=.3), dict(kind='finalize_requested', time_seconds=.3),
+              event(delta(' world'), .5)]
     if flush_reply is not None:
         events.append(event(done(flush_reply), .9))
     events += [dict(kind='audio_complete', time_seconds=1.3), dict(kind='close_stream_requested', time_seconds=1.3)]
     if tail is not None:
+        if tail:
+            events.append(event(delta(' ' + tail), 1.8))
         events.append(event(done(tail), 2.0))
     return events + [dict(kind='provider_terminal', time_seconds=2.0)]
 
@@ -99,10 +105,11 @@ def test_turn_profile_and_run_lists_include_the_model():
 def test_clip_completes_on_the_flush_reply_then_the_end_reply():
     c = config()
     events = clip_events()
-    # Deadline text at speech end is the streamed, not yet final, text.
+    # Streamed words are final on receipt; at speech end one word has arrived.
     assert transcript_at(events, .3, c) == {
-        'text': 'hello world', 'final_text': '', 'partial_text': 'hello world',
-        'provisional': True, 'reconstruction_status': 'supported'}
+        'text': 'hello', 'final_text': 'hello', 'partial_text': '',
+        'provisional': False, 'reconstruction_status': 'supported'}
+    assert transcript_at(events, .5, c)['final_text'] == 'hello world'
     result = reduce_events(events, c)
     assert result['transcript'] == 'hello world'
     assert result['transcript_complete'] and result['model_verified']
@@ -144,10 +151,23 @@ def test_an_end_reply_repeating_earlier_segments_fails_closed(tail, doubled):
     assert (snap['reconstruction_status'] == 'unsupported_order_or_overlap') is doubled
 
 
+@pytest.mark.parametrize('flush_reply, supported', [
+    ('hello world', True),
+    ('  hello   world ', True),     # spacing only
+    ('hello there', False),         # a reply that revises final words
+    ('hello', False),               # a reply missing a streamed word
+])
+def test_the_flush_reply_must_repeat_the_streamed_words(flush_reply, supported):
+    snap, result = mistral.replay(clip_events(flush_reply=flush_reply), config())
+    assert (snap['reconstruction_status'] == 'supported') is supported
+    assert result['transcript_complete'] is supported
+
+
 @pytest.mark.parametrize('tail, ttfs_ms, snapshots', [
-    ('', 600, ['', 'hello world']),
+    # Final text is complete when the last word arrives, before the flush reply.
+    ('', 200, ['', 'hello', 'hello world']),
     # Text invented from the silence tail is scored and delays the final text.
-    ('Thank you.', 1700, ['', 'hello world', 'hello world Thank you.']),
+    ('Thank you.', 1500, ['', 'hello', 'hello world', 'hello world Thank you.']),
 ])
 def test_turn_timing_and_full_run_snapshots_use_the_last_final_text(tail, ttfs_ms, snapshots):
     profile = json.loads(PROFILE.read_text())

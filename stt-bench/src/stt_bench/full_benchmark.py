@@ -18,7 +18,7 @@ import tarfile
 import numpy as np
 import soundfile as sf
 
-from . import gradium, reson8, trial_providers, zoom
+from . import gradium, mistral, reson8, trial_providers, zoom
 from .audio_formats import derivative, resample_24k
 from .credentials import redact
 from .data import sha256, write_json
@@ -32,7 +32,8 @@ from .streaming import EventLog, read_events
 
 MODELS = ('smallest-pulse', 'gradium-default', 'reson8-realtime', 'inworld-stt-1')
 # Version 1 plans must list exactly MODELS, so later additions live separately.
-FULL_MODELS = (*MODELS, 'soniox-stt-rt-v5', 'zoom-scribe-live', 'zoom-scribe-pro-live', 'zoom-scribe-pro-v2-1-live')
+FULL_MODELS = (*MODELS, 'soniox-stt-rt-v5', 'zoom-scribe-live', 'zoom-scribe-pro-live', 'zoom-scribe-pro-v2-1-live',
+               'mistral-voxtral-realtime-3')
 # Public-only runs stream the 1,000 Pipecat clips without the eight private
 # recordings. Inworld is listed again so it can be re-run on public clips alone.
 PUBLIC_LIVE_MODELS = ('gemini-3.8-live', 'gemini-3.8-live-extended-thinking', 'soniox-stt-rt-v5', 'inworld-stt-1',
@@ -255,7 +256,7 @@ def session_assessment(events,clip,config):
 
 
 def final_snapshots(events, config):
-    factory = {'gradium': gradium.Protocol, 'reson8': reson8.Protocol, 'zoom': zoom.Protocol}.get(config['provider'], trial_providers.Protocol)
+    factory = {'gradium': gradium.Protocol, 'mistral': mistral.Protocol, 'reson8': reson8.Protocol, 'zoom': zoom.Protocol}.get(config['provider'], trial_providers.Protocol)
     protocol = factory(config)
     snapshots, previous = [], None
     for e in events:

@@ -410,7 +410,8 @@ def replay(events, config, cutoff=float('inf'), *, protocol_factory=Protocol):
             accepted = e.get('model') == config['model']
         elif kind == 'provider_terminal':
             if protocol.terminal or (protocol.ack and protocol.provider not in (
-                    'speechmatics', 'cartesia', 'soniox', 'smallest', 'sarvam', 'inworld', 'gradium', 'reson8')):
+                    'speechmatics', 'cartesia', 'soniox', 'smallest', 'sarvam', 'inworld', 'gradium', 'reson8',
+                    'mistral')):
                 terminal_at = at
         elif kind == 'provider_message':
             before = protocol.snapshot()['final_text']

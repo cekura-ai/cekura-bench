@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 
 import numpy as np
 import pytest
@@ -129,3 +130,20 @@ def test_registered_with_provenance():
     assert info["requires_realtime"] is True
     if info["stt_bench_config"] is not None:
         assert all(info["stt_bench_config"]["matches"].values())
+
+
+def test_host_pacing_slip_is_recorded_and_voids_past_threshold():
+    samples = np.zeros(16000, dtype=np.float32)
+    run = stream_speaker(CascadeFlux(CONFIG, connector=FakeFlux({}).connect), samples, 16000, realtime=True)
+    pacing = run.diagnostics["pacing"]
+    assert pacing["void_threshold_ms"] == 25.0 and pacing["pacing_void"] is False
+
+    class StalledHost(CascadeFlux):
+        def push(self, frame, t_end_s):
+            if abs(t_end_s - 0.5) < 1e-9:
+                time.sleep(0.06)  # the host stalls 60 ms mid-stream
+            return super().push(frame, t_end_s)
+
+    run = stream_speaker(StalledHost(CONFIG, connector=FakeFlux({}).connect), samples, 16000, realtime=True)
+    assert run.diagnostics["pacing"]["max_slip_ms"] > 25.0
+    assert run.diagnostics["pacing"]["pacing_void"] is True

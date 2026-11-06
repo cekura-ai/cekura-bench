@@ -38,6 +38,14 @@ for STT timing, which is the opposite of what a turn-taking cascade uses. Here
 Flux's documented turn-detection defaults are sent explicitly and recorded.
 Transport is aiohttp, already in turn-taking-bench's lock (via fsspec[http]).
 
+Host pacing. As for the S2S models (``s2s/model.py``), each push is compared
+with its wall-clock schedule (origin = the channel's first push) and the worst
+lateness is recorded per channel in ``diagnostics()["pacing"]``, using the
+service bench's ``SLIP_WARN_MS`` / ``VOID_SLIP_MS``. A channel whose worst
+slip exceeds ``VOID_SLIP_MS`` is flagged ``pacing_void``: the delay was the
+host's, not the provider's, so a pipeline can exclude that conversation
+instead of scoring it.
+
 The API key is ``DEEPGRAM_API_KEY`` from the process environment or the
 ``env_file`` (default ``turn-taking-bench/.env``); it is never logged or recorded.
 """
@@ -56,6 +64,7 @@ from urllib.parse import urlencode
 
 import numpy as np
 
+from turn_taking_bench.author import service_bridge
 from turn_taking_bench.model import FRAME_S, Event
 
 MODEL_NAME = "cascade_flux"
@@ -262,12 +271,14 @@ class CascadeFlux:
                                      float(self.config["ready_timeout_s"])),
                   timeout=float(self.config["ready_timeout_s"]) + 5)
         self._first_push: tuple[float, float] | None = None
+        self._reset_pacing()
 
     def push(self, frame: np.ndarray, t_end_s: float) -> list[Event]:
         session = self._require_session()
         if len(frame) != self._frame_samples:
             raise ValueError(f"cascade_flux expects {self._frame_samples}-sample frames, got {len(frame)}")
         now = time.monotonic()
+        self._record_slip(now, t_end_s)
         if self._first_push is None:
             self._first_push = (now, t_end_s)
         else:
@@ -295,9 +306,29 @@ class CascadeFlux:
     def diagnostics(self) -> dict[str, Any]:
         """Raw Flux messages with receipt time and audio already sent, plus the
         session parameters; ``events.jsonl`` stores this next to the events."""
-        return {"flux": dict(self._channel), "messages": list(self._messages)}
+        return {"flux": dict(self._channel), "pacing": self._pacing(), "messages": list(self._messages)}
 
     # internals ----------------------------------------------------------------
+
+    def _reset_pacing(self) -> None:
+        self._pace_origin: float | None = None
+        self._max_slip_ms = 0.0
+        self._slip_events = 0
+
+    def _record_slip(self, now: float, t_end_s: float) -> None:
+        """How late this push is against the channel's wall-clock schedule."""
+        if self._pace_origin is None:
+            self._pace_origin = now - t_end_s
+        slip_ms = (now - (self._pace_origin + t_end_s)) * 1000.0
+        self._max_slip_ms = max(self._max_slip_ms, slip_ms)
+        if slip_ms > service_bridge.caller().SLIP_WARN_MS:
+            self._slip_events += 1
+
+    def _pacing(self) -> dict[str, Any]:
+        void_ms = service_bridge.caller().VOID_SLIP_MS
+        max_slip = getattr(self, "_max_slip_ms", 0.0)
+        return {"max_slip_ms": round(max_slip, 2), "slip_events": getattr(self, "_slip_events", 0),
+                "void_threshold_ms": void_ms, "pacing_void": max_slip > void_ms}
 
     def _require_session(self) -> _Session:
         if self._session is None:

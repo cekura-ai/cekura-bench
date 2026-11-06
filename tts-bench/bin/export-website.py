@@ -3,6 +3,7 @@
 
     python bin/export-website.py summarize <run>... --out <dir>         # one small JSON per run, next to nothing else
     python bin/export-website.py summarize <run>... --amend --out <dir> # one JSON per model; later runs amend earlier
+    python bin/export-website.py summarize <run> --first-reads --out <dir> # timings from first reads only
     python bin/export-website.py combine <summary.json>... --models config/site-models.json --out tts-benchmark.json
 
 ``summarize`` needs only the run's records (it reads no audio), so it can run
@@ -31,6 +32,8 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--out", required=True)
     parser.add_argument("--models", help="combine: display names, order and sourced prices")
     parser.add_argument("--amend", action="store_true", help="summarize: later runs of a model amend its earliest run")
+    parser.add_argument("--first-reads", action="store_true",
+                        help="summarize: one-shot timings from each sentence's first read only (a service that answers seen text faster)")
     args = parser.parse_args(argv)
 
     if args.command == "summarize":
@@ -41,7 +44,7 @@ def main(argv: list[str]) -> int:
             p = json.loads((Path(run) / "provenance.json").read_text())
             groups.setdefault((p["provider"], p["model"], p["voice"]) if args.amend else (run,), []).append(run)
         for runs in groups.values():
-            summary = website.summarize(runs[0], runs[1:])
+            summary = website.summarize(runs[0], runs[1:], first_reads=args.first_reads)
             path = out / f"{summary['run']}.site.json"
             path.write_text(json.dumps(summary, indent=1) + "\n")
             print(f"{path}")

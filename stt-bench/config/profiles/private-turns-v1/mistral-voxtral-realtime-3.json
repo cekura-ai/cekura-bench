@@ -12,6 +12,7 @@
   "channels": 1,
   "frame_ms": 20,
   "target_streaming_delay_ms": 480,
+  "verbatim": true,
   "ready_timeout_seconds": 15,
   "finalize_timeout_seconds": 5,
   "close_timeout_seconds": 5,
@@ -29,7 +30,7 @@
     "checked_on": "2026-11-04",
     "billing_basis": "submitted audio minutes; Mistral publishes $0.008 per input minute"
   },
-  "protocol_caveat": "Public Preview. The benchmark requests voxtral-mini-transcribe-realtime-3-0, which Mistral resolves to a served build; requesting the build name directly is refused, so the session.created and session.updated echo is checked against served_model and a different build fails the attempt. session.updated must echo English, 16 kHz PCM and the 480 ms streaming delay (Mistral's documented default, set explicitly because session.created reports it as unset) before audio is sent. Mistral documents each text delta as final when received and never revised, so deltas count as final text; the transcription.done that answers a flush or end must repeat that segment's streamed text exactly, or the attempt fails closed. input_audio.flush at speech end is answered by one transcription.done holding that segment alone; flush is sent by Mistral's SDK but the current documentation describes done only after input_audio.end, where live sessions return the remaining (tail) segment rather than the whole transcript. A done repeating every earlier segment fails closed. The client closes after the done that answers input_audio.end; left open, the server drops the connection without a close frame.",
+  "protocol_caveat": "Public Preview. The benchmark requests voxtral-mini-transcribe-realtime-3-0, which Mistral resolves to a served build; requesting the build name directly is refused, so the session.created and session.updated echo is checked against served_model and a different build fails the attempt. session.updated must echo English, 16 kHz PCM, the 480 ms streaming delay (Mistral's documented default, set explicitly because session.created reports it as unset) and verbatim true before audio is sent. Verbatim (default false) keeps repetitions, stutters and false starts; the references are word-for-word, as for Gemini, Reson8 and Rime. Mistral documents each text delta as final when received and never revised, so deltas count as final text; the transcription.done that answers a flush or end must repeat that segment's streamed text exactly, or the attempt fails closed. input_audio.flush at speech end is answered by one transcription.done holding that segment alone; flush is sent by Mistral's SDK but the current documentation describes done only after input_audio.end, where live sessions return the remaining (tail) segment rather than the whole transcript. A done repeating every earlier segment fails closed. The client closes after the done that answers input_audio.end; left open, the server drops the connection without a close frame.",
   "measurement_profile": "private-turns-controlled-v1",
   "profile_version": "private-turns-v1",
   "turn_finalization_class": "controlled",

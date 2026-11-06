@@ -18,6 +18,10 @@ Wire contract, probed live on 2026-11-04:
 - `input_audio.end` closes the remaining segment (normally the silence tail)
   with one more `transcription.done`. A client close after it completes with
   code 1000; left open, the server drops the connection without a close frame.
+- `verbatim` defaults to false, which drops repetitions, stutters and false
+  starts. The references are word-for-word, so it is requested, as Gemini
+  (VERBATIM), Reson8 (filler_mode verbatim) and Rime (verbatim mode) are run, and
+  `session.updated` must echo it.
 """
 import asyncio
 import base64
@@ -36,7 +40,7 @@ ENDPOINT = 'wss://api.mistral.ai/v1/audio/transcriptions/realtime'
 def validate(config):
     # The provider registry already pins the endpoint and requested model.
     expected = dict(language='en', sample_rate=16000, encoding='pcm_s16le', channels=1, frame_ms=20,
-                    target_streaming_delay_ms=480, finalization='manual_at_speech_end',
+                    target_streaming_delay_ms=480, verbatim=True, finalization='manual_at_speech_end',
                     completion_basis='transcription_done_after_input_audio_end',
                     finalize_ack_supported=True, requires_final_only_completion=True)
     for key, value in expected.items():
@@ -55,8 +59,12 @@ def connection(config, key):
 
 def session(config):
     """The settings sent in session.update, which session.updated must echo."""
-    return {'audio_format': {'encoding': config['encoding'], 'sample_rate': config['sample_rate']},
-            'language': config['language'], 'target_streaming_delay_ms': config['target_streaming_delay_ms']}
+    settings = {'audio_format': {'encoding': config['encoding'], 'sample_rate': config['sample_rate']},
+                'language': config['language'], 'target_streaming_delay_ms': config['target_streaming_delay_ms']}
+    # Runs frozen before verbatim was configured replay their saved evidence without it.
+    if 'verbatim' in config:
+        settings['verbatim'] = config['verbatim']
+    return settings
 
 
 def words(text):

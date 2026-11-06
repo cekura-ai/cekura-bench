@@ -40,7 +40,8 @@ def created(**changes):
 
 
 def updated(**changes):
-    return {'type': 'session.updated', 'session': state(**{'language': 'en', 'target_streaming_delay_ms': 480, **changes})}
+    return {'type': 'session.updated',
+            'session': state(**{'language': 'en', 'target_streaming_delay_ms': 480, 'verbatim': True, **changes})}
 
 
 def delta(text):
@@ -86,6 +87,7 @@ def test_config_connection_and_credentials():
     assert parse_qs(urlsplit(url).query) == {'model': ['voxtral-mini-transcribe-realtime-3-0']}
     for key, value in [('language', None), ('language', 'fr'), ('sample_rate', 24000),
                        ('target_streaming_delay_ms', None), ('target_streaming_delay_ms', 2400),
+                       ('verbatim', False), ('verbatim', None),
                        ('finalization', 'stream_end_after_tail'), ('finalize_ack_supported', False),
                        ('served_model', None), ('served_model', 'voxtral-mini-transcribe-realtime-2602'),
                        ('model', 'voxtral-mini-transcribe-realtime-3')]:
@@ -188,7 +190,7 @@ def test_a_different_served_build_is_never_verified(index, message):
 
 
 @pytest.mark.parametrize('changes', [
-    dict(language=None), dict(target_streaming_delay_ms=None),
+    dict(language=None), dict(target_streaming_delay_ms=None), dict(verbatim=False),
     dict(audio_format={'encoding': 'pcm_s16le', 'sample_rate': 24000}),
     dict(turn_detection={'end_threshold': .5}), dict(diarize=True),
 ])
@@ -198,6 +200,15 @@ def test_session_settings_must_be_echoed_before_audio(changes):
     with pytest.raises(mistral.shared.ProviderError):
         protocol.feed(updated(**changes))
     assert not protocol.ready
+
+
+def test_runs_frozen_before_verbatim_replay_their_saved_session():
+    old = {k: v for k, v in config().items() if k != 'verbatim'}
+    assert 'verbatim' not in mistral.session(old)
+    protocol = mistral.Protocol(old)
+    protocol.feed(created())
+    protocol.feed(updated(verbatim=False))
+    assert protocol.ready
     fresh = mistral.Protocol(config())
     with pytest.raises(mistral.shared.ProviderError):
         fresh.feed(updated())  # session.updated before session.created
@@ -296,7 +307,7 @@ def test_loopback_waits_for_session_created_sends_flush_then_end_and_closes_clea
     assert [m['type'] for m in received] == ['session.update', 'input_audio.append', 'input_audio.flush',
                                               'input_audio.append', 'input_audio.end']
     assert received[0]['session'] == {'audio_format': {'encoding': 'pcm_s16le', 'sample_rate': 16000},
-                                      'language': 'en', 'target_streaming_delay_ms': 480}
+                                      'language': 'en', 'target_streaming_delay_ms': 480, 'verbatim': True}
     assert [base64.b64decode(m['audio']) for m in received if m['type'] == 'input_audio.append'] == [SPEECH, TAIL]
     assert record['closes'] == [1000]
     result = reduce_events(record['events'], config())

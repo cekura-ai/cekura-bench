@@ -205,7 +205,8 @@ PROVIDERS: dict[str, ProviderEntry] = {
         (Model("voxtral-mini-tts-3-0", MARGARET),),
         notes="realtime TTS websocket; session.update before t0 and its echo checked; input_text.append appends text, "
               "input_text.flush ends a generation (speech.audio.done); one generation at a time per socket; "
-              "float32 PCM converted to int16; streaming_mode=responsive (option); no cancel",
+              "float32 PCM converted to int16; streaming_mode=responsive (option); no cancel; "
+              "US inference host api.us.mistral.ai (option region, default us; global for api.mistral.ai)",
     ),
 }
 

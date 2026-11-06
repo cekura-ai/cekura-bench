@@ -834,11 +834,13 @@ class TestMistralRealtime:
         assert finished.error is None                                # a close after done ends nothing
 
     def test_the_protocol_limits_are_declared_and_the_lineup_names_a_mistral_voice(self):
+        import pytest
         from tts_bench.adapters.mistral_realtime import MistralRealtimeAdapter
         from tts_bench.registry import MARGARET, PENDING
 
         mistral, _ = adapter(MistralRealtimeAdapter, "voxtral-mini-tts-3-0", MARGARET)
-        assert mistral.url == "wss://api.mistral.ai/v1/audio/speech/realtime?model=voxtral-mini-tts-3-0"
+        assert mistral.url == "wss://api.us.mistral.ai/v1/audio/speech/realtime?model=voxtral-mini-tts-3-0"
+        assert mistral.region == "us"
         assert mistral._headers() == {"Authorization": "Bearer unused"}
         assert mistral._settings() == {"voice": "voice_447", "response_format": "pcm", "streaming_mode": "responsive"}
         config = TTSConfig("voxtral-mini-tts-3-0", MARGARET)
@@ -853,6 +855,13 @@ class TestMistralRealtime:
         long_form = TTSConfig("voxtral-mini-tts-3-0", MARGARET, options=(("streaming_mode", "long_form"),))
         clock = Clock()
         assert MistralRealtimeAdapter(long_form, "k", EventLog(clock), clock)._settings()["streaming_mode"] == "long_form"
+        global_host = TTSConfig("voxtral-mini-tts-3-0", MARGARET, options=(("region", "global"),))
+        assert MistralRealtimeAdapter(global_host, "k", EventLog(clock), clock).url.startswith("wss://api.mistral.ai/")
+        eu = TTSConfig("voxtral-mini-tts-3-0", MARGARET, options=(("region", "eu"),))
+        assert MistralRealtimeAdapter(eu, "k", EventLog(clock), clock).url.startswith("wss://api.eu.mistral.ai/")
+        with pytest.raises(ValueError):
+            MistralRealtimeAdapter(TTSConfig("voxtral-mini-tts-3-0", MARGARET, options=(("region", "evil.example/x"),)),
+                                   "k", EventLog(clock), clock)
 
     async def _serve(self, tmp_path, *, updated=None, on_update=None, on_text=None, reject=None):
         """A local stand-in for the realtime endpoint. Returns the frames it saw, its request headers and the log."""

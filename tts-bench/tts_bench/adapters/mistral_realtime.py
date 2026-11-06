@@ -23,13 +23,21 @@ can straddle two deltas, so the remainder is carried to the next one.
 An unknown voice is not refused at ``session.update``: the server closes the
 socket with 1008 once text arrives. A rejected key is HTTP 401 at the upgrade.
 
+The global host (``api.mistral.ai``) does not commit to an inference location.
+The default is the US host (``api.us.mistral.ai``), next to the campaign's cloud
+region, as Azure's default region is; the ``region`` option overrides it
+(``global`` for the global host) and is recorded in every cell. Mistral prices
+regional inference 10% above the global rate.
+
 Reference: https://docs.mistral.ai/studio/audio/text-to-speech/speak-in-realtime
+Regions: https://docs.mistral.ai/studio/regional-inference
 """
 
 from __future__ import annotations
 
 import asyncio
 import base64
+import re
 from typing import Any, ClassVar
 from urllib.parse import urlencode
 
@@ -40,6 +48,7 @@ from tts_bench.adapters.base import AdapterError
 
 FLOAT_WIDTH = 4
 HANDSHAKE_TIMEOUT_S = 20.0
+DEFAULT_REGION = "us"
 
 
 def to_int16(samples: bytes) -> bytes:
@@ -55,10 +64,14 @@ class MistralRealtimeAdapter(WebSocketAdapter):
     native_mulaw_8k: ClassVar[bool] = False    # pcm, wav, mp3, flac, opus; all 24 kHz
     setup_excluded: ClassVar[str] = "TCP, TLS, websocket upgrade, session.created and session.update"
     AUDIO_KEYS: ClassVar[frozenset[str]] = WebSocketAdapter.AUDIO_KEYS | {"audio_data"}
-    base = "wss://api.mistral.ai/v1/audio/speech/realtime"
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
+        self.region = self.config.option("region", DEFAULT_REGION)
+        if not re.fullmatch(r"global|[a-z]{2}", self.region):
+            raise ValueError(f"mistral-realtime region must be 'global' or a two-letter region, not {self.region!r}")
+        host = "api.mistral.ai" if self.region == "global" else f"api.{self.region}.mistral.ai"
+        self.base = f"wss://{host}/v1/audio/speech/realtime"
         self._active: str | None = None
         self._pending = b""
         self._handshake: asyncio.Future | None = None
@@ -115,6 +128,7 @@ class MistralRealtimeAdapter(WebSocketAdapter):
         self._pending = b""
         self.contexts[context_id].meta["session"] = {
             k: self.session.get(k) for k in ("model", "voice", "streaming_mode", "response_format", "expressiveness")}
+        self.contexts[context_id].meta["region"] = self.region
 
     async def _send_text(self, context_id: str, text: str, first: bool) -> None:
         await self._send_json({"type": "input_text.append", "text": text})

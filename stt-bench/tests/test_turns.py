@@ -128,6 +128,16 @@ def test_profiles_preserve_tuning_and_flag_exceptions():
     for p in Path('config/profiles/private-turns-v1').glob('*.json'):validate_profile(json.loads(p.read_text()))
 
 
+def test_turn_profiles_pin_the_same_model_as_their_base_config():
+    # A turn profile carries its own copy of the model identity; updating only
+    # config/models would run the turn set against the old pinned model.
+    for path in Path('config/profiles/private-turns-v1').glob('*.json'):
+        profile=json.loads(path.read_text());base=json.loads(Path(profile['base_config']).read_text())
+        assert profile['model_id']==path.stem==base['model_id']
+        for k in ('provider','model','version','expected_resolved_model','endpoint','language','sample_rate'):
+            assert profile.get(k)==base.get(k),(path.stem,k)
+
+
 CONFIG=controlled_profile(json.loads(Path('config/models/deepgram-nova-3.json').read_text()))
 
 

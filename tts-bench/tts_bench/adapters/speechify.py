@@ -6,11 +6,18 @@ goes in as ``input.text`` pieces and ``input.close`` speaks whatever is left
 and ends the session with ``speech.done``. Audio comes back as base64 PCM in
 ``speech.chunk`` events.
 
-The server speaks a sentence once the next one starts, and sentences that
-complete while one is speaking join the next segment; each segment is a
-separate synthesis. There is no cancel: the only controls are ``input.flush``
-and ``input.close``, and both speak the text already sent rather than
+A sentence is spoken once its closing punctuation and the space after it
+arrive (the docs say once the next sentence starts; live, a lone
+``"Hello there. "`` was voiced about 350 ms later), and sentences that complete
+while one is speaking join the next segment; each segment is a separate
+synthesis. There is no cancel: the only controls are ``input.flush`` and
+``input.close``, and both speak the text already sent rather than
 interrupting it.
+
+Only ``speech.done`` with reason ``closed`` ends an utterance. Any other
+reason (``idle``, ``session_limit``, ``shutdown``) or a socket that closes
+before it means the recording may be cut short, so it is the synthesis's
+error, never its end.
 
 A session holds one of the account's concurrent requests, and every session,
 and every segment after a session's first, draws on one per-account request
@@ -75,11 +82,32 @@ class SpeechifyAdapter(WebSocketAdapter):
     def _on_message(self, message: dict[str, Any]) -> None:
         kind = message.get("type")
         if kind == "speech.chunk" and message.get("audio"):
-            self._on_audio(self._active, base64.b64decode(message["audio"]))
+            pcm = base64.b64decode(message["audio"])
+            if len(pcm) % 2:
+                # Never seen live (every chunk was whole 16-bit samples); a half sample would shift the timeline.
+                self._on_error(self._active, f"speech.chunk of {len(pcm)} bytes ends inside a 16-bit sample")
+                return
+            self._on_audio(self._active, pcm)
         elif kind == "speech.done":
-            self._on_done(self._active, reason=message.get("reason"),
-                          billable_characters=message.get("billable_characters_count"),
-                          server_duration_ms=message.get("audio_duration_ms"))
+            reason = message.get("reason")
+            meta = {"reason": reason, "billable_characters": message.get("billable_characters_count"),
+                    "server_duration_ms": message.get("audio_duration_ms")}
+            if reason != "closed":
+                self._on_error(self._active, f"speech.done with reason {reason!r}, not 'closed'")
+                if self._active in self.contexts:
+                    self.contexts[self._active].meta.update(meta)
+                return
+            self._on_done(self._active, **meta)
         elif kind == "speech.error":
             error = message.get("error") or {}
             self._on_error(self._active, f"{error.get('code')}: {error.get('message')}")
+
+    async def _receive_loop(self) -> None:
+        await super()._receive_loop()
+        # A clean close (1000) ends the loop without the exception the base reports.
+        self._on_closed("closed by server")
+
+    def _on_closed(self, reason: str) -> None:
+        for context_id, synthesis in self.contexts.items():
+            if not synthesis.done.is_set():
+                self._on_error(context_id, f"closed before speech.done: {reason}")

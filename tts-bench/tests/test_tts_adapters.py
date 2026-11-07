@@ -835,6 +835,66 @@ class TestSpeechify:
         raw = (tmp_path / "raw.jsonl").read_text()
         assert "secret-key" not in raw and "secret-key" not in str(log.events) and "<640 b64 chars>" in raw
 
+    async def test_a_recording_cut_short_is_an_error_and_a_full_account_is_a_refusal(self):
+        import base64
+        import http
+        import json
+
+        import pytest
+        import websockets
+
+        from tts_bench.adapters.base import AdapterError, is_refusal
+        from tts_bench.adapters.speechify import SpeechifyAdapter
+        from tts_bench.registry import HARPER
+
+        pcm = b"\x01\x00" * 240
+        ending = {"mode": ""}
+
+        def process_request(connection, request):
+            if ending["mode"] == "429":
+                return connection.respond(http.HTTPStatus.TOO_MANY_REQUESTS, '{"error":{"code":"rate_limited"}}')
+            return None
+
+        async def serve(ws):
+            async for raw in ws:
+                if json.loads(raw)["type"] != "input.close":
+                    continue
+                await ws.send(json.dumps({"type": "speech.chunk", "audio": base64.b64encode(pcm).decode()}))
+                if ending["mode"] == "shutdown":
+                    await ws.send(json.dumps({"type": "speech.done", "billable_characters_count": 6,
+                                              "audio_duration_ms": 10, "reason": "shutdown"}))
+                    await ws.close(1001)
+                else:
+                    await ws.close(1011 if ending["mode"] == "fault" else 1000)
+
+        clock = Clock()
+        async with websockets.serve(serve, "127.0.0.1", 0, process_request=process_request) as server:
+            base = f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}/v1/audio/stream/ws"
+            for mode, expected in (("fault", "closed before speech.done"), ("clean", "closed before speech.done"),
+                                   ("shutdown", "speech.done with reason 'shutdown'")):
+                ending["mode"] = mode
+                speechify = SpeechifyAdapter(TTSConfig("simba-3.5", HARPER), "k", EventLog(clock), clock)
+                speechify.base = base
+                async with speechify:
+                    await speechify.open_context("main")
+                    await speechify.send("main", "Hello.")
+                    await speechify.finish("main")
+                    synthesis = await speechify.wait("main", 5.0)
+                assert synthesis.error.startswith(expected), mode
+                assert synthesis.t_done is None and synthesis.meta["ended_by"] != "timeout" and not is_refusal(synthesis.error)
+            assert synthesis.meta["reason"] == "shutdown"
+            ending["mode"] = "429"
+            speechify = SpeechifyAdapter(TTSConfig("simba-3.5", HARPER), "k", EventLog(clock), clock)
+            speechify.base = base
+            with pytest.raises(AdapterError) as refused:
+                await speechify.connect()
+            assert is_refusal(str(refused.value))
+
+        speechify, _ = adapter(SpeechifyAdapter, "simba-3.5", HARPER)
+        synthesis = await speechify.open_context("main")
+        speechify._on_message({"type": "speech.chunk", "audio": base64.b64encode(b"\x01\x00\x02").decode()})
+        assert synthesis.error.endswith("ends inside a 16-bit sample") and bytes(synthesis.pcm) == b""
+
 
 class TestLineupRates:
     def test_a_model_that_emits_one_rate_names_it_and_the_rest_keep_the_default(self):

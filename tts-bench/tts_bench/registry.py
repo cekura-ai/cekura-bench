@@ -183,9 +183,10 @@ PROVIDERS: dict[str, ProviderEntry] = {
     ),
     "speechify": ProviderEntry(
         "speechify", SpeechifyAdapter, "SPEECHIFY_API_KEY",
-        (Model("simba-3.5", HARPER),),
+        (Model("simba-3.5", HARPER), Model("simba-3.2", HARPER)),
         notes="text-input websocket, one session per utterance; model, voice, PCM rate and language ride the upgrade URL; "
-              "a sentence is spoken once the next starts; input.close speaks the rest and ends the session; no cancel",
+              "a sentence is spoken once its closing punctuation and a space arrive; input.close speaks the rest and ends "
+              "the session; no cancel; simba-3.5 is the recommended multilingual model, simba-3.2 the English-only one",
     ),
     "azure-speech": ProviderEntry(
         "azure-speech", AzureSpeechAdapter, "AZURE_SPEECH_KEY",

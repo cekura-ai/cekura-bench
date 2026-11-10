@@ -1,0 +1,30 @@
+{
+  "provider": "nvidia",
+  "endpoint_env": "NVIDIA_TRANSCRIBE_ENDPOINT",
+  "served_by": "NVIDIA-hosted vLLM 0.28.0 deployment; the URL is supplied by NVIDIA and kept out of the repository",
+  "interface": "batch",
+  "model": "nvidia/Nemotron-3.5-Transcribe-30B-A4B",
+  "model_card": "https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Transcribe-30B-A4B",
+  "model_note": "The deployment serves the model under its pre-release name; the public card, released 2026-10-28, names it NVIDIA-Nemotron-3.5-Transcribe-30B-A4B",
+  "open_weights": "OpenMDW-1.1",
+  "language": "en-US",
+  "audio": {"format": "wav", "sample_rate": 16000, "encoding": "linear16", "channels": 1,
+            "trailing_silence": "the frozen input's one-second tail is sent as part of the file"},
+  "prompt": "Audio transcription. Language: as spoken. Wording: verbatim, including fillers and repetitions. Formatting: punctuation and capitalization. Output: transcript only.",
+  "prompt_source": "NVIDIA's recommended single-speaker user prompt, sent to Cekura on 2026-10-22; the model card lists it as the verbatim ASR prompt",
+  "chat_template_kwargs": {"enable_thinking": false},
+  "temperature": 0,
+  "max_tokens_per_audio_second": 12,
+  "min_max_tokens": 256,
+  "request_timeout_seconds": 600,
+  "workers": 4,
+  "pricing": {
+    "usd_per_minute": 0.002,
+    "plan": "DeepInfra hosted inference, $2 per 1,000 minutes of input audio; NVIDIA publishes the weights",
+    "source": "https://deepinfra.com/nvidia/NVIDIA-Nemotron-3.5-Transcribe-30B-A4B",
+    "status": "published_list_rate",
+    "billing_basis": "input audio duration at a third-party host's rate; the measured run used NVIDIA's own deployment, which was not billed; estimate, not an invoice",
+    "checked_on": "2026-10-28"
+  },
+  "model_id": "nvidia-nemotron-3-5-transcribe"
+}

@@ -33,7 +33,7 @@ replaces the base run's.
 | Hume Octave 2 (preview) | `campaign-1014-hume` | none |
 | Gradium (default), voice Everly | `campaign-1018b-gradium-everly` | none |
 | Inworld TTS-2 Flash and TTS-2 (creative delivery) | `campaign-1019-inworld` | none |
-| HeyGen Voice 1 Turbo and Voice 1, voice Nadine (timings from first reads) | `heygen-voice-20261105` | none |
+| HeyGen Voice 1 Turbo and Voice 1, voice Nadine | `heygen-voice-20261105` | none |
 
 `campaign-0928-fix` re-ran the models whose recordings an early stream-end bug
 had cut short, and `campaign-0928-v4` added the two v4 models. Grok's
@@ -46,13 +46,4 @@ its new checkpoint rolled out, with the voice Sarah; it replaces the
 ten voices it recommended, in place of the `campaign-1013` Harper run. The
 sandbox's OpenAI key had been rejected for both campaigns, so their Whisper
 transcripts were scored offline with `bin/score-tts.py`.
-HeyGen answers a sentence it has already synthesised faster, for at least
-twenty minutes: in `heygen-voice-20261105` the first read of a sentence was the
-slowest of its three on 73 of 102 sentences (Turbo) and 78 of 104 (Voice 1),
-where Murf's were 49 of 104. An agent mostly sends text a service has not seen,
-so HeyGen's summaries were written with `summarize --first-reads`: latency,
-throughput and playout come from each sentence's first read
-(`"timingReads": "first"`), and accuracy, naturalness and determinism from every
-read. Across all three reads its first-audio P50 is 623 ms (Turbo) and 782 ms
-(Voice 1), against 681 ms and 871 ms on first reads.
 Each summary names its runs in `run` and `amendments`.

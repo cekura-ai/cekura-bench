@@ -18,6 +18,7 @@ MODELS = {name: Path('config/models') / (name + '.json') for name in (
     'gemini-3.8-live',
     'gemini-3.8-live-extended-thinking',
     'elevenlabs-scribe-v2-realtime',
+    'elevenlabs-scribe-v3-live',
     'speechmatics-standard',
     'speechmatics-enhanced',
     'speechmatics-linden-1',

@@ -13,7 +13,7 @@ MODELS = {
     'deepgram': {'nova-2', 'nova-3', 'flux-general-en', 'flux-general-multi'},
     'openai': {'gpt-realtime-whisper', 'gpt-4o-transcribe', 'gpt-4o-mini-transcribe'},
     'gemini': {'gemini-3.5-transcribe-live', *gemini_live.MODELS},
-    'elevenlabs': {'scribe_v2_realtime'},
+    'elevenlabs': {'scribe_v2_realtime', 'scribe_v3_live'},
     'speechmatics': {'standard', 'enhanced', 'linden-1'},
     'cartesia': {'ink-2'},
     'google': {'chirp_2', 'chirp_3'},

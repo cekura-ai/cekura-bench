@@ -159,7 +159,7 @@ class Runner:
             model=model,
             voice=spec.voice or self.entry.voice_for(model),
             sample_rate=spec.sample_rate,
-            options=tuple(spec.options),
+            options=tuple(spec.options) or self.entry.options_for(model),
         )
         self.planned = self.plan()
         self.cells: list[Cell] = []                    # the cells run in this session

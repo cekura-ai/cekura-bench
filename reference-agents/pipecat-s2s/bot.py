@@ -658,8 +658,10 @@ def deepslate_tts(voice: str, settings: Settings) -> dict[str, Any]:
 
     ``elevenlabs`` (the default) has Deepslate call ElevenLabs with the voice and
     model every cascade row speaks with, on this deployment's ElevenLabs key.
-    ``hosted`` uses a voice Deepslate hosts; it has no stock voice, only voices
-    cloned into an account, so that mode needs ``s2s_voice`` set to one.
+    ``hosted`` uses a voice Deepslate hosts: one from its catalog, which every
+    organization can use, or one cloned into the account. The row's default
+    voice is an ElevenLabs id rather than one of these, so that mode needs
+    ``s2s_voice`` set.
     """
     mode = settings.get("deepslate_tts", "elevenlabs")
     if mode == "elevenlabs":
@@ -672,7 +674,7 @@ def deepslate_tts(voice: str, settings: Settings) -> dict[str, Any]:
         }
     if mode == "hosted":
         if not settings.get("s2s_voice"):
-            raise ValueError("deepslate_tts=hosted needs s2s_voice: Deepslate hosts no stock voice to default to")
+            raise ValueError("deepslate_tts=hosted needs s2s_voice: the default voice is an ElevenLabs id")
         return {"provider": "hosted", "voice_id": voice, "mode": DEEPSLATE_HOSTED_MODE}
     raise ValueError(f"unknown deepslate_tts {mode!r}; expected elevenlabs or hosted")
 
@@ -689,6 +691,7 @@ def deepslate_disclosures(settings: Settings) -> dict[str, str]:
         "deepslate_vad": ", ".join(f"{k} {v}" for k, v in DEEPSLATE_VAD.items()),
         "deepslate_temperature": str(DEEPSLATE_TEMPERATURE),
         "deepslate_playback_reporting": "off; the service estimates what a caller heard before a barge-in",
+        "deepslate_barge_in": "a caller who starts speaking cuts a reply while it is generated or still playing",
     }
 
 
@@ -771,6 +774,104 @@ def polyai_disclosures(settings: Settings) -> dict[str, str]:
         "polyai_playback_reporting": (
             "on: started and stopped, audio_ms and dropped_ms from the audio delivered, "
             "spoken_text from the words played"
+        ),
+    }
+
+
+def _deepgram_voice_agent(credential: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
+    """Deepgram's Voice Agent API; the text model's own OpenAI key is read here, never from a session."""
+    from deepgram_voice_agent import DeepgramVoiceAgentLLMService
+
+    return DeepgramVoiceAgentLLMService(
+        api_key=credential,
+        think_api_key=_credential(("OPENAI_API_KEY",), "deepgram-voice-agent's text model on our own OpenAI account"),
+        model=model,
+        voice=voice,
+        instructions=instructions,
+    )
+
+
+def deepgram_disclosures(settings: Settings) -> dict[str, str]:
+    from deepgram_voice_agent import LISTEN, THINK_ENDPOINTS
+
+    return {
+        "deepgram_listen": f"{LISTEN['model']} ({LISTEN['version']}) at Flux's own end-of-turn defaults",
+        "deepgram_think": (
+            "on our own OpenAI account through Deepgram's bring-your-own endpoint "
+            f"({', '.join(THINK_ENDPOINTS.values())}); Deepgram's hosted models cut prompts "
+            "past 25,000 characters and the medicare contract's is longer"
+        ),
+        "tts": "Deepgram Aura, the named voice, server-side; 24 kHz PCM out",
+        "deepgram_barge_in": (
+            "the service ends its reply when Flux hears the caller start; the pipeline cuts "
+            "playback on the same announcement"
+        ),
+    }
+
+
+def _smallest_hydra(credential: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
+    """Smallest AI's Hydra, through the service in ``smallest_hydra``."""
+    from smallest_hydra import SmallestHydraLLMService
+
+    return SmallestHydraLLMService(api_key=credential, model=model, voice=voice, instructions=instructions)
+
+
+def hydra_disclosures(settings: Settings) -> dict[str, str]:
+    from smallest_hydra import OUTPUT_SAMPLE_RATE, PREROLL_S, TRANSCRIPTION_MODEL, URL
+
+    return {
+        "hydra_endpoint": URL,
+        "hydra_turn_detection": "service, no settings (the service takes none)",
+        # The words are every row's opening turn; only where they are put differs.
+        "hydra_opening": (
+            "the opening turn's instruction appended to the system prompt, with generate_initial_response "
+            "on, because the service answers no text turn"
+        ),
+        "hydra_agent_transcript": "the service's own reply text (an undocumented frame), held until the reply sounds",
+        "hydra_caller_transcription": (
+            f"{TRANSCRIPTION_MODEL} (Smallest speech-to-text, same key), each caller turn the service "
+            f"announces, from {PREROLL_S:g} s before its start to its stop"
+        ),
+        "tts": f"the vendor's own, server-side; {OUTPUT_SAMPLE_RATE // 1000} kHz PCM out",
+        "hydra_closing_tools": (
+            "no reply is asked for after a closing tool whose reply made a sound; one, at most, after a silent one"
+        ),
+    }
+
+
+def _rime_prism(credential: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
+    """Rime's Prism, through the service in ``rime_prism``.
+
+    No framework service speaks Prism's protocol. ``model`` is not sent: the
+    endpoint serves one model and takes no model parameter.
+    """
+    from rime_prism import RimePrismLLMService
+
+    return RimePrismLLMService(api_key=credential, model=model, voice=voice, instructions=instructions)
+
+
+def rime_prism_disclosures(settings: Settings) -> dict[str, str]:
+    from rime_prism import prism_url
+
+    return {
+        "rime_prism_endpoint": prism_url(),
+        # The release that answered is known only once connected; the service
+        # replaces this line with it then, and every rewrite of the record carries it.
+        "rime_prism_release": "pending: reported once the session opens",
+        # Not sent, so the service's defaults apply; once configured, the values
+        # the service reports in effect replace this line.
+        "rime_prism_turn_detection": (
+            "provider defaults, not sent: eagerness auto, prism_end_of_turn_timeout_ms 5000, "
+            "interrupt_response true"
+        ),
+        "rime_prism_opening": "a nudge (prism_cause proactive) carrying the opening instruction",
+        "rime_prism_tool_filler": "provider default (auto): the service says a short line while a tool runs",
+        "rime_prism_closing_tools": (
+            "no reply is asked for after a closing tool whose reply made a sound; one, at most, after a silent one"
+        ),
+        "rime_prism_playback_reporting": (
+            "on: conversation.item.truncate with the milliseconds heard when the caller cuts in, "
+            "prism.playback.drained when a reply plays out, both from after the output transport"
         ),
     }
 
@@ -1075,8 +1176,10 @@ class Provider:
     # interruption itself, when it happens.
     interruptions: bool = True
     # Whether the service is told, from after the output transport, what the
-    # caller has actually heard. One service judges barge-in only while it
-    # knows a reply is audible, and sends audio faster than it is played.
+    # caller has actually heard. These services send audio faster than it is
+    # played, and one judges barge-in only while it knows a reply is audible;
+    # another decides from it what it keeps of a reply cut short and when the
+    # caller's next words open a new turn.
     reports_playback: bool = False
 
 
@@ -1084,7 +1187,8 @@ class Provider:
 # and it is not a detail: a scored run needs both halves of the conversation, and
 # a transcript holding only the agent reads as a caller who never spoke. Three of
 # these services transcribe the caller only when asked, and each asks
-# differently; seven do it themselves. Nothing warns about the difference,
+# differently; nine do it themselves; one cannot, and its vendor's separate
+# speech-to-text is run on each caller turn. Nothing warns about the difference,
 # because a session without transcription is a working session.
 #
 #   openai-realtime   asked for  -- an input transcription config, default model
@@ -1097,6 +1201,10 @@ class Provider:
 #   phonic            automatic  -- the service sends each finished caller turn
 #   deepslate         automatic  -- the service transcribes each finished caller turn
 #   polyai-dialog     automatic  -- transcription streams inside the reply it answers
+#   smallest-hydra    pulse-pro  -- the service transcribes neither side; the
+#                                   vendor's speech-to-text runs on each caller turn
+#   rime-prism        automatic  -- the service transcribes each committed caller turn
+#   deepgram-voice-agent automatic -- Flux's transcript of each caller turn
 #
 # The tool calls travel separately, through the context aggregator, which is why
 # a run can show resolved tools and still carry no speech.
@@ -1311,13 +1419,54 @@ PROVIDERS: dict[str, Provider] = {
     # PolyAI's audio-native dialog model hears the caller at its native 16 kHz
     # and speaks at 24 kHz in its own voice, which the output transport
     # resamples -- see ``polyai_realtime``. The service announces the caller's
-    # turns and transcribes them as part of each reply. A result is sent as
-    # soon as it exists, so the next reply is written while the line the tool
-    # call carried is still being said.
+    # turns and transcribes them as part of each reply, and decides barge-in
+    # itself: the agent stops when the service cancels the reply, not when the
+    # caller's turn starts. A result is sent as soon as it exists, so the next
+    # reply is written while the line the tool call carried is still being said.
     "polyai-dialog": Provider(
         _polyai, 16000, "dialog-rsn-1", "service default", ("POLY_API_KEY",),
         "polyai_realtime",
         discloses=polyai_disclosures,
+        results="immediate", interruptions=False, caller_transcription="automatic",
+        reports_playback=True,
+    ),
+    # Deepgram's Voice Agent: Flux hears the caller at 16 kHz, GPT-4.1 on our own
+    # OpenAI account replies, and Aura speaks at 24 kHz, which the output
+    # transport resamples -- see ``deepgram_voice_agent``. The service announces
+    # the caller's turns and stops its own reply when the caller starts, which is
+    # when the pipeline interrupts too. A result is sent as soon as it exists;
+    # the service answers once it has it.
+    "deepgram-voice-agent": Provider(
+        _deepgram_voice_agent, 16000, "open_ai/gpt-4.1", "aura-2-thalia-en", ("DEEPGRAM_API_KEY",),
+        "deepgram_voice_agent",
+        discloses=deepgram_disclosures,
+        results="immediate", caller_transcription="automatic",
+    ),
+    # Smallest AI's Hydra hears the caller at 16 kHz and speaks at 24 kHz, which
+    # the output transport resamples -- see ``smallest_hydra``. The service
+    # announces the caller's turns and stops its own reply when talked over; it
+    # transcribes neither side, so the caller's words are Smallest's separate
+    # speech-to-text, run by the service on each finished caller turn.
+    "smallest-hydra": Provider(
+        _smallest_hydra, 16000, "hydra-v1.1", "sterling", ("SMALLEST_API_KEY",),
+        "smallest_hydra",
+        discloses=hydra_disclosures,
+        caller_transcription="pulse-pro",
+    ),
+    # Rime's Prism hears the caller at 16 kHz and speaks at 24 kHz, which the
+    # output transport resamples -- see ``rime_prism``. The service announces
+    # the caller's turns, cancels its own reply when talked over and asks the
+    # client to stop playback then, so the pipeline follows its boundary and
+    # cuts the agent off on it. A result is sent as soon as it exists: the
+    # service continues the conversation only when asked, and accepts that once
+    # the reply that made the call has ended and the result is stored, so
+    # holding it until the agent stops speaking would only add the rest of the
+    # tool's filler line to every tool round. What the caller heard is reported
+    # back from after the output transport.
+    "rime-prism": Provider(
+        _rime_prism, 16000, "prism", "astra", ("RIME_API_KEY",),
+        "rime_prism",
+        discloses=rime_prism_disclosures,
         results="immediate", caller_transcription="automatic", reports_playback=True,
     ),
 }
@@ -3188,6 +3337,12 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
 
         llm = provider.build(credential, model, voice, instructions, settings)
         hangup.closing_reply = getattr(llm, "closing_reply_done", None)
+        # A service that ends the session mid-call cannot answer again.
+        _on_event(llm, "on_session_lost", lambda *_: hangup.hang_up("session_lost"))
+        if hasattr(llm, "runtime_record"):
+            # A service that learns part of its configuration only once connected
+            # (Prism's release) writes it into the record every rewrite carries.
+            llm.runtime_record = record
         register_tools(llm, server, trace, hangup.hang_up)
         context = LLMContext(opening_messages(server.first_message), tools=build_tools(server))
         aggregators = BenchAggregators(
@@ -3207,9 +3362,11 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         stages = [transport.input(), aggregators.user(), restatements, llm, transport.output(),
                   hangup, DropControlTokens(), aggregators.assistant()]
         if provider.reports_playback:
-            from polyai_realtime import ReportsPlayback
+            # Each reporting service ships its own stage, so one row's reporting
+            # never changes with another's.
+            import importlib
 
-            stages.insert(5, ReportsPlayback(llm))  # right after the output transport
+            stages.insert(5, importlib.import_module(provider.module).ReportsPlayback(llm))  # after the output transport
         rate = provider.input_rate
         realtime = True
         service_answers = provider.turns == "local" and provider.answers == "provider"

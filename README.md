@@ -10,6 +10,7 @@ repository. Each project keeps its own runtime, configuration, and results.
 | Voice agents | Complete Appointment and Medicare workflows against a Cekura-connected agent | Repository root; Node.js 20+ |
 | [Speech-to-text](stt-bench/README.md) | Streaming transcription accuracy, text availability, completion, and reliability | `stt-bench/`; Python 3.12 or 3.13 and `uv` |
 | [Text-to-speech](tts-bench/README.md) | A TTS service at its own interface: time to first audio, playout continuity, cancel, continuation, and round-trip accuracy | `tts-bench/`; Python 3.12 or 3.13 and `uv` |
+| [Real-caller S2S](s2s-human-bench/README.md) | Speech-to-speech models on calls with recorded human callers: call score, pass³ and ELO, from exported Cekura runs | `s2s-human-bench/`; Python 3.12 or 3.13 and `uv` |
 
 For speech-to-text setup and a local model listing (no provider requests):
 

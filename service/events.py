@@ -44,6 +44,7 @@ VAD_SPEECH_END = "vad.speech.end"
 
 TOOL_CALL = "tool.call"
 TOOL_RESULT = "tool.result"
+TOOL_CANCELLED = "tool.cancelled"              # the provider withdrew a call it had sent
 RESPONSE_DONE = "response.done"
 
 

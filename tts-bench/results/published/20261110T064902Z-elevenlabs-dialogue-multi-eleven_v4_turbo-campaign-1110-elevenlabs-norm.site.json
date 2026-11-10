@@ -1,8 +1,8 @@
 {
  "schema": "tts-bench/site-summary/1",
- "run": "20260928T213622Z-elevenlabs-dialogue-multi-eleven_v4-campaign-0928-v4",
+ "run": "20261110T064902Z-elevenlabs-dialogue-multi-eleven_v4_turbo-campaign-1110-elevenlabs-norm",
  "provider": "elevenlabs-dialogue-multi",
- "model": "eleven_v4",
+ "model": "eleven_v4_turbo",
  "voice": "21m00Tcm4TlvDq8ikWAM",
  "adapter": "elevenlabs-dialogue-multi",
  "sampleRateHz": 24000,
@@ -21,267 +21,259 @@
   "setup_excluded_from_t0": "TCP, TLS, websocket upgrade, per-context voice registration frame"
  },
  "site": "vercel-iad1-allowlist",
- "harnessCommit": "9ae828e9d24a396eea83d5ef557da649a75dcf55",
+ "harnessCommit": "55203db246f5f55c37ce6460cea9aff286a02760",
  "harnessDirty": false,
  "corpusVersion": "0.3.0",
  "methodology": "tts/0.1",
- "startedUtc": "2026-09-28T21:36:22.273640+00:00",
+ "startedUtc": "2026-11-10T06:49:02.202795+00:00",
  "repeats": 3,
- "amendments": [
-  {
-   "run": "20261004T142943Z-elevenlabs-dialogue-multi-eleven_v4-campaign-1004",
-   "startedUtc": "2026-10-04T14:29:43.647367+00:00",
-   "corpusVersion": "0.3.0",
-   "harnessCommit": "9ae828e9d24a396eea83d5ef557da649a75dcf55",
-   "cells": 200
-  }
- ],
+ "amendments": [],
  "cells": {
   "planned": 971,
   "completed": 971,
   "excludedByProbe": {},
   "providerRefused": 0,
   "graded": 968,
-  "failed": 19
+  "failed": 6
  },
  "sentinel": {
   "n": 3,
-  "p50": 598.4,
-  "p90": 664.9,
+  "p50": 227.3,
+  "p90": 228.8,
   "p50Ci95": [
-   580.3,
-   681.5
+   226.6,
+   229.2
   ]
  },
  "latency": {
   "ttfa": {
    "n": 312,
-   "p50": 677.8,
-   "p90": 799.4,
-   "p95": 878.2,
+   "p50": 261.6,
+   "p90": 370.3,
+   "p95": 414.8,
    "p50Ci95": [
-    664.5,
-    688.5
+    246.2,
+    271.4
    ]
   },
   "roundtrip": {
    "n": 312,
-   "p50": 624.5,
-   "p90": 758.5,
-   "p95": 837.1,
+   "p50": 206.2,
+   "p90": 304.5,
+   "p95": 346.6,
    "p50Ci95": [
-    612.7,
-    632.3
+    195.1,
+    215.7
    ]
   },
   "leadingSilence": {
    "n": 312,
-   "p50": 47.5,
-   "p90": 81.0,
-   "p95": 93.9,
+   "p50": 54.0,
+   "p90": 80.9,
+   "p95": 87.0,
    "p50Ci95": [
-    44.0,
-    50.0
+    49.5,
+    59.0
    ]
   },
   "warmSecondRequest": {
    "n": 312,
-   "p50": 653.2,
-   "p90": 768.4,
-   "p95": 816.5,
+   "p50": 262.7,
+   "p90": 366.2,
+   "p95": 395.0,
    "p50Ci95": [
-    639.6,
-    663.6
+    247.2,
+    272.9
    ]
   },
   "byCohort": {
    "abbrev": {
     "n": 15,
-    "p50": 697.2,
-    "p90": 1112.1,
+    "p50": 297.2,
+    "p90": 385.8,
     "p50Ci95": [
-     667.3,
-     752.4
+     263.2,
+     311.9
     ]
    },
    "alnum": {
     "n": 18,
-    "p50": 671.5,
-    "p90": 887.8,
+    "p50": 298.9,
+    "p90": 353.0,
     "p50Ci95": [
-     613.5,
-     696.8
+     283.8,
+     331.1
     ]
    },
    "contact": {
     "n": 15,
-    "p50": 684.7,
-    "p90": 808.2,
+    "p50": 281.2,
+    "p90": 337.2,
     "p50Ci95": [
-     576.4,
-     740.5
+     265.6,
+     293.5
     ]
    },
    "currency": {
     "n": 18,
-    "p50": 722.0,
-    "p90": 787.9,
+    "p50": 327.7,
+    "p90": 358.7,
     "p50Ci95": [
-     612.8,
-     756.1
+     286.1,
+     337.4
     ]
    },
    "datetime": {
     "n": 18,
-    "p50": 649.0,
-    "p90": 728.0,
+    "p50": 261.1,
+    "p90": 316.3,
     "p50Ci95": [
-     605.0,
-     711.2
+     244.7,
+     285.9
     ]
    },
    "dense": {
     "n": 9,
-    "p50": 650.4,
-    "p90": 677.7,
+    "p50": 487.8,
+    "p90": 548.0,
     "p50Ci95": [
-     577.7,
-     670.8
+     424.3,
+     546.5
     ]
    },
    "heteronym": {
     "n": 15,
-    "p50": 703.5,
-    "p90": 818.4,
+    "p50": 199.8,
+    "p90": 206.3,
     "p50Ci95": [
-     653.1,
-     795.5
+     190.3,
+     203.5
     ]
    },
    "long": {
     "n": 12,
-    "p50": 664.9,
-    "p90": 740.3,
+    "p50": 256.1,
+    "p90": 501.4,
     "p50Ci95": [
-     635.4,
-     736.8
+     217.6,
+     411.4
     ]
    },
    "names": {
     "n": 15,
-    "p50": 706.5,
-    "p90": 865.1,
+    "p50": 197.7,
+    "p90": 209.7,
     "p50Ci95": [
-     661.1,
-     756.4
+     184.0,
+     208.5
     ]
    },
    "numbers": {
     "n": 21,
-    "p50": 646.0,
-    "p90": 746.3,
+    "p50": 280.2,
+    "p90": 383.0,
     "p50Ci95": [
-     589.2,
-     655.5
+     273.6,
+     317.1
     ]
    },
    "paragraph": {
     "n": 12,
-    "p50": 766.8,
-    "p90": 1424.8,
+    "p50": 386.6,
+    "p90": 421.4,
     "p50Ci95": [
-     705.5,
-     914.3
+     317.8,
+     415.3
     ]
    },
    "phone": {
     "n": 15,
-    "p50": 736.6,
-    "p90": 839.2,
+    "p50": 345.5,
+    "p90": 390.1,
     "p50Ci95": [
-     699.5,
-     805.8
+     320.6,
+     353.4
     ]
    },
    "prose": {
     "n": 24,
-    "p50": 688.6,
-    "p90": 773.6,
+    "p50": 189.2,
+    "p90": 218.8,
     "p50Ci95": [
-     659.8,
-     728.0
+     181.5,
+     203.0
     ]
    },
    "questions": {
     "n": 12,
-    "p50": 706.2,
-    "p90": 791.7,
+    "p50": 206.3,
+    "p90": 226.8,
     "p50Ci95": [
-     634.3,
-     756.4
+     186.4,
+     219.0
     ]
    },
    "repair": {
     "n": 18,
-    "p50": 618.2,
-    "p90": 692.2,
+    "p50": 199.8,
+    "p90": 210.6,
     "p50Ci95": [
-     564.9,
-     670.1
+     188.3,
+     206.2
     ]
    },
    "spelled": {
     "n": 12,
-    "p50": 652.6,
-    "p90": 727.0,
+    "p50": 275.1,
+    "p90": 330.9,
     "p50Ci95": [
-     631.4,
-     681.0
+     269.7,
+     312.8
     ]
    },
    "symbols": {
     "n": 12,
-    "p50": 666.9,
-    "p90": 748.5,
+    "p50": 274.4,
+    "p90": 302.2,
     "p50Ci95": [
-     636.3,
-     698.3
+     244.0,
+     286.9
     ]
    },
    "tech": {
     "n": 12,
-    "p50": 522.8,
-    "p90": 587.1,
+    "p50": 296.4,
+    "p90": 362.7,
     "p50Ci95": [
-     489.3,
-     551.5
+     264.6,
+     336.4
     ]
    },
    "terms": {
     "n": 18,
-    "p50": 691.0,
-    "p90": 751.8,
+    "p50": 209.7,
+    "p90": 243.0,
     "p50Ci95": [
-     591.8,
-     720.1
+     199.1,
+     216.2
     ]
    },
    "units": {
     "n": 12,
-    "p50": 705.0,
-    "p90": 767.2,
+    "p50": 268.1,
+    "p90": 341.8,
     "p50Ci95": [
-     675.1,
-     740.4
+     241.9,
+     330.5
     ]
    },
    "worded": {
     "n": 9,
-    "p50": 579.2,
-    "p90": 708.2,
+    "p50": 205.8,
+    "p90": 228.8,
     "p50Ci95": [
-     540.0,
-     685.0
+     192.6,
+     228.7
     ]
    }
   }
@@ -289,28 +281,28 @@
  "streamedInput": {
   "ttfaFromFirstWord": {
    "n": 312,
-   "p50": 898.7,
-   "p90": 1074.2,
-   "p95": 1508.5,
+   "p50": 473.0,
+   "p90": 587.2,
+   "p95": 620.0,
    "p50Ci95": [
-    886.5,
-    911.6
+    467.0,
+    481.9
    ]
   },
   "ttfaFromLastWord": {
    "n": 312,
-   "p50": 561.3,
-   "p90": 755.9,
-   "p95": 1058.9,
+   "p50": 131.2,
+   "p90": 288.0,
+   "p95": 334.6,
    "p50Ci95": [
-    537.5,
-    580.9
+    104.2,
+    153.3
    ]
   },
   "startedBeforeInputDone": {
    "n": 312,
-   "passed": 31,
-   "rate": 0.0994
+   "passed": 61,
+   "rate": 0.1955
   },
   "wordsPerSecond": 30
  },
@@ -323,55 +315,55 @@
  "throughput": {
   "charsPerSecondParagraph": {
    "n": 12,
-   "p50": 50.7,
-   "p90": 57.6,
+   "p50": 103.3,
+   "p90": 107.0,
    "p50Ci95": [
-    48.0,
-    53.7
+    100.3,
+    106.1
    ]
   },
   "charsPerSecond": {
    "n": 312,
-   "p50": 26.6,
-   "p90": 43.2,
-   "p95": 50.2,
+   "p50": 65.7,
+   "p90": 99.4,
+   "p95": 103.8,
    "p50Ci95": [
-    25.9,
-    27.4
+    63.7,
+    71.3
    ]
   },
   "realtimeFactor": {
    "n": 312,
-   "p50": 0.3,
-   "p90": 0.5,
-   "p95": 0.5,
+   "p50": 0.1,
+   "p90": 0.2,
+   "p95": 0.2,
    "p50Ci95": [
-    0.3,
-    0.4
+    0.1,
+    0.1
    ]
   },
   "audioMsPerChar": {
    "n": 312,
-   "p50": 81.3,
-   "p90": 132.5,
-   "p95": 140.0,
+   "p50": 83.4,
+   "p90": 137.8,
+   "p95": 151.2,
    "p50Ci95": [
-    75.4,
-    86.5
+    77.9,
+    88.4
    ]
   }
  },
  "playout": {
   "underrunCells": {
    "n": 312,
-   "passed": 23,
-   "rate": 0.0737
+   "passed": 0,
+   "rate": 0.0
   },
   "stallMs": {
    "n": 312,
    "p50": 0.0,
    "p90": 0.0,
-   "p95": 466.0,
+   "p95": 0.0,
    "p50Ci95": [
     0.0,
     0.0
@@ -379,46 +371,46 @@
   },
   "minMarginMs": {
    "n": 312,
-   "p50": 444.4,
-   "p90": 510.6,
-   "p95": 535.8,
+   "p50": 69.7,
+   "p90": 80.7,
+   "p95": 83.9,
    "p50Ci95": [
-    428.6,
-    457.8
+    68.5,
+    70.7
    ]
   }
  },
  "cancel": {
   "stopped": {
    "n": 20,
-   "passed": 1,
-   "rate": 0.05
+   "passed": 14,
+   "rate": 0.7
   },
   "toLastChunkMs": {
    "n": 20,
-   "p50": 4182.2,
-   "p90": 4946.5,
+   "p50": 1935.5,
+   "p90": 2283.2,
    "p50Ci95": [
-    3882.8,
-    4613.4
+    1875.8,
+    1994.8
    ]
   },
   "audioAfterCancelMs": {
    "n": 20,
-   "p50": 14618.8,
-   "p90": 17458.8,
+   "p50": 14427.2,
+   "p90": 17328.4,
    "p50Ci95": [
-    13738.8,
-    15578.8
+    14064.4,
+    15846.6
    ]
   },
   "ackMs": {
-   "n": 19,
-   "p50": 4313.8,
-   "p90": 4950.2,
+   "n": 20,
+   "p50": 1935.5,
+   "p90": 2283.2,
    "p50Ci95": [
-    3949.3,
-    4626.0
+    1875.8,
+    1994.8
    ]
   }
  },
@@ -426,25 +418,25 @@
   "durationDeltaMs": {
    "n": 12,
    "p50": 80.0,
-   "p90": 552.0,
+   "p90": 312.0,
    "p50Ci95": [
-    -120.0,
-    400.0
+    -160.0,
+    240.0
    ]
   },
   "ttfaDeltaMs": {
    "n": 12,
-   "p50": 158.4,
-   "p90": 577.7,
+   "p50": 118.9,
+   "p90": 439.4,
    "p50Ci95": [
-    19.2,
-    340.7
+    -39.9,
+    260.4
    ]
   },
   "framedUnderrunCells": {
    "n": 12,
-   "passed": 1,
-   "rate": 0.0833
+   "passed": 0,
+   "rate": 0.0
   }
  },
  "determinism": {
@@ -456,7 +448,7 @@
   "durationDeltaAbsMs": {
    "n": 312,
    "p50": 80.0,
-   "p90": 320.0,
+   "p90": 240.0,
    "p95": 400.0,
    "p50Ci95": [
     80.0,
@@ -469,8 +461,7 @@
   "timeouts": 0,
   "runaways": 0,
   "endedBy": {
-   "provider": 1291,
-   "quiet": 1
+   "provider": 1292
   },
   "runawayRule": "a recording over 2x and 3000 ms longer than the model's median for the same text"
  },
@@ -482,46 +473,46 @@
     "version": "0.1.15"
    },
    "oneShot": {
-    "wer": 0.0233,
+    "wer": 0.0102,
     "recordings": 315,
-    "referenceWords": 5484
+    "referenceWords": 5492
    },
    "streamedInput": {
-    "wer": 0.0213,
+    "wer": 0.0116,
     "recordings": 312,
-    "referenceWords": 5437
+    "referenceWords": 5447
    },
    "underLoad": null,
    "byCohort": {
     "abbrev": {
-     "wer": 0.0521,
+     "wer": 0.0,
      "recordings": 15,
      "referenceWords": 192
     },
     "alnum": {
-     "wer": 0.0142,
+     "wer": 0.0333,
      "recordings": 18,
-     "referenceWords": 211
+     "referenceWords": 210
     },
     "contact": {
-     "wer": 0.0123,
+     "wer": 0.0,
      "recordings": 15,
      "referenceWords": 162
     },
     "currency": {
-     "wer": 0.0667,
+     "wer": 0.0,
      "recordings": 18,
      "referenceWords": 225
     },
     "datetime": {
-     "wer": 0.039,
+     "wer": 0.0427,
      "recordings": 18,
-     "referenceWords": 231
+     "referenceWords": 234
     },
     "dense": {
-     "wer": 0.1267,
+     "wer": 0.0,
      "recordings": 9,
-     "referenceWords": 221
+     "referenceWords": 228
     },
     "heteronym": {
      "wer": 0.0,
@@ -534,17 +525,17 @@
      "referenceWords": 558
     },
     "names": {
-     "wer": 0.0,
+     "wer": 0.0098,
      "recordings": 15,
      "referenceWords": 102
     },
     "numbers": {
-     "wer": 0.0557,
+     "wer": 0.0263,
      "recordings": 21,
-     "referenceWords": 305
+     "referenceWords": 304
     },
     "paragraph": {
-     "wer": 0.0093,
+     "wer": 0.0059,
      "recordings": 12,
      "referenceWords": 1185
     },
@@ -574,22 +565,22 @@
      "referenceWords": 70
     },
     "symbols": {
-     "wer": 0.0727,
+     "wer": 0.0364,
      "recordings": 12,
      "referenceWords": 165
     },
     "tech": {
-     "wer": 0.0299,
+     "wer": 0.0398,
      "recordings": 12,
      "referenceWords": 201
     },
     "terms": {
-     "wer": 0.0104,
+     "wer": 0.0,
      "recordings": 18,
      "referenceWords": 192
     },
     "units": {
-     "wer": 0.0458,
+     "wer": 0.0196,
      "recordings": 12,
      "referenceWords": 153
     },
@@ -601,25 +592,25 @@
    },
    "spans": {
     "all": {
-     "passed": 174,
+     "passed": 209,
      "n": 219,
-     "rate": 0.7945
+     "rate": 0.9543
     },
     "byCategory": {
      "context": {
-      "passed": 21,
+      "passed": 24,
       "n": 24,
-      "rate": 0.875
+      "rate": 1.0
      },
      "sequence": {
-      "passed": 30,
+      "passed": 33,
       "n": 42,
-      "rate": 0.7143
+      "rate": 0.7857
      },
      "shorthand": {
-      "passed": 87,
+      "passed": 116,
       "n": 117,
-      "rate": 0.7436
+      "rate": 0.9915
      },
      "term": {
       "passed": 36,
@@ -638,29 +629,29 @@
     "version": "0.1.15"
    },
    "oneShot": {
-    "wer": 0.0203,
+    "wer": 0.0252,
     "recordings": 315,
-    "referenceWords": 5509
+    "referenceWords": 5512
    },
    "streamedInput": {
-    "wer": 0.0207,
+    "wer": 0.0245,
     "recordings": 312,
-    "referenceWords": 5462
+    "referenceWords": 5460
    },
    "underLoad": null,
    "byCohort": {
     "abbrev": {
-     "wer": 0.0417,
+     "wer": 0.0,
      "recordings": 15,
      "referenceWords": 192
     },
     "alnum": {
-     "wer": 0.0183,
+     "wer": 0.0806,
      "recordings": 18,
-     "referenceWords": 219
+     "referenceWords": 211
     },
     "contact": {
-     "wer": 0.0903,
+     "wer": 0.0625,
      "recordings": 15,
      "referenceWords": 144
     },
@@ -670,14 +661,14 @@
      "referenceWords": 225
     },
     "datetime": {
-     "wer": 0.0537,
+     "wer": 0.0943,
      "recordings": 18,
-     "referenceWords": 242
+     "referenceWords": 244
     },
     "dense": {
-     "wer": 0.047,
+     "wer": 0.0372,
      "recordings": 9,
-     "referenceWords": 234
+     "referenceWords": 242
     },
     "heteronym": {
      "wer": 0.0,
@@ -690,17 +681,17 @@
      "referenceWords": 558
     },
     "names": {
-     "wer": 0.0098,
+     "wer": 0.0,
      "recordings": 15,
      "referenceWords": 102
     },
     "numbers": {
-     "wer": 0.0348,
+     "wer": 0.0729,
      "recordings": 21,
-     "referenceWords": 287
+     "referenceWords": 288
     },
     "paragraph": {
-     "wer": 0.0034,
+     "wer": 0.0042,
      "recordings": 12,
      "referenceWords": 1185
     },
@@ -720,7 +711,7 @@
      "referenceWords": 123
     },
     "repair": {
-     "wer": 0.0058,
+     "wer": 0.0087,
      "recordings": 18,
      "referenceWords": 345
     },
@@ -735,7 +726,7 @@
      "referenceWords": 165
     },
     "tech": {
-     "wer": 0.0348,
+     "wer": 0.0448,
      "recordings": 12,
      "referenceWords": 201
     },
@@ -745,37 +736,37 @@
      "referenceWords": 192
     },
     "units": {
-     "wer": 0.0,
+     "wer": 0.0196,
      "recordings": 12,
      "referenceWords": 153
     },
     "worded": {
-     "wer": 0.0,
+     "wer": 0.0088,
      "recordings": 9,
      "referenceWords": 114
     }
    },
    "spans": {
     "all": {
-     "passed": 178,
+     "passed": 201,
      "n": 219,
-     "rate": 0.8128
+     "rate": 0.9178
     },
     "byCategory": {
      "context": {
-      "passed": 21,
+      "passed": 24,
       "n": 24,
-      "rate": 0.875
+      "rate": 1.0
      },
      "sequence": {
-      "passed": 40,
+      "passed": 39,
       "n": 42,
-      "rate": 0.9524
+      "rate": 0.9286
      },
      "shorthand": {
-      "passed": 81,
+      "passed": 102,
       "n": 117,
-      "rate": 0.6923
+      "rate": 0.8718
      },
      "term": {
       "passed": 36,
@@ -788,43 +779,43 @@
    "instrumentErrors": 0
   }
  },
- "instrumentDisagreements": 128,
+ "instrumentDisagreements": 84,
  "naturalness": {
   "model": "utmos22-strong",
   "scale": "1-5, a listener model's estimate of a mean opinion score",
   "mos": {
    "n": 312,
-   "p50": 4.5,
+   "p50": 4.4,
    "p90": 4.5,
    "p95": 4.5,
    "p50Ci95": [
-    4.5,
+    4.4,
     4.5
    ],
-   "mean": 4.423
+   "mean": 4.409
   },
   "byCohort": {
-   "abbrev": 4.425,
-   "alnum": 4.486,
-   "contact": 4.443,
-   "currency": 4.478,
-   "datetime": 4.448,
-   "dense": 4.499,
-   "heteronym": 4.391,
-   "long": 4.472,
-   "names": 4.374,
-   "numbers": 4.469,
-   "paragraph": 4.464,
-   "phone": 4.442,
-   "prose": 4.324,
-   "questions": 4.318,
-   "repair": 4.251,
-   "spelled": 4.387,
-   "symbols": 4.464,
-   "tech": 4.479,
-   "terms": 4.444,
+   "abbrev": 4.43,
+   "alnum": 4.467,
+   "contact": 4.431,
+   "currency": 4.469,
+   "datetime": 4.447,
+   "dense": 4.481,
+   "heteronym": 4.44,
+   "long": 4.463,
+   "names": 4.344,
+   "numbers": 4.462,
+   "paragraph": 4.396,
+   "phone": 4.404,
+   "prose": 4.275,
+   "questions": 4.324,
+   "repair": 4.194,
+   "spelled": 4.415,
+   "symbols": 4.465,
+   "tech": 4.483,
+   "terms": 4.439,
    "units": 4.433,
-   "worded": 4.498
+   "worded": 4.475
   }
  }
 }

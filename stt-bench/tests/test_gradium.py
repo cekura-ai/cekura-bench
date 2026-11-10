@@ -132,11 +132,12 @@ def test_loopback_exchange(tmp_path, failure):
 
 
 # Gradium replaces its default STT model in place. The September published run
-# saw 55966eda@500 and the 3 November turn rerun saw d1b59b55@500; since
-# 6 November the service names 3c7a64f3@450 in its ready message.
-CURRENT = '3c7a64f3@450'
-PREVIOUS = ('55966eda@500', 'd1b59b55@500')
-# Shape captured from the 2026-11-06 live ten-clip smoke.
+# saw 55966eda@500, the 3 November turn rerun saw d1b59b55@500, and 6-9 November
+# runs saw 3c7a64f3@450; since 10 November the service names 933b5345@150 in its
+# ready message.
+CURRENT = '933b5345@150'
+PREVIOUS = ('55966eda@500', 'd1b59b55@500', '3c7a64f3@450')
+# Shape captured live on 2026-11-06 and unchanged on 2026-11-10.
 LIVE_READY = {'type': 'ready', 'client_req_id': None, 'request_id': 'fixture', 'model_name': CURRENT,
               'model_ext': CURRENT, 'residency': 'none', 'sample_rate': 24000, 'frame_size': 1920,
               'delay_in_frames': 10, 'text_stream_names': ['asr_0']}
@@ -157,8 +158,8 @@ def test_model_config_and_turn_profile_pin_the_current_server_model():
 @pytest.mark.parametrize('ready, mismatch', [
     (dict(model_name=CURRENT), False),
     *[(dict(model_name=old), True) for old in PREVIOUS],
-    (dict(model_name='3c7a64f3@500'), True),   # same prefix, other suffix
-    (dict(model_name='3c7a64f3'), True),
+    (dict(model_name='933b5345@450'), True),   # same prefix, other suffix
+    (dict(model_name='933b5345'), True),
     (dict(model_name=None), True),
     (dict(), True),                            # no identifier is never a match
 ])

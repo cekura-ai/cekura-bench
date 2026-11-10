@@ -6,7 +6,7 @@ from . import gemini_live
 
 MODELS = {
     'assemblyai': {'universal-3-5-pro', 'universal-3-6-pro'},
-    'reson8': {'realtime'},
+    'reson8': {'realtime', 'rumble-2'},
     'zoom': {'zoom-asr-en-v1', 'zoom-scribe-en', 'zoom-scribe-en-pro', 'zoom-scribe-en-pro-v2.1'},
     'gradium': {'default'},
     **trial_providers.MODELS,
@@ -20,7 +20,7 @@ MODELS = {
 }
 ENDPOINTS = {
     'assemblyai': {'wss://streaming.assemblyai.com/v3/ws'},
-    'reson8': {'wss://api.reson8.dev/v1/speech-to-text/realtime'},
+    'reson8': {'wss://api.reson8.dev/v1/speech-to-text/realtime', reson8.GLOBAL_ENDPOINT},
     'zoom': {zoom.ENDPOINT},
     'gradium': {'wss://api.gradium.ai/api/speech/asr'},
     **trial_providers.ENDPOINTS,

@@ -105,7 +105,8 @@ export async function main(argv=process.argv.slice(2)){
   const {Sandbox}=await import(pathToFileURL(join(sdk,'dist/index.js')));
   const {getAuth,OAuth,updateAuthConfig}=await import(pathToFileURL(join(sdk,'dist/auth/index.js')));
   let refreshing;
-  async function account(){let a=getAuth();if(!a?.token)throw new Error('Vercel login missing');
+  async function account(){if(process.env.VERCEL_TOKEN)return {token:process.env.VERCEL_TOKEN,teamId:accountPlan.teamId,projectId:accountPlan.projectId};
+    let a=getAuth();if(!a?.token)throw new Error('Vercel login missing');
     if(a.expiresAt?.getTime()<Date.now()+300000){refreshing??=(async()=>{const t=await(await OAuth()).refreshToken(a.refreshToken);updateAuthConfig({token:t.access_token,refreshToken:t.refresh_token??a.refreshToken,expiresAt:new Date(Date.now()+t.expires_in*1000)});})();try{await refreshing;}finally{refreshing=null;}a=getAuth();}
     return {token:a.token,teamId:accountPlan.teamId,projectId:accountPlan.projectId};}
   async function get(name){return Sandbox.get({...await account(),name,resume:false});}

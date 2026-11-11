@@ -19,7 +19,7 @@ from .full_benchmark import classify
 
 MANIFEST='datasets/private-turns-v1/automatic-v1/manifest.json'
 # Profiles added after the original 23 run only when a plan names them.
-OPT_IN=frozenset({'assemblyai-universal-3-6-pro-min-latency','zoom-scribe-live','zoom-scribe-pro-live','zoom-scribe-pro-v2-1-live','elevenlabs-scribe-v3-live'})
+OPT_IN=frozenset({'assemblyai-universal-3-6-pro-min-latency','soniox-stt-rt-v6','zoom-scribe-live','zoom-scribe-pro-live','zoom-scribe-pro-v2-1-live','elevenlabs-scribe-v3-live'})
 
 
 def prepare(root,models=None):
@@ -37,7 +37,7 @@ def prepare(root,models=None):
     # Known account limits win over general defaults. Unknown ceilings ramp under
     # a bounded worker budget and permanently reduce after a rate-limit response.
     limits={'deepgram':150,'openai':50,'google':20,'speechmatics':2,'assemblyai':20,
-            'gradium':3,'inworld':32,'reson8':32,'smallest':32,'soniox':32,'sarvam':16,
+            'gradium':3,'inworld':32,'reson8':32,'smallest':32,'soniox':8,'sarvam':16,
             'cartesia':16,'elevenlabs':16,'gemini':10,'zoom':16}
     files=[Path('pyproject.toml'),Path('uv.lock'),*Path('src/stt_bench').glob('*.py'),
            *Path('src/stt_bench').glob('*.html'),*Path('tests').glob('*.py'),

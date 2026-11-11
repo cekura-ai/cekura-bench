@@ -15,7 +15,7 @@ from . import provider_protocol as shared
 from .credentials import redact
 from .streaming import stream_audio, transmitted_silence_frames
 
-MODELS = {'soniox': {'stt-rt-v5'}, 'smallest': {'pulse'},
+MODELS = {'soniox': {'stt-rt-v5', 'stt-rt-v6'}, 'smallest': {'pulse'},
           'sarvam': {'saaras:v3-realtime'}, 'inworld': {'inworld/inworld-stt-1'}}
 ENDPOINTS = {
     'soniox': {'wss://stt-rt.soniox.com/transcribe-websocket'},

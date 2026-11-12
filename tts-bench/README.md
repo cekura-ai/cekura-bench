@@ -162,6 +162,7 @@ vendored):
 | `azure-speech` | `MAI-Voice-2.1-Flash`, `MAI-Voice-2.1` | HTTP streaming, SSML | no | no | no | yes | whole text per request; the model is the voice name's suffix (`en-US-Harper:MAI-Voice-2.1-Flash`); the region is the host, option `region` (default `eastus2`) |
 | `assemblyai` | `assemblyai-tts-1` | HTTP streaming (OpenAI-compatible) | no | no | no | no | whole text per request; the voice is `voice_id` (Audrey), and OpenAI's `voice` is left out |
 | `assemblyai-streaming` | `assemblyai-tts-1` | websocket, one utterance at a time | yes | `Cancel` | yes | yes | session configured in the URL, `Begin` before t0; `Flush` ends the utterance; new sessions per minute are limited per account |
+| `speechify` | `simba-3.5`, `simba-3.2` | websocket, text input, one utterance per session | yes | no | yes | yes | settings ride the upgrade URL; a sentence is spoken once its closing punctuation and a space arrive; `input.close` speaks the rest and ends the session with `speech.done`; repeat reconnects before t0 |
 
 Each model runs with one fixed voice, set in the registry: a female US English
 stock voice from that provider. `--all-models` runs the whole lineup of a

@@ -150,7 +150,7 @@ def test_consecutive_sessions_use_real_stream_clock_and_terminal_events(tmp_path
             received=[];sessions.append(received)
             async for raw in ws:
                 m=json.loads(raw);received.append(m)
-                if m['type']=='setup':await ws.send(json.dumps(dict(type='ready',model_name='55966eda@500',sample_rate=24000,delay_in_frames=10)))
+                if m['type']=='setup':await ws.send(json.dumps(dict(type='ready',model_name=config['expected_resolved_model'],sample_rate=24000,delay_in_frames=10)))
                 elif m['type']=='flush':
                     for reply in [dict(type='text',text='hello'),dict(type='end_text'),dict(type='flushed',flush_id=1)]:await ws.send(json.dumps(reply))
                 elif m['type']=='end_of_stream':

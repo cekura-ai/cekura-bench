@@ -128,7 +128,7 @@ SCENARIOS: tuple[ScenarioSpec, ...] = (
         id="book.morning", contract="appointments", opener="open.book", identify=JAMES,
         expected=(
             ExpectedCall("lookup_patient", {"phone": "2025550188"}),
-            ExpectedCall("check_availability", {"date": "2026-07-08"}),
+            ExpectedCall("check_availability", {"date": "2026-12-09"}),
             ExpectedCall("book_appointment", {"patient_id": "p_1002"}),
         ),
         forbidden=("cancel_appointment",), done_when_called="book_appointment",
@@ -139,8 +139,8 @@ SCENARIOS: tuple[ScenarioSpec, ...] = (
         routes=((ASK_DATE[0], "task.date.anytime"),),
         expected=(
             ExpectedCall("lookup_patient", {"phone": "2025550188"}),
-            ExpectedCall("check_availability", {"date": "2026-07-08"}),
-            ExpectedCall("book_appointment", {"patient_id": "p_1002", "datetime": "2026-07-08T11:30:00"}),
+            ExpectedCall("check_availability", {"date": "2026-12-09"}),
+            ExpectedCall("book_appointment", {"patient_id": "p_1002", "datetime": "2026-12-09T11:30:00"}),
         ),
         forbidden=("cancel_appointment",), done_when_called="book_appointment",
         note="a named provider: only one of the day's slots is theirs",
@@ -154,9 +154,9 @@ SCENARIOS: tuple[ScenarioSpec, ...] = (
         ),
         expected=(
             ExpectedCall("lookup_patient", {"phone": "2025550188"}),
-            ExpectedCall("check_availability", {"date": "2026-07-10"}),
-            ExpectedCall("check_availability", {"date": "2026-07-09"}),
-            ExpectedCall("book_appointment", {"patient_id": "p_1002", "datetime": "2026-07-09T10:15:00"}),
+            ExpectedCall("check_availability", {"date": "2026-12-11"}),
+            ExpectedCall("check_availability", {"date": "2026-12-10"}),
+            ExpectedCall("book_appointment", {"patient_id": "p_1002", "datetime": "2026-12-10T10:15:00"}),
         ),
         forbidden=("cancel_appointment",), done_when_called="book_appointment", max_turns=12,
         note="the first date is full; the agent must check the second before offering it",
@@ -170,7 +170,7 @@ SCENARIOS: tuple[ScenarioSpec, ...] = (
         ),
         expected=(
             ExpectedCall("lookup_patient", {"phone": "2025550188"}),
-            ExpectedCall("check_availability", {"date": "2026-07-08"}),
+            ExpectedCall("check_availability", {"date": "2026-12-09"}),
             ExpectedCall("book_appointment", {"patient_id": "p_1002"}),
         ),
         forbidden=("cancel_appointment",), done_when_called="book_appointment", max_turns=12,
@@ -181,7 +181,7 @@ SCENARIOS: tuple[ScenarioSpec, ...] = (
         routes=((ASK_DATE[0], "task.date.correct"),),
         expected=(
             ExpectedCall("lookup_patient", {"phone": "2025550188"}),
-            ExpectedCall("check_availability", {"date": "2026-07-08"}),
+            ExpectedCall("check_availability", {"date": "2026-12-09"}),
             ExpectedCall("book_appointment", {"patient_id": "p_1002"}),
         ),
         forbidden=("cancel_appointment",), done_when_called="book_appointment",
@@ -191,7 +191,7 @@ SCENARIOS: tuple[ScenarioSpec, ...] = (
         id="book.digits.spoken", contract="appointments", opener="open.book", identify="identify.alt",
         expected=(
             ExpectedCall("lookup_patient", {"phone": "2025550188"}),
-            ExpectedCall("check_availability", {"date": "2026-07-08"}),
+            ExpectedCall("check_availability", {"date": "2026-12-09"}),
             ExpectedCall("book_appointment", {"patient_id": "p_1002"}),
         ),
         forbidden=("cancel_appointment",), done_when_called="book_appointment",
@@ -204,7 +204,7 @@ SCENARIOS: tuple[ScenarioSpec, ...] = (
                   "medical advice", "follow up with you"), "task.reason")),
         expected=(
             ExpectedCall("lookup_patient", {"phone": "2025550188"}),
-            ExpectedCall("check_availability", {"date": "2026-07-08"}),
+            ExpectedCall("check_availability", {"date": "2026-12-09"}),
             ExpectedCall("book_appointment", {"patient_id": "p_1002"}),
         ),
         forbidden=("cancel_appointment",), done_when_called="book_appointment", max_turns=12,
@@ -275,8 +275,8 @@ SCENARIOS: tuple[ScenarioSpec, ...] = (
                 (("is that the", "the one on", "this appointment", "that appointment", "correct", "is that right"), "task.yes")),
         expected=(
             ExpectedCall("lookup_patient", {"phone": "6175559210"}),
-            ExpectedCall("check_availability", {"date": "2026-07-09"}),
-            ExpectedCall("book_appointment", {"patient_id": "p_1003", "datetime": "2026-07-09T10:15:00"}),
+            ExpectedCall("check_availability", {"date": "2026-12-10"}),
+            ExpectedCall("book_appointment", {"patient_id": "p_1003", "datetime": "2026-12-10T10:15:00"}),
             ExpectedCall("cancel_appointment", {"appointment_id": "appt_5003"}),
         ),
         done_when_called="cancel_appointment", max_turns=12,
@@ -288,8 +288,8 @@ SCENARIOS: tuple[ScenarioSpec, ...] = (
                 (("is that the", "the one on", "this appointment", "that appointment", "correct", "is that right"), "task.yes")),
         expected=(
             ExpectedCall("lookup_patient", {"phone": "6175559210"}),
-            ExpectedCall("check_availability", {"date": "2026-07-08"}),
-            ExpectedCall("book_appointment", {"patient_id": "p_1003", "datetime": "2026-07-08T09:00:00"}),
+            ExpectedCall("check_availability", {"date": "2026-12-09"}),
+            ExpectedCall("book_appointment", {"patient_id": "p_1003", "datetime": "2026-12-09T09:00:00"}),
             ExpectedCall("cancel_appointment", {"appointment_id": "appt_5003"}),
         ),
         done_when_called="cancel_appointment", max_turns=12,

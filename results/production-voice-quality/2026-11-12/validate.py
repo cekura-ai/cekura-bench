@@ -15,11 +15,11 @@ def close(a,b):
 def validate(path=P/'results.json'):
     d=json.loads(path.read_text());ids=[];counts=collections.Counter();calls=0
     close(sum(d['weights'].values()),1)
-    assert len(d['providers'])==16 and d['phone_number_count']==46 and d['selected_call_count']==2070
+    assert len(d['providers'])==16 and d['phone_number_count']==31 and d['selected_call_count']==1395
     assert hashlib.sha256((path.parent/'report.html').read_bytes()).hexdigest()==d['report_sha256']
     for p in d['providers']:
         assert p['provider']!='Cognigy'
-        assert len(p['numbers'])==p['phone_number_count']
+        assert len(p['numbers'])==p['phone_number_count'] and 1<=len(p['numbers'])<=3
         for n in p['numbers']:
             cs=n['calls'];assert len(cs)==45
             assert set(collections.Counter(c['scenario'] for c in cs))==set(d['scenarios'])
@@ -54,6 +54,6 @@ def validate(path=P/'results.json'):
             assert a['scored_calls']==sum(c['metrics'][key] is not None for n in p['numbers'] for c in n['calls'])
         score=sum(d['weights'][k]*p['metrics'][k]['normalized'] for k in d['weights'] if d['weights'][k]>0)
         close(score,p['composite'])
-    assert calls==2070 and len(set(ids))==2070 and sum(counts.values())==46
+    assert calls==1395 and len(set(ids))==1395 and sum(counts.values())==31
     print(f'Validated {len(d["providers"])} providers, {sum(counts.values())} numbers, {calls} selected calls, metric averages and composites.')
 if __name__=='__main__':validate()

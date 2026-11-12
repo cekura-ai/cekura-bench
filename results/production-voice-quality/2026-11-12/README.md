@@ -1,7 +1,7 @@
 # Production Voice Agent Quality Benchmark · 12 November 2026
 
-This snapshot contains **2,070 selected calls across 46 verified production
-phone numbers and 16 providers**. Each number has the same 15 generic support
+This snapshot contains **1,395 selected calls across 31 verified production
+phone numbers and 16 providers**, with a maximum of three agreed phone numbers per provider. Each number has the same 15 generic support
 scenarios, with three repetitions per scenario and concurrency three per number.
 Cognigy, demo numbers and identity-blocked numbers are excluded.
 
@@ -55,9 +55,9 @@ synthesis or meaningless generated speech; proper names and foreign-language
 speech are not failures by themselves.
 
 Phone numbers are production access points, not a claim of distinct underlying
-AI models. Provider counts are Bland 2, Crescendo 6, Cresta 2, Decagon 3,
-Dialpad 2, ElevenLabs 1, Giga 1, Intercom 2, Parloa 1, PolyAI 12, Regal 1,
-Retell 5, Sierra 4, Synthflow 1, Talkdesk 2 and Vapi 1.
+AI models. Provider counts are Bland 2, Crescendo 3, Cresta 2, Decagon 3,
+Dialpad 2, ElevenLabs 1, Giga 1, Intercom 2, Parloa 1, PolyAI 3, Regal 1,
+Retell 3, Sierra 3, Synthflow 1, Talkdesk 2 and Vapi 1.
 
 ## Validate
 

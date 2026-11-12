@@ -162,6 +162,7 @@ vendored):
 | `azure-speech` | `MAI-Voice-2.1-Flash`, `MAI-Voice-2.1` | HTTP streaming, SSML | no | no | no | yes | whole text per request; the model is the voice name's suffix (`en-US-Harper:MAI-Voice-2.1-Flash`); the region is the host, option `region` (default `eastus2`) |
 | `assemblyai` | `assemblyai-tts-1` | HTTP streaming (OpenAI-compatible) | no | no | no | no | whole text per request; the voice is `voice_id` (Audrey), and OpenAI's `voice` is left out |
 | `assemblyai-streaming` | `assemblyai-tts-1` | websocket, one utterance at a time | yes | `Cancel` | yes | yes | session configured in the URL, `Begin` before t0; `Flush` ends the utterance; new sessions per minute are limited per account |
+| `mistral-realtime` | `voxtral-mini-tts-3-0` | websocket, one generation at a time | yes | no | yes | no | `session.update` before t0, its echo checked; `input_text.flush` ends the utterance (`speech.audio.done`); `pcm` arrives as 32-bit float and is converted to 16-bit; option `streaming_mode` (default `responsive`); the US host `api.us.mistral.ai`, option `region` (default `us`, `global` for `api.mistral.ai`) |
 
 Each model runs with one fixed voice, set in the registry: a female US English
 stock voice from that provider. `--all-models` runs the whole lineup of a

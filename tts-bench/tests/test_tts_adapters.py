@@ -755,3 +755,244 @@ class TestLineupRates:
         assert PROVIDERS["hume"].rate_for("octave-2") == 48000
         assert PROVIDERS["cartesia"].rate_for("sonic-3.6") == 24000
         assert PROVIDERS["cartesia"].rate_for("a-model-outside-the-lineup") == 24000
+
+
+class TestMistralRealtime:
+    @staticmethod
+    def floats(*values: float) -> bytes:
+        import numpy as np
+
+        return np.array(values, dtype="<f4").tobytes()
+
+    @staticmethod
+    def delta(audio: bytes) -> dict:
+        import base64
+
+        return {"type": "speech.audio.delta", "audio_data": base64.b64encode(audio).decode()}
+
+    SESSION = {"request_id": "ws-1", "model": "voxtral-mini-tts-3-0-13", "voice": "voice_447", "is_ref_audio": False,
+               "streaming_mode": "responsive", "response_format": "wav", "expressiveness": 2.0}
+
+    def test_float32_is_converted_to_int16_and_clipped_not_wrapped(self):
+        import numpy as np
+
+        from tts_bench.adapters.mistral_realtime import to_int16
+
+        out = np.frombuffer(to_int16(self.floats(0.0, 0.5, -0.5, 1.0, -1.0, 1.5, -2.0)), dtype="<i2")
+        assert out.tolist() == [0, 16384, -16384, 32767, -32767, 32767, -32767]
+
+    async def test_text_is_appended_the_flush_ends_it_and_a_float_split_across_deltas_is_carried(self):
+        import numpy as np
+
+        from tts_bench.adapters.mistral_realtime import MistralRealtimeAdapter
+        from tts_bench.probes import Continuation
+
+        mistral, sent = adapter(MistralRealtimeAdapter, "voxtral-mini-tts-3-0", "voice_447")
+        synthesis = await mistral.open_context("main")
+        assert synthesis.t0 is None and sent == []
+        for frame in Continuation.frames("Hello there. How can I help?"):
+            await mistral.send("main", frame)
+        await mistral.finish("main")
+        assert sent == [{"type": "input_text.append", "text": "Hello there. "},
+                        {"type": "input_text.append", "text": "How can I help?"}, {"type": "input_text.flush"}]
+        audio = self.floats(0.25, -0.25, 0.5)
+        for part in (audio[:6], audio[6:]):                          # the second float straddles the two deltas
+            mistral._on_message(self.delta(part))
+        assert np.frombuffer(bytes(synthesis.pcm), dtype="<i2").tolist() == [8192, -8192, 16384]
+        assert not synthesis.done.is_set()
+        mistral._on_message({"type": "speech.audio.done", "usage": {"prompt_tokens": 9}})
+        assert synthesis.done.is_set() and synthesis.meta["usage"] == {"prompt_tokens": 9}
+        assert "trailing_bytes_dropped" not in synthesis.meta and synthesis.error is None
+
+    async def test_a_partial_float_left_at_done_is_recorded_and_not_carried_into_the_next_generation(self):
+        import numpy as np
+
+        from tts_bench.adapters.mistral_realtime import MistralRealtimeAdapter
+
+        mistral, _ = adapter(MistralRealtimeAdapter, "voxtral-mini-tts-3-0", "voice_447")
+        first = await mistral.open_context("first")
+        mistral._on_message(self.delta(self.floats(0.5) + b"\x00\x00"))
+        mistral._on_message({"type": "speech.audio.done", "usage": {}})
+        assert first.meta["trailing_bytes_dropped"] == 2 and len(first.pcm) == 2
+        second = await mistral.open_context("second")
+        mistral._on_message(self.delta(self.floats(-0.5)))
+        assert np.frombuffer(bytes(second.pcm), dtype="<i2").tolist() == [-16384]
+        failed = await mistral.open_context("failed")                # a generation that errors with half a float pending
+        mistral._on_message(self.delta(b"\x00\x00"))
+        mistral._on_message({"type": "error", "error": {"message": "Generation failed", "code": 3800}})
+        assert failed.error and not failed.pcm
+        third = await mistral.open_context("third")
+        mistral._on_message(self.delta(self.floats(0.25)))
+        assert np.frombuffer(bytes(third.pcm), dtype="<i2").tolist() == [8192]
+
+    async def test_a_close_before_done_and_an_error_event_are_failures_not_the_end_of_the_utterance(self):
+        from tts_bench.adapters.base import is_refusal
+        from tts_bench.adapters.mistral_realtime import MistralRealtimeAdapter
+
+        mistral, _ = adapter(MistralRealtimeAdapter, "voxtral-mini-tts-3-0", "voice_447")
+        cut = await mistral.open_context("cut")
+        mistral._on_message(self.delta(self.floats(0.5, 0.5)))
+        mistral._on_closed("received 1011 (internal error) Upstream connection error")
+        assert cut.done.is_set() and cut.error.startswith("closed before speech.audio.done") and cut.pcm
+        assert not is_refusal(cut.error)
+        failed = await mistral.open_context("failed")
+        mistral._on_message({"type": "error", "error": {"message": "Generation failed", "code": 3800}})
+        assert failed.done.is_set() and failed.error == "3800: Generation failed" and failed.t_done is None
+        finished = await mistral.open_context("finished")
+        mistral._on_message({"type": "speech.audio.done", "usage": {}})
+        mistral._on_closed("received 1000 (OK)")
+        assert finished.error is None                                # a close after done ends nothing
+
+    def test_the_protocol_limits_are_declared_and_the_lineup_names_a_mistral_voice(self):
+        import pytest
+        from tts_bench.adapters.mistral_realtime import MistralRealtimeAdapter
+        from tts_bench.registry import MARGARET, PENDING
+
+        mistral, _ = adapter(MistralRealtimeAdapter, "voxtral-mini-tts-3-0", MARGARET)
+        assert mistral.url == "wss://api.us.mistral.ai/v1/audio/speech/realtime?model=voxtral-mini-tts-3-0"
+        assert mistral.region == "us"
+        assert mistral._headers() == {"Authorization": "Bearer unused"}
+        assert mistral._settings() == {"voice": "voice_447", "response_format": "pcm", "streaming_mode": "responsive"}
+        config = TTSConfig("voxtral-mini-tts-3-0", MARGARET)
+        assert MistralRealtimeAdapter.unsupported_reason(config, ("cancel",)) == "mistral-realtime has no cancel"
+        assert MistralRealtimeAdapter.unsupported_reason(config, ("streamed_input", "continuation")) is None
+        assert MistralRealtimeAdapter.unsupported_reason(TTSConfig("voxtral-mini-tts-3-0", MARGARET, sample_rate=8000))
+        assert not MistralRealtimeAdapter.native_mulaw_8k and not MistralRealtimeAdapter.ends_on_quiet
+        entry = PROVIDERS["mistral-realtime"]
+        assert entry.credential_env == "MISTRAL_API_KEY" and entry.voice_for("voxtral-mini-tts-3-0") == MARGARET
+        assert entry.rate_for("voxtral-mini-tts-3-0") == 24000 and "mistral-realtime" not in PENDING
+        assert MistralRealtimeAdapter._without_audio(self.delta(b"\x00" * 300))["audio_data"] == "<400 b64 chars>"
+        long_form = TTSConfig("voxtral-mini-tts-3-0", MARGARET, options=(("streaming_mode", "long_form"),))
+        clock = Clock()
+        assert MistralRealtimeAdapter(long_form, "k", EventLog(clock), clock)._settings()["streaming_mode"] == "long_form"
+        global_host = TTSConfig("voxtral-mini-tts-3-0", MARGARET, options=(("region", "global"),))
+        assert MistralRealtimeAdapter(global_host, "k", EventLog(clock), clock).url.startswith("wss://api.mistral.ai/")
+        eu = TTSConfig("voxtral-mini-tts-3-0", MARGARET, options=(("region", "eu"),))
+        assert MistralRealtimeAdapter(eu, "k", EventLog(clock), clock).url.startswith("wss://api.eu.mistral.ai/")
+        with pytest.raises(ValueError):
+            MistralRealtimeAdapter(TTSConfig("voxtral-mini-tts-3-0", MARGARET, options=(("region", "evil.example/x"),)),
+                                   "k", EventLog(clock), clock)
+
+    async def _serve(self, tmp_path, *, updated=None, on_update=None, on_text=None, reject=None):
+        """A local stand-in for the realtime endpoint. Returns the frames it saw, its request headers and the log."""
+        import json
+
+        import websockets
+
+        from tts_bench.adapters.mistral_realtime import MistralRealtimeAdapter
+
+        seen: list[dict] = []
+        headers: dict = {}
+        test = self
+
+        async def serve(ws):
+            headers.update(ws.request.headers)
+            headers["path"] = ws.request.path
+            await ws.send(json.dumps({"type": "session.created", "session": test.SESSION}))
+            async for raw in ws:
+                frame = json.loads(raw)
+                seen.append(frame)
+                if frame["type"] == "session.update":
+                    if on_update:
+                        await on_update(ws)
+                        continue
+                    session = {**test.SESSION, **frame["session"], **(updated or {})}
+                    await ws.send(json.dumps({"type": "session.updated", "session": session}))
+                elif frame["type"] == "input_text.flush":
+                    await (on_text or test._speak)(ws)
+
+        def process_request(connection, request):
+            return connection.respond(reject, "Unauthorized\n") if reject else None
+
+        clock = Clock()
+        log = EventLog(clock, raw_path=tmp_path / "raw.jsonl")
+        mistral = MistralRealtimeAdapter(TTSConfig("voxtral-mini-tts-3-0", "voice_447"), "secret-key", log, clock)
+        server = await websockets.serve(serve, "127.0.0.1", 0, process_request=process_request)
+        mistral.base = f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}/v1/audio/speech/realtime"
+        return server, mistral, seen, headers, log
+
+    async def _speak(self, ws):
+        import json
+
+        audio = self.floats(0.25, -0.25, 0.5)
+        await ws.send(json.dumps(self.delta(audio[:6])))
+        await ws.send(json.dumps(self.delta(audio[6:])))
+        await ws.send(json.dumps({"type": "speech.audio.done", "usage": {"prompt_tokens": 3}}))
+
+    async def test_a_reusable_socket_sets_up_before_t0_and_speaks_two_generations_without_logging_the_key(self, tmp_path):
+        import numpy as np
+
+        server, mistral, seen, headers, log = await self._serve(tmp_path)
+        async with server:
+            async with mistral:
+                for context_id in ("first", "repeat"):
+                    synthesis = await mistral.open_context(context_id)
+                    assert synthesis.t0 is None
+                    await mistral.send(context_id, "Your total is ")
+                    await mistral.send(context_id, "$42.")
+                    await mistral.finish(context_id)
+                    done = await mistral.wait(context_id, 5.0)
+                    assert np.frombuffer(bytes(done.pcm), dtype="<i2").tolist() == [8192, -8192, 16384]
+                    assert done.meta["ended_by"] == "provider" and done.error is None
+                    assert done.meta["session"]["model"] == "voxtral-mini-tts-3-0-13"
+                    assert done.meta["session"]["voice"] == "voice_447" and done.meta["usage"] == {"prompt_tokens": 3}
+        assert seen[0] == {"type": "session.update",
+                           "session": {"voice": "voice_447", "response_format": "pcm", "streaming_mode": "responsive"}}
+        assert [f["type"] for f in seen[1:]] == ["input_text.append", "input_text.append", "input_text.flush"] * 2
+        assert headers["authorization"] == "Bearer secret-key" and headers["path"].endswith("?model=voxtral-mini-tts-3-0")
+        raw = (tmp_path / "raw.jsonl").read_text()
+        assert "secret-key" not in raw and "secret-key" not in str(log.events)
+
+    async def test_settings_the_server_did_not_apply_refuse_the_session_before_t0(self, tmp_path):
+        import pytest
+
+        from tts_bench.adapters.base import AdapterError
+
+        for updated, named in (({"voice": "voice_478"}, "voice"), ({"response_format": "wav"}, "response_format"),
+                               ({"model": "voxtral-mini-tts-2603"}, "model")):
+            server, mistral, _, _, _ = await self._serve(tmp_path, updated=updated)
+            async with server:
+                with pytest.raises(AdapterError, match=f"did not apply the requested settings: {{'{named}'"):
+                    await mistral.connect()
+
+    async def test_a_rejected_setting_a_closed_socket_and_a_rejected_key_are_refused_sessions(self, tmp_path):
+        import json
+
+        import pytest
+
+        from tts_bench.adapters.base import AdapterError, is_refusal
+
+        async def invalid(ws):
+            await ws.send(json.dumps({"type": "error", "error": {"message": "Input should be 'responsive' or 'long_form'", "code": 422}}))
+
+        async def unknown_voice(ws):
+            await ws.close(1008, "Voice 'voice_x' not found.")
+
+        for kwargs, match in (({"on_update": invalid}, "422: Input should be"),
+                              ({"on_update": unknown_voice}, "Voice 'voice_x' not found"),
+                              ({"reject": 401}, "HTTP 401")):
+            server, mistral, _, _, _ = await self._serve(tmp_path, **kwargs)
+            async with server:
+                with pytest.raises(AdapterError, match=match) as refused:
+                    await mistral.connect()
+            assert is_refusal(str(refused.value)) == ("reject" in kwargs)
+
+    async def test_a_generation_the_server_drops_ends_as_an_error_with_its_audio_kept(self, tmp_path):
+        import json
+
+        async def drop(ws):
+            await ws.send(json.dumps(self.delta(self.floats(0.5, 0.5))))
+            await ws.close(1011, "Upstream connection error")
+
+        server, mistral, _, _, _ = await self._serve(tmp_path, on_text=drop)
+        async with server:
+            async with mistral:
+                await mistral.open_context("main")
+                await mistral.send("main", "Hello.")
+                await mistral.finish("main")
+                done = await mistral.wait("main", 5.0)
+        assert len(done.pcm) == 4 and done.t_done is None                       # the audio is kept, the utterance never finished
+        assert done.error.startswith("closed before speech.audio.done") and "1011" in done.error
+        from tts_bench.probes import _verdict
+
+        assert _verdict(done) == "fail"

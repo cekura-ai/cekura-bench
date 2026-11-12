@@ -36107,7 +36107,7 @@
           "events": 76
         },
         "stop": {
-          "value": 7876.666666666667,
+          "value": 4663.333333333333,
           "normalized": 0.0,
           "scored_calls": 3,
           "eligible_numbers": 1,
@@ -36734,7 +36734,7 @@
                 "gibberish": 100.0,
                 "infrastructure": 100.0,
                 "latency": 2670.0,
-                "stop": 14390.0,
+                "stop": 4750,
                 "organization": 5,
                 "style": 5,
                 "emotion": null,
@@ -36746,7 +36746,7 @@
                   2670.0
                 ],
                 "stop": [
-                  14390.0
+                  4750
                 ]
               }
             },
@@ -37547,7 +37547,7 @@
               "events": 76
             },
             "stop": {
-              "value": 7876.666666666667,
+              "value": 4663.333333333333,
               "normalized": 0.0,
               "scored_calls": 3,
               "eligible_scenarios": 1,
@@ -46557,7 +46557,7 @@
       ]
     }
   ],
-  "report_sha256": "903ac553c688b868e00e4bfb40067e396758b101c2742ae10fcb434edc5ba4fb",
+  "report_sha256": "fbde69db2f7f5faaf1c1869a20c437b8a59fba9705e4a137ec53b8d3ac99f5b8",
   "audio_model": {
     "name": "NISQA discontinuity",
     "checkpoint_sha256": "7ec4cf937514dd3f8860b21e66fabd8ca87a168572675ef8d979c4c4ad2e805c",

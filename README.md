@@ -289,6 +289,12 @@ or use their platform's mock-tool mechanism.
 
 ## Methodology
 
+Published workflow result snapshots are stored under
+[`results/voice-agent-workflows/`](results/voice-agent-workflows/). The
+[Retell tell-1 result from 10 November 2026](results/voice-agent-workflows/retell-tell-1-2026-11-10/README.md)
+includes the approved report, per-call scores, its five-gate policy and a local
+validator for Pass¹ and Pass³.
+
 ### The agents under test
 
 The benchmark exercises two canonical phone-agent workflows:

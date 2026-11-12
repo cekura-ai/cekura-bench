@@ -1,0 +1,4383 @@
+{
+  "schema_version": 1,
+  "configuration": "Retell tell-1",
+  "collected_on": "2026-11-10",
+  "snapshot_at": "2026-11-11T01:04:33.967189+00:00",
+  "project_id": 8197,
+  "transport": "PSTN",
+  "runs_per_scenario": 3,
+  "concurrency_per_workflow": 5,
+  "model": "tell-1",
+  "model_tier": "standard",
+  "model_high_priority": false,
+  "speech": {
+    "voice_id": "cartesia-Cimo",
+    "stt_mode": "accurate",
+    "language": "en-US",
+    "voice_speed": 1,
+    "voice_temperature": 1,
+    "volume": 1
+  },
+  "workflows": {
+    "Appointments": {
+      "cekura_agent_id": 20898,
+      "result_id": 1068690,
+      "published_retell_version": 8
+    },
+    "Medicare": {
+      "cekura_agent_id": 20897,
+      "result_id": 1068691,
+      "published_retell_version": 7
+    }
+  },
+  "scoring": {
+    "gates": [
+      {
+        "metric": "Expected Outcome",
+        "operator": "eq",
+        "threshold": 5
+      },
+      {
+        "metric": "Infrastructure Issues",
+        "operator": "eq",
+        "threshold": 5
+      },
+      {
+        "metric": "Interruption Score",
+        "operator": "gte",
+        "threshold": 1
+      },
+      {
+        "metric": "Latency (in ms)",
+        "operator": "lte",
+        "threshold": 10000
+      },
+      {
+        "metric": "Tool Call Accuracy",
+        "operator": "eq",
+        "threshold": 5
+      }
+    ],
+    "tool_accuracy_variant": "standard",
+    "tool_accuracy_not_applicable_scenarios": [
+      "AS12",
+      "AS49",
+      "MS79"
+    ],
+    "infrastructure_true_normalized_score": 5,
+    "record_only_metrics": [
+      "Transcription Accuracy",
+      "Voice Tone + Clarity"
+    ]
+  },
+  "provenance": {
+    "benchmark_commit": "a504cf6c5596e5677aee2d2b6f6643816a232c26",
+    "website_commit": "cc552c6dae6fdc7b0bb759271a088640b4b233df",
+    "peer_website_snapshot_at": "2026-11-03T15:21:15Z",
+    "peer_website_url": "https://benchmarks.cekura.ai/voice-agent-workflows",
+    "peer_rows_checked_against_live_site": 10,
+    "definition_parity": {
+      "appointments": {
+        "prompt_matches_latest_repository": false,
+        "first_message_matches_latest_repository": true,
+        "latest_prompt_sha256": "5597cca2e34299de7f07eed5df4083f9a207438d683b0e17e5c1df72751bf6db",
+        "live_prompt_sha256": "99f621aa76c230bb66aac77149dd3bd9eb69a32671867769ee80bfa85e817510"
+      },
+      "medicare": {
+        "prompt_matches_latest_repository": true,
+        "first_message_matches_latest_repository": true,
+        "latest_prompt_sha256": "e64d5c2a057dcc3a4bf776cb0e1671844e5d65a0447d6c73b90d25ee5f8252b5",
+        "live_prompt_sha256": "e64d5c2a057dcc3a4bf776cb0e1671844e5d65a0447d6c73b90d25ee5f8252b5"
+      }
+    },
+    "configuration_changes": {
+      "previous_model": "gpt-5.5",
+      "previous_model_tier": "fast",
+      "previous_model_high_priority": true,
+      "prompt_identical_to_historical_agents": true,
+      "first_message_identical_to_historical_agents": true,
+      "tools_identical_to_historical_agents": true,
+      "speech_and_runtime_settings_identical_to_historical_agents": true
+    },
+    "expected_outcome_reevaluations": {
+      "AS45": [
+        4473371,
+        4473489
+      ],
+      "AS17": [
+        4473343,
+        4473402,
+        4473461
+      ]
+    },
+    "report_file": "report.html",
+    "report_sha256": "ea17dab7903dfa9ee823a20b4ccec8ebed2b820e04f8c79f4c527d04bc5cbc3d"
+  },
+  "review_required_run_ids": [],
+  "stats": {
+    "Appointments": {
+      "calls": 177,
+      "passed_calls": 170,
+      "pass1": 0.96045197740113,
+      "scenarios": 59,
+      "passed_scenarios": 54,
+      "pass3": 0.9152542372881356
+    },
+    "Medicare": {
+      "calls": 69,
+      "passed_calls": 66,
+      "pass1": 0.9565217391304348,
+      "scenarios": 23,
+      "passed_scenarios": 20,
+      "pass3": 0.8695652173913043
+    },
+    "Combined": {
+      "calls": 246,
+      "passed_calls": 236,
+      "pass1": 0.959349593495935,
+      "scenarios": 82,
+      "passed_scenarios": 74,
+      "pass3": 0.9024390243902439
+    }
+  },
+  "metrics": {
+    "Expected Outcome": {
+      "n": 246,
+      "mean": 4.878048780487805,
+      "full_score_rate": 0.975609756097561
+    },
+    "Infrastructure Issues": {
+      "n": 246,
+      "mean": 5,
+      "full_score_rate": 1.0
+    },
+    "Interruption Score": {
+      "n": 246,
+      "mean": 4.776341463414634,
+      "full_score_rate": 0.7520325203252033
+    },
+    "Latency (in ms)": {
+      "n": 246,
+      "mean": 945.9093089430894
+    },
+    "Tool Call Accuracy": {
+      "n": 237,
+      "mean": 4.954810126582278,
+      "full_score_rate": 0.9831223628691983
+    },
+    "Transcription Accuracy": {
+      "n": 246,
+      "mean": 4.726787398373983,
+      "full_score_rate": 0.6504065040650406
+    },
+    "Voice Tone + Clarity": {
+      "n": 246,
+      "mean": 4.3233132207296725,
+      "full_score_rate": 0.0
+    }
+  },
+  "calls": [
+    {
+      "run_id": 4473327,
+      "result_id": 1068690,
+      "scenario": "AS1",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.421672821044922,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 946.25,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473327"
+    },
+    {
+      "run_id": 4473328,
+      "result_id": 1068690,
+      "scenario": "AS2",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.401660919189453,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1204,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473328"
+    },
+    {
+      "run_id": 4473329,
+      "result_id": 1068690,
+      "scenario": "AS3",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.4457621574401855,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 870,
+        "Interruption Score": 4.17,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473329"
+    },
+    {
+      "run_id": 4473330,
+      "result_id": 1068690,
+      "scenario": "AS4",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.234072208404541,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 845,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473330"
+    },
+    {
+      "run_id": 4473331,
+      "result_id": 1068690,
+      "scenario": "AS5",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.360003471374512,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 838.75,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473331"
+    },
+    {
+      "run_id": 4473332,
+      "result_id": 1068690,
+      "scenario": "AS6",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.440419673919678,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 895,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473332"
+    },
+    {
+      "run_id": 4473333,
+      "result_id": 1068690,
+      "scenario": "AS7",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.342306613922119,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 852.22,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473333"
+    },
+    {
+      "run_id": 4473334,
+      "result_id": 1068690,
+      "scenario": "AS8",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.4081244468688965,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 742.86,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473334"
+    },
+    {
+      "run_id": 4473335,
+      "result_id": 1068690,
+      "scenario": "AS9",
+      "passed": false,
+      "metrics": {
+        "Tool Call Accuracy": 4.29,
+        "Voice Tone + Clarity": 4.369359970092773,
+        "Transcription Accuracy": 3.99,
+        "Latency (in ms)": 1093.33,
+        "Interruption Score": 4.5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [
+        "Tool Call Accuracy"
+      ],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473335"
+    },
+    {
+      "run_id": 4473336,
+      "result_id": 1068690,
+      "scenario": "AS10",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.079689025878906,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 790,
+        "Interruption Score": 4,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473336"
+    },
+    {
+      "run_id": 4473337,
+      "result_id": 1068690,
+      "scenario": "AS11",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.410458087921143,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 862,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473337"
+    },
+    {
+      "run_id": 4473338,
+      "result_id": 1068690,
+      "scenario": "AS12",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": null,
+        "Voice Tone + Clarity": 4.390311241149902,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1530,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473338"
+    },
+    {
+      "run_id": 4473339,
+      "result_id": 1068690,
+      "scenario": "AS13",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.437138557434082,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 725,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473339"
+    },
+    {
+      "run_id": 4473340,
+      "result_id": 1068690,
+      "scenario": "AS14",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.333473205566406,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 850,
+        "Interruption Score": 3.57,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473340"
+    },
+    {
+      "run_id": 4473341,
+      "result_id": 1068690,
+      "scenario": "AS15",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.374783039093018,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 915.71,
+        "Interruption Score": 4.29,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473341"
+    },
+    {
+      "run_id": 4473342,
+      "result_id": 1068690,
+      "scenario": "AS16",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.424156665802002,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1138,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473342"
+    },
+    {
+      "run_id": 4473343,
+      "result_id": 1068690,
+      "scenario": "AS17",
+      "passed": false,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.41970682144165,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 874.29,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 0
+      },
+      "failed_gates": [
+        "Expected Outcome"
+      ],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473343"
+    },
+    {
+      "run_id": 4473344,
+      "result_id": 1068690,
+      "scenario": "AS18",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.192671298980713,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1070,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473344"
+    },
+    {
+      "run_id": 4473345,
+      "result_id": 1068690,
+      "scenario": "AS19",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.406178951263428,
+        "Transcription Accuracy": 4.995,
+        "Latency (in ms)": 873.33,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473345"
+    },
+    {
+      "run_id": 4473346,
+      "result_id": 1068690,
+      "scenario": "AS20",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.283717632293701,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 962.22,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473346"
+    },
+    {
+      "run_id": 4473347,
+      "result_id": 1068690,
+      "scenario": "AS21",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.417849540710449,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 1387.5,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473347"
+    },
+    {
+      "run_id": 4473348,
+      "result_id": 1068690,
+      "scenario": "AS22",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.270622253417969,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1001,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473348"
+    },
+    {
+      "run_id": 4473349,
+      "result_id": 1068690,
+      "scenario": "AS23",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.303464889526367,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 971.67,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473349"
+    },
+    {
+      "run_id": 4473350,
+      "result_id": 1068690,
+      "scenario": "AS24",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.2633562088012695,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 1018.57,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473350"
+    },
+    {
+      "run_id": 4473351,
+      "result_id": 1068690,
+      "scenario": "AS25",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.025174617767334,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 873.75,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473351"
+    },
+    {
+      "run_id": 4473352,
+      "result_id": 1068690,
+      "scenario": "AS26",
+      "passed": false,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.362027645111084,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 842,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 0
+      },
+      "failed_gates": [
+        "Expected Outcome"
+      ],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473352"
+    },
+    {
+      "run_id": 4473353,
+      "result_id": 1068690,
+      "scenario": "AS27",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.414675712585449,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 848.75,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473353"
+    },
+    {
+      "run_id": 4473354,
+      "result_id": 1068690,
+      "scenario": "AS28",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.324676990509033,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 957.14,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473354"
+    },
+    {
+      "run_id": 4473355,
+      "result_id": 1068690,
+      "scenario": "AS29",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.3608784675598145,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 824.29,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473355"
+    },
+    {
+      "run_id": 4473356,
+      "result_id": 1068690,
+      "scenario": "AS30",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.338500022888184,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 738.57,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473356"
+    },
+    {
+      "run_id": 4473357,
+      "result_id": 1068690,
+      "scenario": "AS31",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.270397186279297,
+        "Transcription Accuracy": 4.995,
+        "Latency (in ms)": 777.78,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473357"
+    },
+    {
+      "run_id": 4473358,
+      "result_id": 1068690,
+      "scenario": "AS32",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.328714370727539,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 860,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473358"
+    },
+    {
+      "run_id": 4473359,
+      "result_id": 1068690,
+      "scenario": "AS33",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.404109001159668,
+        "Transcription Accuracy": 4.995,
+        "Latency (in ms)": 1018.33,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473359"
+    },
+    {
+      "run_id": 4473360,
+      "result_id": 1068690,
+      "scenario": "AS34",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.3837738037109375,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1015.71,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473360"
+    },
+    {
+      "run_id": 4473361,
+      "result_id": 1068690,
+      "scenario": "AS35",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.290625095367432,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 885.71,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473361"
+    },
+    {
+      "run_id": 4473362,
+      "result_id": 1068690,
+      "scenario": "AS36",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.500576019287109,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 952.5,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473362"
+    },
+    {
+      "run_id": 4473363,
+      "result_id": 1068690,
+      "scenario": "AS37",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.377871036529541,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 873.75,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473363"
+    },
+    {
+      "run_id": 4473364,
+      "result_id": 1068690,
+      "scenario": "AS38",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.408138751983643,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 981.67,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473364"
+    },
+    {
+      "run_id": 4473365,
+      "result_id": 1068690,
+      "scenario": "AS39",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.356960296630859,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 982,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473365"
+    },
+    {
+      "run_id": 4473366,
+      "result_id": 1068690,
+      "scenario": "AS40",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.400592803955078,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 864.55,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473366"
+    },
+    {
+      "run_id": 4473367,
+      "result_id": 1068690,
+      "scenario": "AS41",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.477578163146973,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1032,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473367"
+    },
+    {
+      "run_id": 4473368,
+      "result_id": 1068690,
+      "scenario": "AS42",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.290597438812256,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1097.27,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473368"
+    },
+    {
+      "run_id": 4473369,
+      "result_id": 1068690,
+      "scenario": "AS43",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.4180803298950195,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 897.14,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473369"
+    },
+    {
+      "run_id": 4473370,
+      "result_id": 1068690,
+      "scenario": "AS44",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.303205490112305,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 868.57,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473370"
+    },
+    {
+      "run_id": 4473371,
+      "result_id": 1068690,
+      "scenario": "AS45",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.434206485748291,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1183.33,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473371"
+    },
+    {
+      "run_id": 4473372,
+      "result_id": 1068690,
+      "scenario": "AS46",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.360335350036621,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1011.67,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473372"
+    },
+    {
+      "run_id": 4473373,
+      "result_id": 1068690,
+      "scenario": "AS47",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.3694634437561035,
+        "Transcription Accuracy": 4.995,
+        "Latency (in ms)": 1538.33,
+        "Interruption Score": 3.33,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473373"
+    },
+    {
+      "run_id": 4473374,
+      "result_id": 1068690,
+      "scenario": "AS48",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.243951797485352,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 981.67,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473374"
+    },
+    {
+      "run_id": 4473375,
+      "result_id": 1068690,
+      "scenario": "AS49",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": null,
+        "Voice Tone + Clarity": 3.708034038543701,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 2237.5,
+        "Interruption Score": 3.75,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473375"
+    },
+    {
+      "run_id": 4473376,
+      "result_id": 1068690,
+      "scenario": "AS50",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.376223087310791,
+        "Transcription Accuracy": 3.985,
+        "Latency (in ms)": 1338.33,
+        "Interruption Score": 3.75,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473376"
+    },
+    {
+      "run_id": 4473377,
+      "result_id": 1068690,
+      "scenario": "AS51",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.377920150756836,
+        "Transcription Accuracy": 4.99,
+        "Latency (in ms)": 735.71,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473377"
+    },
+    {
+      "run_id": 4473378,
+      "result_id": 1068690,
+      "scenario": "AS52",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.355131149291992,
+        "Transcription Accuracy": 4.995,
+        "Latency (in ms)": 778.57,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473378"
+    },
+    {
+      "run_id": 4473379,
+      "result_id": 1068690,
+      "scenario": "AS53",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.242509365081787,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 867.5,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473379"
+    },
+    {
+      "run_id": 4473380,
+      "result_id": 1068690,
+      "scenario": "AS54",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.350225925445557,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 845,
+        "Interruption Score": 4.38,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473380"
+    },
+    {
+      "run_id": 4473381,
+      "result_id": 1068690,
+      "scenario": "AS55",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.3453826904296875,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 933.33,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473381"
+    },
+    {
+      "run_id": 4473382,
+      "result_id": 1068690,
+      "scenario": "AS56",
+      "passed": false,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.347239971160889,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 781.25,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 0
+      },
+      "failed_gates": [
+        "Expected Outcome"
+      ],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473382"
+    },
+    {
+      "run_id": 4473383,
+      "result_id": 1068690,
+      "scenario": "AS57",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.329080581665039,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 785.71,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473383"
+    },
+    {
+      "run_id": 4473384,
+      "result_id": 1068690,
+      "scenario": "AS58",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.4048380851745605,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 1156.25,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473384"
+    },
+    {
+      "run_id": 4473385,
+      "result_id": 1068690,
+      "scenario": "AS59",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.358317852020264,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 923.75,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473385"
+    },
+    {
+      "run_id": 4473386,
+      "result_id": 1068690,
+      "scenario": "AS1",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.356422424316406,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 836.25,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473386"
+    },
+    {
+      "run_id": 4473387,
+      "result_id": 1068690,
+      "scenario": "AS2",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.411785125732422,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 892,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473387"
+    },
+    {
+      "run_id": 4473388,
+      "result_id": 1068690,
+      "scenario": "AS3",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.498956680297852,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 965,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473388"
+    },
+    {
+      "run_id": 4473389,
+      "result_id": 1068690,
+      "scenario": "AS4",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.273205280303955,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1040,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473389"
+    },
+    {
+      "run_id": 4473390,
+      "result_id": 1068690,
+      "scenario": "AS5",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.345979690551758,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 801.25,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473390"
+    },
+    {
+      "run_id": 4473391,
+      "result_id": 1068690,
+      "scenario": "AS6",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 3.7352161407470703,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 987.5,
+        "Interruption Score": 3.75,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473391"
+    },
+    {
+      "run_id": 4473392,
+      "result_id": 1068690,
+      "scenario": "AS7",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.340669631958008,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 832.22,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473392"
+    },
+    {
+      "run_id": 4473393,
+      "result_id": 1068690,
+      "scenario": "AS8",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.358231067657471,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 903.75,
+        "Interruption Score": 4.38,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473393"
+    },
+    {
+      "run_id": 4473394,
+      "result_id": 1068690,
+      "scenario": "AS9",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.406177043914795,
+        "Transcription Accuracy": 4.995,
+        "Latency (in ms)": 1026.25,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473394"
+    },
+    {
+      "run_id": 4473395,
+      "result_id": 1068690,
+      "scenario": "AS10",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.03875732421875,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 992,
+        "Interruption Score": 4,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473395"
+    },
+    {
+      "run_id": 4473396,
+      "result_id": 1068690,
+      "scenario": "AS11",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 3.988546848297119,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 791.82,
+        "Interruption Score": 4.17,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473396"
+    },
+    {
+      "run_id": 4473397,
+      "result_id": 1068690,
+      "scenario": "AS12",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": null,
+        "Voice Tone + Clarity": 4.232180595397949,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1240,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473397"
+    },
+    {
+      "run_id": 4473398,
+      "result_id": 1068690,
+      "scenario": "AS13",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.416811466217041,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 825,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473398"
+    },
+    {
+      "run_id": 4473399,
+      "result_id": 1068690,
+      "scenario": "AS14",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.209090709686279,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 651.11,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473399"
+    },
+    {
+      "run_id": 4473400,
+      "result_id": 1068690,
+      "scenario": "AS15",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.262884616851807,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1076.67,
+        "Interruption Score": 4.17,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473400"
+    },
+    {
+      "run_id": 4473401,
+      "result_id": 1068690,
+      "scenario": "AS16",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.327249050140381,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 938,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473401"
+    },
+    {
+      "run_id": 4473402,
+      "result_id": 1068690,
+      "scenario": "AS17",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.444112300872803,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 810,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473402"
+    },
+    {
+      "run_id": 4473403,
+      "result_id": 1068690,
+      "scenario": "AS18",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.312426567077637,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1102.5,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473403"
+    },
+    {
+      "run_id": 4473404,
+      "result_id": 1068690,
+      "scenario": "AS19",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.4820404052734375,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1063.33,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473404"
+    },
+    {
+      "run_id": 4473405,
+      "result_id": 1068690,
+      "scenario": "AS20",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.374953746795654,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 886.67,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473405"
+    },
+    {
+      "run_id": 4473406,
+      "result_id": 1068690,
+      "scenario": "AS21",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.373147964477539,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 918.33,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473406"
+    },
+    {
+      "run_id": 4473407,
+      "result_id": 1068690,
+      "scenario": "AS22",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.416015148162842,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 811,
+        "Interruption Score": 4,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473407"
+    },
+    {
+      "run_id": 4473408,
+      "result_id": 1068690,
+      "scenario": "AS23",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.373069763183594,
+        "Transcription Accuracy": 4.995,
+        "Latency (in ms)": 885,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473408"
+    },
+    {
+      "run_id": 4473409,
+      "result_id": 1068690,
+      "scenario": "AS24",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 3.9311513900756836,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 960,
+        "Interruption Score": 4.17,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473409"
+    },
+    {
+      "run_id": 4473410,
+      "result_id": 1068690,
+      "scenario": "AS25",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.286490440368652,
+        "Transcription Accuracy": 4.995,
+        "Latency (in ms)": 911.25,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473410"
+    },
+    {
+      "run_id": 4473411,
+      "result_id": 1068690,
+      "scenario": "AS26",
+      "passed": false,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.402717113494873,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 898,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 0
+      },
+      "failed_gates": [
+        "Expected Outcome"
+      ],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473411"
+    },
+    {
+      "run_id": 4473412,
+      "result_id": 1068690,
+      "scenario": "AS27",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.3976640701293945,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 830,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473412"
+    },
+    {
+      "run_id": 4473413,
+      "result_id": 1068690,
+      "scenario": "AS28",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.41593074798584,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 870,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473413"
+    },
+    {
+      "run_id": 4473414,
+      "result_id": 1068690,
+      "scenario": "AS29",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.314664363861084,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 823.75,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473414"
+    },
+    {
+      "run_id": 4473415,
+      "result_id": 1068690,
+      "scenario": "AS30",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.304685592651367,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 972.86,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473415"
+    },
+    {
+      "run_id": 4473416,
+      "result_id": 1068690,
+      "scenario": "AS31",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 3.7731645107269287,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1028.33,
+        "Interruption Score": 4.29,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473416"
+    },
+    {
+      "run_id": 4473417,
+      "result_id": 1068690,
+      "scenario": "AS32",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.406834125518799,
+        "Transcription Accuracy": 4.995,
+        "Latency (in ms)": 888.75,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473417"
+    },
+    {
+      "run_id": 4473418,
+      "result_id": 1068690,
+      "scenario": "AS33",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.4121809005737305,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 998.33,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473418"
+    },
+    {
+      "run_id": 4473419,
+      "result_id": 1068690,
+      "scenario": "AS34",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.397408962249756,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 1153.33,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473419"
+    },
+    {
+      "run_id": 4473420,
+      "result_id": 1068690,
+      "scenario": "AS35",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.311582088470459,
+        "Transcription Accuracy": 3.995,
+        "Latency (in ms)": 941.25,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473420"
+    },
+    {
+      "run_id": 4473421,
+      "result_id": 1068690,
+      "scenario": "AS36",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.4589691162109375,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 945,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473421"
+    },
+    {
+      "run_id": 4473422,
+      "result_id": 1068690,
+      "scenario": "AS37",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.368220329284668,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 836.67,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473422"
+    },
+    {
+      "run_id": 4473423,
+      "result_id": 1068690,
+      "scenario": "AS38",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.366189002990723,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 815,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473423"
+    },
+    {
+      "run_id": 4473424,
+      "result_id": 1068690,
+      "scenario": "AS39",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.38540506362915,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 833.33,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473424"
+    },
+    {
+      "run_id": 4473425,
+      "result_id": 1068690,
+      "scenario": "AS40",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.415861129760742,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 830,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473425"
+    },
+    {
+      "run_id": 4473426,
+      "result_id": 1068690,
+      "scenario": "AS41",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.386866569519043,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1066,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473426"
+    },
+    {
+      "run_id": 4473427,
+      "result_id": 1068690,
+      "scenario": "AS42",
+      "passed": false,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.355587005615234,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1149.09,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 0
+      },
+      "failed_gates": [
+        "Expected Outcome"
+      ],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473427"
+    },
+    {
+      "run_id": 4473428,
+      "result_id": 1068690,
+      "scenario": "AS43",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.4099016189575195,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 900,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473428"
+    },
+    {
+      "run_id": 4473429,
+      "result_id": 1068690,
+      "scenario": "AS44",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.309131145477295,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 1037.5,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473429"
+    },
+    {
+      "run_id": 4473430,
+      "result_id": 1068690,
+      "scenario": "AS45",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.399579048156738,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1223.75,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473430"
+    },
+    {
+      "run_id": 4473431,
+      "result_id": 1068690,
+      "scenario": "AS46",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.395224094390869,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1120,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473431"
+    },
+    {
+      "run_id": 4473432,
+      "result_id": 1068690,
+      "scenario": "AS47",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.292027473449707,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1011.67,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473432"
+    },
+    {
+      "run_id": 4473433,
+      "result_id": 1068690,
+      "scenario": "AS48",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.458553791046143,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 1145,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473433"
+    },
+    {
+      "run_id": 4473434,
+      "result_id": 1068690,
+      "scenario": "AS49",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": null,
+        "Voice Tone + Clarity": 4.478244304656982,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1255,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473434"
+    },
+    {
+      "run_id": 4473435,
+      "result_id": 1068690,
+      "scenario": "AS50",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.377516746520996,
+        "Transcription Accuracy": 3.995,
+        "Latency (in ms)": 1090,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473435"
+    },
+    {
+      "run_id": 4473436,
+      "result_id": 1068690,
+      "scenario": "AS51",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.3024420738220215,
+        "Transcription Accuracy": 2.995,
+        "Latency (in ms)": 996,
+        "Interruption Score": 4.5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473436"
+    },
+    {
+      "run_id": 4473437,
+      "result_id": 1068690,
+      "scenario": "AS52",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.315098285675049,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 728.57,
+        "Interruption Score": 4.38,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473437"
+    },
+    {
+      "run_id": 4473438,
+      "result_id": 1068690,
+      "scenario": "AS53",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.4265570640563965,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1010,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473438"
+    },
+    {
+      "run_id": 4473439,
+      "result_id": 1068690,
+      "scenario": "AS54",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 3.992784023284912,
+        "Transcription Accuracy": 4.995,
+        "Latency (in ms)": 843.75,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473439"
+    },
+    {
+      "run_id": 4473440,
+      "result_id": 1068690,
+      "scenario": "AS55",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.318125247955322,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 887.14,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473440"
+    },
+    {
+      "run_id": 4473441,
+      "result_id": 1068690,
+      "scenario": "AS56",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.331391334533691,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 1006.67,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473441"
+    },
+    {
+      "run_id": 4473442,
+      "result_id": 1068690,
+      "scenario": "AS57",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.251362323760986,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 880,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473442"
+    },
+    {
+      "run_id": 4473443,
+      "result_id": 1068690,
+      "scenario": "AS58",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.3000593185424805,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 1335.45,
+        "Interruption Score": 4.55,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473443"
+    },
+    {
+      "run_id": 4473444,
+      "result_id": 1068690,
+      "scenario": "AS59",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.359557628631592,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 880,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473444"
+    },
+    {
+      "run_id": 4473445,
+      "result_id": 1068690,
+      "scenario": "AS1",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.360756874084473,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 908.89,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473445"
+    },
+    {
+      "run_id": 4473446,
+      "result_id": 1068690,
+      "scenario": "AS2",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.347207069396973,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 876,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473446"
+    },
+    {
+      "run_id": 4473447,
+      "result_id": 1068690,
+      "scenario": "AS3",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.46014928817749,
+        "Transcription Accuracy": 4.995,
+        "Latency (in ms)": 978.33,
+        "Interruption Score": 4.17,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473447"
+    },
+    {
+      "run_id": 4473448,
+      "result_id": 1068690,
+      "scenario": "AS4",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.220096111297607,
+        "Transcription Accuracy": 4.995,
+        "Latency (in ms)": 950,
+        "Interruption Score": 3.75,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473448"
+    },
+    {
+      "run_id": 4473449,
+      "result_id": 1068690,
+      "scenario": "AS5",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.311140060424805,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 732.5,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473449"
+    },
+    {
+      "run_id": 4473450,
+      "result_id": 1068690,
+      "scenario": "AS6",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.358321189880371,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 915,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473450"
+    },
+    {
+      "run_id": 4473451,
+      "result_id": 1068690,
+      "scenario": "AS7",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.331305503845215,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 828.89,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473451"
+    },
+    {
+      "run_id": 4473452,
+      "result_id": 1068690,
+      "scenario": "AS8",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.403235912322998,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 900,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473452"
+    },
+    {
+      "run_id": 4473453,
+      "result_id": 1068690,
+      "scenario": "AS9",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.377808094024658,
+        "Transcription Accuracy": 4.995,
+        "Latency (in ms)": 932.5,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473453"
+    },
+    {
+      "run_id": 4473454,
+      "result_id": 1068690,
+      "scenario": "AS10",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.177342414855957,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 986.67,
+        "Interruption Score": 4.29,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473454"
+    },
+    {
+      "run_id": 4473455,
+      "result_id": 1068690,
+      "scenario": "AS11",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.444124698638916,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 956.36,
+        "Interruption Score": 4.55,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473455"
+    },
+    {
+      "run_id": 4473456,
+      "result_id": 1068690,
+      "scenario": "AS12",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": null,
+        "Voice Tone + Clarity": 4.300793647766113,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1225,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473456"
+    },
+    {
+      "run_id": 4473457,
+      "result_id": 1068690,
+      "scenario": "AS13",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.311483860015869,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 852.5,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473457"
+    },
+    {
+      "run_id": 4473458,
+      "result_id": 1068690,
+      "scenario": "AS14",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.414974212646484,
+        "Transcription Accuracy": 3.995,
+        "Latency (in ms)": 720,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473458"
+    },
+    {
+      "run_id": 4473459,
+      "result_id": 1068690,
+      "scenario": "AS15",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 3.9910378456115723,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 1302.86,
+        "Interruption Score": 4.29,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473459"
+    },
+    {
+      "run_id": 4473460,
+      "result_id": 1068690,
+      "scenario": "AS16",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 3.805630922317505,
+        "Transcription Accuracy": 4.99,
+        "Latency (in ms)": 782.5,
+        "Interruption Score": 3.33,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473460"
+    },
+    {
+      "run_id": 4473461,
+      "result_id": 1068690,
+      "scenario": "AS17",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.42704963684082,
+        "Transcription Accuracy": 4.995,
+        "Latency (in ms)": 843.75,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473461"
+    },
+    {
+      "run_id": 4473462,
+      "result_id": 1068690,
+      "scenario": "AS18",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.262368679046631,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 852.5,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473462"
+    },
+    {
+      "run_id": 4473463,
+      "result_id": 1068690,
+      "scenario": "AS19",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.475613117218018,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 915,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473463"
+    },
+    {
+      "run_id": 4473464,
+      "result_id": 1068690,
+      "scenario": "AS20",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.369272232055664,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 902.5,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473464"
+    },
+    {
+      "run_id": 4473465,
+      "result_id": 1068690,
+      "scenario": "AS21",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.359170913696289,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 845.71,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473465"
+    },
+    {
+      "run_id": 4473466,
+      "result_id": 1068690,
+      "scenario": "AS22",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.306654930114746,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 860,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473466"
+    },
+    {
+      "run_id": 4473467,
+      "result_id": 1068690,
+      "scenario": "AS23",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.374878406524658,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 782.86,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473467"
+    },
+    {
+      "run_id": 4473468,
+      "result_id": 1068690,
+      "scenario": "AS24",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.268452167510986,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1046,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473468"
+    },
+    {
+      "run_id": 4473469,
+      "result_id": 1068690,
+      "scenario": "AS25",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.371664524078369,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 888.75,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473469"
+    },
+    {
+      "run_id": 4473470,
+      "result_id": 1068690,
+      "scenario": "AS26",
+      "passed": false,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.269768238067627,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 981.67,
+        "Interruption Score": 4.29,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 0
+      },
+      "failed_gates": [
+        "Expected Outcome"
+      ],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473470"
+    },
+    {
+      "run_id": 4473471,
+      "result_id": 1068690,
+      "scenario": "AS27",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.350565433502197,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 903.33,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473471"
+    },
+    {
+      "run_id": 4473472,
+      "result_id": 1068690,
+      "scenario": "AS28",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.374682426452637,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 965,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473472"
+    },
+    {
+      "run_id": 4473473,
+      "result_id": 1068690,
+      "scenario": "AS29",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.312098026275635,
+        "Transcription Accuracy": 4.995,
+        "Latency (in ms)": 783.75,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473473"
+    },
+    {
+      "run_id": 4473474,
+      "result_id": 1068690,
+      "scenario": "AS30",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.380183696746826,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 807.14,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473474"
+    },
+    {
+      "run_id": 4473475,
+      "result_id": 1068690,
+      "scenario": "AS31",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.364974498748779,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 1008.57,
+        "Interruption Score": 3.89,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473475"
+    },
+    {
+      "run_id": 4473476,
+      "result_id": 1068690,
+      "scenario": "AS32",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.334195613861084,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 837.5,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473476"
+    },
+    {
+      "run_id": 4473477,
+      "result_id": 1068690,
+      "scenario": "AS33",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.441002368927002,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 913.33,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473477"
+    },
+    {
+      "run_id": 4473478,
+      "result_id": 1068690,
+      "scenario": "AS34",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.279983997344971,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1050,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473478"
+    },
+    {
+      "run_id": 4473479,
+      "result_id": 1068690,
+      "scenario": "AS35",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.362320899963379,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 895.71,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473479"
+    },
+    {
+      "run_id": 4473480,
+      "result_id": 1068690,
+      "scenario": "AS36",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.35348653793335,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1012.5,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473480"
+    },
+    {
+      "run_id": 4473481,
+      "result_id": 1068690,
+      "scenario": "AS37",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.449801921844482,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 837.5,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473481"
+    },
+    {
+      "run_id": 4473482,
+      "result_id": 1068690,
+      "scenario": "AS38",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.302587985992432,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 843.33,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473482"
+    },
+    {
+      "run_id": 4473483,
+      "result_id": 1068690,
+      "scenario": "AS39",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.083497524261475,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1184,
+        "Interruption Score": 4,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473483"
+    },
+    {
+      "run_id": 4473484,
+      "result_id": 1068690,
+      "scenario": "AS40",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.371909141540527,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 854.17,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473484"
+    },
+    {
+      "run_id": 4473485,
+      "result_id": 1068690,
+      "scenario": "AS41",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.420982837677002,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1154,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473485"
+    },
+    {
+      "run_id": 4473486,
+      "result_id": 1068690,
+      "scenario": "AS42",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.191329002380371,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 862.73,
+        "Interruption Score": 4.23,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473486"
+    },
+    {
+      "run_id": 4473487,
+      "result_id": 1068690,
+      "scenario": "AS43",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.371626377105713,
+        "Transcription Accuracy": 3.995,
+        "Latency (in ms)": 935,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473487"
+    },
+    {
+      "run_id": 4473488,
+      "result_id": 1068690,
+      "scenario": "AS44",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.356395721435547,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 935.71,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473488"
+    },
+    {
+      "run_id": 4473489,
+      "result_id": 1068690,
+      "scenario": "AS45",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.389578819274902,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1265.56,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473489"
+    },
+    {
+      "run_id": 4473490,
+      "result_id": 1068690,
+      "scenario": "AS46",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.323027610778809,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 1002.5,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473490"
+    },
+    {
+      "run_id": 4473491,
+      "result_id": 1068690,
+      "scenario": "AS47",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.2440972328186035,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1081.67,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473491"
+    },
+    {
+      "run_id": 4473492,
+      "result_id": 1068690,
+      "scenario": "AS48",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.2794270515441895,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 1021.67,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473492"
+    },
+    {
+      "run_id": 4473493,
+      "result_id": 1068690,
+      "scenario": "AS49",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": null,
+        "Voice Tone + Clarity": 3.7957873344421387,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 2247.5,
+        "Interruption Score": 2.5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473493"
+    },
+    {
+      "run_id": 4473494,
+      "result_id": 1068690,
+      "scenario": "AS50",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.365262985229492,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 697.14,
+        "Interruption Score": 4.38,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473494"
+    },
+    {
+      "run_id": 4473495,
+      "result_id": 1068690,
+      "scenario": "AS51",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.0311784744262695,
+        "Transcription Accuracy": 2.99,
+        "Latency (in ms)": 694,
+        "Interruption Score": 3.12,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473495"
+    },
+    {
+      "run_id": 4473496,
+      "result_id": 1068690,
+      "scenario": "AS52",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.327724933624268,
+        "Transcription Accuracy": 4.995,
+        "Latency (in ms)": 1112.86,
+        "Interruption Score": 4.38,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473496"
+    },
+    {
+      "run_id": 4473497,
+      "result_id": 1068690,
+      "scenario": "AS53",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.365022659301758,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 902.86,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473497"
+    },
+    {
+      "run_id": 4473498,
+      "result_id": 1068690,
+      "scenario": "AS54",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.272010326385498,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 801.25,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473498"
+    },
+    {
+      "run_id": 4473499,
+      "result_id": 1068690,
+      "scenario": "AS55",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.320178031921387,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 831.43,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473499"
+    },
+    {
+      "run_id": 4473500,
+      "result_id": 1068690,
+      "scenario": "AS56",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.284286975860596,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 832.5,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473500"
+    },
+    {
+      "run_id": 4473501,
+      "result_id": 1068690,
+      "scenario": "AS57",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.343076229095459,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 980,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473501"
+    },
+    {
+      "run_id": 4473502,
+      "result_id": 1068690,
+      "scenario": "AS58",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.355997562408447,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 1088.75,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473502"
+    },
+    {
+      "run_id": 4473503,
+      "result_id": 1068690,
+      "scenario": "AS59",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.353374481201172,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 885,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068690?call_id=4473503"
+    },
+    {
+      "run_id": 4473504,
+      "result_id": 1068691,
+      "scenario": "MS60",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.368453502655029,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 823.33,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473504"
+    },
+    {
+      "run_id": 4473505,
+      "result_id": 1068691,
+      "scenario": "MS61",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.357854843139648,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 798.89,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473505"
+    },
+    {
+      "run_id": 4473506,
+      "result_id": 1068691,
+      "scenario": "MS62",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.340802192687988,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 748,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473506"
+    },
+    {
+      "run_id": 4473507,
+      "result_id": 1068691,
+      "scenario": "MS63",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.30223274230957,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 868.18,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473507"
+    },
+    {
+      "run_id": 4473508,
+      "result_id": 1068691,
+      "scenario": "MS64",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.378702163696289,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 1790,
+        "Interruption Score": 3.75,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473508"
+    },
+    {
+      "run_id": 4473509,
+      "result_id": 1068691,
+      "scenario": "MS65",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.337523937225342,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 885,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473509"
+    },
+    {
+      "run_id": 4473510,
+      "result_id": 1068691,
+      "scenario": "MS66",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.336965084075928,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 764,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473510"
+    },
+    {
+      "run_id": 4473511,
+      "result_id": 1068691,
+      "scenario": "MS67",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.230603218078613,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 847,
+        "Interruption Score": 4.55,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473511"
+    },
+    {
+      "run_id": 4473512,
+      "result_id": 1068691,
+      "scenario": "MS68",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.294400691986084,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 1092.73,
+        "Interruption Score": 4.17,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473512"
+    },
+    {
+      "run_id": 4473513,
+      "result_id": 1068691,
+      "scenario": "MS69",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.340305328369141,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 726,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473513"
+    },
+    {
+      "run_id": 4473514,
+      "result_id": 1068691,
+      "scenario": "MS70",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.347235679626465,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 902.5,
+        "Interruption Score": 4.17,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473514"
+    },
+    {
+      "run_id": 4473515,
+      "result_id": 1068691,
+      "scenario": "MS71",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.360119819641113,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 714,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473515"
+    },
+    {
+      "run_id": 4473516,
+      "result_id": 1068691,
+      "scenario": "MS72",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.367595195770264,
+        "Transcription Accuracy": 4.995,
+        "Latency (in ms)": 1001.25,
+        "Interruption Score": 4.44,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473516"
+    },
+    {
+      "run_id": 4473517,
+      "result_id": 1068691,
+      "scenario": "MS73",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.310247898101807,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 842,
+        "Interruption Score": 4.55,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473517"
+    },
+    {
+      "run_id": 4473518,
+      "result_id": 1068691,
+      "scenario": "MS74",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.3308329582214355,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 838,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473518"
+    },
+    {
+      "run_id": 4473519,
+      "result_id": 1068691,
+      "scenario": "MS75",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.3714599609375,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 740.91,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473519"
+    },
+    {
+      "run_id": 4473520,
+      "result_id": 1068691,
+      "scenario": "MS76",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.304983139038086,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 804.55,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473520"
+    },
+    {
+      "run_id": 4473521,
+      "result_id": 1068691,
+      "scenario": "MS77",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.307380676269531,
+        "Transcription Accuracy": 3.995,
+        "Latency (in ms)": 798,
+        "Interruption Score": 4,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473521"
+    },
+    {
+      "run_id": 4473522,
+      "result_id": 1068691,
+      "scenario": "MS78",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.349917411804199,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1150.77,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473522"
+    },
+    {
+      "run_id": 4473523,
+      "result_id": 1068691,
+      "scenario": "MS79",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": null,
+        "Voice Tone + Clarity": 4.149828910827637,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1375,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473523"
+    },
+    {
+      "run_id": 4473524,
+      "result_id": 1068691,
+      "scenario": "MS80",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.232883453369141,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 762.5,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473524"
+    },
+    {
+      "run_id": 4473525,
+      "result_id": 1068691,
+      "scenario": "MS81",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.3564772605896,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 858.33,
+        "Interruption Score": 4.58,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473525"
+    },
+    {
+      "run_id": 4473526,
+      "result_id": 1068691,
+      "scenario": "MS82",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.368899345397949,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 1131.67,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473526"
+    },
+    {
+      "run_id": 4473527,
+      "result_id": 1068691,
+      "scenario": "MS60",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.348918914794922,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 750,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473527"
+    },
+    {
+      "run_id": 4473528,
+      "result_id": 1068691,
+      "scenario": "MS61",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.317563056945801,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 782,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473528"
+    },
+    {
+      "run_id": 4473529,
+      "result_id": 1068691,
+      "scenario": "MS62",
+      "passed": false,
+      "metrics": {
+        "Tool Call Accuracy": 2.5,
+        "Voice Tone + Clarity": 4.347200870513916,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 799.09,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [
+        "Tool Call Accuracy"
+      ],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473529"
+    },
+    {
+      "run_id": 4473530,
+      "result_id": 1068691,
+      "scenario": "MS63",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.313764810562134,
+        "Transcription Accuracy": 3.9962,
+        "Latency (in ms)": 916.15,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473530"
+    },
+    {
+      "run_id": 4473531,
+      "result_id": 1068691,
+      "scenario": "MS64",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.331813335418701,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 780,
+        "Interruption Score": 2.5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473531"
+    },
+    {
+      "run_id": 4473532,
+      "result_id": 1068691,
+      "scenario": "MS65",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.324364185333252,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 890,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473532"
+    },
+    {
+      "run_id": 4473533,
+      "result_id": 1068691,
+      "scenario": "MS66",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.303200721740723,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 711.82,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473533"
+    },
+    {
+      "run_id": 4473534,
+      "result_id": 1068691,
+      "scenario": "MS67",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.365762710571289,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 818.18,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473534"
+    },
+    {
+      "run_id": 4473535,
+      "result_id": 1068691,
+      "scenario": "MS68",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.3146071434021,
+        "Transcription Accuracy": 3.995,
+        "Latency (in ms)": 882,
+        "Interruption Score": 4,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473535"
+    },
+    {
+      "run_id": 4473536,
+      "result_id": 1068691,
+      "scenario": "MS69",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.272627353668213,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 852.22,
+        "Interruption Score": 4.44,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473536"
+    },
+    {
+      "run_id": 4473537,
+      "result_id": 1068691,
+      "scenario": "MS70",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.298234939575195,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 930,
+        "Interruption Score": 4.5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473537"
+    },
+    {
+      "run_id": 4473538,
+      "result_id": 1068691,
+      "scenario": "MS71",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.365126132965088,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 763,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473538"
+    },
+    {
+      "run_id": 4473539,
+      "result_id": 1068691,
+      "scenario": "MS72",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.3778157234191895,
+        "Transcription Accuracy": 3.995,
+        "Latency (in ms)": 1123,
+        "Interruption Score": 4.5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473539"
+    },
+    {
+      "run_id": 4473540,
+      "result_id": 1068691,
+      "scenario": "MS73",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.3859381675720215,
+        "Transcription Accuracy": 4.9955,
+        "Latency (in ms)": 797.27,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473540"
+    },
+    {
+      "run_id": 4473541,
+      "result_id": 1068691,
+      "scenario": "MS74",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.313664436340332,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 827.27,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473541"
+    },
+    {
+      "run_id": 4473542,
+      "result_id": 1068691,
+      "scenario": "MS75",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.245474338531494,
+        "Transcription Accuracy": 3.9958,
+        "Latency (in ms)": 1070.91,
+        "Interruption Score": 4.17,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473542"
+    },
+    {
+      "run_id": 4473543,
+      "result_id": 1068691,
+      "scenario": "MS76",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.329892158508301,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 826,
+        "Interruption Score": 4.55,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473543"
+    },
+    {
+      "run_id": 4473544,
+      "result_id": 1068691,
+      "scenario": "MS77",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.285364866256714,
+        "Transcription Accuracy": 3.995,
+        "Latency (in ms)": 952,
+        "Interruption Score": 4.5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473544"
+    },
+    {
+      "run_id": 4473545,
+      "result_id": 1068691,
+      "scenario": "MS78",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.370392799377441,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 788.18,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473545"
+    },
+    {
+      "run_id": 4473546,
+      "result_id": 1068691,
+      "scenario": "MS79",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": null,
+        "Voice Tone + Clarity": 4.359830379486084,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1175,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473546"
+    },
+    {
+      "run_id": 4473547,
+      "result_id": 1068691,
+      "scenario": "MS80",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.296580791473389,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 945,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473547"
+    },
+    {
+      "run_id": 4473548,
+      "result_id": 1068691,
+      "scenario": "MS81",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.324069023132324,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 836.67,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473548"
+    },
+    {
+      "run_id": 4473549,
+      "result_id": 1068691,
+      "scenario": "MS82",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.374417781829834,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1094,
+        "Interruption Score": 4,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473549"
+    },
+    {
+      "run_id": 4473550,
+      "result_id": 1068691,
+      "scenario": "MS60",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.261254787445068,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 1213.33,
+        "Interruption Score": 3.75,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473550"
+    },
+    {
+      "run_id": 4473551,
+      "result_id": 1068691,
+      "scenario": "MS61",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.349837303161621,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 798,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473551"
+    },
+    {
+      "run_id": 4473552,
+      "result_id": 1068691,
+      "scenario": "MS62",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.340973377227783,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 843.33,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473552"
+    },
+    {
+      "run_id": 4473553,
+      "result_id": 1068691,
+      "scenario": "MS63",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.310241460800171,
+        "Transcription Accuracy": 3.9964,
+        "Latency (in ms)": 1226.43,
+        "Interruption Score": 4.29,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473553"
+    },
+    {
+      "run_id": 4473554,
+      "result_id": 1068691,
+      "scenario": "MS64",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.199042320251465,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 840,
+        "Interruption Score": 2.5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473554"
+    },
+    {
+      "run_id": 4473555,
+      "result_id": 1068691,
+      "scenario": "MS65",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.305153846740723,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 780,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473555"
+    },
+    {
+      "run_id": 4473556,
+      "result_id": 1068691,
+      "scenario": "MS66",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.30612325668335,
+        "Transcription Accuracy": 4.9958,
+        "Latency (in ms)": 739.17,
+        "Interruption Score": 4.58,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473556"
+    },
+    {
+      "run_id": 4473557,
+      "result_id": 1068691,
+      "scenario": "MS67",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.366515159606934,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 839.09,
+        "Interruption Score": 4.55,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473557"
+    },
+    {
+      "run_id": 4473558,
+      "result_id": 1068691,
+      "scenario": "MS68",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.359800815582275,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 860,
+        "Interruption Score": 4,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473558"
+    },
+    {
+      "run_id": 4473559,
+      "result_id": 1068691,
+      "scenario": "MS69",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.303272724151611,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 862,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473559"
+    },
+    {
+      "run_id": 4473560,
+      "result_id": 1068691,
+      "scenario": "MS70",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.338410377502441,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 895,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473560"
+    },
+    {
+      "run_id": 4473561,
+      "result_id": 1068691,
+      "scenario": "MS71",
+      "passed": false,
+      "metrics": {
+        "Tool Call Accuracy": 2.5,
+        "Voice Tone + Clarity": 4.317403793334961,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 946.92,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [
+        "Tool Call Accuracy"
+      ],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473561"
+    },
+    {
+      "run_id": 4473562,
+      "result_id": 1068691,
+      "scenario": "MS72",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.308726787567139,
+        "Transcription Accuracy": 3.995,
+        "Latency (in ms)": 1106.67,
+        "Interruption Score": 4.5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473562"
+    },
+    {
+      "run_id": 4473563,
+      "result_id": 1068691,
+      "scenario": "MS73",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.215442419052124,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 795,
+        "Interruption Score": 4.62,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473563"
+    },
+    {
+      "run_id": 4473564,
+      "result_id": 1068691,
+      "scenario": "MS74",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.334125995635986,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 1148,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473564"
+    },
+    {
+      "run_id": 4473565,
+      "result_id": 1068691,
+      "scenario": "MS75",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.38185977935791,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 763.33,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473565"
+    },
+    {
+      "run_id": 4473566,
+      "result_id": 1068691,
+      "scenario": "MS76",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.320823669433594,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 772.73,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473566"
+    },
+    {
+      "run_id": 4473567,
+      "result_id": 1068691,
+      "scenario": "MS77",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.310649394989014,
+        "Transcription Accuracy": 4,
+        "Latency (in ms)": 825.45,
+        "Interruption Score": 4.55,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473567"
+    },
+    {
+      "run_id": 4473568,
+      "result_id": 1068691,
+      "scenario": "MS78",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.36905574798584,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 840,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473568"
+    },
+    {
+      "run_id": 4473569,
+      "result_id": 1068691,
+      "scenario": "MS79",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": null,
+        "Voice Tone + Clarity": 4.38886022567749,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1360,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473569"
+    },
+    {
+      "run_id": 4473570,
+      "result_id": 1068691,
+      "scenario": "MS80",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.318309783935547,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 835,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473570"
+    },
+    {
+      "run_id": 4473571,
+      "result_id": 1068691,
+      "scenario": "MS81",
+      "passed": false,
+      "metrics": {
+        "Tool Call Accuracy": 0,
+        "Voice Tone + Clarity": 4.299505233764648,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 760,
+        "Interruption Score": 5,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [
+        "Tool Call Accuracy"
+      ],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473571"
+    },
+    {
+      "run_id": 4473572,
+      "result_id": 1068691,
+      "scenario": "MS82",
+      "passed": true,
+      "metrics": {
+        "Tool Call Accuracy": 5,
+        "Voice Tone + Clarity": 4.407348155975342,
+        "Transcription Accuracy": 5,
+        "Latency (in ms)": 1154,
+        "Interruption Score": 4,
+        "Infrastructure Issues": 5,
+        "Expected Outcome": 5
+      },
+      "failed_gates": [],
+      "url": "https://dashboard.cekura.ai/8197/results/1068691?call_id=4473572"
+    }
+  ]
+}

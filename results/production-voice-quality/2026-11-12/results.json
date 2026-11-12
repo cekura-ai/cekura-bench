@@ -119,10 +119,10 @@
     {
       "key": "latency",
       "metric_id": 276250,
-      "label": "Response latency",
+      "label": "Median turn latency",
       "kind": "ms",
       "family": "original",
-      "description": "Average time between the caller finishing a turn and the AI starting its response. Menus, handoffs, responses to caller interruptions, and unscripted test-agent idle check-ins are excluded."
+      "description": "Median time between the caller finishing a turn and the AI starting its response, across qualifying individual events. Menus, handoffs, responses to caller interruptions, and unscripted test-agent idle check-ins are excluded."
     },
     {
       "key": "stop",
@@ -173,7 +173,7 @@
       "description": "Whether the AI lets the caller speak and continues coherently after the caller interrupts. This scores turn-taking and recovery, not fulfillment of the new request."
     }
   ],
-  "aggregation": "Within each metric: average repetitions within eligible scenarios, average eligible scenarios within each number, then average eligible numbers equally within the provider. Composite is the weighted sum of twelve normalized metric scores. Latency is separate and is the mean of individual qualifying events. N/A is excluded from applicable denominators.",
+  "aggregation": "Within each metric: average repetitions within eligible scenarios, average eligible scenarios within each number, then average eligible numbers equally within the provider. Composite is the weighted sum of twelve normalized metric scores. Latency is separate and is the median of individual qualifying events. N/A is excluded from applicable denominators.",
   "providers": [
     {
       "provider": "Crescendo",
@@ -224,7 +224,7 @@
           "events": 0
         },
         "latency": {
-          "value": 2853.4666666666667,
+          "value": 2750.0,
           "normalized": null,
           "scored_calls": 135,
           "eligible_numbers": 3,
@@ -1669,7 +1669,7 @@
               "events": 0
             },
             "latency": {
-              "value": 3027.4025974025976,
+              "value": 2730.0,
               "normalized": null,
               "scored_calls": 45,
               "eligible_scenarios": 15,
@@ -3121,7 +3121,7 @@
               "events": 0
             },
             "latency": {
-              "value": 2432.0,
+              "value": 2430.0,
               "normalized": null,
               "scored_calls": 45,
               "eligible_scenarios": 15,
@@ -4386,7 +4386,7 @@
                 "relevance": 5,
                 "gibberish": 100.0,
                 "infrastructure": 100.0,
-                "latency": 1500.0,
+                "latency": 710.0,
                 "stop": null,
                 "organization": 5,
                 "style": 5,
@@ -4568,7 +4568,7 @@
               "events": 0
             },
             "latency": {
-              "value": 3103.013698630137,
+              "value": 3090.0,
               "normalized": null,
               "scored_calls": 45,
               "eligible_scenarios": 15,
@@ -4669,7 +4669,7 @@
           "events": 0
         },
         "latency": {
-          "value": 2310.1716738197424,
+          "value": 2260.0,
           "normalized": null,
           "scored_calls": 133,
           "eligible_numbers": 3,
@@ -4855,7 +4855,7 @@
                 "relevance": 5,
                 "gibberish": 100.0,
                 "infrastructure": 100.0,
-                "latency": 2570.0,
+                "latency": 2520.0,
                 "stop": null,
                 "organization": 5,
                 "style": 5,
@@ -6116,7 +6116,7 @@
               "events": 0
             },
             "latency": {
-              "value": 2460.8860759493673,
+              "value": 2440.0,
               "normalized": null,
               "scored_calls": 45,
               "eligible_scenarios": 15,
@@ -6302,7 +6302,7 @@
                 "relevance": 5,
                 "gibberish": 100.0,
                 "infrastructure": 100.0,
-                "latency": 2450.0,
+                "latency": 2260.0,
                 "stop": null,
                 "organization": 5,
                 "style": 5,
@@ -7563,7 +7563,7 @@
               "events": 0
             },
             "latency": {
-              "value": 2423.6708860759495,
+              "value": 2300.0,
               "normalized": null,
               "scored_calls": 45,
               "eligible_scenarios": 15,
@@ -9004,7 +9004,7 @@
               "events": 0
             },
             "latency": {
-              "value": 2031.8666666666666,
+              "value": 1990.0,
               "normalized": null,
               "scored_calls": 43,
               "eligible_scenarios": 15,
@@ -9105,7 +9105,7 @@
           "events": 0
         },
         "latency": {
-          "value": 1514.1777777777777,
+          "value": 1410.0,
           "normalized": null,
           "scored_calls": 132,
           "eligible_numbers": 3,
@@ -10541,7 +10541,7 @@
               "events": 0
             },
             "latency": {
-              "value": 1497.857142857143,
+              "value": 1410.0,
               "normalized": null,
               "scored_calls": 43,
               "eligible_scenarios": 15,
@@ -10727,7 +10727,7 @@
                 "relevance": 5,
                 "gibberish": 100.0,
                 "infrastructure": 100.0,
-                "latency": 1476.6666666666667,
+                "latency": 1350.0,
                 "stop": 500.0,
                 "organization": 4,
                 "style": 5,
@@ -11027,7 +11027,7 @@
                 "relevance": 5,
                 "gibberish": 100.0,
                 "infrastructure": 100.0,
-                "latency": 1783.3333333333333,
+                "latency": 2090.0,
                 "stop": 810.0,
                 "organization": 5,
                 "style": 5,
@@ -11983,7 +11983,7 @@
               "events": 0
             },
             "latency": {
-              "value": 1822.5641025641025,
+              "value": 1870.0,
               "normalized": null,
               "scored_calls": 45,
               "eligible_scenarios": 15,
@@ -13427,7 +13427,7 @@
               "events": 0
             },
             "latency": {
-              "value": 1216.6233766233765,
+              "value": 1160.0,
               "normalized": null,
               "scored_calls": 44,
               "eligible_scenarios": 15,
@@ -13528,7 +13528,7 @@
           "events": 0
         },
         "latency": {
-          "value": 3399.102564102564,
+          "value": 3095.0,
           "normalized": null,
           "scored_calls": 90,
           "eligible_numbers": 2,
@@ -14976,7 +14976,7 @@
               "events": 0
             },
             "latency": {
-              "value": 4138.974358974359,
+              "value": 3880.0,
               "normalized": null,
               "scored_calls": 45,
               "eligible_scenarios": 15,
@@ -16424,7 +16424,7 @@
               "events": 0
             },
             "latency": {
-              "value": 2659.230769230769,
+              "value": 2695.0,
               "normalized": null,
               "scored_calls": 45,
               "eligible_scenarios": 15,
@@ -16525,7 +16525,7 @@
           "events": 0
         },
         "latency": {
-          "value": 1901.9354838709678,
+          "value": 1940.0,
           "normalized": null,
           "scored_calls": 125,
           "eligible_numbers": 3,
@@ -17953,7 +17953,7 @@
               "events": 0
             },
             "latency": {
-              "value": 1702.741935483871,
+              "value": 1690.0,
               "normalized": null,
               "scored_calls": 37,
               "eligible_scenarios": 13,
@@ -19402,7 +19402,7 @@
               "events": 0
             },
             "latency": {
-              "value": 1800.5128205128206,
+              "value": 1860.0,
               "normalized": null,
               "scored_calls": 45,
               "eligible_scenarios": 15,
@@ -20843,7 +20843,7 @@
               "events": 0
             },
             "latency": {
-              "value": 2165.064935064935,
+              "value": 2150.0,
               "normalized": null,
               "scored_calls": 43,
               "eligible_scenarios": 15,
@@ -20944,7 +20944,7 @@
           "events": 0
         },
         "latency": {
-          "value": 2283.5625,
+          "value": 2180.0,
           "normalized": null,
           "scored_calls": 90,
           "eligible_numbers": 2,
@@ -21431,7 +21431,7 @@
                 "relevance": 5,
                 "gibberish": 100.0,
                 "infrastructure": 100.0,
-                "latency": 2623.3333333333335,
+                "latency": 2570.0,
                 "stop": 460.0,
                 "organization": 5,
                 "style": 5,
@@ -22395,7 +22395,7 @@
               "events": 0
             },
             "latency": {
-              "value": 1913.3333333333333,
+              "value": 1860.0,
               "normalized": null,
               "scored_calls": 45,
               "eligible_scenarios": 15,
@@ -23364,7 +23364,7 @@
                 "relevance": 5,
                 "gibberish": 100.0,
                 "infrastructure": 100.0,
-                "latency": 3283.3333333333335,
+                "latency": 2890.0,
                 "stop": null,
                 "organization": 5,
                 "style": 5,
@@ -23846,7 +23846,7 @@
               "events": 0
             },
             "latency": {
-              "value": 2663.1645569620255,
+              "value": 2630.0,
               "normalized": null,
               "scored_calls": 45,
               "eligible_scenarios": 15,
@@ -23947,7 +23947,7 @@
           "events": 0
         },
         "latency": {
-          "value": 2754.8076923076924,
+          "value": 2445.0,
           "normalized": null,
           "scored_calls": 89,
           "eligible_numbers": 2,
@@ -24974,7 +24974,7 @@
                 "relevance": 5,
                 "gibberish": 100.0,
                 "infrastructure": 100.0,
-                "latency": 2316.6666666666665,
+                "latency": 2060.0,
                 "stop": null,
                 "organization": 5,
                 "style": 5,
@@ -25065,7 +25065,7 @@
                 "relevance": 5,
                 "gibberish": 100.0,
                 "infrastructure": 100.0,
-                "latency": 2456.6666666666665,
+                "latency": 2130.0,
                 "stop": null,
                 "organization": 5,
                 "style": 5,
@@ -25397,7 +25397,7 @@
               "events": 0
             },
             "latency": {
-              "value": 2387.0886075949365,
+              "value": 2320.0,
               "normalized": null,
               "scored_calls": 44,
               "eligible_scenarios": 15,
@@ -26842,7 +26842,7 @@
               "events": 0
             },
             "latency": {
-              "value": 3132.0779220779223,
+              "value": 2710.0,
               "normalized": null,
               "scored_calls": 45,
               "eligible_scenarios": 15,
@@ -26943,7 +26943,7 @@
           "events": 0
         },
         "latency": {
-          "value": 2566.6225165562914,
+          "value": 2390.0,
           "normalized": null,
           "scored_calls": 89,
           "eligible_numbers": 2,
@@ -28383,7 +28383,7 @@
               "events": 0
             },
             "latency": {
-              "value": 3070.1369863013697,
+              "value": 2850.0,
               "normalized": null,
               "scored_calls": 44,
               "eligible_scenarios": 15,
@@ -29831,7 +29831,7 @@
               "events": 0
             },
             "latency": {
-              "value": 2095.3846153846152,
+              "value": 1990.0,
               "normalized": null,
               "scored_calls": 45,
               "eligible_scenarios": 15,
@@ -29932,7 +29932,7 @@
           "events": 0
         },
         "latency": {
-          "value": 2428.157894736842,
+          "value": 2260.0,
           "normalized": null,
           "scored_calls": 45,
           "eligible_numbers": 1,
@@ -30418,7 +30418,7 @@
                 "relevance": 5,
                 "gibberish": 100.0,
                 "infrastructure": 100.0,
-                "latency": 2410.0,
+                "latency": 2530.0,
                 "stop": null,
                 "organization": 5,
                 "style": 5,
@@ -31374,7 +31374,7 @@
               "events": 0
             },
             "latency": {
-              "value": 2428.157894736842,
+              "value": 2260.0,
               "normalized": null,
               "scored_calls": 45,
               "eligible_scenarios": 15,
@@ -31475,7 +31475,7 @@
           "events": 0
         },
         "latency": {
-          "value": 3571.6666666666665,
+          "value": 3465.0,
           "normalized": null,
           "scored_calls": 45,
           "eligible_numbers": 1,
@@ -32923,7 +32923,7 @@
               "events": 0
             },
             "latency": {
-              "value": 3571.6666666666665,
+              "value": 3465.0,
               "normalized": null,
               "scored_calls": 45,
               "eligible_scenarios": 15,
@@ -33024,7 +33024,7 @@
           "events": 0
         },
         "latency": {
-          "value": 2903.239436619718,
+          "value": 2780.0,
           "normalized": null,
           "scored_calls": 40,
           "eligible_numbers": 1,
@@ -33680,7 +33680,7 @@
                 "relevance": 5,
                 "gibberish": 100.0,
                 "infrastructure": 100.0,
-                "latency": 2970.0,
+                "latency": 2980.0,
                 "stop": null,
                 "organization": 5,
                 "style": 5,
@@ -34456,7 +34456,7 @@
               "events": 0
             },
             "latency": {
-              "value": 2903.239436619718,
+              "value": 2780.0,
               "normalized": null,
               "scored_calls": 40,
               "eligible_scenarios": 14,
@@ -34557,7 +34557,7 @@
           "events": 0
         },
         "latency": {
-          "value": 2894.266666666667,
+          "value": 2910.0,
           "normalized": null,
           "scored_calls": 43,
           "eligible_numbers": 1,
@@ -34741,7 +34741,7 @@
                 "relevance": 5,
                 "gibberish": 100.0,
                 "infrastructure": 100.0,
-                "latency": 1843.3333333333333,
+                "latency": 1780.0,
                 "stop": null,
                 "organization": 5,
                 "style": 5,
@@ -35336,7 +35336,7 @@
                 "relevance": 5,
                 "gibberish": 100.0,
                 "infrastructure": 100.0,
-                "latency": 2793.3333333333335,
+                "latency": 2770.0,
                 "stop": 1020.0,
                 "organization": 5,
                 "style": 5,
@@ -35999,7 +35999,7 @@
               "events": 0
             },
             "latency": {
-              "value": 2894.266666666667,
+              "value": 2910.0,
               "normalized": null,
               "scored_calls": 43,
               "eligible_scenarios": 15,
@@ -36100,7 +36100,7 @@
           "events": 0
         },
         "latency": {
-          "value": 2688.4210526315787,
+          "value": 2595.0,
           "normalized": null,
           "scored_calls": 45,
           "eligible_numbers": 1,
@@ -37540,7 +37540,7 @@
               "events": 0
             },
             "latency": {
-              "value": 2688.4210526315787,
+              "value": 2595.0,
               "normalized": null,
               "scored_calls": 45,
               "eligible_scenarios": 15,
@@ -37641,7 +37641,7 @@
           "events": 0
         },
         "latency": {
-          "value": 3386.376811594203,
+          "value": 3210.0,
           "normalized": null,
           "scored_calls": 130,
           "eligible_numbers": 3,
@@ -38599,7 +38599,7 @@
                 "relevance": 5,
                 "gibberish": 100.0,
                 "infrastructure": 100.0,
-                "latency": 2373.3333333333335,
+                "latency": 2720.0,
                 "stop": null,
                 "organization": 5,
                 "style": 5,
@@ -38719,7 +38719,7 @@
                 "relevance": 5,
                 "gibberish": 100.0,
                 "infrastructure": 100.0,
-                "latency": 2323.3333333333335,
+                "latency": 2000.0,
                 "stop": null,
                 "organization": 5,
                 "style": 5,
@@ -38839,7 +38839,7 @@
                 "relevance": 5,
                 "gibberish": 100.0,
                 "infrastructure": 100.0,
-                "latency": 2033.3333333333333,
+                "latency": 2200.0,
                 "stop": null,
                 "organization": 5,
                 "style": 5,
@@ -39081,7 +39081,7 @@
               "events": 0
             },
             "latency": {
-              "value": 3104.848484848485,
+              "value": 2800.0,
               "normalized": null,
               "scored_calls": 41,
               "eligible_scenarios": 15,
@@ -40525,7 +40525,7 @@
               "events": 0
             },
             "latency": {
-              "value": 3292.2535211267605,
+              "value": 3180.0,
               "normalized": null,
               "scored_calls": 44,
               "eligible_scenarios": 15,
@@ -41967,7 +41967,7 @@
               "events": 0
             },
             "latency": {
-              "value": 3747.285714285714,
+              "value": 3590.0,
               "normalized": null,
               "scored_calls": 45,
               "eligible_scenarios": 15,
@@ -42068,7 +42068,7 @@
           "events": 0
         },
         "latency": {
-          "value": 2435.5072463768115,
+          "value": 2360.0,
           "normalized": null,
           "scored_calls": 44,
           "eligible_numbers": 1,
@@ -43512,7 +43512,7 @@
               "events": 0
             },
             "latency": {
-              "value": 2435.5072463768115,
+              "value": 2360.0,
               "normalized": null,
               "scored_calls": 44,
               "eligible_scenarios": 15,
@@ -43613,7 +43613,7 @@
           "events": 0
         },
         "latency": {
-          "value": 1473.435582822086,
+          "value": 1420.0,
           "normalized": null,
           "scored_calls": 90,
           "eligible_numbers": 2,
@@ -43799,7 +43799,7 @@
                 "relevance": 1.5,
                 "gibberish": 100.0,
                 "infrastructure": 100.0,
-                "latency": 1313.3333333333333,
+                "latency": 1340.0,
                 "stop": 400.0,
                 "organization": 5,
                 "style": 5,
@@ -44491,7 +44491,7 @@
                 "relevance": 0,
                 "gibberish": 100.0,
                 "infrastructure": 100.0,
-                "latency": 1186.6666666666667,
+                "latency": 1190.0,
                 "stop": null,
                 "organization": 5,
                 "style": 4,
@@ -45061,7 +45061,7 @@
               "events": 0
             },
             "latency": {
-              "value": 1222.4418604651162,
+              "value": 1200.0,
               "normalized": null,
               "scored_calls": 45,
               "eligible_scenarios": 15,
@@ -45247,7 +45247,7 @@
                 "relevance": 1,
                 "gibberish": 100.0,
                 "infrastructure": 100.0,
-                "latency": 1600.0,
+                "latency": 1610.0,
                 "stop": null,
                 "organization": 5,
                 "style": 5,
@@ -45846,7 +45846,7 @@
                 "relevance": 1,
                 "gibberish": 100.0,
                 "infrastructure": 100.0,
-                "latency": 1823.3333333333333,
+                "latency": 1850.0,
                 "stop": null,
                 "organization": 5,
                 "style": 5,
@@ -46504,7 +46504,7 @@
               "events": 0
             },
             "latency": {
-              "value": 1753.7662337662337,
+              "value": 1710.0,
               "normalized": null,
               "scored_calls": 45,
               "eligible_scenarios": 15,
@@ -46557,11 +46557,12 @@
       ]
     }
   ],
-  "report_sha256": "148fd2b5b5433a55ff6a58a4e17c036547d58e45bdeded14bc4ee33d17d4bc43",
+  "report_sha256": "903ac553c688b868e00e4bfb40067e396758b101c2742ae10fcb434edc5ba4fb",
   "audio_model": {
     "name": "NISQA discontinuity",
     "checkpoint_sha256": "7ec4cf937514dd3f8860b21e66fabd8ca87a168572675ef8d979c4c4ad2e805c",
     "scored_calls": 1342,
     "minimum_ai_speech_seconds": 5
-  }
+  },
+  "latency_statistic": "median of qualifying individual turn events"
 }

@@ -37,7 +37,9 @@ def validate(path=P/'results.json'):
         for m in d['metrics']:
             key=m['key']; a=p['metrics'][key]
             value=equal_numbers(p['numbers'],key)
-            if m['kind']=='ms': value=mean([v for n in p['numbers'] for c in n['calls'] for v in c['events_ms'][key]])
+            if m['kind']=='ms':
+                ev=[v for n in p['numbers'] for c in n['calls'] for v in c['events_ms'][key]]
+                value=(statistics.median(ev) if ev else None) if key=='latency' else mean(ev)
             close(value,a['value'])
             norm=None if key=='latency' else value*(20 if m['kind']=='score' else 1)
             if key=='stop':

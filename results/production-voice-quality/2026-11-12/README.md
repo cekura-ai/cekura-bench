@@ -38,8 +38,8 @@ eligible scenarios within each number, and eligible numbers equally within
 each provider. The composite is the weighted sum of the twelve normalized
 metrics. It is a composite score, not Elo.
 
-**Latency is separate:** the descriptive latency and stop-time values are means
-of individual qualifying events. Navigation, human handoffs, caller-initiated
+**Latency is separate:** response latency is the median of individual qualifying turn events.
+Descriptive stop time remains the mean of individual qualifying interruptions. Navigation, human handoffs, caller-initiated
 interruptions (for response latency), and testing-agent idle check-ins are
 excluded. Quality scores use fixed anchors rather than field min-max scaling.
 

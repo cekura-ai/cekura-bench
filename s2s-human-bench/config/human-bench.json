@@ -366,6 +366,19 @@
       "vendor": "Phonic",
       "siteId": "phonic-1",
       "agentId": 26898
+    },
+    {
+      "key": "higgs-realtime",
+      "name": "Higgs Realtime",
+      "vendor": "Boson AI",
+      "siteId": "higgs-realtime",
+      "agentId": 27253,
+      "details": {
+        "modelId": "higgs-realtime",
+        "voice": "default",
+        "setting": "Server VAD: threshold 0.35, 1,000 ms silence, 300 ms prefix padding",
+        "sampleRateHz": 24000
+      }
     }
   ],
   "suites": [

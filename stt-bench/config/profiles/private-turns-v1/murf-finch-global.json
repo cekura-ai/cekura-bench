@@ -20,12 +20,12 @@
   "model_source": "https://murf.ai/api/docs/speech-to-text/streaming.md",
   "checked_on": "2026-11-03",
   "pricing": {
-    "usd_per_minute": 0.004,
-    "usd_per_hour": 0.24,
+    "usd_per_minute": 0.002,
+    "usd_per_hour": 0.12,
     "source": "https://murf.ai/api/docs/speech-to-text/streaming.md",
     "status": "published_list_rate",
-    "checked_on": "2026-11-03",
-    "billing_basis": "submitted audio seconds; Murf publishes $0.24 per hour"
+    "checked_on": "2026-11-13",
+    "billing_basis": "submitted audio seconds; Murf publishes $0.12 per hour (was $0.24 when the published runs were made)"
   },
   "protocol_caveat": "Beta. Murf sends an informational SessionStarted event but no model echo, so the benchmark sends AudioConfig before binary audio. Although the documentation says a turn ends only on Finalize or CloseStream, the live service also ends turns on silence (trigger vad), sometimes just before the benchmark's Finalize, and then labels its reply to Finalize vad as well. The first final after Finalize that leaves no provisional text is therefore the benchmark acknowledgment, whatever its trigger; CloseStream must then close the session with code 1000.",
   "measurement_profile": "private-turns-controlled-v1",

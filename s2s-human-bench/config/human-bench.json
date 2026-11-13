@@ -405,6 +405,19 @@
         "setting": "Server VAD: threshold 0.35, 1,000 ms silence, 300 ms prefix padding",
         "sampleRateHz": 24000
       }
+    },
+    {
+      "key": "rime-prism",
+      "name": "Rime Prism",
+      "vendor": "Rime",
+      "siteId": "rime-prism",
+      "agentId": 27254,
+      "details": {
+        "modelId": "prism",
+        "voice": "astra",
+        "setting": "Provider turn detection defaults",
+        "sampleRateHz": 16000
+      }
     }
   ],
   "suites": [

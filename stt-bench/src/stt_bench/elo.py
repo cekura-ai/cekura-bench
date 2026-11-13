@@ -1,7 +1,7 @@
 """STT benchmark ELO: one rating from head-to-head comparisons on every clip (method in STT_ELO.md).
 
 Measures and weights: Ocular turns WER 10, Pipecat WER 10, semantic WER 10, phone 12, callcenter 10, babble 8,
-tv 5, reverb 5, short replies (<5 words) 10, entities 20.  A measure with no data is dropped and the rest renormalised.
+tv 5, reverb 5, short replies (<5 words) 10, entities 20.  A measure with no data is dropped and the rest renormalized.
 Per clip: score = 100 - WER on clips with >= 5 reference words; draw if |gap| <= 5; matches weighted by word count;
 a failed clip loses to a valid one; clips invalid for our-side reasons (pacing) are missing, not failures.
 Short replies: score = -errors, no margin.  Entities: score = entities captured exactly, no margin.

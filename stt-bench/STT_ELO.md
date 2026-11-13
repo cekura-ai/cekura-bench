@@ -1,7 +1,7 @@
 # STT benchmark ELO
 
 One rating that combines clean accuracy, noise conditions, short replies and entities, fitted the same way as the
-Speech-to-Speech Real Human Calls rating. Every WER number on the page stays; the ELO adds one ranking.
+Speech-to-Speech Real Human Calls rating. Every published WER figure stays as it is; the ELO adds one ranking on top.
 
 ## Measures and weights
 | Measure | Weight | Clips |
@@ -9,15 +9,15 @@ Speech-to-Speech Real Human Calls rating. Every WER number on the page stays; th
 | WER, Ocular private turns (clean) | 10% | 206 turns |
 | WER, Pipecat public set | 10% | 1,000 clips |
 | Semantic WER (Pipecat judge prompt, verbatim) | 10% | Ocular turns |
-| Phone line (G.711) | 12% | 206 turns |
-| Call center noise | 10% | 206 turns |
-| Babble noise (5 dB) | 8% | 206 turns |
-| TV noise (5 dB) | 5% | 206 turns |
-| Reverb | 5% | 206 turns |
+| Phone line (G.711, 8 kHz) | 12% | 206 turns |
+| Call-center noise (chatter 10 dB below speech, G.711) | 10% | 206 turns |
+| Babble noise (6 voices, 5 dB below speech) | 8% | 206 turns |
+| TV noise (5 dB below speech) | 5% | 206 turns |
+| Reverb (0.6 s) | 5% | 206 turns |
 | Short replies (< 5 words), error count | 10% | Ocular turns |
 | Entities captured exactly | 20% | Ocular turns |
 
-A measure with no data for any model is dropped and the rest renormalised.
+A measure with no data for any model is dropped and the rest renormalized.
 
 ## Per-clip rules
 - Clip score = 100 − WER, on clips with 5+ reference words. Two models draw if their scores are within 5 points.

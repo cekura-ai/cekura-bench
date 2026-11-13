@@ -6,7 +6,8 @@ Per clip: score = 100 - WER on clips with >= 5 reference words; draw if |gap| <=
 a failed clip loses to a valid one; clips invalid for our-side reasons (pacing) are missing, not failures.
 Short replies: score = -errors, no margin.  Entities: score = entities captured exactly, no margin.
 Each measure's matches are scaled to its weight.  Bradley-Terry fit, ELO = 1000 + 400 log10(p).
-Bootstrap 95% ranges, resampling conversations (shared across measures) and Pipecat clips; rank range = LMArena rule (1 + number of models whose lower bound is above my upper bound).
+Bootstrap 95% ranges, resampling conversations (shared across measures) and Pipecat clips; a model's rank is
+1 + the number of models whose lower bound is above its upper bound.
 Usage: python -m stt_bench.elo sources.json out.json   (env: STT_ELO_JUDGMENTS, DRAWS)
 """
 import json, math, os, random, re, sys, collections, statistics

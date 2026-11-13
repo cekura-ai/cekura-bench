@@ -47,6 +47,8 @@ class Model:
     model: str
     voice: str
     rate: int = DEFAULT_RATE    # a model that emits only one PCM rate names it here
+    # Adapter options this row is run with (key, value); recorded in every cell.
+    options: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -65,6 +67,10 @@ class ProviderEntry:
         """The lineup's sample rate for ``model``; the harness default for a model outside the lineup."""
         return next((m.rate for m in self.models if m.model == model), DEFAULT_RATE)
 
+    def options_for(self, model: str) -> tuple[tuple[str, str], ...]:
+        """The lineup's adapter options for ``model``; none for a model outside the lineup."""
+        return next((m.options for m in self.models if m.model == model), ())
+
     def voice_for(self, model: str) -> str:
         """The lineup's voice for ``model``; the default model's voice for a model outside the lineup."""
         return next((m.voice for m in self.models if m.model == model), self.models[0].voice)
@@ -74,6 +80,8 @@ class ProviderEntry:
 # model string, so there the voice is the model.
 SKYLAR = "db6b0ed5-d5d3-463d-ae85-518a07d3c2b4"       # Cartesia
 RACHEL = "21m00Tcm4TlvDq8ikWAM"                       # ElevenLabs
+# ElevenLabs' text normalizer (numbers, abbreviations) for v4, on at ElevenLabs' recommendation.
+V4_NORMALIZATION = ("apply_text_normalization", "on")
 EVERLY = "vjFyp2BcCyTlUmYb"     # Gradium, its first choice of its recommended voices
 ASTRA = "astra"                                      # Rime, female US English on Coda and Mist v3
 SARAH = "933563129e564b19a115bedd57b7406a"              # Fish Official, female US English
@@ -100,9 +108,10 @@ PROVIDERS: dict[str, ProviderEntry] = {
     ),
     "elevenlabs-dialogue-multi": ProviderEntry(
         "elevenlabs-dialogue-multi", ElevenLabsDialogueMultiAdapter, "ELEVENLABS_API_KEY",
-        (Model("eleven_v4_turbo", RACHEL), Model("eleven_v4", RACHEL)),
+        (Model("eleven_v4_turbo", RACHEL, options=(V4_NORMALIZATION,)), Model("eleven_v4", RACHEL, options=(V4_NORMALIZATION,))),
         notes="multi-context text-to-dialogue websocket (v4 is served only there); text in pieces per context; "
-              "close_context flushes, so the cancel is measured, not assumed",
+              "close_context flushes, so the cancel is measured, not assumed; text normalization on, as ElevenLabs "
+              "recommends for v4",
     ),
     "deepgram": ProviderEntry(
         "deepgram", DeepgramSpeakAdapter, "DEEPGRAM_API_KEY",

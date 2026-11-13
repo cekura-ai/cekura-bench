@@ -25,7 +25,7 @@ replaces the base run's.
 | Cartesia Sonic 3.6 and 3.5, Deepgram Aura-2 and Flux, ElevenLabs Flash v2.5, Smallest Lightning v3.1 Pro | `campaign-0928` | `campaign-1004` |
 | ElevenLabs v3 Conversational, Gemini 3.8 Flash, 3.8 Flash-Lite and 3.1 Flash, GPT-4o mini TTS, Qwen3-TTS | `campaign-0928-fix` | `campaign-1004` |
 | Grok TTS | `campaign-0928-fix` | `campaign-1004-xai` |
-| ElevenLabs v4 Turbo and v4 | `campaign-0928-v4` | `campaign-1004` |
+| ElevenLabs v4 Turbo and v4 (text normalization on) | `campaign-1110-elevenlabs-norm` | none |
 | Soniox TTS RT v2 | `campaign-1004-soniox` | none |
 | Rime Coda and Mist v3, Fish Audio S2.1-Pro | `campaign-1013` | none |
 | Microsoft MAI-Voice-2.1 and MAI-Voice-2.1-Flash | `campaign-1013-azure` | none |
@@ -45,4 +45,7 @@ its new checkpoint rolled out, with the voice Sarah; it replaces the
 ten voices it recommended, in place of the `campaign-1013` Harper run. The
 sandbox's OpenAI key had been rejected for both campaigns, so their Whisper
 transcripts were scored offline with `bin/score-tts.py`.
+`campaign-1110-elevenlabs-norm` re-ran ElevenLabs v4 Turbo and v4 with
+`apply_text_normalization=on`, as ElevenLabs recommends for v4; it replaces their
+`campaign-0928-v4` runs and their `campaign-1004` amendment.
 Each summary names its runs in `run` and `amendments`.

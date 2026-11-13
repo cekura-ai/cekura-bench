@@ -33,7 +33,11 @@ class ElevenLabsDialogueMultiAdapter(WebSocketAdapter):
 
     @property
     def url(self) -> str:  # type: ignore[override]
-        return f"{self.base}?model_id={self.config.model}&output_format=pcm_{self.config.sample_rate}"
+        url = f"{self.base}?model_id={self.config.model}&output_format=pcm_{self.config.sample_rate}"
+        # Option ``apply_text_normalization`` (auto/on/off): ElevenLabs' number and abbreviation normalizer.
+        if normalization := self.config.option("apply_text_normalization"):
+            url += f"&apply_text_normalization={normalization}"
+        return url
 
     def _headers(self) -> dict[str, str]:
         return {"xi-api-key": self.api_key}

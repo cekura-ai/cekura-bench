@@ -11,13 +11,14 @@ from collections.abc import Callable
 from typing import Any
 
 from turn_taking_bench import assets, s2s
-from turn_taking_bench.adapters import cascade_flux, rms_vad, smart_turn_v3
+from turn_taking_bench.adapters import cascade_flux, reson8_turns, rms_vad, smart_turn_v3
 from turn_taking_bench.model import ModelFactory, TurnModel
 
 MODELS: dict[str, tuple[ModelFactory, dict[str, Any]]] = {
     "rms_vad": (rms_vad.build, rms_vad.DEFAULT_CONFIG),
     "smart_turn_v3": (smart_turn_v3.build, smart_turn_v3.DEFAULT_CONFIG),
     "cascade_flux": (cascade_flux.build, cascade_flux.DEFAULT_CONFIG),
+    "reson8_turns": (reson8_turns.build, reson8_turns.DEFAULT_CONFIG),
     # Speech-to-speech providers behind the service bench's adapters
     # (turn_taking_bench/s2s): one live session per conversation, streamed in real time.
     **{f"{s2s.MODEL_PREFIX}{provider}": (s2s.build, s2s.default_config(provider)) for provider in s2s.S2S_PROVIDERS},
@@ -30,6 +31,7 @@ ASSETS: dict[str, list[assets.Asset]] = {
 PROVENANCE: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "smart_turn_v3": smart_turn_v3.provenance,
     "cascade_flux": cascade_flux.provenance,
+    "reson8_turns": reson8_turns.provenance,
     **{f"{s2s.MODEL_PREFIX}{provider}": s2s.provenance for provider in s2s.S2S_PROVIDERS},
 }
 

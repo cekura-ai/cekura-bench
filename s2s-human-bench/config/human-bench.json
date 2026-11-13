@@ -368,6 +368,32 @@
       "agentId": 26898
     },
     {
+      "key": "eleven-realtime-v1-max",
+      "name": "Eleven Realtime v1 Max",
+      "vendor": "ElevenLabs",
+      "siteId": "eleven-realtime-v1-max",
+      "agentId": 27121,
+      "details": {
+        "modelId": "eleven_realtime_v1_max",
+        "voice": "brian",
+        "setting": "No reasoning setting",
+        "sampleRateHz": 24000
+      }
+    },
+    {
+      "key": "eleven-realtime-v1-mini",
+      "name": "Eleven Realtime v1 Mini",
+      "vendor": "ElevenLabs",
+      "siteId": "eleven-realtime-v1-mini",
+      "agentId": 27122,
+      "details": {
+        "modelId": "eleven_realtime_v1_mini",
+        "voice": "brian",
+        "setting": "No reasoning setting",
+        "sampleRateHz": 24000
+      }
+    },
+    {
       "key": "higgs-realtime",
       "name": "Higgs Realtime",
       "vendor": "Boson AI",

@@ -65,7 +65,7 @@ def consolidate(roots,out):
         evidence=out/'evidence'/model;evidence.mkdir(parents=True);(evidence/'raw').mkdir();(evidence/'attempts').mkdir();(evidence/'metadata').mkdir()
         for name in ('manifest.json','draft.json','review.json'):os.link(Path(plan['manifest']).parent/name,evidence/name)
         config=dict(plan['configs'][model])
-        if model=='elevenlabs-scribe-v2-realtime':config['transcript_reconstruction']='elevenlabs-committed-segments-v3'
+        if model in ('elevenlabs-scribe-v2-realtime','elevenlabs-scribe-v3-live'):config['transcript_reconstruction']='elevenlabs-committed-segments-v3'
         if model in ('speechmatics-enhanced','speechmatics-standard'):config['transcript_reconstruction']='speechmatics-empty-silence-ranges-v2'
         provenance=[];copied=set()
         for cid,item in first[model].items():

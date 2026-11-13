@@ -19,3 +19,16 @@ def test_bradley_terry_orders_by_wins():
 def test_pipecat_counting_vendored():
     assert elo.count_reference_words("I'm here at 7:30, it's fine.") == 8  # I am, here, at, 7:30, it is, fine
     assert elo.error_weight({'type': 'deletion', 'reference': 'the big dog', 'hypothesis': None}) == 3
+
+
+def test_bootstrap_resamples_whole_conversations_across_measures():
+    import random
+    assert elo.unit('c003-s1-seg0008') == 'c003'
+    assert elo.unit('pipecat-0042') == 'pipecat-0042'
+    turns = {f'c00{i}-s1-seg000{j}': {'a': 90.0, 'b': 80.0} for i in (1, 2) for j in (1, 2)}
+    M = {'ocular': (turns, {}), 'phone': (turns, {}), 'pipecat': ({'p1': {}, 'p2': {}}, {})}
+    s = elo.bootstrap_sample(M, random.Random(1))
+    assert s['ocular'] == s['phone']  # one conversation draw shared by every measure built on it
+    assert len(s['ocular']) == 4 and len({c.split('-')[0] for c in s['ocular']}) <= 2
+    assert all(c.split('-')[0] in {x.split('-')[0] for x in s['ocular']} for c in s['ocular'])
+    assert len(s['pipecat']) == 2

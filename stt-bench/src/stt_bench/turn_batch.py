@@ -171,7 +171,7 @@ def report(root):
             meta=json.loads((source/'run.json').read_text())
             expected=dict(meta['config'])
             reconstruction=plan['configs'][model].get('transcript_reconstruction')
-            if reconstruction in ('elevenlabs-committed-segments-v2','speechmatics-empty-silence-ranges-v2'):
+            if reconstruction in ('elevenlabs-committed-segments-v2','elevenlabs-committed-segments-v3','speechmatics-empty-silence-ranges-v2'):
                 expected['transcript_reconstruction']=reconstruction
             require(expected==plan['configs'][model] and meta['manifest_sha256']==plan['manifest_sha256'],
                     'Imported smoke changed more than the versioned transcript reconstruction')

@@ -23,13 +23,16 @@ A measure with no data for any model is dropped and the rest renormalized.
 - Clip score = 100 − WER, on clips with 5+ reference words. Two models draw if their scores are within 5 points.
 - Matches are weighted by the clip's word count; each measure's matches are scaled to its weight.
 - A failed clip (model error or timeout) loses to a valid one. Clips that failed for our own reasons (sender pacing,
-  provider concurrency limits) are missing, not losses.
+  provider concurrency limits, or rows flagged `our_side_failure` after checking the raw provider events) are missing,
+  not losses. Transcripts the harness failed to stitch are rebuilt from the raw events first (ElevenLabs Scribe v3 Live
+  uses `elevenlabs-committed-segments-v3`, set in its turn profile).
 - Short replies: score = −(errors); no margin. Entities: count of labelled entities captured exactly in the normalised
   transcript (same normaliser as WER); no margin. Only entities present in the normalised reference are scored.
 
 ## Fit
-Bradley–Terry on all weighted matches; ELO = 1000 + 400·log10(p). 95% ranges come from resampling clips
-(bootstrap); a model's rank is 1 + the number of models whose lower bound is above its upper bound. Latency and price
+Bradley–Terry on all weighted matches; ELO = 1000 + 400·log10(p). 95% ranges come from a bootstrap
+that resamples whole Ocular conversations (one draw shared by every measure built on them, since turns of a
+conversation share speakers and audio) and the Pipecat clips; a model's rank is 1 + the number of models whose lower bound is above its upper bound. Latency and price
 are not in the ELO.
 
 ## Running it

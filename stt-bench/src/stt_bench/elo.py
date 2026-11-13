@@ -6,7 +6,7 @@ Per clip: score = 100 - WER on clips with >= 5 reference words; draw if |gap| <=
 a failed clip loses to a valid one; clips invalid for our-side reasons (pacing) are missing, not failures.
 Short replies: score = -errors, no margin.  Entities: score = entities captured exactly, no margin.
 Each measure's matches are scaled to its weight.  Bradley-Terry fit, ELO = 1000 + 400 log10(p).
-Bootstrap 95% ranges over clips; rank range = LMArena rule (1 + number of models whose lower bound is above my upper bound).
+Bootstrap 95% ranges, resampling conversations (shared across measures) and Pipecat clips; rank range = LMArena rule (1 + number of models whose lower bound is above my upper bound).
 Usage: python -m stt_bench.elo sources.json out.json   (env: STT_ELO_JUDGMENTS, DRAWS)
 """
 import json, math, os, random, re, sys, collections, statistics
@@ -100,6 +100,7 @@ def load(path, model=None):
 def row(c, we):
     t = c.get('turn_timing') or {}
     if c.get('attempted') is False: return ('missing', None, '')  # never run: not a model failure
+    if c.get('our_side_failure'): return ('missing', None, '')  # failed for our own reasons (flagged from raw events)
     if c.get('valid') and we: return ('valid', we, c.get('reference') or '')
     if t.get('ttft_status') in OUR_SIDE or (c.get('pacing') or {}).get('valid') is False: return ('missing', None, '')
     return ('failed', None, c.get('reference') or '')
@@ -219,6 +220,33 @@ def matches(rows, wts, models, margin, clips):
     return out
 
 
+_CONVERSATION = re.compile(r'^(c\d+)-s\d+-seg\d+$')
+
+
+def unit(clip_id):
+    """Bootstrap unit: an Ocular turn (cNNN-sN-segNNNN) belongs to its conversation; any other clip is its own unit.
+    Turns of one conversation share speakers and audio, so they are resampled together."""
+    m = _CONVERSATION.match(str(clip_id))
+    return m.group(1) if m else clip_id
+
+
+def bootstrap_sample(M, rng):
+    """One bootstrap draw. Conversations are drawn once with replacement and that draw is shared by every measure built
+    on them; measures of independent clips (Pipecat) resample their clips."""
+    groups = {k: collections.defaultdict(list) for k in M}
+    for k in M:
+        for c in M[k][0]: groups[k][unit(c)].append(c)
+    conversations = sorted({u for k in M for u in groups[k] if _CONVERSATION.match(str(next(iter(groups[k][u]))))})
+    drawn = [rng.choice(conversations) for _ in conversations]
+    sample = {}
+    for k in M:
+        if any(u in groups[k] for u in conversations):
+            sample[k] = [c for u in drawn for c in groups[k].get(u, [])]
+        else:
+            keys = list(M[k][0]); sample[k] = [rng.choice(keys) for _ in keys]
+    return sample
+
+
 def bt(weighted, models, iters=400):
     p = {m: 1.0 for m in models}; wins = collections.Counter(); pairs = collections.Counter()
     for a, b, s, w in weighted:
@@ -259,8 +287,7 @@ def main(src_path, out_path, draws=int(os.environ.get("DRAWS", 200))):
     elo = fit(M, models, weights)
     rng = random.Random(42); boots = {m: [] for m in models}
     for _ in range(draws):
-        smp = {k: [rng.choice(list(M[k][0])) for _ in M[k][0]] for k in M}
-        r = fit(M, models, weights, smp)
+        r = fit(M, models, weights, bootstrap_sample(M, rng))
         for m in models: boots[m].append(r[m])
     ci = {m: (sorted(v)[int(.025 * draws)], sorted(v)[int(.975 * draws) - 1]) for m, v in boots.items()}
     rank = {m: 1 + sum(1 for o in models if o != m and ci[o][0] > ci[m][1]) for m in models}

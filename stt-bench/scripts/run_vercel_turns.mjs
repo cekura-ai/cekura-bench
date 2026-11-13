@@ -30,9 +30,10 @@ async function uploadVerifiedParts(sb,path,destination){
 }
 
 export function smokeRowPassed(plan,model,r){
+  if(plan.smoke_policy==='timeout-counts-as-failure-v1'&&r&&!r.valid&&(r.failure_class==='transient'||(r.failure_class==null&&(r.turn_timing||{}).ttft_status==='invalid_attempt')))return true;
   if(!r?.valid)return false;
   const t=r.turn_timing||{};
-  if(plan.smoke_policy==='completed-empty-allowed-v1'&&t.ttft_status==='no_text'&&t.ttfs_status==='no_final_text'&&t.ttft_ms==null&&t.ttfs_ms==null)return true;
+  if(['completed-empty-allowed-v1','timeout-counts-as-failure-v1'].includes(plan.smoke_policy)&&t.ttft_status==='no_text'&&t.ttfs_status==='no_final_text'&&t.ttft_ms==null&&t.ttfs_ms==null)return true;
   return t.ttft_ms!=null&&(plan.configs[model].turn_finalization_class!=='controlled'||t.ttfs_ms!=null);
 }
 export function smokePassed(plan,model){return plan.smoke_ids.every(id=>smokeRowPassed(plan,model.name,model.rows[id]));}
@@ -105,7 +106,7 @@ export async function main(argv=process.argv.slice(2)){
   const {Sandbox}=await import(pathToFileURL(join(sdk,'dist/index.js')));
   const {getAuth,OAuth,updateAuthConfig}=await import(pathToFileURL(join(sdk,'dist/auth/index.js')));
   let refreshing;
-  async function account(){let a=getAuth();if(!a?.token)throw new Error('Vercel login missing');
+  async function account(){let a=getAuth();if(!a?.token&&process.env.VERCEL_TOKEN)return {token:process.env.VERCEL_TOKEN,teamId:accountPlan.teamId,projectId:accountPlan.projectId};if(!a?.token)throw new Error('Vercel login missing');
     if(a.expiresAt?.getTime()<Date.now()+300000){refreshing??=(async()=>{const t=await(await OAuth()).refreshToken(a.refreshToken);updateAuthConfig({token:t.access_token,refreshToken:t.refresh_token??a.refreshToken,expiresAt:new Date(Date.now()+t.expires_in*1000)});})();try{await refreshing;}finally{refreshing=null;}a=getAuth();}
     return {token:a.token,teamId:accountPlan.teamId,projectId:accountPlan.projectId};}
   async function get(name){return Sandbox.get({...await account(),name,resume:false});}

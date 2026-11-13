@@ -25,7 +25,7 @@ A measure with no data for any model is dropped and the rest renormalized.
 - A failed clip (model error or timeout) loses to a valid one. Clips that failed for our own reasons (sender pacing,
   provider concurrency limits, or rows flagged `our_side_failure` after checking the raw provider events) are missing,
   not losses. Transcripts the harness failed to stitch are rebuilt from the raw events first (ElevenLabs Scribe v3 Live
-  uses `elevenlabs-committed-segments-v3`, set in its turn profile).
+  uses `elevenlabs-committed-segments-v4`, set in its model config and its turn profile).
 - Short replies: score = −(errors); no margin. Entities: count of labelled entities captured exactly in the normalised
   transcript (same normaliser as WER); no margin. Only entities present in the normalised reference are scored.
 

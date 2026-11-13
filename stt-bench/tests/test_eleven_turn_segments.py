@@ -50,3 +50,24 @@ def test_v3_late_duplicate_partial_does_not_reopen_committed_segment():
  assert not p.snapshot()['partial_text']
  p.feed(dict(message_type='partial_transcript',text='A new unfinished sentence'))
  assert p.snapshot()['partial_text']=='A new unfinished sentence'
+
+def test_v4_empty_manual_commit_with_its_timestamp_form_first_keeps_the_turn():
+ # The auto-commit took every word, so the manual commit at speech end is empty and its timestamp form arrives first.
+ for version,supported in (('elevenlabs-committed-segments-v3',False),('elevenlabs-committed-segments-v4',True)):
+  p=Protocol({**CONFIG,'transcript_reconstruction':version})
+  p.feed(plain('Everything said before the auto-commit.'));p.feed(timed('Everything said before the auto-commit.',0,35))
+  p.requested=True;p.feed(dict(message_type='committed_transcript_with_timestamps',text=''));p.feed(plain(''))
+  assert p.snapshot()['final_text']=='Everything said before the auto-commit.' and p.ack
+  assert (p.snapshot()['reconstruction_status']=='supported')==supported
+
+def test_v4_still_flags_a_timestamp_annotation_without_its_commit():
+ p=Protocol({**CONFIG,'transcript_reconstruction':'elevenlabs-committed-segments-v4'})
+ p.feed(timed('Words that were never committed.',0,2));assert p.unsupported
+
+def test_scribe_v3_live_full_runs_stitch_committed_segments():
+ c=json.loads(Path('config/models/elevenlabs-scribe-v3-live.json').read_text())
+ assert c['transcript_reconstruction']=='elevenlabs-committed-segments-v4'
+ p=Protocol(c);p.requested=True;p.feed(plain('... Called it.'));p.feed(timed('... called it.',0,2))
+ assert p.snapshot()['reconstruction_status']=='supported' and p.snapshot()['final_text']=='... Called it.'
+ old=Protocol({k:v for k,v in c.items() if k!='transcript_reconstruction'});old.requested=True
+ old.feed(plain('... Called it.'));old.feed(timed('... called it.',0,2));assert old.unsupported

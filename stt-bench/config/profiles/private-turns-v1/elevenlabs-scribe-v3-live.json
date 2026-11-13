@@ -1,7 +1,7 @@
 {
   "model_id": "elevenlabs-scribe-v3-live",
   "provider": "elevenlabs",
-  "transcript_reconstruction": "elevenlabs-committed-segments-v3",
+  "transcript_reconstruction": "elevenlabs-committed-segments-v4",
   "model": "scribe_v3_live",
   "version": "unversioned-alias",
   "identity_policy": "requested_alias_session_accepted",

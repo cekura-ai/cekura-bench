@@ -44,6 +44,10 @@ class Protocol:
         ElevenLabs can auto-commit at about 36 seconds even in manual mode.
         Its delayed timestamp event is a second representation of that same
         segment, occasionally with different capitalization.
+
+        V4: when a manual commit follows an auto-commit that already took every
+        word, the commit is empty and its timestamp form can arrive first. An
+        annotation without words or text has nothing to misorder.
         """
         text = message.get('text', '')
         if kind == 'committed_transcript':
@@ -58,6 +62,9 @@ class Protocol:
                 self.ack = True
         else:
             words = message.get('words') or []
+            if (self.config.get('transcript_reconstruction') == 'elevenlabs-committed-segments-v4'
+                    and not words and not text.strip() and not self.eleven_pending):
+                return
             boundary = (words[0].get('start'), words[-1].get('end')) if words else None
             if boundary is not None and boundary in self.eleven_ranges:
                 key = self.eleven_ranges[boundary]
@@ -169,12 +176,12 @@ class Protocol:
                 # V3 suppresses a late duplicate of the just-committed text.
                 # A different partial remains visible and can invalidate an
                 # incomplete stream; this never drops new unfinished words.
-                duplicate=(self.config.get('transcript_reconstruction') == 'elevenlabs-committed-segments-v3' and
+                duplicate=(self.config.get('transcript_reconstruction') in ('elevenlabs-committed-segments-v3','elevenlabs-committed-segments-v4') and
                            self.eleven_pending and
                            m.get('text','').strip()==self.finals[self.eleven_pending[-1]].strip())
                 if not duplicate:self.put('utterance', m.get('text', ''), False)
             elif kind in ('committed_transcript', 'committed_transcript_with_timestamps'):
-                if self.config.get('transcript_reconstruction') in ('elevenlabs-committed-segments-v2','elevenlabs-committed-segments-v3'):
+                if self.config.get('transcript_reconstruction') in ('elevenlabs-committed-segments-v2','elevenlabs-committed-segments-v3','elevenlabs-committed-segments-v4'):
                     self.eleven_segment(kind, m)
                 else:
                     # Preserve historical reconstruction for existing reports.

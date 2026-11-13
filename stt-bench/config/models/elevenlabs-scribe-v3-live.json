@@ -1,0 +1,26 @@
+{
+  "model_id": "elevenlabs-scribe-v3-live",
+  "provider": "elevenlabs",
+  "model": "scribe_v3_live",
+  "version": "unversioned-alias",
+  "identity_policy": "requested_alias_session_accepted",
+  "endpoint": "wss://api.elevenlabs.io/v1/speech-to-text/realtime",
+  "language": "en-US",
+  "sample_rate": 16000,
+  "encoding": "pcm_s16le",
+  "channels": 1,
+  "frame_ms": 20,
+  "ready_timeout_seconds": 15,
+  "finalize_timeout_seconds": 5,
+  "close_timeout_seconds": 5,
+  "finalization": "manual_at_speech_end",
+  "completion_basis": "single_manual_commit_then_observation_window",
+  "model_source": "https://elevenlabs.io/docs/api-reference/speech-to-text/v-1-speech-to-text-realtime",
+  "checked_on": "2026-10-28",
+  "pricing": {
+    "usd_per_minute": null,
+    "source": "https://elevenlabs.io/pricing/api",
+    "status": "unpublished_v3_rate_site_uses_scribe_v2_realtime_rate",
+    "billing_basis": "submitted audio including silence and retries; rate-dependent estimate, not an invoice"
+  }
+}

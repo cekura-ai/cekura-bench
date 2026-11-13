@@ -6,14 +6,14 @@ from . import gemini_live
 
 MODELS = {
     'assemblyai': {'universal-3-5-pro', 'universal-3-6-pro'},
-    'reson8': {'realtime'},
+    'reson8': {'realtime', 'rumble-2'},
     'zoom': {'zoom-asr-en-v1', 'zoom-scribe-en', 'zoom-scribe-en-pro', 'zoom-scribe-en-pro-v2.1'},
     'gradium': {'default'},
     **trial_providers.MODELS,
     'deepgram': {'nova-2', 'nova-3', 'flux-general-en', 'flux-general-multi'},
     'openai': {'gpt-realtime-whisper', 'gpt-4o-transcribe', 'gpt-4o-mini-transcribe'},
     'gemini': {'gemini-3.5-transcribe-live', *gemini_live.MODELS},
-    'elevenlabs': {'scribe_v2_realtime'},
+    'elevenlabs': {'scribe_v2_realtime', 'scribe_v3_live'},
     'speechmatics': {'standard', 'enhanced', 'linden-1'},
     'cartesia': {'ink-2'},
     'murf': {'finch_global_1.0'},
@@ -21,7 +21,7 @@ MODELS = {
 }
 ENDPOINTS = {
     'assemblyai': {'wss://streaming.assemblyai.com/v3/ws'},
-    'reson8': {'wss://api.reson8.dev/v1/speech-to-text/realtime'},
+    'reson8': {'wss://api.reson8.dev/v1/speech-to-text/realtime', reson8.GLOBAL_ENDPOINT},
     'zoom': {zoom.ENDPOINT},
     'gradium': {'wss://api.gradium.ai/api/speech/asr'},
     **trial_providers.ENDPOINTS,

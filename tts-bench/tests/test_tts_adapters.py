@@ -113,6 +113,16 @@ class TestElevenLabsDialogueMulti:
         assert not ElevenLabsDialogueMultiAdapter.ends_on_quiet
         assert ElevenLabsDialogueMultiAdapter.unsupported_reason(TTSConfig("eleven_v4", "v"), ("streamed_input", "cancel", "continuation")) is None
 
+    def test_the_lineup_runs_v4_with_text_normalization_on(self):
+        entry = PROVIDERS["elevenlabs-dialogue-multi"]
+        for model in ("eleven_v4_turbo", "eleven_v4"):
+            options = entry.options_for(model)
+            assert dict(options) == {"apply_text_normalization": "on"}
+            config = TTSConfig(model=model, voice="v", options=options)
+            multi = ElevenLabsDialogueMultiAdapter(config, "unused", EventLog(Clock()), Clock())
+            assert multi.url.endswith("&apply_text_normalization=on")
+            assert config.label.endswith(",apply_text_normalization=on")
+
 
 class TestLineup:
     def test_each_model_runs_with_its_own_voice_and_names_its_run(self, tmp_path):

@@ -5,7 +5,9 @@ A run folder holds ``calls/<code>/<call id>/`` with ``call.json``, ``metrics.jso
 
 The call score (0-100) is the weighted mean of the skill families the call reached. A
 family's value is the share of its reached skills that passed; Task Handling blends that
-with the share of the scenario's expected-outcome lines met (✅ against ❌; 🟡, not
+with the call's task outcome. With a task file the outcome is 100 or 0: whether the agent
+completed the scenario's main task, decided from its tool calls (``tasks.py``). Without one
+it is the share of the scenario's expected-outcome lines met (✅ against ❌; 🟡, not
 reached, is left out).
 """
 
@@ -17,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from s2s_human_bench.config import Config, Model, Skill
+from s2s_human_bench.tasks import TaskFileError, task_verdict
 
 MET, MISSED = "✅", "❌"
 
@@ -30,7 +33,7 @@ class Call:
     verdicts: dict[str, bool | None]  # skill id -> verdict, skills in family order
     explanations: dict[str, str]
     families: dict[str, float | None]
-    outcome: float | None  # share of expected-outcome lines met, 0-100
+    outcome: float | None  # task outcome, 0-100: main task done (100/0) with a task file, else share of expected-outcome lines met
     outcome_lines: list[str]
     score: float | None
     latency_ms: float | None
@@ -118,7 +121,14 @@ def load_call(cfg: Config, call_json: Path) -> Call:
 
     verdicts = {s.id: verdict(s, results[s.metric]) if s.metric in results else None for s in cfg.skills}
     explanations = {s.id: results[s.metric].get("explanation") or "" for s in cfg.skills if s.metric in results}
-    outcome = outcome_share(lines)
+    if cfg.tasks is not None:
+        if meta["code"] not in cfg.tasks:
+            raise TaskFileError(f"task file has no task for {meta['code']}")
+        task_done, _ = task_verdict(cfg.tasks[meta["code"]], transcript)
+        outcome: float | None = 100.0 if task_done else 0.0
+    else:
+        outcome = outcome_share(lines)
+        task_done = sum(x.startswith(MISSED) for x in lines) == 0 and sum(x.startswith(MET) for x in lines) > 0
     families = family_scores(cfg, verdicts, outcome)
     agent = [t for t in transcript if _speaker(t, inputs["agentRolePrefix"])]
     caller = [t for t in transcript if _speaker(t, inputs["callerRolePrefix"])]
@@ -138,7 +148,7 @@ def load_call(cfg: Config, call_json: Path) -> Call:
         score=call_score(cfg.weights, families),
         latency_ms=results.get(metric_ids["latency"], {}).get("score"),
         turn_words=results.get(metric_ids["turnLength"], {}).get("score"),
-        task_done=sum(x.startswith(MISSED) for x in lines) == 0 and sum(x.startswith(MET) for x in lines) > 0,
+        task_done=task_done,
         stalled=_went_quiet(agent, caller, cfg.scoring["stallSeconds"]),
         agent_ended=inputs["endCallTool"] in tools,
         spoke=bool(agent),

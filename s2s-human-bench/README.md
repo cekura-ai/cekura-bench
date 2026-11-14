@@ -17,7 +17,15 @@ holds none of them.
 * **Call score (0-100)**: the weighted mean of four skill families (Hearing, Turn Taking,
   Task Handling, Speaking; 25% each) over the families the call reached. A family's value
   is the share of its reached skills that passed. Task Handling is half skills, half the
-  share of the scenario's expected-outcome lines met (lines not reached are left out).
+  call's task outcome: the share of the scenario's expected-outcome lines met (lines not
+  reached are left out) or, with a task file (`--tasks`), 100 when the agent completed the
+  scenario's main task and 0 when it did not.
+* **Main task (`--tasks`)**: decided from the call's tool calls. The private task file
+  lists, per scenario, the tool calls the task needs and the values each must carry. It can
+  also list tools that must not run (the caller took the action back first) and the undo
+  expected after an action. Values are compared after normalizing formats (phone numbers,
+  dates, times, amounts, ids, street abbreviations). The format is described in
+  [`tasks.py`](src/s2s_human_bench/tasks.py).
 * **Pass**: call score of at least 80. **pass³**: the scenario passed in all three runs.
 * **ELO**: per scenario, a model's call score averaged over its runs; two models draw when
   their scores are within 5 points, otherwise the higher wins. Ranked models get
@@ -55,9 +63,12 @@ uv run --locked s2s-human-bench site-export \
   failed, `--clip-picks` also writes the example moments' clip windows, and
   `--reviewed-examples` lists the example calls (`{site id: [call id, ...]}`) a person has
   listened to; without it no example calls are published.
+* `--tasks` scores Task Outcome as pass or fail on each scenario's main task (see Scoring).
+  The file names each scenario's tools and the values the caller gives, so it is test-set
+  grading detail and stays out of this repository; without the flag nothing changes.
 
-Output depends only on the inputs, the config and `--date`. Run data, transcripts and clip
-picks stay out of this repository.
+Output depends only on the inputs, the config, `--date` and the task file. Run data,
+transcripts, the task file and clip picks stay out of this repository.
 
 ```sh
 uv run --locked pytest

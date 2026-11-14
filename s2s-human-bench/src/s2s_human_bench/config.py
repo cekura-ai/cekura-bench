@@ -55,6 +55,7 @@ class Config:
     weights: dict[str, float] = field(default_factory=dict)
     skills: list[Skill] = field(default_factory=list)  # family order
     models: list[Model] = field(default_factory=list)
+    tasks: dict[str, dict[str, Any]] | None = None  # per-scenario main tasks (private --tasks file); None = expected-outcome share
 
     def __getitem__(self, key: str) -> Any:
         return self.raw[key]

@@ -27,7 +27,7 @@ def make_inputs(tmp_path):
     return runs
 
 
-def export(tmp_path, cfg, out, reviewed=None, clips=None):
+def export(tmp_path, cfg, out, reviewed=None, clips=None, tasks=None):
     args = Namespace(
         config=tmp_path / "config.json",
         runs=tmp_path / "runs",
@@ -41,6 +41,7 @@ def export(tmp_path, cfg, out, reviewed=None, clips=None):
         clip_picks=None,
         reviewed_examples=reviewed,
         reviewed_clips=clips,
+        tasks=tasks,
     )
     assert run_site_export(args) == 0
     return {p.name: json.loads(p.read_text()) for p in out.iterdir()}
@@ -119,3 +120,19 @@ def test_reviewed_clips(cfg, tmp_path):
     clips.write_text(json.dumps({sid: {"pass": dict(side, model="nobody"), "fail": side}}))
     with pytest.raises(ValueError, match="unknown model"):
         export(tmp_path, cfg, tmp_path / "out2", clips=clips)
+
+
+def test_task_file_decides_the_task_outcome(cfg, tmp_path):
+    runs = make_inputs(tmp_path)
+    for path in runs.glob("run_a1_*/calls/*/*/transcript.json"):  # Alpha makes the call; the others never do
+        turns = json.loads(path.read_text())
+        turns.append({"role": "Function Call", "start_time": 3.5, "data": {"name": "send_payment", "arguments": json.dumps({"account": "A-1001"})}})
+        path.write_text(json.dumps(turns))
+    task = {"requirements": [{"any_of": [{"tool": "send_payment", "accepted": [{"account": "A-1001"}]}]}]}
+    (tmp_path / "tasks.json").write_text(json.dumps({"tasks": dict.fromkeys(("B01", "B02", "C01", "C02"), task)}))
+
+    with_tasks = export(tmp_path, cfg, tmp_path / "with", tasks=tmp_path / "tasks.json")["benchmark.json"]["results"]
+    overall = {r["model"]: r for r in with_tasks if r["suite"] == "all"}
+    assert overall["alpha-site"]["taskPass"] == 8 and overall["beta-site"]["taskPass"] == 0 and overall["ref-site"]["taskPass"] == 0
+    without = {r["model"]: r for r in export(tmp_path, cfg, tmp_path / "without")["benchmark.json"]["results"] if r["suite"] == "all"}
+    assert without["beta-site"]["taskPass"] > 0  # by expected-outcome lines, Beta completes some calls

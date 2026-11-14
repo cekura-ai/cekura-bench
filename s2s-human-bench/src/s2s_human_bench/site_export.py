@@ -20,6 +20,7 @@ from s2s_human_bench.examples import examples_doc
 from s2s_human_bench.languages import languages_doc
 from s2s_human_bench.s2s import s2s_docs
 from s2s_human_bench.skills import skills_doc
+from s2s_human_bench.tasks import load_tasks
 
 PUBLIC_S2S_PATH = "data/s2s-benchmark.json"
 
@@ -98,6 +99,8 @@ def write_json(path: Path, doc: Any) -> None:
 
 def run_site_export(args: Any) -> int:
     cfg = load_config(args.config)
+    if args.tasks:
+        cfg.tasks = load_tasks(args.tasks)
     names = dict(cfg["outputs"])
     for pair in args.name or []:
         kind, sep, file = pair.partition("=")
@@ -123,6 +126,9 @@ def run_site_export(args: Any) -> int:
         write_json(args.clip_picks, picks)
     models = docs["skills"]["models"]
     print(f"{len(models)} models, {docs['skills']['callSummary']['total']} scenarios -> {args.out}")
+    if cfg.tasks is not None:
+        overall = [r for r in docs["benchmark"]["results"] if r["suite"] == "all"]
+        print(f"  main task done on {sum(r['taskPass'] for r in overall)} of {sum(r['runs'] for r in overall)} calls (task file {args.tasks})")
     for row in docs["skills"]["elo"]:
         print(f"  {row['model']:<24} elo {row['elo']}  score {row['score']}")
     return 0

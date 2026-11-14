@@ -27,7 +27,8 @@
   "metrics": {
     "latency": 275642,
     "turnLength": 275674,
-    "entity": 275303
+    "entity": 275303,
+    "task": 281918
   },
   "families": [
     {
@@ -242,7 +243,7 @@
       "type": "passive",
       "better": "higher",
       "unit": "share",
-      "description": "Expected-outcome score for the call: did the agent finish the caller's task the way the scenario requires."
+      "description": "Task outcome for the call: did the agent finish the caller's task the way the scenario requires."
     },
     {
       "id": "L1",

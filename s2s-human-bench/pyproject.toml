@@ -23,6 +23,8 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 160
+# metrics/ holds the exact code deployed as a Cekura metric, built by `s2s-human-bench task-metric`
+extend-exclude = ["metrics"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B"]

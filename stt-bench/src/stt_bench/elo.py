@@ -2,7 +2,7 @@
 
 Measures and weights: Ocular turns WER 10, Pipecat WER 10, semantic WER 10, phone 12, callcenter 10, babble 8,
 tv 5, reverb 5, short replies (<5 words) 10, entities 20.  A measure with no data is dropped and the rest renormalized.
-Per clip: score = 100 - WER on clips with >= 5 reference words; draw if |gap| <= 5; matches weighted by word count;
+Per clip (every clip with reference words): score = 100 - WER; draw if |gap| <= 5; matches weighted by word count;
 a failed clip loses to a valid one; clips invalid for our-side reasons (pacing) are missing, not failures.
 Short replies: score = -errors, no margin.  Entities: score = entities captured exactly, no margin.
 Each measure's matches are scaled to its weight.  Bradley-Terry fit, ELO = 1000 + 400 log10(p).
@@ -135,11 +135,12 @@ def semantic_rows(runs):
             try: r = json.loads(l); J[r['id']] = r['errors']
             except Exception: pass
     rows = collections.defaultdict(dict); wts = {}; missing = collections.Counter()
+    spoken = {cid for data in runs.values() for cid, (st, we, ref) in data.items() if we and we['reference_words']}
     for m, data in runs.items():
         for cid, (st, we, ref) in data.items():
-            if st == 'missing': continue
+            if st == 'missing' or cid not in spoken: continue  # same clips as WER: a reference with words after normalising
             n = count_reference_words(ref) if ref else (we or {}).get('reference_words', 0)
-            if n < SHORT: continue
+            if n == 0: continue
             if st == 'failed': rows[cid][m] = None; wts[cid] = max(wts.get(cid, 0), n); continue
             if we['hypothesis_normalized'] == we['reference_normalized']: e = 0
             else:
@@ -203,7 +204,7 @@ def measure_rows(kind, runs, labels=None):
                 if not ents: continue
                 rows[cid][m] = None if st == 'failed' else ent_captured(ents, we['hypothesis_normalized'])
             else:
-                if words < SHORT: continue
+                if words == 0: continue
                 rows[cid][m] = None if st == 'failed' else clip_score(we)
             wts[cid] = max(wts.get(cid, 0), words)
     return rows, wts

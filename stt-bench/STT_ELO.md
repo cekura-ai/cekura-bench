@@ -20,7 +20,8 @@ Speech-to-Speech Real Human Calls rating. Every published WER figure stays as it
 A measure with no data for any model is dropped and the rest renormalized.
 
 ## Per-clip rules
-- Clip score = 100 − WER, on clips with 5+ reference words. Two models draw if their scores are within 5 points.
+- Every clip with reference words counts. Clip score = 100 − WER; two models draw if their scores are within 5 points.
+  Short replies (< 5 words) also form their own measure, scored by error count.
 - Matches are weighted by the clip's word count; each measure's matches are scaled to its weight.
 - A failed clip (model error or timeout) loses to a valid one. Clips that failed for our own reasons (sender pacing,
   provider concurrency limits, or rows flagged `our_side_failure` after checking the raw provider events) are missing,

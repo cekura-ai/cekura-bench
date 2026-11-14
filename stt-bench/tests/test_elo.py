@@ -32,3 +32,13 @@ def test_bootstrap_resamples_whole_conversations_across_measures():
     assert len(s['ocular']) == 4 and len({c.split('-')[0] for c in s['ocular']}) <= 2
     assert all(c.split('-')[0] in {x.split('-')[0] for x in s['ocular']} for c in s['ocular'])
     assert len(s['pipecat']) == 2
+
+
+def test_every_clip_with_reference_words_is_scored():
+    we = lambda n, e: dict(reference_words=n, substitutions=e, insertions=0, deletions=0)
+    runs = {'a': {'short': ('valid', we(2, 0), 'yes please'), 'empty': ('valid', we(0, 0), ''), 'long': ('valid', we(6, 1), '')},
+            'b': {'short': ('valid', we(2, 1), 'yes please'), 'empty': ('valid', we(0, 1), ''), 'long': ('failed', None, '')}}
+    rows, wts = elo.measure_rows('wer', runs)
+    assert set(rows) == {'short', 'long'}  # a 2-word reply counts; a clip with no reference words does not
+    assert rows['short'] == {'a': 100.0, 'b': 50.0} and wts['short'] == 2
+    assert rows['long']['b'] is None and wts['long'] == 6

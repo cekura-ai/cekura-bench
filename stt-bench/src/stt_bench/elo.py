@@ -273,15 +273,29 @@ def fit(M, models, weights, sample=None):
     return bt(allw, models)
 
 
+def wer_totals(runs):
+    """model -> (word errors, reference words) over its valid clips: the plain WER shown in the output table.
+    The matches use per-clip scores floored at 0; this total is not floored, so inserted words all count."""
+    out = {}
+    for m, data in runs.items():
+        e = n = 0
+        for st, we, ref in data.values():
+            if st == 'valid' and we and we['reference_words']:
+                e += we['substitutions'] + we['insertions'] + we['deletions']; n += we['reference_words']
+        out[m] = (e, n)
+    return out
+
+
 def main(src_path, out_path, draws=int(os.environ.get("DRAWS", 200))):
     S = json.load(open(src_path)); labels = json.load(open(S['entity_labels']))['clips']
-    models = S['models']; M = {}; coverage = {}
+    models = S['models']; M = {}; coverage = {}; totals = {}
     for k in WEIGHTS:
         spec = S['measures'].get(k)
         if not spec: continue
         base = spec.get('from', k)
         runs = {m: merge(S['measures'][base]['runs'][m], m) for m in models if S['measures'][base]['runs'].get(m)}
         M[k] = semantic_rows(runs) if k == 'semantic' else measure_rows({'short': 'short', 'entities': 'entities'}.get(k, 'wer'), runs, labels)
+        if k not in ('semantic', 'short', 'entities'): totals[k] = wer_totals(runs)
         coverage[k] = {m: sum(1 for r in M[k][0].values() if m in r) for m in models}
     weights = {k: v for k, v in WEIGHTS.items() if k in M}; t = sum(weights.values()); weights = {k: v / t for k, v in weights.items()}
     dropped = [m for m in models if not any(coverage[k].get(m) for k in M)]
@@ -304,6 +318,9 @@ def main(src_path, out_path, draws=int(os.environ.get("DRAWS", 200))):
             elif k == 'entities':
                 tot = sum(ENTN.get(c, 0) for c, r in rows.items() if m in r)
                 t[k] = dict(captured=sum(v for v, _ in ok), total=tot, pct=round(100 * sum(v for v, _ in ok) / tot, 2) if tot else None, failed=len(vals) - len(ok))
+            elif k in totals:
+                e, n = totals[k].get(m, (0, 0))
+                t[k] = dict(wer=round(100 * e / n, 2) if n else None, clips=len(vals), failed=len(vals) - len(ok))
             else:
                 sw = sum(w for _, w in ok)
                 t[k] = dict(wer=round(100 - sum(v * w for v, w in ok) / sw, 2) if sw else None, clips=len(vals), failed=len(vals) - len(ok))

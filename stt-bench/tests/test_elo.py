@@ -42,3 +42,9 @@ def test_every_clip_with_reference_words_is_scored():
     assert set(rows) == {'short', 'long'}  # a 2-word reply counts; a clip with no reference words does not
     assert rows['short'] == {'a': 100.0, 'b': 50.0} and wts['short'] == 2
     assert rows['long']['b'] is None and wts['long'] == 6
+
+
+def test_table_wer_is_plain_wer_with_no_floor():
+    we = lambda n, e: dict(reference_words=n, substitutions=0, insertions=e, deletions=0)
+    runs = {'a': {'x': ('valid', we(1, 9), ''), 'y': ('valid', we(9, 1), ''), 'z': ('failed', None, '')}}
+    assert elo.wer_totals(runs) == {'a': (10, 10)}  # 9 inserted words on a 1-word reply all count; the failed clip does not

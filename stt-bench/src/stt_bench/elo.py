@@ -1,6 +1,6 @@
 """STT benchmark ELO: one rating from head-to-head comparisons on every clip (method in STT_ELO.md).
 
-Measures and weights: Ocular turns WER 10, Pipecat WER 10, semantic WER 10, phone 5, callcenter 20, babble 5,
+Measures and weights: Ocular turns WER 5, Pipecat WER 10, semantic WER 10, phone 5, callcenter 20, babble 10,
 tv 5, reverb 5, short replies (<5 words) 10, entities 20.  A measure with no data is dropped and the rest renormalized.
 Per clip (every clip with reference words): score = 100 - WER; draw if |gap| <= 5; matches weighted by word count;
 a failed clip loses to a valid one; clips invalid for our-side reasons (pacing) are missing, not failures.
@@ -76,9 +76,10 @@ def error_weight(error: dict) -> int:
 JUDGMENT_DIRS = [d for d in os.environ.get('STT_ELO_JUDGMENTS', '').split(os.pathsep) if d]
 
 
-# Call-center noise is what callers bring, so it weighs most among the conditions. Phone line is the clean turns through
-# a G.711 codec and tracks them closely; babble, TV and reverb at 5 dB / 0.6 s are stress tests: each carries 5.
-WEIGHTS = {'ocular': .10, 'pipecat': .10, 'semantic': .10, 'phone': .05, 'callcenter': .20, 'babble': .05,
+# Background talkers are what callers bring: call center 20, babble (louder, no phone line) 10. The clean Ocular turns
+# carry 5 because phone, the noise sets, semantic WER and short replies are all built on the same turns; phone line is
+# those turns through a G.711 codec and tracks them closely. TV and reverb are stress tests.
+WEIGHTS = {'ocular': .05, 'pipecat': .10, 'semantic': .10, 'phone': .05, 'callcenter': .20, 'babble': .10,
            'tv': .05, 'reverb': .05, 'short': .10, 'entities': .20}
 SHORT, MARGIN = 5, 5.0
 OUR_SIDE = {'invalid_pacing'}

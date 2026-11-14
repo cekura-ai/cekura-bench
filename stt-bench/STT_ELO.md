@@ -9,9 +9,9 @@ Speech-to-Speech Real Human Calls rating. Every published WER figure stays as it
 | WER, Ocular private turns (clean) | 10% | 206 turns |
 | WER, Pipecat public set | 10% | 1,000 clips |
 | Semantic WER (Pipecat judge prompt, verbatim) | 10% | Ocular turns |
-| Phone line (G.711, 8 kHz) | 12% | 206 turns |
-| Call-center noise (chatter 10 dB below speech, G.711) | 10% | 206 turns |
-| Babble noise (6 voices, 5 dB below speech) | 8% | 206 turns |
+| Phone line (G.711, 8 kHz) | 5% | 206 turns |
+| Call-center noise (chatter 10 dB below speech, G.711) | 20% | 206 turns |
+| Babble noise (6 voices, 5 dB below speech) | 5% | 206 turns |
 | TV noise (5 dB below speech) | 5% | 206 turns |
 | Reverb (0.6 s) | 5% | 206 turns |
 | Short replies (< 5 words), error count | 10% | Ocular turns |

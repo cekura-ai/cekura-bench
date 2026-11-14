@@ -242,7 +242,7 @@
       "type": "passive",
       "better": "higher",
       "unit": "share",
-      "description": "Expected-outcome score for the call: did the agent finish the caller's task the way the scenario requires."
+      "description": "Task outcome for the call: did the agent finish the caller's task the way the scenario requires."
     },
     {
       "id": "L1",

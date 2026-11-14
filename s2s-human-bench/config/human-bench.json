@@ -27,7 +27,8 @@
   "metrics": {
     "latency": 275642,
     "turnLength": 275674,
-    "entity": 275303
+    "entity": 275303,
+    "task": 281918
   },
   "families": [
     {

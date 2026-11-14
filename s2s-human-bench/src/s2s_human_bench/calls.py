@@ -5,10 +5,11 @@ A run folder holds ``calls/<code>/<call id>/`` with ``call.json``, ``metrics.jso
 
 The call score (0-100) is the weighted mean of the skill families the call reached. A
 family's value is the share of its reached skills that passed; Task Handling blends that
-with the call's task outcome. With a task file the outcome is 100 or 0: whether the agent
-completed the scenario's main task, decided from its tool calls (``tasks.py``). Without one
-it is the share of the scenario's expected-outcome lines met (✅ against ❌; 🟡, not
-reached, is left out).
+with the call's task outcome: 100 or 0, whether the agent completed the scenario's main task,
+decided from its tool calls (``tasks.py``). The verdict comes from the task file when one is
+given, else from the platform's task metric (``metrics.task`` in the config, ``task_metric.py``)
+when the run carries it. Runs with neither use the share of the scenario's expected-outcome
+lines met (✅ against ❌; 🟡, not reached, is left out).
 """
 
 from __future__ import annotations
@@ -121,11 +122,15 @@ def load_call(cfg: Config, call_json: Path) -> Call:
 
     verdicts = {s.id: verdict(s, results[s.metric]) if s.metric in results else None for s in cfg.skills}
     explanations = {s.id: results[s.metric].get("explanation") or "" for s in cfg.skills if s.metric in results}
+    platform_task = results.get(metric_ids["task"], {}).get("score") if "task" in metric_ids else None
     if cfg.tasks is not None:
         if meta["code"] not in cfg.tasks:
             raise TaskFileError(f"task file has no task for {meta['code']}")
         task_done, _ = task_verdict(cfg.tasks[meta["code"]], transcript)
         outcome: float | None = 100.0 if task_done else 0.0
+    elif isinstance(platform_task, bool):  # the same checker, run on the platform as a metric (task_metric.py)
+        task_done = platform_task
+        outcome = 100.0 if task_done else 0.0
     else:
         outcome = outcome_share(lines)
         task_done = sum(x.startswith(MISSED) for x in lines) == 0 and sum(x.startswith(MET) for x in lines) > 0

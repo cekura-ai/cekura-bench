@@ -38,11 +38,22 @@ def main() -> None:
     p.add_argument("--reviewed-clips", type=Path, help="approved clip pairs per skill, {skill id: {setup, should, pass, fail}}; replaces the candidate moments")
     p.add_argument("--clip-picks", type=Path, help="also write the example moments' clip windows (with call ids) here; keep it out of the repo")
 
+    m = sub.add_parser("task-metric", help="Write the Cekura custom-code metric that scores the main task on the platform, built from tasks.py")
+    m.add_argument("--out", type=Path, help="file to write (default: standard output)")
+
     args = parser.parse_args()
     if args.command == "site-export":
         from s2s_human_bench.site_export import run_site_export
 
         sys.exit(run_site_export(args))
+    if args.command == "task-metric":
+        from s2s_human_bench.task_metric import metric_source
+
+        source = metric_source()
+        if args.out:
+            args.out.write_text(source, encoding="utf-8")
+        else:
+            sys.stdout.write(source)
 
 
 if __name__ == "__main__":

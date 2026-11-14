@@ -8,6 +8,7 @@ exported runs into the website's data files.
 | Command | What it does |
 | --- | --- |
 | `s2s-human-bench site-export` | Scores every call, rates the models and writes the website's data files: leaderboard, insights, reports, per-language view, per-skill view and reviewed example calls |
+| `s2s-human-bench task-metric` | Writes the Cekura custom-code metric that checks the main task on the platform, built from the scorer's own checker |
 
 ## Scoring
 
@@ -17,15 +18,19 @@ holds none of them.
 * **Call score (0-100)**: the weighted mean of four skill families (Hearing, Turn Taking,
   Task Handling, Speaking; 25% each) over the families the call reached. A family's value
   is the share of its reached skills that passed. Task Handling is half skills, half the
-  call's task outcome: the share of the scenario's expected-outcome lines met (lines not
-  reached are left out) or, with a task file (`--tasks`), 100 when the agent completed the
-  scenario's main task and 0 when it did not.
-* **Main task (`--tasks`)**: decided from the call's tool calls. The private task file
-  lists, per scenario, the tool calls the task needs and the values each must carry. It can
-  also list tools that must not run (the caller took the action back first) and the undo
-  expected after an action. Values are compared after normalizing formats (phone numbers,
-  dates, times, amounts, ids, street abbreviations). The format is described in
-  [`tasks.py`](src/s2s_human_bench/tasks.py).
+  call's task outcome: 100 when the agent completed the scenario's main task and 0 when it
+  did not. Runs without a main-task verdict (neither a task file nor the platform metric)
+  use the share of the scenario's expected-outcome lines met, leaving out lines not reached.
+* **Main task**: decided from the call's tool calls. Each scenario's task lists the tool
+  calls it needs and the values each must carry. It can also list tools that must not run
+  (the caller took the action back first) and the undo expected after an action. Values are
+  compared after normalizing formats (phone numbers, dates, times, amounts, ids, street
+  abbreviations); the format is described in [`tasks.py`](src/s2s_human_bench/tasks.py).
+  The tasks are test-set grading detail and stay out of this repository: offline they come
+  from a private file (`--tasks`); on the platform, each scenario's test profile carries its
+  task (`eval_target_task`) and the metric in [`metrics/`](metrics/task_completion_metric.py),
+  built from the same checker by `task-metric`, scores every run. The scorer reads that
+  metric's verdict (`metrics.task` in the config) unless a task file is given.
 * **Pass**: call score of at least 80. **pass³**: the scenario passed in all three runs.
 * **ELO**: per scenario, a model's call score averaged over its runs; two models draw when
   their scores are within 5 points, otherwise the higher wins. Ranked models get

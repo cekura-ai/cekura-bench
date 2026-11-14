@@ -26,6 +26,7 @@ MODELS = {name: Path('config/models') / (name + '.json') for name in (
     'google-chirp-2',
     'google-chirp-3',
     'soniox-stt-rt-v5',
+    'soniox-stt-rt-v6',
     'smallest-pulse',
     'sarvam-saaras-v3-realtime',
     'inworld-stt-1',

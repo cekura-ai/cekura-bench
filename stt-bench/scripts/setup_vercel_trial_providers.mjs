@@ -7,7 +7,7 @@ import {parseArgs} from 'node:util';
 import {codeFiles} from './setup_vercel_chirp.mjs';
 import {dispatchOnce, validatePlan} from './vercel_models.mjs';
 
-export const MODELS = ['soniox-stt-rt-v5', 'smallest-pulse', 'sarvam-saaras-v3-realtime', 'inworld-stt-1'];
+export const MODELS = ['soniox-stt-rt-v5', 'soniox-stt-rt-v6', 'smallest-pulse', 'sarvam-saaras-v3-realtime', 'inworld-stt-1'];
 export const REMOTE = '/vercel/sandbox/stt-bench-v4';
 // Dependency hosts only. Provider endpoints never appear in the setup policy.
 export const INSTALL_NETWORK = {allow: ['pypi.org', 'files.pythonhosted.org']};

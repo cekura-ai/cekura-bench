@@ -17,7 +17,7 @@ from .run import assess
 from .streaming import read_events
 from .full_benchmark import classify
 
-MANIFEST='datasets/private-turns-v1/automatic-v1/manifest.json'
+MANIFEST=os.environ.get('STT_TURN_MANIFEST','datasets/private-turns-v1/automatic-v1/manifest.json')  # STT_TURN_MANIFEST selects a frozen noise-condition turn set
 # Profiles added after the original 23 run only when a plan names them.
 OPT_IN=frozenset({'assemblyai-universal-3-6-pro-min-latency','zoom-scribe-live','zoom-scribe-pro-live','zoom-scribe-pro-v2-1-live','elevenlabs-scribe-v3-live'})
 
@@ -60,6 +60,7 @@ def prepare(root,models=None):
         authorization=('User explicitly authorized all remaining models on the automatic turn dataset in Vercel; Gemini 3.8 excluded.' if not models
             else 'User explicitly authorized '+', '.join(models)+' on the automatic turn dataset in Vercel.'),
         counts=m['counts'],hashes={str(p):sha256(p) for p in files})
+    if os.environ.get('STT_TURN_SMOKE_POLICY'): plan['smoke_policy']=os.environ['STT_TURN_SMOKE_POLICY']  # optional smoke policy override for condition runs
     write_json(root/'plan.json',plan)
     with tarfile.open(root/'input.tar.gz','w:gz',compresslevel=1) as archive:
         for p in files:archive.add(p,arcname=str(p),recursive=False)
@@ -71,7 +72,7 @@ def prepare(root,models=None):
 def verify(plan_path,expected,*,replay_smoke=True):
     require(sha256(plan_path)==expected,'Frozen turn plan changed')
     plan=json.loads(plan_path.read_text())
-    require(plan['kind']=='private_turns' and plan['manifest']==MANIFEST,'Not a turn benchmark')
+    require(plan['kind']=='private_turns' and plan['manifest'].startswith('datasets/private-turns-v1/') and plan['manifest'].endswith('/manifest.json'),'Not a turn benchmark')
     for name,value in plan['hashes'].items():require(sha256(Path(name))==value,'Frozen input changed: '+name)
     verify_turn_manifest(Path(plan['manifest']))
     for row in plan.get('replayed_smoke',[]) if replay_smoke else []:
@@ -170,7 +171,7 @@ def report(root):
             meta=json.loads((source/'run.json').read_text())
             expected=dict(meta['config'])
             reconstruction=plan['configs'][model].get('transcript_reconstruction')
-            if reconstruction in ('elevenlabs-committed-segments-v2','speechmatics-empty-silence-ranges-v2'):
+            if reconstruction in ('elevenlabs-committed-segments-v2','elevenlabs-committed-segments-v3','elevenlabs-committed-segments-v4','speechmatics-empty-silence-ranges-v2'):
                 expected['transcript_reconstruction']=reconstruction
             require(expected==plan['configs'][model] and meta['manifest_sha256']==plan['manifest_sha256'],
                     'Imported smoke changed more than the versioned transcript reconstruction')

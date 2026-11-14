@@ -5,6 +5,8 @@ from pathlib import Path
 DATASETS = {'pipecat-stt-benchmark': Path('config/datasets/pipecat-stt-benchmark.json')}
 MODELS = {name: Path('config/models') / (name + '.json') for name in (
     'assemblyai-universal-3-5-pro',
+    'assemblyai-universal-3-5-pro-min-latency',
+    'assemblyai-universal-3-6-pro-min-latency',
     'reson8-realtime',
     'gradium-default',
     'deepgram-nova-3',

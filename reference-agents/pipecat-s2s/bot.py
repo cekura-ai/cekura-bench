@@ -3689,12 +3689,17 @@ def create_task(pipeline, context, params, runner_args, transport, record, obser
     it is simply not observed -- a missing key must not be the reason a benchmark
     call fails.
     """
+    # Pipecat adds RTVI to every task unless told not to, and RTVI broadcasts each spoken word
+    # to the other participant. No caller of this agent is an RTVI client, and a row that
+    # generates faster than real time sends a whole reply's words at once as the reply starts,
+    # which lands on the caller just as the reply's audio does.
+    task_kwargs = {"params": params, "observers": observers, "enable_rtvi": False}
     definition = record.get("agent_definition")
     api_key, agent_id = os.getenv("CEKURA_API_KEY"), cekura_agent_id(definition)
     if not (api_key and agent_id):
         missing = "CEKURA_API_KEY" if not api_key else f"the agent id for {definition}"
         logger.info("Cekura tracing off: {} unset", missing)
-        return PipelineTask(pipeline, params=params, observers=observers), None
+        return PipelineTask(pipeline, **task_kwargs), None
 
     try:
         agent_id = int(agent_id)
@@ -3720,15 +3725,15 @@ def create_task(pipeline, context, params, runner_args, transport, record, obser
         if record.get("cekura_mode") == "observe":
             return tracer.observe_and_create_task(
                 pipeline, context, runner_args=runner_args, transport=transport,
-                custom_metadata=metadata, params=params, observers=observers,
+                custom_metadata=metadata, **task_kwargs,
             ), tracer
         return tracer.track_and_create_task(
             pipeline, context, runner_args=runner_args, transport=transport,
-            custom_metadata=metadata, params=params, observers=observers,
+            custom_metadata=metadata, **task_kwargs,
         ), tracer
     except Exception as exc:  # noqa: BLE001 -- observability must never fail a call
         logger.warning("Cekura tracing disabled: {}", exc)
-        return PipelineTask(pipeline, params=params, observers=observers), None
+        return PipelineTask(pipeline, **task_kwargs), None
 
 
 def warm() -> None:

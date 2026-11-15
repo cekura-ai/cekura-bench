@@ -22,6 +22,10 @@ A measure with no data for any model is dropped and the rest renormalized.
 ## Per-clip rules
 - Every clip with reference words counts. Clip score = 100 − WER; two models draw if their scores are within 5 points.
   Short replies (< 5 words) also form their own measure, scored by error count.
+- Margin of victory: on the WER and semantic measures a decided clip counts more the wider the gap, on a log scale,
+  ln(1 + gap) / ln(6). A 5-point win counts 1×, a 20-point win 1.7×, a 50-point win 2.2× and a 100-point win 2.6×;
+  a failed clip scores 0. Draws, short replies and entities count 1×. A garbled turn costs more than one wrong word,
+  and the log scale keeps a few garbled clips from swamping the rest.
 - Matches are weighted by the clip's word count; each measure's matches are scaled to its weight.
 - The per-measure WER in the output table is plain WER: all word errors over all reference words of the model's valid
   clips, with no floor. Only the match scores are floored at 0.

@@ -2,7 +2,9 @@
 
 Measures and weights: Ocular turns WER 5, Pipecat WER 10, semantic WER 10, phone 5, callcenter 20, babble 10,
 tv 5, reverb 5, short replies (<5 words) 10, entities 20.  A measure with no data is dropped and the rest renormalized.
-Per clip (every clip with reference words): score = 100 - WER; draw if |gap| <= 5; matches weighted by word count;
+Per clip (every clip with reference words): score = 100 - WER; draw if |gap| <= 5; matches weighted by word count,
+and a decided clip's weight is multiplied by ln(1 + gap) / ln(6) (margin of victory: a 5-point win counts 1x,
+a 50-point win 2.2x, a 100-point win 2.6x);
 a failed clip loses to a valid one; clips invalid for our-side reasons (pacing) are missing, not failures.
 Short replies: score = -errors, no margin.  Entities: score = entities captured exactly, no margin.
 Each measure's matches are scaled to its weight.  Bradley-Terry fit, ELO = 1000 + 400 log10(p).
@@ -172,6 +174,14 @@ def outcome(a, b, margin):
     return 0.5 if abs(a - b) <= margin else float(a > b)
 
 
+def win_weight(a, b, o, margin):
+    """Margin of victory on scored measures: a decided clip counts more the wider the gap, on a log scale so a few
+    garbled clips cannot swamp the rest. A 5-point win counts 1x; a failed clip scores 0. Draws and count measures
+    (margin 0: short replies, entities) count 1x."""
+    if margin == 0 or o == 0.5: return 1.0
+    return math.log1p(max(margin, abs((a or 0) - (b or 0)))) / math.log1p(margin)
+
+
 def ent_scoreable(ents, ref_norm):
     """Entities normalised with the benchmark's own normaliser; keep only those present in the normalised reference."""
     out = []
@@ -221,7 +231,7 @@ def matches(rows, wts, models, margin, clips):
             for b in models[i + 1:]:
                 if a in r and b in r:
                     o = outcome(r[a], r[b], margin)
-                    if o is not None: out.append((a, b, o, wts[c]))
+                    if o is not None: out.append((a, b, o, wts[c] * win_weight(r[a], r[b], o, margin)))
     return out
 
 

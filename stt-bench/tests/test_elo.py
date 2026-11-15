@@ -8,6 +8,13 @@ def test_outcome_margin_and_failures():
     assert elo.outcome(None, None, 5.0) is None
 
 
+def test_margin_of_victory_weights_decided_clips_on_a_log_scale():
+    assert elo.win_weight(90.0, 87.0, 0.5, 5.0) == 1.0  # a draw
+    assert elo.win_weight(95.0, 89.0, 1.0, 5.0) < 1.1  # a narrow win
+    assert abs(elo.win_weight(100.0, 50.0, 1.0, 5.0) - 2.19) < 0.01 and abs(elo.win_weight(None, 100.0, 0.0, 5.0) - 2.58) < 0.01
+    assert elo.win_weight(-3.0, 0.0, 0.0, 0.0) == 1.0  # count measures keep win / draw / loss
+
+
 def test_bradley_terry_orders_by_wins():
     models = ['a', 'b', 'c']
     matches = [('a', 'b', 1.0, 1.0)] * 8 + [('b', 'c', 1.0, 1.0)] * 8 + [('a', 'c', 1.0, 1.0)] * 8

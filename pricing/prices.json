@@ -234,12 +234,38 @@
       ]
     },
     "polyai-dialog": {
-      "read_on": null,
-      "verified": false,
-      "source": null,
-      "components": [],
+      "read_on": "2026-11-16",
+      "verified": true,
+      "source": "https://docs.poly.ai/api-reference/dialog-rsn-1/limits.md#pricing (summarised at https://poly.ai/pricing, Model API)",
+      "reasoning_in_output": true,
+      "components": [
+        {
+          "name": "dialog-rsn-1 connected time",
+          "basis": "per_minute",
+          "measure": "call_seconds",
+          "rates": {
+            "minute": 0.02
+          }
+        },
+        {
+          "name": "dialog-rsn-1 text tokens",
+          "basis": "per_million_tokens",
+          "requires": [
+            "cache_read_input_tokens"
+          ],
+          "rates": {
+            "text_input": 2.0,
+            "text_input_cached": 0.2,
+            "text_output": 5.0,
+            "audio_input": 0.0,
+            "audio_input_cached": 0.0,
+            "audio_output": 0.0
+          }
+        }
+      ],
       "unmetered": [
-        "No public price list."
+        "Connected time is billed per second from WebSocket open to close; the call's own length stands in for it.",
+        "Only text tokens are billed by the token. Speech in and out and turn detection are inside the connected-minute rate, so the audio lanes are priced at zero."
       ]
     },
     "smallest-hydra": {

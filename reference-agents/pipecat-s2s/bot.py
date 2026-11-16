@@ -3703,6 +3703,10 @@ def create_task(pipeline, context, params, runner_args, transport, record, obser
 
     try:
         agent_id = int(agent_id)
+        # The tool answers are part of what is measured: they come from this agent's own
+        # mock tool table (and a benchmark's private layer), never from the platform. From
+        # 1.6.8 the SDK swaps in the platform agent's mock tools on a simulation run.
+        os.environ["CEKURA_MOCK_TOOLS_ENABLED"] = "false"
         from cekura.pipecat import PipecatTracer
 
         tracer = PipecatTracer(

@@ -66,12 +66,20 @@ def test_config_credentials_and_setup():
             validate(dict(c, **{key: value}))
 
 
+def test_captions_are_requested_only_when_set():
+    assert 'config' not in wire.Protocol(validate(config())).setup()
+    v21 = validate(config('zoom-scribe-pro-v2-1-live'))
+    assert wire.Protocol(v21).setup()['config'] == {'model': 'zoom-scribe-en-pro-v2.1', 'interim_results': True}
+    assert wire.Protocol(dict(v21, interim_results=False)).setup()['config'] == {'model': 'zoom-scribe-en-pro-v2.1'}
+
+
 @pytest.mark.parametrize('name,model', [('zoom-scribe-pro-live', 'zoom-scribe-en-pro'), ('zoom-scribe-pro-v2-1-live', 'zoom-scribe-en-pro-v2.1')])
 def test_pro_requests_its_model_inside_config(name, model):
     pro = validate(config(name))
+    captions = {'interim_results': True} if pro.get('interim_results') else {}
     assert wire.Protocol(pro).setup() == {'type': 'session.update', 'language': 'en-US', 'audio': {'format': 'pcm16'},
-                                          'config': {'model': model}}
-    differ = ('model_id', 'model', 'request_model', 'pricing', 'protocol_caveat', 'checked_on')
+                                          'config': {'model': model, **captions}}
+    differ = ('model_id', 'model', 'request_model', 'interim_results', 'pricing', 'protocol_caveat', 'checked_on')
     assert {k: v for k, v in pro.items() if k not in differ} == {k: v for k, v in config().items() if k not in differ}
 
 

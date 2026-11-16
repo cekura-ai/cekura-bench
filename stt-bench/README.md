@@ -71,7 +71,7 @@ A provider may require additional account access for a particular model.
 | Speechmatics | Standard, Enhanced | `SPEECHMATICS_API_KEY` |
 | Cartesia | Ink-2 | `CARTESIA_API_KEY` |
 | Google Cloud Speech | Chirp 2, Chirp 3 | `GOOGLE_APPLICATION_CREDENTIALS` |
-| AssemblyAI | Universal 3.5 Pro | `ASSEMBLYAI_API_KEY` |
+| AssemblyAI | Universal 3.5 Pro, Universal 3.6 Pro, STT 3.7 Realtime Agent | `ASSEMBLYAI_API_KEY` |
 | Soniox | STT RT v5 | `SONIOX_API_KEY` |
 | Smallest AI | Pulse | `SMALLEST_API_KEY` |
 | Sarvam | Saaras v3 Realtime | `SARVAM_API_KEY` |

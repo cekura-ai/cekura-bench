@@ -43,7 +43,10 @@ def sections(report):
                        f"Dispatch ceiling: {live.get('ceiling', 'unavailable')}; peak overlapping captures: {data['peak_capture_overlap']}. "
                        'Capture overlap includes connecting and finishing requests; it is not proof that the provider accepted that many streams.')
         if model.startswith('assemblyai'):
-            yield 'text', 'AssemblyAI configuration: universal-3-5-pro, mode=min_latency, language_codes=[en]. New stream starts are globally limited to five per minute with a 62-second safety window. Existing streams may overlap; the worker ceiling is separate from the session-start rate. No prompts, keyterms, agent context, or silence overrides. Original audio is sent in 60 ms packets (80/100 ms end packets as needed), preserving every sample. Private word timing uses the actual delivery of the packet containing the word end. Packet-aware pacing gates apply; wire timing differs from 20 ms providers.'
+            # Name the model this run requested rather than assuming 3.5 Pro.
+            config = Path('config/models') / f'{model}.json'
+            requested = json.loads(config.read_text())['model'] if config.exists() else model
+            yield 'text', f'AssemblyAI configuration: {requested}, mode=min_latency, language_codes=[en]. New stream starts are globally limited to {execution.get('start_rate_limit') or 'five'} per minute with a 62-second safety window. Existing streams may overlap; the worker ceiling is separate from the session-start rate. No prompts, keyterms, agent context, or silence overrides. Original audio is sent in 60 ms packets (80/100 ms end packets as needed), preserving every sample. Private word timing uses the actual delivery of the packet containing the word end. Packet-aware pacing gates apply; wire timing differs from 20 ms providers.'
         attempts = [a for item in data['items'] for a in item['attempts']]
         starts = [a['started_at'] for a in attempts if a.get('started_at')]
         ends = [a['finished_at'] for a in attempts if a.get('finished_at')]

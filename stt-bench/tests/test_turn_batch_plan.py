@@ -41,3 +41,13 @@ def test_opt_in_profile_runs_only_when_named(frozen):
     assert 'assemblyai-universal-3-6-pro-min-latency' not in json.loads((frozen/'plan-e/plan.json').read_text())['models']
     turn_batch.prepare(frozen/'plan-f', ['assemblyai-universal-3-6-pro-min-latency'])
     assert json.loads((frozen/'plan-f/plan.json').read_text())['models'] == ['assemblyai-universal-3-6-pro-min-latency']
+    assert 'assemblyai-stt-3-7-realtime-agent-min-latency' not in json.loads((frozen/'plan-e/plan.json').read_text())['models']
+    turn_batch.prepare(frozen/'plan-g', ['assemblyai-stt-3-7-realtime-agent-min-latency'])
+    plan = json.loads((frozen/'plan-g/plan.json').read_text())
+    assert plan['models'] == ['assemblyai-stt-3-7-realtime-agent-min-latency']
+    assert plan['planned_sessions'] == len(plan['clip_ids']) and plan['assemblyai_new_sessions_per_minute'] == 5
+    turn_batch.prepare(frozen/'plan-h', ['assemblyai-stt-3-7-realtime-agent-min-latency'], 60)
+    assert json.loads((frozen/'plan-h/plan.json').read_text())['assemblyai_new_sessions_per_minute'] == 60
+    for bad in (0, 101, 5.5):
+        with pytest.raises(ValueError, match='1-100'):
+            turn_batch.prepare(frozen/f'plan-bad-{bad}', ['assemblyai-stt-3-7-realtime-agent-min-latency'], bad)

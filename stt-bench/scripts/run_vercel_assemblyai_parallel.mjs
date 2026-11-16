@@ -20,8 +20,11 @@ export async function freshDispatchSandbox(previous,getFresh){
 }
 // An unacknowledged reservation holds a slot indefinitely. Only a remote
 // handshake/failure receipt, or collected command evidence, starts its expiry.
+// The account's new-session limit is confirmed per run in runtime.json; the
+// original account allowed five. Never above AssemblyAI's documented paid start.
+export function confirmedLimit(limit){return Number.isInteger(limit)&&limit>=1&&limit<=100;}
 export function reserveStart(gate,id,worker,stamp=Date.now()){
-  if(gate.limit!==5||gate.windowMs<62000)throw new Error('Expected confirmed five starts per minute');
+  if(!confirmedLimit(gate.limit)||gate.windowMs<62000)throw new Error('Expected a confirmed starts-per-minute limit');
   if(gate.entries[id])return true;
   const occupied=Object.values(gate.entries).filter(e=>e.ackAt==null||stamp-e.ackAt<gate.windowMs).length;
   if(occupied>=gate.limit)return false;
@@ -219,15 +222,16 @@ export async function main(argv=process.argv.slice(2)){
       }
       await save();
     }
-    if(!runtime?.confirmed_start_rate||runtime.confirmed_start_rate.limit!==5)throw new Error('User-confirmed start-rate policy required');
+    const limit=runtime?.confirmed_start_rate?.limit;
+    if(!confirmedLimit(limit))throw new Error('User-confirmed start-rate policy required');
     if(state.startRate?.authorization!==runtime.confirmed_start_rate.id){
       const stamp=Date.now();
-      state.startRate={authorization:runtime.confirmed_start_rate.id,limit:5,windowMs:62000,
-        entries:Object.fromEntries(Array.from({length:5},(_,i)=>['cutover-'+i,{reservedAt:stamp,ackAt:stamp,worker:null}]))};
+      state.startRate={authorization:runtime.confirmed_start_rate.id,limit,windowMs:62000,
+        entries:Object.fromEntries(Array.from({length:limit},(_,i)=>['cutover-'+i,{reservedAt:stamp,ackAt:stamp,worker:null}]))};
       for(const m of Object.values(state.models)){
         m.ceiling=Math.min(20,m.successes>=16?20:m.successes>=6?10:m.successes>=1?5:1);
         m.throttled=false;m.cooldown=stamp+62000;
-        m.reductions.push({at:new Date(stamp).toISOString(),to:m.ceiling,reason:'user_confirmed_five_new_sessions_per_minute_global_gate'});
+        m.reductions.push({at:new Date(stamp).toISOString(),to:m.ceiling,reason:limit===5?'user_confirmed_five_new_sessions_per_minute_global_gate':`user_confirmed_${limit}_new_sessions_per_minute_global_gate`});
       }
       await save();
     }

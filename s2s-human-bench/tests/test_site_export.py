@@ -136,3 +136,25 @@ def test_task_file_decides_the_task_outcome(cfg, tmp_path):
     assert overall["alpha-site"]["taskPass"] == 8 and overall["beta-site"]["taskPass"] == 0 and overall["ref-site"]["taskPass"] == 0
     without = {r["model"]: r for r in export(tmp_path, cfg, tmp_path / "without")["benchmark.json"]["results"] if r["suite"] == "all"}
     assert without["beta-site"]["taskPass"] > 0  # by expected-outcome lines, Beta completes some calls
+
+
+def test_export_warns_when_calls_lack_the_task_metric(cfg, tmp_path, capsys):
+    runs = make_inputs(tmp_path)
+    config = json.loads((tmp_path / "config.json").read_text())
+    config["metrics"]["task"] = 950
+    (tmp_path / "config.json").write_text(json.dumps(config))
+    for path in runs.glob("run_a1_*/calls/*/*/metrics.json"):  # only Alpha's runs were rescored with the task metric
+        doc = json.loads(path.read_text())
+        doc["results"].append({"id": 950, "name": "Task", "score": True, "explanation": "Main task done."})
+        path.write_text(json.dumps(doc))
+
+    export(tmp_path, cfg, tmp_path / "out")
+    err = capsys.readouterr().err
+    assert "warning: 16 of 24 calls have no verdict from the task metric (950)" in err and "Models: Beta, Reference." in err
+
+    for path in runs.glob("run_a[23]_*/calls/*/*/metrics.json"):  # once every run carries it, the warning goes
+        doc = json.loads(path.read_text())
+        doc["results"].append({"id": 950, "name": "Task", "score": False, "explanation": "Main task not done."})
+        path.write_text(json.dumps(doc))
+    export(tmp_path, cfg, tmp_path / "all")
+    assert "warning" not in capsys.readouterr().err

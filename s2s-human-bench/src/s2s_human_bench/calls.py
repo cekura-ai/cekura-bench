@@ -34,12 +34,13 @@ class Call:
     verdicts: dict[str, bool | None]  # skill id -> verdict, skills in family order
     explanations: dict[str, str]
     families: dict[str, float | None]
-    outcome: float | None  # task outcome, 0-100: main task done (100/0) with a task file, else share of expected-outcome lines met
+    outcome: float | None  # task outcome, 0-100: main task done (100/0) by the task file or metric, else share of expected-outcome lines met
     outcome_lines: list[str]
     score: float | None
     latency_ms: float | None
     turn_words: float | None
     task_done: bool = False
+    outcome_from: str = "lines"  # what decided the outcome: "tasks" (task file), "metric" (platform task metric) or "lines"
     stalled: bool = False
     agent_ended: bool = False
     spoke: bool = False
@@ -128,12 +129,15 @@ def load_call(cfg: Config, call_json: Path) -> Call:
             raise TaskFileError(f"task file has no task for {meta['code']}")
         task_done, _ = task_verdict(cfg.tasks[meta["code"]], transcript)
         outcome: float | None = 100.0 if task_done else 0.0
+        outcome_from = "tasks"
     elif isinstance(platform_task, bool):  # the same checker, run on the platform as a metric (task_metric.py)
         task_done = platform_task
         outcome = 100.0 if task_done else 0.0
+        outcome_from = "metric"
     else:
         outcome = outcome_share(lines)
         task_done = sum(x.startswith(MISSED) for x in lines) == 0 and sum(x.startswith(MET) for x in lines) > 0
+        outcome_from = "lines"
     families = family_scores(cfg, verdicts, outcome)
     agent = [t for t in transcript if _speaker(t, inputs["agentRolePrefix"])]
     caller = [t for t in transcript if _speaker(t, inputs["callerRolePrefix"])]
@@ -154,6 +158,7 @@ def load_call(cfg: Config, call_json: Path) -> Call:
         latency_ms=results.get(metric_ids["latency"], {}).get("score"),
         turn_words=results.get(metric_ids["turnLength"], {}).get("score"),
         task_done=task_done,
+        outcome_from=outcome_from,
         stalled=_went_quiet(agent, caller, cfg.scoring["stallSeconds"]),
         agent_ended=inputs["endCallTool"] in tools,
         spoke=bool(agent),

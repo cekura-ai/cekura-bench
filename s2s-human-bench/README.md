@@ -32,7 +32,8 @@ holds none of them.
   built from the same checker by `task-metric`, scores a run when its metrics are rescored
   after the calls, like the other skill metrics; the platform does not score it on its own.
   The scorer reads that metric's verdict (`metrics.task` in the config) unless a task file
-  is given.
+  is given. Calls without a verdict from it fall back to the expected-outcome share, and
+  `site-export` warns about them.
 * **Pass**: call score of at least 80. **pass³**: the scenario passed in all three runs.
 * **ELO**: per scenario, a model's call score averaged over its runs; two models draw when
   their scores are within 5 points, otherwise the higher wins. Ranked models get

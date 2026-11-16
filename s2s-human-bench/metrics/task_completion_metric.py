@@ -27,13 +27,21 @@ def tool_calls(transcript):
         if turn.get('role') != 'Function Call' or not data.get('name'):
             continue
         args = data.get('arguments')
-        if isinstance(args, str):
-            try:
-                args = json.loads(args) if args.strip() else {}
-            except json.JSONDecodeError:
-                args = {}
+        for _ in range(2):
+            if isinstance(args, dict) and isinstance(args.get('_unparsed'), str):
+                args = args['_unparsed']
+            if isinstance(args, str):
+                try:
+                    args = json.loads(args) if args.strip() else {}
+                except json.JSONDecodeError:
+                    args = _salvage(args)
         calls.append((float(turn.get('start_time') or i), data['name'], args if isinstance(args, dict) else {}))
     return sorted(calls, key=lambda c: c[0])
+
+def _salvage(text):
+    """The complete ``"key": value`` pairs of a JSON object that was cut off part-way."""
+    pairs = re.findall('"([^"\\\\]+)"\\s*:\\s*("(?:[^"\\\\]|\\\\.)*"|-?\\d+(?:\\.\\d+)?|true|false|null)', text)
+    return {key: json.loads(value) for key, value in pairs}
 
 def _plain(value):
     text = unicodedata.normalize('NFKD', str(value)).encode('ascii', 'ignore').decode().lower()
@@ -62,6 +70,10 @@ def _times(text):
         found.add(f'{int(h):02d}:{m}')
     return found
 
+def _spoken(value):
+    """Letters and digits only, with spelled-out digits as digits: "Q three oh seven one" -> "Q3071"."""
+    return ''.join(('0' if w == 'oh' else w for w in _plain(value).split())).upper()
+
 def _number(value):
     text = str(value).replace(',', '').replace('$', '').strip()
     return float(text) if re.fullmatch('-?\\d+(\\.\\d+)?', text) else None
@@ -77,10 +89,12 @@ def value_matches(expected, actual):
         pool = actual if isinstance(actual, list) else [actual]
         return all((any((value_matches(e, a) for a in pool)) or any((_plain(e) in _plain(a) for a in pool)) for e in expected))
     exp = str(expected).strip()
+    if exp.startswith('='):
+        return _plain(exp[1:]) == _plain(actual)
     if exp.lower() in ('true', 'false'):
         return str(actual).strip().lower() in (('true', 'yes', '1') if exp.lower() == 'true' else ('false', 'no', '0', 'none'))
     num = _number(exp)
-    if num is not None and len(_digits(exp)) < 7:
+    if num is not None and ('.' in exp or len(_digits(exp)) < 7):
         got = _number(actual)
         return got is not None and abs(got - num) < 0.005
     years = [int(y) for y in re.findall('\\b(20\\d\\d)\\b', exp)]
@@ -99,11 +113,11 @@ def value_matches(expected, actual):
     if times and (not re.search('[a-z]{4,}', exp.lower().replace('am', '').replace('pm', ''))):
         return min(times) in _times(str(actual))
     digits, alnum = (_digits(exp), re.sub('[^A-Za-z0-9]', '', exp))
+    written = re.sub('[^A-Za-z0-9]', '', str(actual)).upper()
     if len(digits) >= 7 and len(digits) >= 0.6 * len(alnum):
-        return _digits(actual)[-10:] == digits[-10:]
+        return any((_digits(got)[-10:] == digits[-10:] for got in (written, _spoken(actual))))
     if alnum and ' ' not in exp and any((c.isdigit() for c in alnum)):
-        got = re.sub('[^A-Za-z0-9]', '', str(actual)).upper()
-        return got == alnum.upper() or (len(alnum) >= 4 and alnum.upper() in got)
+        return any((got == alnum.upper() or (len(alnum) >= 4 and alnum.upper() in got) for got in (written, _spoken(actual))))
     want, got = (_plain(exp).split(), set(_plain(actual).split()))
     words = [w for w in want if w not in _STOP]
     if not words:

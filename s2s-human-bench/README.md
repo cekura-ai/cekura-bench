@@ -29,8 +29,10 @@ holds none of them.
   The tasks are test-set grading detail and stay out of this repository: offline they come
   from a private file (`--tasks`); on the platform, each scenario's test profile carries its
   task (`eval_target_task`) and the metric in [`metrics/`](metrics/task_completion_metric.py),
-  built from the same checker by `task-metric`, scores every run. The scorer reads that
-  metric's verdict (`metrics.task` in the config) unless a task file is given.
+  built from the same checker by `task-metric`, scores a run when its metrics are rescored
+  after the calls, like the other skill metrics; the platform does not score it on its own.
+  The scorer reads that metric's verdict (`metrics.task` in the config) unless a task file
+  is given.
 * **Pass**: call score of at least 80. **pass³**: the scenario passed in all three runs.
 * **ELO**: per scenario, a model's call score averaged over its runs; two models draw when
   their scores are within 5 points, otherwise the higher wins. Ranked models get

@@ -47,6 +47,12 @@ def test_copy_carries_no_annotations_or_loader():
 
 PAY = {"requirements": [one("send_payment", [{"account": "A-1001", "amount": "250.00"}])]}
 RIDES = {"requirements": [one("book_ride", [{"rider": "R-5", "?date": "2026-03-02"}]), one("book_ride", [{"rider": "R-5", "?date": "2026-03-04"}])]}
+SEAT = {"requirements": [one("book_seat", [{"booking": "B-77", "?seat": "=window seat"}])]}
+CUT_OFF = {  # arguments the transcript stored cut off
+    "role": "Function Call",
+    "start_time": 5,
+    "data": {"name": "send_payment", "arguments": json.dumps({"_unparsed": '{"account": "A-1001", "amount": "250", "memo": "re'})},
+}
 CASES = [
     (PAY, [fc("send_payment", 5, account="A-1001", amount="250")]),
     (PAY, [fc("send_payment", 5, account="A-1001", amount="205")]),
@@ -56,6 +62,8 @@ CASES = [
     ({"requirements": [one("book_visit", [{"slot": "S2"}])], "then_undo": ["cancel_visit"]}, [fc("book_visit", 3, slot="S2")]),
     (RIDES, [fc("book_ride", 3, rider="R-5")]),
     (RIDES, [fc("book_ride", 3, rider="R-5", date="Monday"), fc("book_ride", 7, rider="R-5", date="Wednesday")]),
+    (PAY, [CUT_OFF]),
+    (SEAT, [fc("book_seat", 4, booking="B-77", seat="window or aisle seat")]),
 ]
 
 

@@ -6,7 +6,7 @@ import pytest
 
 from conftest import write_call
 from s2s_human_bench.calls import load_call
-from s2s_human_bench.tasks import TaskFileError, load_tasks, row_matches, task_verdict, value_matches
+from s2s_human_bench.tasks import TaskFileError, load_tasks, row_matches, task_verdict, tool_calls, value_matches
 
 
 def fc(name: str, t: float, **args) -> dict:
@@ -26,10 +26,18 @@ def task(*requirements, **extra) -> dict:
     "expected, actual, ok",
     [
         ("555-010-0199", "(555) 010 0199", True),  # phone formatting
+        ("555-010-0199", "five five five oh one oh oh one nine nine", True),  # read out digit by digit
         ("A-1001", "a1001", True),  # id formatting
         ("A-1001", "A-1002", False),
+        ("Q-3071", "Q three oh seven one", True),
+        ("Q-3071", "Q three oh seven two", False),
+        ("OH-4821", "oh-4821", True),  # letters that read like a digit still match as written
         ("250.00", "250", True),
         ("250.00", "205", False),
+        ("15250.00", "15250", True),  # a large amount is an amount, not an account number
+        ("15250.00", "15205", False),
+        ("=window seat", "Window seat", True),  # an exact choice
+        ("=window seat", "window or aisle seat", False),
         ("2026-03-02", "March 2, 2026", True),
         ("2026-03-02", "2026-03-03", False),
         ("2026-03-02T14:30", "2:30 pm", True),  # a bare time: the record fixes the day
@@ -68,6 +76,18 @@ def test_simple_task():
     assert task_verdict(PAY, []) == (False, "send_payment not called")
     assert task_verdict(PAY, [fc("send_payment", 5, account="A-1001", amount="205")]) == (False, "send_payment called with other values")
     assert task_verdict(PAY, [fc("send_payment", 5, account="A-1001", amount="205"), fc("send_payment", 9, account="A-1001", amount="250")]) == (True, "done")
+
+
+def test_arguments_stored_cut_off():
+    cut = '{"account": "A-1001", "amount": "250.00", "memo": "for the re'
+
+    def turn(arguments) -> dict:
+        return {"role": "Function Call", "start_time": 5, "data": {"name": "send_payment", "arguments": arguments}}
+
+    assert tool_calls([turn(cut)])[0][2] == {"account": "A-1001", "amount": "250.00"}  # the unfinished memo is dropped
+    for arguments in (json.dumps({"_unparsed": cut}), {"_unparsed": cut}, cut):
+        assert task_verdict(PAY, [turn(arguments)]) == (True, "done")
+    assert task_verdict(PAY, [turn(json.dumps({"_unparsed": '{"account": "A-1001", "amo'}))]) == (False, "send_payment called with other values")
 
 
 def test_taken_back_before_anything_was_sent():

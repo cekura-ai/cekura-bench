@@ -34,6 +34,7 @@ replaces the base run's.
 | Gradium (default), voice Everly | `campaign-1018b-gradium-everly` | none |
 | Inworld TTS-2 Flash and TTS-2 (creative delivery) | `campaign-1019-inworld` | none |
 | Speechify Simba 3.5 and Simba 3.2, voice Harper | `speechify-simba-20261109` | none |
+| Speechify Simba 3.0, voice Harper | `speechify-simba-3.0-20261117` | none |
 
 `campaign-0928-fix` re-ran the models whose recordings an early stream-end bug
 had cut short, and `campaign-0928-v4` added the two v4 models. Grok's

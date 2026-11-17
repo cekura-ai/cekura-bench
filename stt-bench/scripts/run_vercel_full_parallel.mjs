@@ -126,7 +126,7 @@ export async function main(argv=process.argv.slice(2)){
   const {getAuth,OAuth,updateAuthConfig}=await import(pathToFileURL(join(sdk,'dist/auth/index.js')));
   let refresh;
   async function account(){
-    let a=getAuth();if(!a?.token)throw new Error('Vercel login missing');
+    let a=getAuth();if(!a?.token&&process.env.VERCEL_TOKEN)return {token:process.env.VERCEL_TOKEN,teamId:accountPlan.teamId,projectId:accountPlan.projectId};if(!a?.token)throw new Error('Vercel login missing');
     if(a.expiresAt?.getTime()<Date.now()+300000){
       refresh??=(async()=>{const t=await(await OAuth()).refreshToken(a.refreshToken);
         updateAuthConfig({token:t.access_token,refreshToken:t.refresh_token??a.refreshToken,expiresAt:new Date(Date.now()+t.expires_in*1000)});})();
@@ -289,10 +289,10 @@ print('Full inputs and adapters verified; no provider calls')`;
             state.batches[batchId]=b;w.batch=batchId;m.active[id]=assignment;
             m.peak=Math.max(m.peak,Object.keys(m.active).length);await save();
           }
-          let sb=await ensureCreate(w,prep.snapshotId,{allow:[new URL(plan.configs[model].endpoint).hostname]});
+          let sb=await ensureCreate(w,prep.snapshotId,{allow:[new URL(plan.configs[model].endpoint).hostname,...(plan.configs[model].socket_hosts??[])]});
           if(sb.region!=='iad1'||sb.vcpus!==2||sb.memory!==4096)throw new Error('Worker resource mismatch');
           if(b.status==='assigned'){
-            await sb.update({networkPolicy:{allow:[new URL(plan.configs[model].endpoint).hostname]}});
+            await sb.update({networkPolicy:{allow:[new URL(plan.configs[model].endpoint).hostname,...(plan.configs[model].socket_hosts??[])]}});
             if(runtimeHash&&amendUndispatched(b,w.command,runtimeHash)){m.active[w.id]=b.assignment;await save();}
             if(runtime&&w.runtimeHash!==runtimeHash){
               const payload=[];

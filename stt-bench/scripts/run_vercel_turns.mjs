@@ -10,7 +10,7 @@ import {digestFile,upload,dispatchOnce} from './vercel_models.mjs';
 import {waitForCompletion} from './vercel_command_wait.mjs';
 const exec=promisify(execFile),REMOTE='/vercel/sandbox/stt-turns';
 
-export function workerPolicy(config){return {allow:[new URL(config.endpoint).hostname,
+export function workerPolicy(config){return {allow:[new URL(config.endpoint).hostname,...(config.socket_hosts??[]),
   ...(config.provider==='google'?['oauth2.googleapis.com']:[])]};}
 export function workerName(model,index,prefix='vocera-turns-0915'){return `${prefix}-${model}-${index}`.replace(/[^a-zA-Z0-9_-]/g,'-');}
 

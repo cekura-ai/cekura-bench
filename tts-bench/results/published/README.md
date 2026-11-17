@@ -35,6 +35,7 @@ replaces the base run's.
 | Inworld TTS-2 Flash and TTS-2 (creative delivery) | `campaign-1019-inworld` | none |
 | Speechify Simba 3.5 and Simba 3.2, voice Harper | `speechify-simba-20261109` | none |
 | Speechify Simba 3.0, voice Harper | `speechify-simba-3.0-20261117` | none |
+| Speechify Simba 3.5, 3.2 and 3.0 over HTTP streaming, voice Harper | `speechify-http-20261117` | none |
 
 `campaign-0928-fix` re-ran the models whose recordings an early stream-end bug
 had cut short, and `campaign-0928-v4` added the two v4 models. Grok's
@@ -47,4 +48,12 @@ its new checkpoint rolled out, with the voice Sarah; it replaces the
 ten voices it recommended, in place of the `campaign-1013` Harper run. The
 sandbox's OpenAI key had been rejected for both campaigns, so their Whisper
 transcripts were scored offline with `bin/score-tts.py`.
+Speechify's site rows come from two endpoints of the same model and voice, as
+`config/site-models.json` says with `streamedFrom`: every one-shot figure from
+`speechify-http-20261117` (`POST /v1/audio/stream`, the endpoint Speechify asked
+us to time), and the streamed-input and continuation figures, which a
+whole-text request cannot measure, from the websocket runs
+(`speechify-simba-20261109`, `speechify-simba-3.0-20261117`). Both sets of
+summaries are published; the site row names the HTTP run in `run` and the
+websocket run in `streamedFrom`.
 Each summary names its runs in `run` and `amendments`.

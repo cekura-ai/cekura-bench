@@ -2,6 +2,7 @@
 import asyncio
 import io
 import json
+import urllib.error
 import urllib.request
 import pytest
 from websockets.asyncio.server import serve
@@ -54,7 +55,8 @@ def test_config_credentials_and_messages():
                          'sample_rate': 16000, 'channels': 1}
     assert p.finalize() == {'type': 'finalize'} and p.finish(0) == {'type': 'finish'}
     for key, value in [('language', 'en'), ('model', 'other'), ('sample_rate', 24000), ('finalize_ack_supported', True),
-                       ('completion_basis', 'session_closed_after_close'), ('endpoint', 'https://example.test/endpoint')]:
+                       ('completion_basis', 'session_closed_after_close'), ('endpoint', 'https://example.test/endpoint'),
+                       ('socket_hosts', ['*.example.test'])]:
         with pytest.raises(ValueError):
             validate(dict(c, **{key: value}))
 
@@ -128,10 +130,12 @@ def test_full_benchmark_and_turn_reconstruction_use_the_aircaps_protocol():
     assert transcript_timeline(events, c)[-1]['text'] == 'Hello there, how are you?'
 
 
-def lookup_with(monkeypatch, body):
+def lookup_with(monkeypatch, body, status=None):
     seen = {}
     def urlopen(request, timeout):
         seen.update(url=request.full_url, auth=request.get_header('Authorization'))
+        if status:
+            raise urllib.error.HTTPError(request.full_url, status, 'refused', {}, io.BytesIO(body.encode()))
         return io.BytesIO(json.dumps(body).encode())
     monkeypatch.setattr(urllib.request, 'urlopen', urlopen)
     return seen
@@ -149,6 +153,15 @@ def test_lookup_returns_only_an_aircaps_socket(monkeypatch):
         lookup_with(monkeypatch, body)
         with pytest.raises(ProviderError):
             wire.socket_url(c, 'fixture')
+
+
+@pytest.mark.parametrize('status,body,failure', [(402, '{"code":"payment_required"}', 'credits'),
+                                                 (429, '{"code":"quota_unavailable"}', 'concurrency')])
+def test_lookup_http_errors_are_classified(status, body, failure, monkeypatch):
+    lookup_with(monkeypatch, body, status)
+    with pytest.raises(ProviderError) as exc:
+        wire.socket_url(config(), 'fixture')
+    assert full_benchmark.classify([{'kind': 'error', 'error_message': str(exc.value)}]) == failure
 
 
 async def fake_aircaps(ws, said, fault=None):
@@ -199,9 +212,9 @@ def test_local_websocket_success(said, tmp_path, monkeypatch):
     assert r['transcript_complete'] and r['model_verified'] and r['transcript'] == said
 
 
-@pytest.mark.parametrize('fault,error', [('model', ProviderError), ('disconnect', ProviderError)])
-def test_local_websocket_faults_never_become_success(fault, error, tmp_path, monkeypatch):
-    with pytest.raises(error):
+@pytest.mark.parametrize('fault', ['model', 'disconnect'])
+def test_local_websocket_faults_never_become_success(fault, tmp_path, monkeypatch):
+    with pytest.raises(ProviderError):
         run_local(tmp_path, monkeypatch, lambda ws: fake_aircaps(ws, 'hello', fault))
     r = reduce_events(read_events(tmp_path / 'events.jsonl'), config())
     assert not r['transcript_complete']

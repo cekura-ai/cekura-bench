@@ -12,6 +12,7 @@ next message restores the full text, so that stale final is skipped.
 """
 import asyncio
 import json
+import urllib.error
 import urllib.request
 from urllib.parse import urlencode, urlsplit
 
@@ -26,7 +27,8 @@ SOCKET_DOMAIN = '.aircaps.ai'
 def validate(config):
     expected = dict(language='en-US', sample_rate=16000, encoding='pcm_s16le', channels=1, frame_ms=20,
                     finalization='manual_at_speech_end', completion_basis='finished_after_finish',
-                    finalize_ack_supported=False, requires_final_only_completion=True)
+                    finalize_ack_supported=False, requires_final_only_completion=True,
+                    socket_hosts=['*' + SOCKET_DOMAIN])
     for key, value in expected.items():
         if config.get(key) != value:
             raise ValueError(f'AirCaps requires {key}={value!r}')
@@ -39,8 +41,12 @@ def headers(key):
 def socket_url(config, key):
     request = urllib.request.Request(config['endpoint'] + '?' + urlencode({'model': config['model']}),
                                      headers=headers(key))
-    with urllib.request.urlopen(request, timeout=15) as response:
-        body = json.load(response)
+    try:
+        with urllib.request.urlopen(request, timeout=15) as response:
+            body = json.load(response)
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode('utf-8', errors='replace')[:500]
+        raise shared.ProviderError(f'AirCaps endpoint lookup failed: HTTP {exc.code} {detail}') from exc
     url = body.get('websocket_url')
     parts = urlsplit(url if isinstance(url, str) else '')
     if parts.scheme != 'wss' or not (parts.hostname or '').endswith(SOCKET_DOMAIN):
@@ -102,7 +108,7 @@ async def exchange(ws, pcm, speech_frames, config, log, secret=''):
 async def transcribe(pcm, speech_frames, config, key, log):
     log.emit('connection_requested', url=config['endpoint'])
     url = await asyncio.to_thread(socket_url, config, key)
-    log.emit('socket_resolved', url=url)
+    log.emit('socket_resolved', url=urlsplit(url)._replace(query='', fragment='').geturl())
     async with connect(url, additional_headers=headers(key), open_timeout=15, close_timeout=5,
                        max_size=8 * 1024 * 1024) as ws:
         log.emit('connection_open')

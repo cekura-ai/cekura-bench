@@ -955,8 +955,8 @@ class TestSpeechify:
         assert entry.adapter is SpeechifyAdapter and entry.credential_env == "SPEECHIFY_API_KEY"
         assert entry.default_model == "simba-3.5"
         assert [(m.model, m.voice, m.rate) for m in entry.models] == [
-            ("simba-3.5", HARPER, 24000), ("simba-3.2", HARPER, 24000)]
-        assert [m.model for key, m in lineup() if key == "speechify"] == ["simba-3.5", "simba-3.2"]
+            ("simba-3.5", HARPER, 24000), ("simba-3.2", HARPER, 24000), ("simba-3.0", HARPER, 24000)]
+        assert [m.model for key, m in lineup() if key == "speechify"] == ["simba-3.5", "simba-3.2", "simba-3.0"]
         for m in entry.models:
             instance, _ = adapter(SpeechifyAdapter, m.model, m.voice)
             assert urlsplit(instance.url).hostname == "api.speechify.ai"   # the host sandbox.mjs allows

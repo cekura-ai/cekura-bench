@@ -299,7 +299,10 @@ the hashed run plan before running a full shard.
 
 Collector corrections are versioned. ElevenLabs committed-segments v3 recognizes
 plain commits, their timestamp annotations, and a late duplicate partial without
-duplicating words. Speechmatics empty-silence-ranges v2 prevents a silent timestamp
+duplicating words. Committed-segments v4 also accepts an empty commit whose
+timestamp annotation arrives before the commit itself, which happens when the
+manual commit at speech end follows an auto-commit that already took every word.
+Speechmatics empty-silence-ranges v2 prevents a silent timestamp
 range from falsely overlapping a real word. Historical profiles keep their prior
 interpretation. Corrected reports replay saved receipts without changing receipt
 timestamps or resubmitting audio.

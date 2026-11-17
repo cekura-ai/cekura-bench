@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import os
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -5637,3 +5638,65 @@ class TestEachDefinitionReportsToItsOwnAgent:
         assert built["agent_id"] == 22 and built["custom_metadata"]["cekura_agent_id"] == 22
         # The record is sent again whole when the call ends, so the id has to be on it.
         assert record["cekura_agent_id"] == 22
+
+
+class TestToolAnswersStayTheAgentsOwn:
+    """The tool answers are part of what is measured. The tracing SDK swaps in the
+    platform agent's mock tools on a simulation run unless told not to."""
+
+    def test_the_tracer_is_built_with_platform_mock_tools_off(self, monkeypatch):
+        import cekura.pipecat
+
+        seen = {}
+
+        class Tracer:
+            def __init__(self, **kwargs):
+                seen["mock_tools"] = os.environ.get("CEKURA_MOCK_TOOLS_ENABLED")
+
+            def track_and_create_task(self, pipeline, context, **kwargs):
+                return "task"
+
+        monkeypatch.setenv("CEKURA_API_KEY", "key")
+        monkeypatch.setenv("CEKURA_AGENT_ID", "10")
+        monkeypatch.setenv("CEKURA_MOCK_TOOLS_ENABLED", "true")
+        monkeypatch.setattr(cekura.pipecat, "PipecatTracer", Tracer)
+        bot.create_task("pipeline", "context", None, None, None, {"agent_definition": "medicare"}, [])
+        assert seen["mock_tools"] == "false"
+
+
+class TestTheTaskSendsNoRTVI:
+    """No caller of the agent is an RTVI client. Pipecat's default RTVI only broadcasts the
+    agent's telemetry: a whole reply's words at once for a row that generates faster than
+    real time, landing on the caller as the reply's audio starts."""
+
+    @pytest.mark.parametrize("mode", ["track", "observe"])
+    def test_a_traced_task_is_built_without_rtvi(self, monkeypatch, mode):
+        import cekura.pipecat
+
+        built = {}
+
+        class Tracer:
+            def __init__(self, **kwargs):
+                pass
+
+            def track_and_create_task(self, pipeline, context, **kwargs):
+                built.update(kwargs)
+                return "task"
+
+            observe_and_create_task = track_and_create_task
+
+        monkeypatch.setenv("CEKURA_API_KEY", "key")
+        monkeypatch.setenv("CEKURA_AGENT_ID", "10")
+        monkeypatch.setattr(cekura.pipecat, "PipecatTracer", Tracer)
+        bot.create_task("pipeline", "context", None, None, None, {"agent_definition": "appointments", "cekura_mode": mode}, [])
+        assert built["enable_rtvi"] is False
+
+    def test_an_untraced_task_has_no_rtvi_processor(self, monkeypatch):
+        from pipecat.pipeline.pipeline import Pipeline
+        from pipecat.pipeline.task import PipelineParams
+
+        monkeypatch.delenv("CEKURA_API_KEY", raising=False)
+        task, tracer = bot.create_task(Pipeline([]), None, PipelineParams(), None, None, {"agent_definition": "appointments"}, [])
+        assert tracer is None
+        with pytest.raises(Exception, match="RTVI is not enabled"):
+            task.rtvi  # Pipecat raises when the task has no RTVI processor

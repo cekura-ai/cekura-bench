@@ -62,3 +62,7 @@ def test_timeout_counts_as_failure_smoke_policy():
     assert not smoke_row_passed(paced, profile, policy)  # our own pacing failure still blocks
     empty={'valid':True,'turn_timing':{'ttft_ms':None,'ttfs_ms':None,'ttft_status':'no_text','ttfs_status':'no_final_text'}}
     assert smoke_row_passed(empty, profile, policy)
+    dropped={'valid':True,'turn_timing':{'ttft_ms':1021.9,'ttfs_ms':None,'ttft_status':'measured','ttfs_status':'no_final_text'}}
+    assert smoke_row_passed(dropped, profile, policy)  # partial text, then an empty final: scored as a lost clip
+    assert not smoke_row_passed(dropped, profile, 'completed-empty-allowed-v1')
+    assert not smoke_row_passed(dropped, profile)

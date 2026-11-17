@@ -69,11 +69,14 @@ def prepare_run_plan(manifest_path, configs, out):
 def smoke_row_passed(row, profile, policy=None):
     if policy == 'timeout-counts-as-failure-v1' and not row.get('valid') and (row.get('failure_class') == 'transient' or (row.get('failure_class') is None and (row.get('turn_timing') or {}).get('ttft_status') == 'invalid_attempt')):
         return True  # a genuine model failure on a smoke clip is scored as a failed clip, not a blocked model
-    if policy == 'timeout-counts-as-failure-v1':
+    scored_failure = policy == 'timeout-counts-as-failure-v1'
+    if scored_failure:
         policy = 'completed-empty-allowed-v1'
     if not row.get('valid'):
         return False
     timing = row.get('turn_timing', {})
+    if scored_failure and timing.get('ttfs_status') == 'no_final_text' and timing.get('ttfs_ms') is None:
+        return True  # partial text then an empty final: a complete session scored as a lost clip
     if (policy == 'completed-empty-allowed-v1' and timing.get('ttft_status') == 'no_text'
             and timing.get('ttfs_status') == 'no_final_text'
             and timing.get('ttft_ms') is None and timing.get('ttfs_ms') is None):

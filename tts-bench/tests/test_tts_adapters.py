@@ -1052,6 +1052,206 @@ class TestSpeechify:
         assert not [p for p in tmp_path.rglob("*.jsonl") if "secret-key" in p.read_text()]
 
 
+async def _speechify_http_server(stream, models_status: int = 200):
+    """A local stand-in for api.speechify.ai: ``GET /v1/audio/models`` and ``POST /v1/audio/stream``."""
+    from aiohttp import web
+
+    requests: list[dict] = []
+
+    async def models(request):
+        return web.json_response({"models": []}, status=models_status)
+
+    async def speak(request):
+        body = await request.json()
+        requests.append({"auth": request.headers.get("Authorization"), "body": body})
+        return await stream(request, body)
+
+    app = web.Application()
+    app.router.add_get("/v1/audio/models", models)
+    app.router.add_post("/v1/audio/stream", speak)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "127.0.0.1", 0)
+    await site.start()
+    return runner, f"http://127.0.0.1:{site._server.sockets[0].getsockname()[1]}", requests
+
+
+async def _pcm_response(request, pcm: bytes, pieces: tuple[int, ...] = (7, 333, 1, 4096)):
+    """Stream ``pcm`` in pieces that cut through samples, as Speechify's chunked body does live."""
+    import asyncio
+
+    from aiohttp import web
+
+    response = web.StreamResponse(headers={
+        "Content-Type": "audio/L16;rate=24000;channels=1", "Speechify-Request-Id": "req-1",
+        "RateLimit-Remaining": "58", "Server-Timing": "ttfb;dur=44.2, model;dur=35.5"})
+    await response.prepare(request)
+    at, turn = 0, 0
+    while at < len(pcm):
+        size = pieces[turn % len(pieces)]
+        await response.write(pcm[at:at + size])
+        await asyncio.sleep(0)
+        at, turn = at + size, turn + 1
+    await response.write_eof()
+    return response
+
+
+class TestSpeechifyHTTP:
+    def test_the_request_body_the_prewarm_and_what_a_whole_text_request_cannot_do(self):
+        from tts_bench.adapters.speechify_http import SpeechifyHTTPAdapter
+        from tts_bench.registry import HARPER
+
+        speechify, _ = adapter(SpeechifyHTTPAdapter, "simba-3.5", HARPER)
+        assert f"{speechify.base}{speechify.speech_path}" == "https://api.speechify.ai/v1/audio/stream"
+        assert speechify._prewarm_url() == "https://api.speechify.ai/v1/audio/models"
+        assert speechify._request_args("Your total is $42.")["json"] == {
+            "input": "Your total is $42.", "voice_id": HARPER, "model": "simba-3.5", "language": "en-US",
+            "output_format": "pcm_24000"}
+        assert not (speechify.supports_streamed_input or speechify.supports_cancel or speechify.supports_continuation)
+
+    def test_the_lineup_shares_the_websocket_key_and_host(self):
+        from urllib.parse import urlsplit
+
+        from tts_bench.adapters.speechify_http import SpeechifyHTTPAdapter
+        from tts_bench.registry import HARPER
+
+        entry = PROVIDERS["speechify-http"]
+        assert entry.adapter is SpeechifyHTTPAdapter and entry.credential_env == "SPEECHIFY_API_KEY"
+        assert [(m.model, m.voice, m.rate) for m in entry.models] == [
+            ("simba-3.5", HARPER, 24000), ("simba-3.2", HARPER, 24000), ("simba-3.0", HARPER, 24000)]
+        # The websocket lineup is unchanged by the HTTP one.
+        assert [m.model for key, m in lineup() if key == "speechify"] == ["simba-3.5", "simba-3.2", "simba-3.0"]
+        assert urlsplit(SpeechifyHTTPAdapter.base).hostname == "api.speechify.ai"   # the host sandbox.mjs allows
+
+    async def test_a_split_sample_is_held_for_the_next_chunk_and_a_stray_byte_at_the_end_is_an_error(self):
+        from tts_bench.adapters.speechify_http import SpeechifyHTTPAdapter
+        from tts_bench.registry import HARPER
+
+        speechify, _ = adapter(SpeechifyHTTPAdapter, "simba-3.5", HARPER)
+        whole = bytes(range(200)) * 3                                   # 600 bytes, 300 samples
+        synthesis = await speechify.open_context("main")
+        for piece in (whole[:7], whole[7:340], whole[340:341], whole[341:]):
+            speechify._on_audio("main", piece)
+        speechify._on_done("main")
+        assert bytes(synthesis.pcm) == whole and synthesis.timeline.n_samples == 300 and synthesis.error is None
+
+        cut = await speechify.open_context("cut")
+        speechify._on_audio("cut", whole[:9])
+        speechify._on_done("cut")
+        assert cut.error == "the stream ended inside a 16-bit sample" and len(cut.pcm) == 8
+
+    async def test_a_run_measures_one_shot_and_repeat_excludes_the_rest_and_retries_refusals(self, tmp_path,
+                                                                                             monkeypatch):
+        import json
+
+        import pytest
+        from aiohttp import web
+
+        from tts_bench import corpus
+        from tts_bench.adapters.speechify_http import SpeechifyHTTPAdapter
+        from tts_bench.probes import Cancel, Continuation, Repeat, StreamedInput
+        from tts_bench.registry import HARPER
+
+        items = corpus.by_id()
+        greet, hold, prep = items["prose.greet"], items["prose.hold"], items["long.prep"]
+        tone = (8000).to_bytes(2, "little", signed=True) + (-8000).to_bytes(2, "little", signed=True)
+
+        async def stream(request, body):
+            if body["input"] == hold.text:
+                return web.json_response({"error": {"code": "payment_required", "message": "Your balance is exhausted."}},
+                                         status=402)
+            return await _pcm_response(request, tone * 12 * len(body["input"]))   # 1 ms of audio per character
+
+        server, base, requests = await _speechify_http_server(stream)
+        try:
+            monkeypatch.setattr(SpeechifyHTTPAdapter, "base", base)
+            spec = RunSpec(provider="speechify-http", items=[greet, hold, prep], repeats=1, sentinel=False,
+                           probes=[OneShot(), Repeat(), StreamedInput(words_per_s=100), Continuation(frame_gap_ms=10),
+                                   Cancel()], store=str(tmp_path))
+            runner = Runner(spec, api_key="secret-key")
+            await runner.run()
+        finally:
+            await server.cleanup()
+        cells = {(c.probe, c.item): c for c in runner.cells}
+
+        shot = cells[("one_shot", "prose.greet")]
+        assert shot.verdict == "pass" and shot.values["ttfa_ms"] is not None
+        assert shot.values["audio_ms"] == pytest.approx(len(greet.text), abs=1)
+        repeat = cells[("repeat", "prose.greet")]
+        assert repeat.verdict == "pass" and repeat.values["identical_pcm"] is True
+        for probe in ("streamed_input", "continuation", "cancel"):
+            excluded = [c for c in runner.cells if c.probe == probe]
+            assert excluded and all(c.void.startswith("configuration not supported") for c in excluded), probe
+        for probe in ("one_shot", "repeat"):
+            assert cells[(probe, "prose.hold")].void.startswith("provider refused: HTTP 402"), probe
+        assert {(p.probe.name, p.item.id) for p in runner.pending()} == {("one_shot", "prose.hold"), ("repeat", "prose.hold")}
+
+        # One request per utterance (one_shot 3, repeat 6), the settings in the body and the key only in the header.
+        assert len(requests) == 9
+        for request in requests:
+            assert request["auth"] == "Bearer secret-key"
+            assert {k: v for k, v in request["body"].items() if k != "input"} == {
+                "voice_id": HARPER, "model": "simba-3.5", "language": "en-US", "output_format": "pcm_24000"}
+        assert runner.config.model == "simba-3.5" and runner.config.voice == HARPER
+        syntheses = json.dumps([json.loads(p.read_text()) for p in tmp_path.rglob("syntheses.json")])
+        assert "req-1" in syntheses and "ttfb;dur=44.2" in syntheses   # request id and Speechify's own timing kept
+        # The run's records (harness.patch, a diff of this uncommitted test, is not one of them).
+        assert not [p for p in tmp_path.rglob("*.json*") if "secret-key" in p.read_text()]
+
+    async def test_a_refused_key_stops_before_t0_and_a_cut_or_refused_stream_is_an_error(self):
+        import asyncio
+
+        import pytest
+        from aiohttp import web
+
+        from tts_bench.adapters.base import AdapterError, is_refusal
+        from tts_bench.adapters.speechify_http import SpeechifyHTTPAdapter
+        from tts_bench.registry import HARPER
+
+        async def stream(request, body):
+            if body["input"] == "busy":
+                return web.json_response({"error": {"code": "rate_limited"}}, status=429)
+            if body["input"] == "odd":
+                return await _pcm_response(request, b"\x01\x00" * 100 + b"\x01")
+            # A body that stops partway: the connection drops before the chunked transfer completes.
+            response = web.StreamResponse(headers={"Content-Type": "audio/L16;rate=24000;channels=1"})
+            await response.prepare(request)
+            await response.write(b"\x01\x00" * 100)
+            await asyncio.sleep(0.05)
+            request.transport.close()
+            return response
+
+        async def speak(base: str, text: str):
+            clock = Clock()
+            speechify = SpeechifyHTTPAdapter(TTSConfig(model="simba-3.5", voice=HARPER), "secret-key",
+                                             EventLog(clock), clock)
+            speechify.base = base
+            async with speechify:
+                await speechify.open_context("main")
+                await speechify.send("main", text)
+                await speechify.finish("main")
+                return await speechify.wait("main", 5.0)
+
+        refused, base, _ = await _speechify_http_server(stream, models_status=401)
+        try:
+            with pytest.raises(AdapterError, match="rejected the key"):
+                await speak(base, "never sent")
+        finally:
+            await refused.cleanup()
+
+        server, base, requests = await _speechify_http_server(stream)
+        try:
+            busy = await speak(base, "busy")
+            odd = await speak(base, "odd")
+            cut = await speak(base, "cut short")
+        finally:
+            await server.cleanup()
+        assert busy.error.startswith("HTTP 429") and is_refusal(busy.error)
+        assert odd.error == "the stream ended inside a 16-bit sample" and len(odd.pcm) == 200
+        assert cut.error is not None and cut.error.startswith("http: ") and not is_refusal(cut.error)
+        assert len(requests) == 3
+
+
 class TestLineupRates:
     def test_a_model_that_emits_one_rate_names_it_and_the_rest_keep_the_default(self):
         assert PROVIDERS["hume"].rate_for("octave-2") == 48000

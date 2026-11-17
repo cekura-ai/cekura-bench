@@ -37,6 +37,7 @@ from tts_bench.adapters.rime import RimeAdapter
 from tts_bench.adapters.smallest import SmallestAdapter
 from tts_bench.adapters.soniox import SonioxAdapter
 from tts_bench.adapters.speechify import SpeechifyAdapter
+from tts_bench.adapters.speechify_http import SpeechifyHTTPAdapter
 from tts_bench.adapters.xai import XaiTTSAdapter
 
 
@@ -188,6 +189,12 @@ PROVIDERS: dict[str, ProviderEntry] = {
               "a sentence is spoken once its closing punctuation and a space arrive; input.close speaks the rest and ends "
               "the session; no cancel; simba-3.5 is the recommended multilingual model, simba-3.2 the English-only one, "
               "simba-3.0 the earlier six-language one",
+    ),
+    "speechify-http": ProviderEntry(
+        "speechify-http", SpeechifyHTTPAdapter, "SPEECHIFY_API_KEY",
+        (Model("simba-3.5", HARPER), Model("simba-3.2", HARPER), Model("simba-3.0", HARPER)),
+        notes="HTTP streaming (POST /v1/audio/stream), the endpoint Speechify asked us to time; whole text per "
+              "request, raw PCM back; no streamed input, cancel or continuation",
     ),
     "azure-speech": ProviderEntry(
         "azure-speech", AzureSpeechAdapter, "AZURE_SPEECH_KEY",

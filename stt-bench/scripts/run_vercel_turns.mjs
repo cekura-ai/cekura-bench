@@ -10,7 +10,7 @@ import {digestFile,upload,dispatchOnce} from './vercel_models.mjs';
 import {waitForCompletion} from './vercel_command_wait.mjs';
 const exec=promisify(execFile),REMOTE='/vercel/sandbox/stt-turns';
 
-export function workerPolicy(config){return {allow:[new URL(config.endpoint).hostname,
+export function workerPolicy(config){return {allow:[new URL(config.endpoint).hostname,...(config.socket_hosts??[]),
   ...(config.provider==='google'?['oauth2.googleapis.com']:[])]};}
 export function workerName(model,index,prefix='vocera-turns-0915'){return `${prefix}-${model}-${index}`.replace(/[^a-zA-Z0-9_-]/g,'-');}
 
@@ -33,6 +33,7 @@ export function smokeRowPassed(plan,model,r){
   if(plan.smoke_policy==='timeout-counts-as-failure-v1'&&r&&!r.valid&&(r.failure_class==='transient'||(r.failure_class==null&&(r.turn_timing||{}).ttft_status==='invalid_attempt')))return true;
   if(!r?.valid)return false;
   const t=r.turn_timing||{};
+  if(plan.smoke_policy==='timeout-counts-as-failure-v1'&&t.ttfs_status==='no_final_text'&&t.ttfs_ms==null)return true;
   if(['completed-empty-allowed-v1','timeout-counts-as-failure-v1'].includes(plan.smoke_policy)&&t.ttft_status==='no_text'&&t.ttfs_status==='no_final_text'&&t.ttft_ms==null&&t.ttfs_ms==null)return true;
   return t.ttft_ms!=null&&(plan.configs[model].turn_finalization_class!=='controlled'||t.ttfs_ms!=null);
 }

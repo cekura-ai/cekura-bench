@@ -1,0 +1,39 @@
+{
+  "model_id": "aircaps-live-1",
+  "provider": "aircaps",
+  "model": "aircaps-live-1",
+  "version": "server-reported-unversioned",
+  "identity_policy": "server_reported_model_in_lookup_and_ready",
+  "endpoint": "https://api.aircaps.com/v1/realtime/endpoint",
+  "socket_hosts": [
+    "*.aircaps.ai"
+  ],
+  "language": "en-US",
+  "sample_rate": 16000,
+  "encoding": "pcm_s16le",
+  "channels": 1,
+  "frame_ms": 20,
+  "ready_timeout_seconds": 15,
+  "finalize_timeout_seconds": 5,
+  "close_timeout_seconds": 5,
+  "finalization": "manual_at_speech_end",
+  "completion_basis": "finished_after_finish",
+  "finalize_ack_supported": false,
+  "requires_final_only_completion": true,
+  "model_source": "AirCaps Live 1 integration guide (internal preview, shared by AirCaps)",
+  "checked_on": "2026-11-17",
+  "pricing": {
+    "usd_per_minute": null,
+    "usd_per_hour": null,
+    "plan": "Internal preview access",
+    "source": "Not published; pending from AirCaps",
+    "status": "unpriced_preview",
+    "billing_basis": "duration of audio streamed (finished reports billed_ms equal to audio_ms)",
+    "checked_on": "2026-11-17"
+  },
+  "protocol_caveat": "Each session first asks the HTTPS endpoint for its WebSocket address, which must be wss on *.aircaps.ai, and the lookup's model must match. start requests the model with 16 kHz mono pcm_s16le and no end-of-turn detection; ready echoes the model and language, and a different echo fails the attempt. Every transcript message holds the whole session text; its first final_chars characters are settled and is_final settles all of it, so settled text shrinking or changing marks the reconstruction unsupported. finalize at speech end returns a final at once when there is speech but gets no reply when there is none, so there is no finalize acknowledgment; completion is finished after finish, which follows a last final. Without finalize the server also settles text by itself about every 20 seconds of audio. Such a server-settled final can carry an older, shorter copy of text already settled, and the next message restores the full text; that stale final is skipped, not counted as a failure, and is counted from the raw events for the report. Interim text arrives about once a second. The preview account allows one concurrent session.",
+  "measurement_profile": "private-turns-controlled-v1",
+  "profile_version": "private-turns-v1",
+  "turn_finalization_class": "controlled",
+  "base_config": "config/models/aircaps-live-1.json"
+}

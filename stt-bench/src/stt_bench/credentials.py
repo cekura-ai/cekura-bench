@@ -7,6 +7,7 @@ NAMES = {
     'assemblyai': ('ASSEMBLYAI_API_KEY', 'ASSEMBLY_API_KEY'),
     'reson8': ('RESON_API_KEY',),
     'zoom': ('ZOOM_API_KEY',),
+    'aircaps': ('AIRCAPS_API_KEY',),
     'gradium': ('GRADIUM_API_KEY',),
     'soniox': ('SONIOX_API_KEY',),
     'smallest': ('SMALLEST_API_KEY',),

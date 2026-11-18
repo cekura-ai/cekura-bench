@@ -16,7 +16,7 @@ from stt_bench.credentials import command_environment, redact
 from stt_bench.providers import validate, transcript_at, reduce_events
 from stt_bench.streaming import EventLog, read_events, transmitted_silence_frames
 
-NAMES = ['soniox-stt-rt-v5', 'smallest-pulse', 'sarvam-saaras-v3-realtime', 'inworld-stt-1']
+NAMES = ['soniox-stt-rt-v5', 'soniox-stt-rt-v6', 'smallest-pulse', 'sarvam-saaras-v3-realtime', 'inworld-stt-1']
 
 
 def config(name):
@@ -69,7 +69,7 @@ def test_config_auth_audio_and_secret_isolation(name):
     audio = protocol.audio(b'\x01\x00' * 320)
     if p == 'soniox':
         assert not headers and setup['api_key'] == 'fixture'
-        assert setup['audio_format'] == 'pcm_s16le' and setup['model'] == 'stt-rt-v5'
+        assert setup['audio_format'] == 'pcm_s16le' and setup['model'] == c['model']
         assert isinstance(audio, bytes) and protocol.finish(60) == '' and isinstance(protocol.finish(60), str)
     elif p == 'smallest':
         assert headers == {'Authorization': 'Bearer fixture'}

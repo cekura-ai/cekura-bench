@@ -40,7 +40,7 @@ function fixture(root, fault) {
 
 test('dry run neither loads credentials nor calls remote clients; no smoke/run options', async () => {
   const result = await main([], {Sandbox: new Proxy({}, {get() {throw new Error('remote action');}})});
-  assert.equal(result.status,'no_remote_actions'); assert.equal(result.models.length,4);
+  assert.equal(result.status,'no_remote_actions'); assert.equal(result.models.length,5);
   await assert.rejects(main(['--smoke']), /Unknown option/);
   await assert.rejects(main(['--run']), /Unknown option/);
   assert.ok(MODELS.every(m=>!plan.models.some(old=>old.model===m)));

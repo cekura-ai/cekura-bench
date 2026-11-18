@@ -72,7 +72,7 @@ A provider may require additional account access for a particular model.
 | Cartesia | Ink-2 | `CARTESIA_API_KEY` |
 | Google Cloud Speech | Chirp 2, Chirp 3 | `GOOGLE_APPLICATION_CREDENTIALS` |
 | AssemblyAI | Universal 3.5 Pro | `ASSEMBLYAI_API_KEY` |
-| Soniox | STT RT v5 | `SONIOX_API_KEY` |
+| Soniox | STT RT v5, STT RT v6 | `SONIOX_API_KEY` |
 | Smallest AI | Pulse | `SMALLEST_API_KEY` |
 | Sarvam | Saaras v3 Realtime | `SARVAM_API_KEY` |
 | Inworld | STT-1 | `INWORLD_API_KEY` |

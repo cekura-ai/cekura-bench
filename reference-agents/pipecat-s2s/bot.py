@@ -1814,9 +1814,13 @@ _FAREWELL = re.compile(
 # What a caller says back to a goodbye: not a question, and made of closing
 # words -- short when it is only an acknowledgement ("great, thanks"), longer
 # when it says outright that the caller is done ("thank you, that's all I
-# needed"). Anything carrying one of the ``_MORE`` words is the caller starting
-# something new, and the agent owes it an answer.
-_DONE = re.compile(r"\b(bye|goodbye|that's all|that's it|that is all|nothing else|all set)\b")
+# needed", "that answers my question"). Anything else carrying one of the
+# ``_MORE`` words is the caller starting something new, and the agent owes it an
+# answer; the words inside a done phrase ("question") do not count.
+_DONE = re.compile(
+    r"\b(bye|goodbye|that's all|that's it|that is all|nothing else|nothing further|all set|"
+    r"(?:that|this|it) answers my (?:questions?|requests?))\b"
+)
 _CLOSING_WORDS = re.compile(
     r"\b(thanks|thank you|okay|ok|alright|all right|got it|you too|great|perfect|"
     r"sounds good|nope|no|cheers|take care|have a (?:good|great|nice) (?:day|one))\b"
@@ -1835,7 +1839,7 @@ def is_farewell(text: str) -> bool:
 def is_closing_reply(text: str) -> bool:
     """The caller answered a goodbye with one, or with an acknowledgement."""
     said = text.strip().lower().replace("\u2019", "'")
-    if not said or "?" in said or _MORE.search(said):
+    if not said or "?" in said or _MORE.search(_DONE.sub(" ", said)):
         return False
     words = len(_WORD.findall(said))
     return (words <= 8 and bool(_CLOSING_WORDS.search(said))) or (words <= 16 and bool(_DONE.search(said)))

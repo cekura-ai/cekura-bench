@@ -20,7 +20,7 @@ from tts_bench.adapters.elevenlabs_dialogue import ElevenLabsDialogueAdapter
 from tts_bench.adapters.elevenlabs_dialogue_multi import ElevenLabsDialogueMultiAdapter
 from tts_bench.adapters.kalpa import KalpaAdapter
 from tts_bench.common.events import Clock, EventLog
-from tts_bench.registry import KIARA, PROVIDERS, lineup
+from tts_bench.registry import ISLA, PROVIDERS, lineup
 from tts_bench.runner import RunSpec, Runner
 from tts_bench.probes import Cancel, Continuation, OneShot, Repeat, StreamedInput
 
@@ -885,7 +885,7 @@ class TestKalpa:
             ("one_shot", "prose.hold"), ("repeat", "prose.hold"), ("streamed_input", "prose.hold")}
 
         for session in sessions:
-            assert session["path"] == f"/v1/tts/{KIARA}/stream"
+            assert session["path"] == f"/v1/tts/{ISLA}/stream"
             assert session["init"] == {"type": "initializeConnection", "api_key": "secret-key", "model": "kalpa-tts-1",
                                        "output_format": "pcm_s16le", "sample_rate": 24000,
                                        "generation_config": {"chunk_length_schedule": [50, 80, 120, 150]}}
@@ -894,7 +894,7 @@ class TestKalpa:
         assert not [p for p in tmp_path.rglob("*.jsonl") if "secret-key" in p.read_text()]
 
     async def test_a_response_cut_short_or_cancelled_by_the_server_is_an_error_and_a_cancel_is_not(self):
-        kalpa, sent = adapter(KalpaAdapter, "kalpa-tts-1", KIARA)
+        kalpa, sent = adapter(KalpaAdapter, "kalpa-tts-1", ISLA)
         first = await kalpa.open_context("first")
         await kalpa.send("first", "Hello there.")
         await kalpa.finish("first")
@@ -940,7 +940,7 @@ class TestKalpa:
                 raise ConnectionClosedError(Close(4402, "allowance exhausted"), None)
 
         clock = Clock()
-        kalpa = KalpaAdapter(TTSConfig("kalpa-tts-1", KIARA), "k", EventLog(clock), clock)
+        kalpa = KalpaAdapter(TTSConfig("kalpa-tts-1", ISLA), "k", EventLog(clock), clock)
         kalpa._ws = Closed()
         second = await kalpa.open_context("second")
         await kalpa.send("second", "Hello again.")
@@ -954,7 +954,7 @@ class TestKalpa:
             voice = ws.request.path.split("/")[-2]
             if init["api_key"] != "good":
                 error, code = {"type": "authentication_error", "message": "Invalid or missing api_key."}, 4401
-            elif voice != KIARA:
+            elif voice != ISLA:
                 error, code = {"type": "not_found", "message": f"Unknown voice '{voice}'."}, 4404
             else:
                 await ws.send(json.dumps({"type": "sessionCreated", "model": init["model"], "voice_id": voice,
@@ -967,7 +967,7 @@ class TestKalpa:
         async with websockets.serve(serve, "127.0.0.1", 0) as server:
             monkeypatch.setattr(KalpaAdapter, "base", f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}/v1/tts")
             outcomes = []
-            for key, voice in (("bad", KIARA), ("good", "nobody"), ("good", KIARA)):
+            for key, voice in (("bad", ISLA), ("good", "nobody"), ("good", ISLA)):
                 clock = Clock()
                 kalpa = KalpaAdapter(TTSConfig(model="kalpa-tts-1", voice=voice), key, EventLog(clock), clock)
                 with pytest.raises(AdapterError) as refused:
@@ -980,14 +980,14 @@ class TestKalpa:
     def test_the_lineup_the_host_the_schedule_option_and_the_key_kept_out_of_the_log(self):
         entry = PROVIDERS["kalpa"]
         assert entry.adapter is KalpaAdapter and entry.credential_env == "KALPA_API_KEY"
-        assert [(m.model, m.voice, m.rate) for m in entry.models] == [("kalpa-tts-1", KIARA, 24000)]
-        kalpa, _ = adapter(KalpaAdapter, "kalpa-tts-1", KIARA)
+        assert [(m.model, m.voice, m.rate) for m in entry.models] == [("kalpa-tts-1", ISLA, 24000)]
+        kalpa, _ = adapter(KalpaAdapter, "kalpa-tts-1", ISLA)
         assert urlsplit(kalpa.url).hostname == "api.kalpalabs.ai"      # the host sandbox.mjs allows
         assert kalpa._logged(kalpa._init_frame())["api_key"] == "<redacted>"
-        assert KalpaAdapter.unsupported_reason(TTSConfig("kalpa-tts-1", KIARA), ("streamed_input", "cancel", "continuation")) is None
+        assert KalpaAdapter.unsupported_reason(TTSConfig("kalpa-tts-1", ISLA), ("streamed_input", "cancel", "continuation")) is None
         clock = Clock()
-        generate_on_flush = KalpaAdapter(TTSConfig("kalpa-tts-1", KIARA, options=(("chunk_length_schedule", "off"),)),
+        generate_on_flush = KalpaAdapter(TTSConfig("kalpa-tts-1", ISLA, options=(("chunk_length_schedule", "off"),)),
                                          "k", EventLog(clock), clock)
         assert "generation_config" not in generate_on_flush._init_frame()
         with pytest.raises(ValueError):
-            KalpaAdapter(TTSConfig("kalpa-tts-1", KIARA, options=(("chunk_length_schedule", "20,80"),)), "k", EventLog(clock), clock)
+            KalpaAdapter(TTSConfig("kalpa-tts-1", ISLA, options=(("chunk_length_schedule", "20,80"),)), "k", EventLog(clock), clock)

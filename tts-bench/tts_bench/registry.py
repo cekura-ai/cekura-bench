@@ -89,7 +89,7 @@ SARAH = "933563129e564b19a115bedd57b7406a"              # Fish Official, female 
 DELIA = "c70cfb98867a4bfb9ae20d2401257b92"              # Fish Audio, female US English, from its Drama 3 voice cast
 AVA = "5bb7de05-c8fe-426a-8fcc-ba4fc4ce9f9c"           # Hume "Ava Song", female US English, from its Voice Library
 AUDREY = "49c443a4-8a1d-5f7e-b70b-98bdbd9823c3"        # AssemblyAI "Audrey", female US English, the voice AssemblyAI chose
-KIARA = "5e0c5704-590f-483b-b291-00a2415cb67e"         # Kalpa "Kiara", female, the voice Kalpa recommended; listed as Hindi, kalpa-tts-1 speaks English and Hindi
+ISLA = "c676a75b-2a1d-4bc8-880a-6ca649ed1170"          # Kalpa "Isla", female English
 
 PROVIDERS: dict[str, ProviderEntry] = {
     "fake": ProviderEntry("fake", FakeTTSAdapter, "FAKE_KEY_UNUSED", (Model("scripted", "tone"),)),
@@ -211,7 +211,7 @@ PROVIDERS: dict[str, ProviderEntry] = {
     ),
     "kalpa": ProviderEntry(
         "kalpa", KalpaAdapter, "KALPA_API_KEY",
-        (Model("kalpa-tts-1", KIARA),),
+        (Model("kalpa-tts-1", ISLA),),
         notes="streaming TTS websocket, voice in the URL; initializeConnection before t0 and its sessionCreated echo "
               "checked; sendText appends text, a flushed sendText ends the utterance (responseDone); bare "
               "cancelResponse is the barge-in (cancelled); one utterance at a time per socket; server-side "

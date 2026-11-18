@@ -33,6 +33,7 @@ replaces the base run's.
 | Hume Octave 2 (preview) | `campaign-1014-hume` | none |
 | Gradium (default), voice Everly | `campaign-1018b-gradium-everly` | none |
 | Inworld TTS-2 Flash and TTS-2 (creative delivery) | `campaign-1019-inworld` | none |
+| HeyGen Voice 1 Turbo and Voice 1, voice Nadine | `heygen-voice-20261105` | none |
 
 `campaign-0928-fix` re-ran the models whose recordings an early stream-end bug
 had cut short, and `campaign-0928-v4` added the two v4 models. Grok's

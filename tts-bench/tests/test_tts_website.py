@@ -60,6 +60,21 @@ async def test_a_later_run_on_the_same_model_amends_the_earlier_one_cell_by_cell
         website.summarize(base.root, [other.root])
 
 
+async def test_first_reads_take_the_timings_from_each_sentences_first_read_only(tmp_path):
+    by_id = corpus.by_id()
+    runner = Runner(RunSpec(provider="fake", probes=[OneShot()], items=[by_id["prose.greet"], by_id["long.prep"]],
+                            repeats=3, sentinel=False, store=str(tmp_path)), "unused", site="lab")
+    await runner.run()
+    every, first = website.summarize(runner.root), website.summarize(runner.root, first_reads=True)
+
+    assert "timingReads" not in every and first["timingReads"] == "first"
+    assert every["latency"]["ttfa"]["n"] == 6 and first["latency"]["ttfa"]["n"] == 2
+    assert first["latency"]["roundtrip"]["n"] == first["playout"]["stallMs"]["n"] == first["throughput"]["charsPerSecond"]["n"] == 2
+    assert {c: v["n"] for c, v in first["latency"]["byCohort"].items()} == {"prose": 1, "long": 1}
+    # Only the timings change: what the cells counted and how they ended is the same.
+    assert first["cells"] == every["cells"] and first["reliability"] == every["reliability"]
+
+
 def test_published_summaries_cover_every_site_model():
     """The committed summaries rebuild the site file with every listed model measured."""
     root = Path(__file__).resolve().parent.parent

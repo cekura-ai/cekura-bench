@@ -106,7 +106,7 @@ def _latest(roots: Sequence[Path], rows_of: Any, key: Any) -> list[dict[str, Any
     return list(out.values())
 
 
-def summarize(run_dir: str | Path, amendments: Iterable[str | Path] = ()) -> dict[str, Any]:
+def summarize(run_dir: str | Path, amendments: Iterable[str | Path] = (), first_reads: bool = False) -> dict[str, Any]:
     """One model's published numbers from its run, amended by any later runs on the same model.
 
     An amendment is a later run of the same provider, model and voice that
@@ -114,6 +114,13 @@ def summarize(run_dir: str | Path, amendments: Iterable[str | Path] = ()) -> dic
     a cell replaces the earlier one, and cells it did not run keep theirs. The
     corpus and harness reported are the latest run's, and the amendments are
     listed so the join is visible.
+
+    ``first_reads`` takes the one-shot timings (latency, throughput, playout)
+    from each sentence's first read only, for a service that answers text it
+    has already synthesised faster: the plan reads a sentence three times in a
+    row, and an agent mostly sends text the service has not seen. Accuracy,
+    naturalness and determinism still use every read. The summary says so in
+    ``timingReads``.
     """
     roots = sorted([Path(run_dir), *(Path(a) for a in amendments)], key=lambda r: _provenance(r)["started_utc"])
     root, later = roots[0], roots[1:]
@@ -147,6 +154,11 @@ def summarize(run_dir: str | Path, amendments: Iterable[str | Path] = ()) -> dic
     by_cohort: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for cell in one:
         by_cohort[cell["cohort"]].append(cell)
+    # The one-shot cells the timings are read from: every read, or each sentence's first.
+    timed = [c for c in one if c["repeat"] == 1] if first_reads else one
+    timed_by_cohort: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for cell in timed:
+        timed_by_cohort[cell["cohort"]].append(cell)
 
     # Every single synthesis a cell recorded, with its item, for reliability and runaway checks. The load
     # probe's streams are left out: a stall there reflects the account's concurrency limit, not the model,
@@ -187,7 +199,7 @@ def summarize(run_dir: str | Path, amendments: Iterable[str | Path] = ()) -> dic
     fails = sum(1 for cs in measured.values() for c in cs if c.get("verdict") == "fail")
     graded = sum(1 for cs in measured.values() for c in cs if c.get("verdict") in ("pass", "fail"))
     refused = sum(1 for c in cells if str(c.get("void") or "").startswith("provider refused"))
-    paragraphs = by_cohort.get("paragraph", [])
+    paragraphs = timed_by_cohort.get("paragraph", [])
 
     return {
         "schema": SCHEMA,
@@ -206,14 +218,15 @@ def summarize(run_dir: str | Path, amendments: Iterable[str | Path] = ()) -> dic
             "excludedByProbe": {p: r for p, r in excluded.items() if r},
             "providerRefused": refused, "graded": graded, "failed": fails,
         },
+        **({"timingReads": "first"} if first_reads else {}),
         "sentinel": _lat(_values(sentinel, "ttfa_ms")),
         "latency": {
-            "ttfa": _lat(_values(one, "ttfa_ms")),
-            "roundtrip": _lat(_values(one, "roundtrip_ms")),
-            "leadingSilence": _lat(_values(one, "leading_silence_ms")),
+            "ttfa": _lat(_values(timed, "ttfa_ms")),
+            "roundtrip": _lat(_values(timed, "roundtrip_ms")),
+            "leadingSilence": _lat(_values(timed, "leading_silence_ms")),
             "warmSecondRequest": _lat([c["values"]["second"]["ttfa_ms"] for c in rep
                                        if isinstance(c["values"].get("second"), dict) and c["values"]["second"].get("ttfa_ms") is not None]),
-            "byCohort": {cohort: _lat(_values(cs, "ttfa_ms")) for cohort, cs in sorted(by_cohort.items())},
+            "byCohort": {cohort: _lat(_values(cs, "ttfa_ms")) for cohort, cs in sorted(timed_by_cohort.items())},
         },
         "streamedInput": None if excluded.get("streamed_input") else {
             "ttfaFromFirstWord": _lat(_values(streamed, "ttfa_ms")),
@@ -229,14 +242,14 @@ def summarize(run_dir: str | Path, amendments: Iterable[str | Path] = ()) -> dic
         },
         "throughput": {
             "charsPerSecondParagraph": _lat(_values(paragraphs, "chars_per_s")),
-            "charsPerSecond": _lat(_values(one, "chars_per_s")),
-            "realtimeFactor": _lat(_values(one, "generation_over_realtime")),
-            "audioMsPerChar": _lat(_values(one, "audio_per_char_ms")),
+            "charsPerSecond": _lat(_values(timed, "chars_per_s")),
+            "realtimeFactor": _lat(_values(timed, "generation_over_realtime")),
+            "audioMsPerChar": _lat(_values(timed, "audio_per_char_ms")),
         },
         "playout": {
-            "underrunCells": _rate([bool(v) for v in _values(one, "underruns")]),
-            "stallMs": _lat(_values(one, "stall_ms")),
-            "minMarginMs": _lat(_values(one, "min_margin_ms")),
+            "underrunCells": _rate([bool(v) for v in _values(timed, "underruns")]),
+            "stallMs": _lat(_values(timed, "stall_ms")),
+            "minMarginMs": _lat(_values(timed, "min_margin_ms")),
         },
         "cancel": None if excluded.get("cancel") else {
             "stopped": _rate([c.get("verdict") == "pass" for c in cancel]),

@@ -31,6 +31,7 @@ from tts_bench.adapters.fish_audio import FishAudioAdapter
 from tts_bench.adapters.gemini_tts import GeminiTTSAdapter
 from tts_bench.adapters.gradium import GradiumAdapter
 from tts_bench.adapters.heygen import HeyGenTTSAdapter
+from tts_bench.adapters.heygen_ws import HeyGenStreamingAdapter
 from tts_bench.adapters.hume import HumeAdapter
 from tts_bench.adapters.inworld import InworldAdapter
 from tts_bench.adapters.openai_tts import OpenAITTSAdapter
@@ -216,6 +217,14 @@ PROVIDERS: dict[str, ProviderEntry] = {
               "language sent (en); voice read and checked ACTIVE before t0; cells paced under the documented "
               "30 requests a minute (option requests_per_minute); Turbo Free left out (shared capacity, "
               "no latency guarantee)",
+    ),
+    "heygen-streaming": ProviderEntry(
+        "heygen-streaming", HeyGenStreamingAdapter, "HEYGEN_API_KEY",
+        (Model("heygen-voice-1-turbo", NADINE), Model("heygen-voice-1", NADINE)),
+        notes="HeyGen Voice over the multi-context input-streaming websocket (/v3/models/audio/tts/multi-stream-input); "
+              "frames as ElevenLabs' multi-context socket; flush per context; close_context is the only stop and lets "
+              "flushed audio finish, so the cancel probe measures what still arrives; language sent (en); handshakes "
+              "and contexts paced under the 30 requests a minute shared with the HTTP endpoint; Turbo Free left out",
     ),
 }
 

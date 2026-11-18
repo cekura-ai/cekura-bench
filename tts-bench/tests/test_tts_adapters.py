@@ -1001,3 +1001,236 @@ class TestHeyGen:
 
     def test_no_corpus_item_carries_text_heygen_reads_as_an_audio_tag_or_a_break(self):
         assert not [item.id for item in corpus.ITEMS if any(mark in item.text for mark in "[]<>")]
+
+
+# -- HeyGen over the input-streaming websocket ---------------------------------
+
+class FakeHeyGenSocket:
+    """HeyGen's multi-context speech socket, scripted per test.
+
+    Each context buffers its text; a flush speaks the buffer as ``frames`` audio
+    frames whose ``alignment`` together covers exactly the characters spoken,
+    ``gap_s`` apart, with ``last_gap_s`` before the final frame (a late tail).
+    ``close_context`` lets a flushed context finish, then answers ``isFinal``,
+    as HeyGen does. Frame sizes are odd on purpose, so a frame can end inside a
+    sample.
+    """
+
+    def __init__(self, frames: int = 3, gap_s: float = 0.01, last_gap_s: float = 0.01) -> None:
+        self.frames, self.gap_s, self.last_gap_s = frames, gap_s, last_gap_s
+        self.handshakes: list[dict] = []
+        self.received: list[dict] = []
+        self.error_on_text: str | None = None
+
+    async def serve(self, ws) -> None:
+        import base64
+        import json
+        from urllib.parse import parse_qs
+
+        query = {k: v[0] for k, v in parse_qs(urlsplit(ws.request.path).query).items()}
+        self.handshakes.append({"path": urlsplit(ws.request.path).path, "query": query,
+                                "key": ws.request.headers.get("X-Api-Key")})
+        buffers: dict[str, str] = {}
+        speaking: dict[str, asyncio.Task] = {}
+
+        async def speak(context_id: str, text: str) -> None:
+            cuts = [round(len(text) * i / self.frames) for i in range(self.frames + 1)]
+            for index in range(self.frames):
+                await asyncio.sleep(self.last_gap_s if index == self.frames - 1 else self.gap_s)
+                chars = list(text[cuts[index]:cuts[index + 1]])
+                # One sample per character; frame 0 ends inside a sample and frame 1 completes it.
+                pcm = b"\x01" * (2 * len(chars) + {0: 1, 1: -1}.get(index, 0))
+                await ws.send(json.dumps({"audio": base64.b64encode(pcm).decode(), "isFinal": None, "contextId": context_id,
+                                          "alignment": {"chars": chars, "charStartTimesMs": [0] * len(chars),
+                                                        "charDurationsMs": [10] * len(chars)},
+                                          "normalizedAlignment": None}))
+
+        async for raw in ws:
+            frame = json.loads(raw)
+            self.received.append(frame)
+            context_id = frame.get("context_id", "default")
+            if self.error_on_text and frame.get("text", " ") != " ":
+                await ws.send(json.dumps({"message": self.error_on_text,
+                                          "error": {"code": self.error_on_text.split(":")[0], "message": self.error_on_text}}))
+                await ws.close(1008, self.error_on_text)
+                return
+            if frame.get("text") not in (None, " "):
+                buffers[context_id] = buffers.get(context_id, "") + frame["text"]
+            if frame.get("flush"):
+                speaking[context_id] = asyncio.create_task(speak(context_id, buffers.pop(context_id, "")))
+            if frame.get("close_context"):
+                if context_id in speaking:
+                    await speaking[context_id]
+                await ws.send(json.dumps({"audio": "", "isFinal": True, "contextId": context_id, "synthesizedChars": 0}))
+            if frame.get("close_socket"):
+                await ws.close()
+                return
+
+
+def heygen_streaming_adapter(base: str, tmp_path=None, **options: str):
+    from tts_bench.adapters.heygen_ws import HeyGenStreamingAdapter
+
+    clock = Clock()
+    log = EventLog(clock, raw_path=tmp_path / "raw.jsonl") if tmp_path else EventLog(clock)
+    instance = HeyGenStreamingAdapter(TTSConfig(model="heygen-voice-1-turbo", voice=NADINE, options=tuple(options.items())),
+                                      "secret-key", log, clock)
+    instance.base = base
+    return instance
+
+
+class TestHeyGenStreaming:
+    def test_the_socket_is_configured_in_the_url_with_sentence_mode_and_timings_on(self):
+        from urllib.parse import parse_qs
+
+        from tts_bench.adapters.heygen_ws import HeyGenStreamingAdapter
+
+        turbo = heygen_streaming_adapter(HeyGenStreamingAdapter.base)
+        url = urlsplit(turbo.url)
+        assert (url.scheme, url.hostname, url.path) == ("wss", "api.heygen.com", "/v3/models/audio/tts/multi-stream-input")
+        assert {k: v[0] for k, v in parse_qs(url.query).items()} == {
+            "voice_id": NADINE, "model": "heygen-voice-1-turbo", "output_format": "pcm_24000", "language": "en",
+            "auto_mode": "true", "with_timestamps": "true", "inactivity_timeout": "60"}
+        assert turbo._headers() == {"X-Api-Key": "secret-key"}
+        tuned = heygen_streaming_adapter(HeyGenStreamingAdapter.base, auto_mode="false", expressiveness_boost="0.5")
+        assert "auto_mode=false" in tuned.url and "expressiveness_boost=0.5" in tuned.url
+        config = TTSConfig(model="heygen-voice-1-turbo", voice=NADINE)
+        assert HeyGenStreamingAdapter.unsupported_reason(config, ("streamed_input", "cancel", "continuation")) is None
+        assert not HeyGenStreamingAdapter.ends_on_quiet and HeyGenStreamingAdapter.transport == "websocket"
+
+    async def test_a_context_is_done_when_every_character_sent_has_been_spoken(self):
+        from tts_bench.adapters.heygen_ws import HeyGenStreamingAdapter
+
+        heygen_ws, sent = adapter(HeyGenStreamingAdapter, "heygen-voice-1-turbo", NADINE)
+        synthesis = await heygen_ws.open_context("main")
+        await heygen_ws.send("main", "Hello there. ")
+        await heygen_ws.send("main", "Bye.")
+        # Sentence mode speaks the first sentence before the input is complete: not done, though every character so far is spoken.
+        heygen_ws._on_message({"audio": "AQAB", "contextId": "main", "alignment": {"chars": list("Hello there. ")}})
+        assert not synthesis.done.is_set() and bytes(synthesis.pcm) == b"\x01\x00"     # the odd byte waits
+        heygen_ws._on_message({"audio": "AA==", "contextId": "main", "alignment": {"chars": list("Bye")}})
+        assert bytes(synthesis.pcm) == b"\x01\x00\x01\x00"
+        await heygen_ws.finish("main")
+        assert sent[-1] == {"context_id": "main", "flush": True} and not synthesis.done.is_set()   # one character to go
+        heygen_ws._on_message({"audio": "AgA=", "contextId": "main", "alignment": {"chars": ["."]}})
+        assert synthesis.done.is_set() and synthesis.meta["aligned_chars"] == len("Hello there. Bye.")
+
+        # Spoken in full before the flush: the flush itself ends it.
+        early = await heygen_ws.open_context("early")
+        await heygen_ws.send("early", "Hi.")
+        heygen_ws._on_message({"audio": "AgA=", "contextId": "early", "alignment": {"chars": list("Hi.")}})
+        assert not early.done.is_set()
+        await heygen_ws.finish("early")
+        assert early.done.is_set()
+
+    async def test_close_context_is_the_cancel_and_is_final_acknowledges_it(self):
+        from tts_bench.adapters.heygen_ws import HeyGenStreamingAdapter
+
+        heygen_ws, sent = adapter(HeyGenStreamingAdapter, "heygen-voice-1-turbo", NADINE)
+        synthesis = await heygen_ws.open_context("main")
+        await heygen_ws.send("main", "A long answer.")
+        await heygen_ws.finish("main")
+        heygen_ws._on_message({"audio": "AgA=", "contextId": "main", "alignment": {"chars": list("A long")}})
+        await heygen_ws.cancel("main")
+        assert sent[-1] == {"context_id": "main", "close_context": True}
+        heygen_ws._on_message({"audio": "AgA=", "contextId": "main", "alignment": {"chars": list(" answer.")}})
+        assert not synthesis.done.is_set()          # after a stop, only HeyGen's isFinal (or quiet) ends it
+        heygen_ws._on_message({"audio": "", "isFinal": True, "contextId": "main", "synthesizedChars": 14})
+        assert synthesis.done.is_set() and synthesis.t_cancel_ack is not None and synthesis.meta["synthesized_chars"] == 14
+
+    async def test_error_frames_are_recorded_and_a_rate_limit_is_a_refusal(self):
+        from tts_bench.adapters.heygen_ws import HeyGenStreamingAdapter
+
+        heygen_ws, _ = adapter(HeyGenStreamingAdapter, "heygen-voice-1-turbo", NADINE)
+        limited = await heygen_ws.open_context("main")
+        heygen_ws._on_message({"message": "Rate limit exceeded",
+                               "error": {"code": "rate_limit_exceeded", "message": "Rate limit exceeded"}})
+        assert limited.error == "rate_limit_exceeded: Rate limit exceeded" and is_refusal(limited.error)
+        heygen_ws, _ = adapter(HeyGenStreamingAdapter, "heygen-voice-1-turbo", NADINE)
+        broken = await heygen_ws.open_context("main")
+        heygen_ws._on_message({"message": "Voice inference failed", "contextId": "main",
+                               "error": {"code": "inference_failed", "message": "Voice inference failed"}})
+        assert broken.error == "inference_failed: Voice inference failed" and not is_refusal(broken.error)
+        slow = heygen_streaming_adapter(HeyGenStreamingAdapter.base)
+        slow.config = TTSConfig(model="heygen-voice-1-turbo", voice=NADINE, speed=1.2)
+        slow._send_json = None
+        with pytest.raises(AdapterError, match="professional clones"):
+            await slow.open_context("main")
+
+    async def test_the_handshake_and_each_context_are_paced_before_t0(self, tmp_path, monkeypatch):
+        import websockets
+
+        from tts_bench.adapters import heygen_ws
+
+        fake = FakeHeyGenSocket()
+        monkeypatch.setattr(heygen, "WINDOW_S", 0.3)
+        heygen._SENT.extend([time.monotonic()] * 28)          # three more do not fit until these leave the window
+        async with websockets.serve(fake.serve, "127.0.0.1", 0) as server:
+            instance = heygen_streaming_adapter(f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}", tmp_path)
+            started = time.monotonic()
+            async with instance:
+                assert time.monotonic() - started >= 0.25
+                for context_id in ("first", "second"):
+                    await instance.open_context(context_id)
+                    await instance.send(context_id, "Hello.")
+                    await instance.finish(context_id)
+                    done = await instance.wait(context_id, 5.0)
+                    assert done.error is None and (done.t_first_chunk - done.t0) < 0.25   # the wait is not in first audio
+        assert len(heygen._SENT) == 3 == heygen_ws.REQUESTS_PER_CELL       # the handshake and two contexts
+        assert '"paced_s"' in (tmp_path / "raw.jsonl").read_text()
+
+    async def test_a_late_tail_is_recorded_as_a_stall_not_cut_off(self, tmp_path):
+        import websockets
+
+        fake = FakeHeyGenSocket(frames=3, last_gap_s=2.0)     # longer than the 1.5 s quiet that would end ElevenLabs
+        text = "So to summarize: you're booked for Thursday. I'll send the confirmation."
+        async with websockets.serve(fake.serve, "127.0.0.1", 0) as server:
+            instance = heygen_streaming_adapter(f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}", tmp_path)
+            async with instance:
+                await instance.open_context("main")
+                await instance.send("main", text)
+                await instance.finish("main")
+                done = await instance.wait("main", 10.0)
+        assert done.error is None and done.meta["ended_by"] == "provider" and done.meta["aligned_chars"] == len(text)
+        assert len(done.pcm) == 2 * len(text) and done.t_last_chunk - done.t_first_chunk >= 1.9
+        assert fake.handshakes[0]["key"] == "secret-key" and fake.handshakes[0]["query"]["with_timestamps"] == "true"
+        raw = (tmp_path / "raw.jsonl").read_text()
+        assert "secret-key" not in raw
+
+    async def test_a_run_measures_every_probe_over_the_socket(self, tmp_path, monkeypatch):
+        import websockets
+
+        from tts_bench.adapters.heygen_ws import HeyGenStreamingAdapter
+        from tts_bench.probes import Cancel, Continuation
+
+        greet, summary = corpus.by_id()["prose.greet"], corpus.by_id()["long.summary"]
+        fake = FakeHeyGenSocket(frames=6, gap_s=0.05)
+        async with websockets.serve(fake.serve, "127.0.0.1", 0) as server:
+            monkeypatch.setattr(HeyGenStreamingAdapter, "base", f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}")
+            spec = RunSpec(provider="heygen-streaming", items=[greet, summary], repeats=1, sentinel=False, store=str(tmp_path),
+                           probes=[OneShot(), Repeat(), StreamedInput(words_per_s=200.0),
+                                   Cancel(after_first_audio_ms=20.0, repeats=1), Continuation(frame_gap_ms=20.0)])
+            runner = Runner(spec, api_key="secret-key")
+            await runner.run()
+        cells = {(c.probe, c.item): c for c in runner.cells}
+        assert all(c.void is None for c in runner.cells), [(c.probe, c.item, c.void) for c in runner.cells]
+        for item in (greet, summary):
+            shot = cells[("one_shot", item.id)]
+            assert shot.verdict == "pass" and shot.values["audio_ms"] == pytest.approx(len(item.text) / 24, abs=0.1)
+            assert cells[("repeat", item.id)].values["identical_pcm"] is True
+            assert cells[("streamed_input", item.id)].verdict == "pass"
+        stopped = cells[("cancel", summary.id)].values
+        assert stopped["audio_after_cancel_ms"] > 0 and stopped["cancel_ack_ms"] is not None   # HeyGen finishes a flushed answer
+        assert cells[("continuation", summary.id)].values["framed"]["audio_ms"] == pytest.approx(len(summary.text) / 24, abs=0.1)
+        assert {"close_context": True, "context_id": "main"} in fake.received
+        assert all(h["path"] == "/v3/models/audio/tts/multi-stream-input" and h["query"]["auto_mode"] == "true"
+                   for h in fake.handshakes)
+        assert runner.config.model == "heygen-voice-1-turbo" and runner.config.voice == NADINE
+
+    def test_the_lineup_and_the_sandbox_allowlist(self):
+        from tts_bench.adapters.heygen_ws import HeyGenStreamingAdapter
+
+        entry = PROVIDERS["heygen-streaming"]
+        assert entry.adapter is HeyGenStreamingAdapter and entry.credential_env == PROVIDERS["heygen"].credential_env
+        assert [(m.model, m.voice, m.rate) for m in entry.models] == [
+            ("heygen-voice-1-turbo", NADINE, 24000), ("heygen-voice-1", NADINE, 24000)]
+        assert urlsplit(heygen_streaming_adapter(HeyGenStreamingAdapter.base).url).hostname == "api.heygen.com"

@@ -5164,7 +5164,7 @@ class TestAGoodbyeLeftOpenIsClosedForTheAgent:
         ("That answers my question. What time do you open tomorrow", False),
         ("I have one more question", False),
         # Each sentence on its own: a closing word in one does not cover a request in the next.
-        ("Okay. I would like to discuss Medicare Advantage options.", False),
+        ("Okay. I would like to discuss my options.", False),
         ("That answers my question. I need to reschedule my appointment.", False),
         # A reply that ends on a sign-off and asks for nothing is a goodbye, whatever it says first.
         ("Thanks. I understand. Goodbye.", True),

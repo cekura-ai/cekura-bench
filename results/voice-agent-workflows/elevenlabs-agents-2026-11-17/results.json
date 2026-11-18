@@ -104,7 +104,7 @@
    "scenario": "AS39",
    "replacement_run_id": 4629061,
    "replacement_result_id": 1120991,
-   "reason": "The Cekura caller went silent 45 s into the call, so Cekura recorded 47 s and could not match the ElevenLabs conversation (conv_9301m7nmd2pqf9fsj3e43wpjzg9w, 96 s); the scores had no tool calls. Rerun once in its slot; the replacement counts."
+   "reason": "The Cekura caller went silent 45 s into the call, so Cekura recorded 47 s and could not match the ElevenLabs conversation (96 s); the scores had no tool calls. Rerun once in its slot; the replacement counts."
   }
  ],
  "review_required_run_ids": [],

@@ -5163,6 +5163,14 @@ class TestAGoodbyeLeftOpenIsClosedForTheAgent:
         ("That answers my question, but I also need to book another visit", False),
         ("That answers my question. What time do you open tomorrow", False),
         ("I have one more question", False),
+        # Each sentence on its own: a closing word in one does not cover a request in the next.
+        ("Okay. I would like to discuss Medicare Advantage options.", False),
+        ("That answers my question. I need to reschedule my appointment.", False),
+        # A reply that ends on a sign-off and asks for nothing is a goodbye, whatever it says first.
+        ("Thanks. I understand. Goodbye.", True),
+        ("That is the right next step. Goodbye.", True),
+        ("That works. Goodbye.", True),
+        ("Great, thank you. That's everything.", True),
     ])
     def test_only_a_goodbye_or_an_acknowledgement_answers_one(self, text, closes):
         assert bot.is_closing_reply(text) is closes

@@ -1811,23 +1811,27 @@ _FAREWELL = re.compile(
     r"have an? (?:great|good|nice|wonderful|lovely|safe) (?:day|one|afternoon|evening|morning|weekend|night)|"
     r"thanks?(?: you)? (?:so much )?for calling|enjoy (?:the rest of )?your (?:day|afternoon|evening|weekend))\b"
 )
-# What a caller says back to a goodbye: not a question, and made of closing
-# words -- short when it is only an acknowledgement ("great, thanks"), longer
-# when it says outright that the caller is done ("thank you, that's all I
-# needed", "that answers my question"). Anything else carrying one of the
-# ``_MORE`` words is the caller starting something new, and the agent owes it an
-# answer; the words inside a done phrase ("question") do not count.
+# What a caller says back to a goodbye, judged sentence by sentence so that a
+# closing word in one sentence cannot cover a request in the next ("Okay. I'd
+# like to discuss my options."). It asks for nothing: no question mark, and none
+# of the ``_MORE`` words outside a done phrase ("that answers my question" is
+# done; "question" on its own starts something new). Then either it ends on a
+# sign-off ("Thanks. I understand. Goodbye."), or every sentence says outright
+# that the caller is done ("I have nothing further to add") or is a short
+# acknowledgement ("great, thanks").
 _DONE = re.compile(
-    r"\b(bye|goodbye|that's all|that's it|that is all|nothing else|nothing further|all set|"
-    r"(?:that|this|it) answers my (?:questions?|requests?))\b"
+    r"\b(bye|goodbye|that's all|that's it|that is all|that's everything|that is everything|nothing else|"
+    r"nothing further|all set|answers my (?:questions?|requests?)|answers everything)\b"
 )
 _CLOSING_WORDS = re.compile(
-    r"\b(thanks|thank you|okay|ok|alright|all right|got it|you too|great|perfect|"
+    r"\b(thanks|thank you|okay|ok|alright|all right|got it|you too|great|perfect|that works|"
     r"sounds good|nope|no|cheers|take care|have a (?:good|great|nice) (?:day|one))\b"
 )
 _MORE = re.compile(r"\b(wait|actually|one more|also|question|but|another|what|when|where|how|why|can you|could you)\b")
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 _WORD = re.compile(r"[a-z']+")
+# Word limits: a done sentence, an acknowledgement, and a whole reply ending on a sign-off.
+_DONE_MAX_WORDS, _ACKNOWLEDGEMENT_MAX_WORDS, _SIGN_OFF_MAX_WORDS = 16, 8, 30
 
 
 def is_farewell(text: str) -> bool:
@@ -1837,12 +1841,22 @@ def is_farewell(text: str) -> bool:
 
 
 def is_closing_reply(text: str) -> bool:
-    """The caller answered a goodbye with one, or with an acknowledgement."""
+    """The caller answered a goodbye with one, or with an acknowledgement, and asked for nothing more."""
     said = text.strip().lower().replace("\u2019", "'")
     if not said or "?" in said or _MORE.search(_DONE.sub(" ", said)):
         return False
-    words = len(_WORD.findall(said))
-    return (words <= 8 and bool(_CLOSING_WORDS.search(said))) or (words <= 16 and bool(_DONE.search(said)))
+    sentences = [s for s in _SENTENCE_END.split(said) if _WORD.findall(s)]
+    if not sentences:
+        return False
+    if _FAREWELL.search(sentences[-1]) and len(_WORD.findall(said)) <= _SIGN_OFF_MAX_WORDS:
+        return True
+
+    def closes(sentence: str) -> bool:
+        words = len(_WORD.findall(sentence))
+        return bool((words <= _DONE_MAX_WORDS and _DONE.search(sentence))
+                    or (words <= _ACKNOWLEDGEMENT_MAX_WORDS and _CLOSING_WORDS.search(sentence)))
+
+    return all(closes(sentence) for sentence in sentences)
 
 
 class ClosesAfterAnUnfinishedGoodbye(BaseObserver):

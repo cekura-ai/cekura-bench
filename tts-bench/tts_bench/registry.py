@@ -32,6 +32,7 @@ from tts_bench.adapters.gemini_tts import GeminiTTSAdapter
 from tts_bench.adapters.gradium import GradiumAdapter
 from tts_bench.adapters.hume import HumeAdapter
 from tts_bench.adapters.inworld import InworldAdapter
+from tts_bench.adapters.kalpa import KalpaAdapter
 from tts_bench.adapters.openai_tts import OpenAITTSAdapter
 from tts_bench.adapters.rime import RimeAdapter
 from tts_bench.adapters.smallest import SmallestAdapter
@@ -88,6 +89,7 @@ SARAH = "933563129e564b19a115bedd57b7406a"              # Fish Official, female 
 DELIA = "c70cfb98867a4bfb9ae20d2401257b92"              # Fish Audio, female US English, from its Drama 3 voice cast
 AVA = "5bb7de05-c8fe-426a-8fcc-ba4fc4ce9f9c"           # Hume "Ava Song", female US English, from its Voice Library
 AUDREY = "49c443a4-8a1d-5f7e-b70b-98bdbd9823c3"        # AssemblyAI "Audrey", female US English, the voice AssemblyAI chose
+ISLA = "c676a75b-2a1d-4bc8-880a-6ca649ed1170"          # Kalpa "Isla", female English
 
 PROVIDERS: dict[str, ProviderEntry] = {
     "fake": ProviderEntry("fake", FakeTTSAdapter, "FAKE_KEY_UNUSED", (Model("scripted", "tone"),)),
@@ -206,6 +208,14 @@ PROVIDERS: dict[str, ProviderEntry] = {
         notes="Streaming TTS websocket, session configured in the URL, Begin before t0; Generate appends text, "
               "Flush ends the utterance (FlushDone), Cancel is the barge-in (Cancelled); one utterance at a time per "
               "socket; word timings off; US data zone; new sessions per minute are limited per account",
+    ),
+    "kalpa": ProviderEntry(
+        "kalpa", KalpaAdapter, "KALPA_API_KEY",
+        (Model("kalpa-tts-1", ISLA),),
+        notes="streaming TTS websocket, voice in the URL; initializeConnection before t0 and its sessionCreated echo "
+              "checked; sendText appends text, a flushed sendText ends the utterance (responseDone); bare "
+              "cancelResponse is the barge-in (cancelled); one utterance at a time per socket; server-side "
+              "segmentation on with Kalpa's default chunk_length_schedule (option)",
     ),
 }
 

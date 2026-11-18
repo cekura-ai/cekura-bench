@@ -162,6 +162,7 @@ vendored):
 | `azure-speech` | `MAI-Voice-2.1-Flash`, `MAI-Voice-2.1` | HTTP streaming, SSML | no | no | no | yes | whole text per request; the model is the voice name's suffix (`en-US-Harper:MAI-Voice-2.1-Flash`); the region is the host, option `region` (default `eastus2`) |
 | `assemblyai` | `assemblyai-tts-1` | HTTP streaming (OpenAI-compatible) | no | no | no | no | whole text per request; the voice is `voice_id` (Audrey), and OpenAI's `voice` is left out |
 | `assemblyai-streaming` | `assemblyai-tts-1` | websocket, one utterance at a time | yes | `Cancel` | yes | yes | session configured in the URL, `Begin` before t0; `Flush` ends the utterance; new sessions per minute are limited per account |
+| `kalpa` | `kalpa-tts-1` | websocket, one utterance at a time | yes | `cancelResponse` | yes | no | voice in the URL; `initializeConnection` before t0, its `sessionCreated` echo checked; a flushed `sendText` ends the utterance (`responseDone`); server-side segmentation on with Kalpa's default `chunk_length_schedule` (`50,80,120,150`), option `chunk_length_schedule` (`off` to generate only on flush); the voice is Isla, a female English voice |
 
 Each model runs with one fixed voice, set in the registry: a female US English
 stock voice from that provider. `--all-models` runs the whole lineup of a

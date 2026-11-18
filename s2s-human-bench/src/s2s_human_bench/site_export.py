@@ -10,16 +10,18 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from datetime import date as Date
 from pathlib import Path
 from typing import Any
 
-from s2s_human_bench.bench import load_bench
+from s2s_human_bench.bench import Entry, load_bench
 from s2s_human_bench.config import Config, load_config
 from s2s_human_bench.examples import examples_doc
 from s2s_human_bench.languages import languages_doc
 from s2s_human_bench.s2s import s2s_docs
 from s2s_human_bench.skills import skills_doc
+from s2s_human_bench.tasks import load_tasks
 
 PUBLIC_S2S_PATH = "data/s2s-benchmark.json"
 
@@ -78,6 +80,8 @@ def build(
     entries = load_bench(cfg, runs, exclude_unhealthy)
     if not entries:
         raise ExportError(f"{runs}: no model has {cfg['inputs']['minRuns']} usable runs")
+    if gap := task_metric_gap(cfg, entries):
+        print(gap, file=sys.stderr)
     bench, insights, reports = s2s_docs(cfg, entries, public_s2s, day)
     examples, picks = examples_doc(cfg, entries, call_titles, reviewed or {}, clips_reviewed)
     docs = dict(
@@ -91,6 +95,22 @@ def build(
     return docs, picks
 
 
+def task_metric_gap(cfg: Config, entries: list[Entry]) -> str | None:
+    """A warning when the config names a task metric but some calls carry no verdict from it (the run was
+    not rescored with it, or it gave none): their Task Outcome falls back to the expected-outcome share,
+    so the board would mix two scorings."""
+    if cfg.tasks is not None or "task" not in cfg["metrics"]:
+        return None
+    missing = [e.model.name for e in entries for c in e.calls if c.outcome_from != "metric"]
+    if not missing:
+        return None
+    return (
+        f"warning: {len(missing)} of {sum(len(e.calls) for e in entries)} calls have no verdict from the task metric"
+        f" ({cfg['metrics']['task']}), so their Task Outcome falls back to the expected-outcome share."
+        f" Models: {', '.join(dict.fromkeys(missing))}. Rescore their runs with the metric, or pass --tasks."
+    )
+
+
 def write_json(path: Path, doc: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(doc, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -98,6 +118,8 @@ def write_json(path: Path, doc: Any) -> None:
 
 def run_site_export(args: Any) -> int:
     cfg = load_config(args.config)
+    if args.tasks:
+        cfg.tasks = load_tasks(args.tasks)
     names = dict(cfg["outputs"])
     for pair in args.name or []:
         kind, sep, file = pair.partition("=")
@@ -123,6 +145,9 @@ def run_site_export(args: Any) -> int:
         write_json(args.clip_picks, picks)
     models = docs["skills"]["models"]
     print(f"{len(models)} models, {docs['skills']['callSummary']['total']} scenarios -> {args.out}")
+    if cfg.tasks is not None:
+        overall = [r for r in docs["benchmark"]["results"] if r["suite"] == "all"]
+        print(f"  main task done on {sum(r['taskPass'] for r in overall)} of {sum(r['runs'] for r in overall)} calls (task file {args.tasks})")
     for row in docs["skills"]["elo"]:
         print(f"  {row['model']:<24} elo {row['elo']}  score {row['score']}")
     return 0

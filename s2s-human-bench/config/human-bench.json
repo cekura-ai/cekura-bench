@@ -406,6 +406,30 @@
         "setting": "Server VAD: threshold 0.35, 1,000 ms silence, 300 ms prefix padding",
         "sampleRateHz": 24000
       }
+    },
+    {
+      "key": "google-eap-a",
+      "name": "Google early-access model A",
+      "vendor": "Google",
+      "siteId": "google-eap-a",
+      "agentId": 27852,
+      "details": {
+        "modelId": "Unreleased Gemini Live model (early access, name withheld)",
+        "voice": "Charon",
+        "setting": "thinking HIGH"
+      }
+    },
+    {
+      "key": "google-eap-b",
+      "name": "Google early-access model B",
+      "vendor": "Google",
+      "siteId": "google-eap-b",
+      "agentId": 27853,
+      "details": {
+        "modelId": "Unreleased Gemini Live model (early access, name withheld)",
+        "voice": "Charon",
+        "setting": "default"
+      }
     }
   ],
   "suites": [

@@ -1,7 +1,8 @@
 """Zoom Scribe live mode: binary PCM in, server-segmented final transcripts out.
 
 Zoom segments speech with its own voice activity detection and sends one
-`transcription.completed` per segment; no partials were observed. The session
+`transcription.completed` per segment. Partial text (`transcription.delta`,
+"Captions") streams only when `config.interim_results` is set. The session
 also honors `input_audio_buffer.commit`, which ends the open segment at the
 commit point. A commit with no open segment produces no event at all, so it
 has no acknowledgment to wait for. `session.close` flushes every open segment
@@ -42,6 +43,9 @@ class Protocol(shared.Protocol):
         update = {'type': 'session.update', 'language': self.config['language'], 'audio': {'format': 'pcm16'}}
         if self.config.get('request_model'):
             update['config'] = {'model': self.config['model']}
+        if self.config.get('interim_results'):
+            # Captions: partial text as transcription.delta. Off by default on Zoom's side.
+            update.setdefault('config', {})['interim_results'] = True
         return update
 
     def finalize(self):

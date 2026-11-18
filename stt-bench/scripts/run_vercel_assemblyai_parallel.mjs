@@ -147,7 +147,7 @@ export async function main(argv=process.argv.slice(2)){
   const {getAuth,OAuth,updateAuthConfig}=await import(pathToFileURL(join(sdk,'dist/auth/index.js')));
   let refresh;
   async function account(){
-    let a=getAuth();if(!a?.token)throw new Error('Vercel login missing');
+    let a=getAuth();if(!a?.token&&process.env.VERCEL_TOKEN)return {token:process.env.VERCEL_TOKEN,teamId:accountPlan.teamId,projectId:accountPlan.projectId};if(!a?.token)throw new Error('Vercel login missing');
     if(a.expiresAt?.getTime()<Date.now()+300000){
       refresh??=(async()=>{const t=await(await OAuth()).refreshToken(a.refreshToken);
         updateAuthConfig({token:t.access_token,refreshToken:t.refresh_token??a.refreshToken,expiresAt:new Date(Date.now()+t.expires_in*1000)});})();

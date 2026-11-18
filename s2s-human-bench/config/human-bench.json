@@ -27,7 +27,8 @@
   "metrics": {
     "latency": 275642,
     "turnLength": 275674,
-    "entity": 275303
+    "entity": 275303,
+    "task": 281918
   },
   "families": [
     {
@@ -242,7 +243,7 @@
       "type": "passive",
       "better": "higher",
       "unit": "share",
-      "description": "Expected-outcome score for the call: did the agent finish the caller's task the way the scenario requires."
+      "description": "Task outcome for the call: did the agent finish the caller's task the way the scenario requires."
     },
     {
       "id": "L1",
@@ -366,6 +367,45 @@
       "vendor": "Phonic",
       "siteId": "phonic-1",
       "agentId": 26898
+    },
+    {
+      "key": "eleven-realtime-v1-max",
+      "name": "Eleven Realtime v1 Max",
+      "vendor": "ElevenLabs",
+      "siteId": "eleven-realtime-v1-max",
+      "agentId": 27121,
+      "details": {
+        "modelId": "eleven_realtime_v1_max",
+        "voice": "brian",
+        "setting": "No reasoning setting",
+        "sampleRateHz": 24000
+      }
+    },
+    {
+      "key": "eleven-realtime-v1-mini",
+      "name": "Eleven Realtime v1 Mini",
+      "vendor": "ElevenLabs",
+      "siteId": "eleven-realtime-v1-mini",
+      "agentId": 27122,
+      "details": {
+        "modelId": "eleven_realtime_v1_mini",
+        "voice": "brian",
+        "setting": "No reasoning setting",
+        "sampleRateHz": 24000
+      }
+    },
+    {
+      "key": "higgs-realtime",
+      "name": "Higgs Realtime",
+      "vendor": "Boson AI",
+      "siteId": "higgs-realtime",
+      "agentId": 27253,
+      "details": {
+        "modelId": "higgs-realtime",
+        "voice": "default",
+        "setting": "Server VAD: threshold 0.35, 1,000 ms silence, 300 ms prefix padding",
+        "sampleRateHz": 24000
+      }
     }
   ],
   "suites": [

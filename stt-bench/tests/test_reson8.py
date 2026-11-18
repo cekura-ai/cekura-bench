@@ -29,7 +29,8 @@ def test_config_audio_and_credential_isolation():
     q = parse_qs(urlsplit(url).query)
     assert q['sample_rate'] == ['16000'] and q['include_interim'] == ['true']
     assert q['encoding'] == ['pcm_s16le'] and q['filler_mode'] == ['verbatim']
-    assert not any(k in q for k in ('model', 'custom_model_id', 'phrases', 'patterns'))
+    assert q['model'] == ['rumble-2'] and urlsplit(url).hostname == 'api.global.reson8.dev'
+    assert not any(k in q for k in ('custom_model_id', 'phrases', 'patterns'))
     p = wire.Protocol(c)
     assert p.ready and p.setup() is None and p.audio(bytes(640)) == bytes(640)
     for key, value in [('sample_rate', 24000), ('channels', 2), ('frame_ms', 80),
@@ -37,6 +38,16 @@ def test_config_audio_and_credential_isolation():
                        ('endpoint', 'wss://other.example'), ('model', 'other')]:
         with pytest.raises(ValueError):
             validate(dict(c, **{key: value}))
+
+
+def test_global_endpoint_requires_rumble_2_and_legacy_label_is_not_sent():
+    c = config()
+    with pytest.raises(ValueError):
+        validate(dict(c, model='realtime'))
+    legacy = dict(c, model='realtime', endpoint='wss://api.reson8.dev/v1/speech-to-text/realtime')
+    assert validate(legacy) == legacy
+    url, _ = wire.connection(legacy, 'fixture')
+    assert 'model' not in parse_qs(urlsplit(url).query)
 
 
 def test_replay_partial_replacement_repeated_finals_and_correlated_completion():

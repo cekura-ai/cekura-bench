@@ -406,6 +406,23 @@
         "setting": "Server VAD: threshold 0.35, 1,000 ms silence, 300 ms prefix padding",
         "sampleRateHz": 24000
       }
+    },
+    {
+      "key": "retell-agents",
+      "name": "Retell Agents",
+      "vendor": "Retell",
+      "siteId": "retell-agents",
+      "runs": [
+        "fullrun_retell_r1",
+        "fullrun_retell_r2",
+        "fullrun_retell_r3"
+      ],
+      "details": {
+        "modelId": "tell-1 on Retell Agents",
+        "voice": "Cimo (Cartesia)",
+        "setting": "Standard tier, default temperature",
+        "turns": "Retell turn handling, accurate speech-to-text"
+      }
     }
   ],
   "suites": [

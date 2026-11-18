@@ -2,14 +2,27 @@
 
 from __future__ import annotations
 
-from tts_bench.adapters.base import TTSConfig
+import asyncio
+import base64
+import json
+import re
+from urllib.parse import urlsplit
+
+import pytest
+import websockets
+from websockets.exceptions import ConnectionClosedError
+from websockets.frames import Close
+
+from tts_bench import corpus
+from tts_bench.adapters.base import AdapterError, TTSConfig, is_refusal
 from tts_bench.adapters.deepgram_flux import DeepgramFluxAdapter
 from tts_bench.adapters.elevenlabs_dialogue import ElevenLabsDialogueAdapter
 from tts_bench.adapters.elevenlabs_dialogue_multi import ElevenLabsDialogueMultiAdapter
+from tts_bench.adapters.kalpa import KalpaAdapter
 from tts_bench.common.events import Clock, EventLog
-from tts_bench.registry import PROVIDERS, lineup
+from tts_bench.registry import KIARA, PROVIDERS, lineup
 from tts_bench.runner import RunSpec, Runner
-from tts_bench.probes import OneShot
+from tts_bench.probes import Cancel, Continuation, OneShot, Repeat, StreamedInput
 
 
 def adapter(cls, model: str, voice: str):
@@ -755,3 +768,226 @@ class TestLineupRates:
         assert PROVIDERS["hume"].rate_for("octave-2") == 48000
         assert PROVIDERS["cartesia"].rate_for("sonic-3.6") == 24000
         assert PROVIDERS["cartesia"].rate_for("a-model-outside-the-lineup") == 24000
+
+
+def _kalpa_server(sessions: list[dict], refuse_text: str | None = None):
+    """A Kalpa streaming socket: sessionCreated echo, responses paced on the wire, a bare cancel, a fatal refusal.
+
+    Audio is 1 ms of tone per character, cut into 20-character chunks sent 60 ms apart, so the recording depends
+    only on the text however it was split, and a cancel 300 ms after the first chunk lands mid-response. A complete
+    sentence is voiced as soon as it arrives (server-side segmentation); the flush voices the rest.
+    """
+    tone = (8000).to_bytes(2, "little", signed=True) + (-8000).to_bytes(2, "little", signed=True)
+
+    async def serve(ws):
+        session = {"path": ws.request.path, "frames": []}
+        sessions.append(session)
+        init = json.loads(await ws.recv())
+        session["init"] = init
+        await ws.send(json.dumps({"type": "sessionCreated", "session_id": f"sess_{len(sessions)}", "model": init["model"],
+                                  "voice_id": ws.request.path.split("/")[-2], "output_format": "pcm_s16le",
+                                  "sample_rate": init["sample_rate"], "channels": 1, "audio_quality": "high"}))
+        queue: asyncio.Queue = asyncio.Queue()
+        state = {"rid": None, "count": 0, "heard": "", "held": ""}
+
+        def voice(text: str) -> None:
+            for start in range(0, len(text), 20):
+                part = text[start:start + 20]
+                queue.put_nowait(("send", json.dumps({"type": "responseAudio", "response_id": state["rid"],
+                                                      "pcm_b64": base64.b64encode(tone * 12 * len(part)).decode()}), 0.06))
+
+        async def speak():
+            while True:
+                kind, payload, pause = await queue.get()
+                if kind == "close":
+                    await ws.close(payload, pause)
+                    return
+                if kind == "done":
+                    state["rid"] = None
+                await ws.send(payload)
+                await asyncio.sleep(pause)
+
+        speaker = asyncio.create_task(speak())
+        try:
+            async for raw in ws:
+                frame = json.loads(raw)
+                session["frames"].append(frame)
+                if frame["type"] == "sendText":
+                    if state["rid"] is None and not frame.get("flush"):
+                        state["count"] += 1
+                        state["rid"] = f"resp_{state['count']}"
+                        queue.put_nowait(("send", json.dumps({"type": "responseCreated", "response_id": state["rid"],
+                                                              "sample_rate": init["sample_rate"]}), 0))
+                    state["heard"] += frame["text"]
+                    state["held"] += frame["text"]
+                    while (end := re.search(r"[.?!] ", state["held"])) is not None:
+                        voice(state["held"][:end.end()])
+                        state["held"] = state["held"][end.end():]
+                    if frame.get("flush"):
+                        heard, state["heard"] = state["heard"], ""
+                        if heard == refuse_text:
+                            queue.put_nowait(("send", json.dumps({"type": "error", "fatal": True, "response_id": state["rid"],
+                                "error": {"type": "allowance_exhausted", "message": "Your organization has used its free allowance."}}), 0))
+                            queue.put_nowait(("close", 4402, "allowance exhausted"))
+                            continue
+                        voice(state["held"])
+                        state["held"] = ""
+                        queue.put_nowait(("done", json.dumps({"type": "responseDone", "response_id": state["rid"],
+                            "status": "completed", "text": heard,
+                            "usage": {"input_chars": len(heard), "output_audio_seconds": len(heard) / 1000}}), 0))
+                elif frame["type"] == "cancelResponse":
+                    while not queue.empty():
+                        queue.get_nowait()
+                    if state["rid"] is not None:
+                        queue.put_nowait(("done", json.dumps({"type": "responseDone", "response_id": state["rid"],
+                                                              "status": "cancelled", "usage": {}}), 0))
+                    queue.put_nowait(("send", json.dumps({"type": "cancelled"}), 0))
+                    state["heard"] = state["held"] = ""
+        finally:
+            speaker.cancel()
+
+    return serve
+
+
+class TestKalpa:
+    async def test_a_run_measures_every_probe_and_a_used_up_allowance_is_a_refusal_to_retry(self, tmp_path, monkeypatch):
+        items = corpus.by_id()
+        greet, hold, prep = items["prose.greet"], items["prose.hold"], items["long.prep"]
+        sessions: list[dict] = []
+        async with websockets.serve(_kalpa_server(sessions, refuse_text=hold.text), "127.0.0.1", 0) as server:
+            monkeypatch.setattr(KalpaAdapter, "base", f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}/v1/tts")
+            spec = RunSpec(provider="kalpa", items=[greet, hold, prep], repeats=1, sentinel=False,
+                           probes=[OneShot(), Repeat(), StreamedInput(words_per_s=100), Continuation(frame_gap_ms=10),
+                                   Cancel(repeats=2)], store=str(tmp_path))
+            runner = Runner(spec, api_key="secret-key")
+            await runner.run()
+        cells = {(c.probe, c.item): c for c in runner.cells}
+
+        shot = cells[("one_shot", "prose.greet")]
+        assert shot.verdict == "pass" and shot.values["ttfa_ms"] is not None
+        assert shot.values["audio_ms"] == pytest.approx(len(greet.text), abs=1)
+        repeat = cells[("repeat", "prose.greet")]
+        assert repeat.verdict == "pass" and repeat.values["identical_pcm"] is True
+        streamed = cells[("streamed_input", "prose.greet")]
+        assert streamed.verdict == "pass" and streamed.values["started_before_input_done"] is True
+        continuation = cells[("continuation", "long.prep")]
+        assert continuation.verdict == "pass" and continuation.values["frames"] > 1
+        assert continuation.values["duration_delta_ms"] == pytest.approx(0, abs=1)
+        cancels = [c for c in runner.cells if c.probe == "cancel"]
+        assert len(cancels) == 2
+        for cell in cancels:
+            assert cell.verdict == "pass" and cell.values["cancel_ack_ms"] is not None
+            assert cell.values["audio_ms"] < len(prep.text) - 100      # stopped mid-response, not played out
+        # A refusal on the first utterance of a two-utterance probe voids the cell; it is not a harness error.
+        for probe in ("one_shot", "repeat", "streamed_input"):
+            assert cells[(probe, "prose.hold")].void.startswith("provider refused: allowance exhausted"), probe
+        assert {(p.probe.name, p.item.id) for p in runner.pending()} == {
+            ("one_shot", "prose.hold"), ("repeat", "prose.hold"), ("streamed_input", "prose.hold")}
+
+        for session in sessions:
+            assert session["path"] == f"/v1/tts/{KIARA}/stream"
+            assert session["init"] == {"type": "initializeConnection", "api_key": "secret-key", "model": "kalpa-tts-1",
+                                       "output_format": "pcm_s16le", "sample_rate": 24000,
+                                       "generation_config": {"chunk_length_schedule": [50, 80, 120, 150]}}
+            kinds = [(f["type"], f.get("flush", False)) for f in session["frames"]]
+            assert kinds and set(kinds) <= {("sendText", False), ("sendText", True), ("cancelResponse", False)}
+        assert not [p for p in tmp_path.rglob("*.jsonl") if "secret-key" in p.read_text()]
+
+    async def test_a_response_cut_short_or_cancelled_by_the_server_is_an_error_and_a_cancel_is_not(self):
+        kalpa, sent = adapter(KalpaAdapter, "kalpa-tts-1", KIARA)
+        first = await kalpa.open_context("first")
+        await kalpa.send("first", "Hello there.")
+        await kalpa.finish("first")
+        assert sent == [{"type": "sendText", "text": "Hello there."}, {"type": "sendText", "text": "", "flush": True}]
+        kalpa._on_message({"type": "responseCreated", "response_id": "r1"})
+        kalpa._on_message({"type": "responseAudio", "response_id": "r1", "pcm_b64": "AAAA"})
+        kalpa._on_message({"type": "responseDone", "response_id": "r1", "status": "completed", "text": "Hello there.",
+                           "usage": {"input_chars": 12, "output_audio_seconds": 0.1}})
+        assert first.done.is_set() and first.error is None and first.meta["usage"]["input_chars"] == 12
+
+        overloaded = await kalpa.open_context("overloaded")
+        await kalpa.send("overloaded", "Hello again.")
+        kalpa._on_message({"type": "responseCreated", "response_id": "r2"})
+        kalpa._on_message({"type": "responseAudio", "response_id": "r1", "pcm_b64": "AAAA"})   # a stray frame of r1
+        kalpa._on_message({"type": "error", "fatal": False, "error": {"type": "overloaded", "message": "busy"}})
+        kalpa._on_message({"type": "responseDone", "response_id": "r2", "status": "cancelled"})
+        assert overloaded.error == "overloaded: busy" and not overloaded.pcm and not is_refusal(overloaded.error)
+
+        nobody_cancelled = await kalpa.open_context("nobody")
+        await kalpa.send("nobody", "And again.")
+        kalpa._on_message({"type": "responseCreated", "response_id": "r3"})
+        kalpa._on_message({"type": "responseDone", "response_id": "r3", "status": "cancelled"})
+        assert nobody_cancelled.error == "responseDone with status 'cancelled' and no cancel sent"
+
+        cut = await kalpa.open_context("cut")
+        await kalpa.send("cut", "A long reply.")
+        kalpa._on_message({"type": "responseAudio", "pcm_b64": "AAAA"})
+        kalpa._on_closed("received 1011 (internal error)")
+        assert cut.error.startswith("closed before responseDone") and first.error is None
+
+        barge = await kalpa.open_context("barge")
+        await kalpa.send("barge", "A long reply.")
+        await kalpa.cancel("barge")
+        assert sent[-1] == {"type": "cancelResponse"}
+        kalpa._on_closed("closed by server")
+        assert barge.done.is_set() and barge.error is None
+
+    async def test_a_frame_sent_after_the_server_closed_fails_that_synthesis_not_the_harness(self):
+        class Closed:
+            close_code = 4402
+
+            async def send(self, _):
+                raise ConnectionClosedError(Close(4402, "allowance exhausted"), None)
+
+        clock = Clock()
+        kalpa = KalpaAdapter(TTSConfig("kalpa-tts-1", KIARA), "k", EventLog(clock), clock)
+        kalpa._ws = Closed()
+        second = await kalpa.open_context("second")
+        await kalpa.send("second", "Hello again.")
+        await kalpa.finish("second")
+        assert second.done.is_set() and second.error.startswith("socket closed before sendText was sent: allowance exhausted (4402)")
+        assert is_refusal(second.error)
+
+    async def test_a_refused_key_an_unknown_voice_or_an_unapplied_setting_stops_the_cell_before_t0(self, monkeypatch):
+        async def serve(ws):
+            init = json.loads(await ws.recv())
+            voice = ws.request.path.split("/")[-2]
+            if init["api_key"] != "good":
+                error, code = {"type": "authentication_error", "message": "Invalid or missing api_key."}, 4401
+            elif voice != KIARA:
+                error, code = {"type": "not_found", "message": f"Unknown voice '{voice}'."}, 4404
+            else:
+                await ws.send(json.dumps({"type": "sessionCreated", "model": init["model"], "voice_id": voice,
+                                          "output_format": "pcm_s16le", "sample_rate": 16000}))
+                await ws.wait_closed()
+                return
+            await ws.send(json.dumps({"type": "error", "fatal": True, "error": error}))
+            await ws.close(code, "refused")
+
+        async with websockets.serve(serve, "127.0.0.1", 0) as server:
+            monkeypatch.setattr(KalpaAdapter, "base", f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}/v1/tts")
+            outcomes = []
+            for key, voice in (("bad", KIARA), ("good", "nobody"), ("good", KIARA)):
+                clock = Clock()
+                kalpa = KalpaAdapter(TTSConfig(model="kalpa-tts-1", voice=voice), key, EventLog(clock), clock)
+                with pytest.raises(AdapterError) as refused:
+                    await kalpa.connect()
+                outcomes.append(str(refused.value))
+        assert is_refusal(outcomes[0]) and "unauthorized" in outcomes[0]
+        assert not is_refusal(outcomes[1]) and "Unknown voice" in outcomes[1]
+        assert "did not apply the requested settings: {'sample_rate': 16000}" in outcomes[2]
+
+    def test_the_lineup_the_host_the_schedule_option_and_the_key_kept_out_of_the_log(self):
+        entry = PROVIDERS["kalpa"]
+        assert entry.adapter is KalpaAdapter and entry.credential_env == "KALPA_API_KEY"
+        assert [(m.model, m.voice, m.rate) for m in entry.models] == [("kalpa-tts-1", KIARA, 24000)]
+        kalpa, _ = adapter(KalpaAdapter, "kalpa-tts-1", KIARA)
+        assert urlsplit(kalpa.url).hostname == "api.kalpalabs.ai"      # the host sandbox.mjs allows
+        assert kalpa._logged(kalpa._init_frame())["api_key"] == "<redacted>"
+        assert KalpaAdapter.unsupported_reason(TTSConfig("kalpa-tts-1", KIARA), ("streamed_input", "cancel", "continuation")) is None
+        clock = Clock()
+        generate_on_flush = KalpaAdapter(TTSConfig("kalpa-tts-1", KIARA, options=(("chunk_length_schedule", "off"),)),
+                                         "k", EventLog(clock), clock)
+        assert "generation_config" not in generate_on_flush._init_frame()
+        with pytest.raises(ValueError):
+            KalpaAdapter(TTSConfig("kalpa-tts-1", KIARA, options=(("chunk_length_schedule", "20,80"),)), "k", EventLog(clock), clock)

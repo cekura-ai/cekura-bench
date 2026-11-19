@@ -1016,8 +1016,11 @@ class FakeHeyGenSocket:
     sample.
     """
 
-    def __init__(self, frames: int = 3, gap_s: float = 0.01, last_gap_s: float = 0.01) -> None:
+    def __init__(self, frames: int = 3, gap_s: float = 0.01, last_gap_s: float = 0.01,
+                 unaligned_stop: bool = False, restart_after: int | None = None) -> None:
         self.frames, self.gap_s, self.last_gap_s = frames, gap_s, last_gap_s
+        self.unaligned_stop = unaligned_stop        # speak the closing full stop but leave it out of the alignment
+        self.restart_after = restart_after          # close 1012 after this many frames, as HeyGen's restarts do
         self.handshakes: list[dict] = []
         self.received: list[dict] = []
         self.error_on_text: str | None = None
@@ -1037,9 +1040,14 @@ class FakeHeyGenSocket:
             cuts = [round(len(text) * i / self.frames) for i in range(self.frames + 1)]
             for index in range(self.frames):
                 await asyncio.sleep(self.last_gap_s if index == self.frames - 1 else self.gap_s)
+                if index == self.restart_after:
+                    await ws.close(1012, "Service restarting; reconnect")
+                    return
                 chars = list(text[cuts[index]:cuts[index + 1]])
                 # One sample per character; frame 0 ends inside a sample and frame 1 completes it.
                 pcm = b"\x01" * (2 * len(chars) + {0: 1, 1: -1}.get(index, 0))
+                if self.unaligned_stop and index == self.frames - 1 and chars[-1:] == ["."]:
+                    chars = chars[:-1]
                 await ws.send(json.dumps({"audio": base64.b64encode(pcm).decode(), "isFinal": None, "contextId": context_id,
                                           "alignment": {"chars": chars, "charStartTimesMs": [0] * len(chars),
                                                         "charDurationsMs": [10] * len(chars)},
@@ -1195,6 +1203,36 @@ class TestHeyGenStreaming:
         assert fake.handshakes[0]["key"] == "secret-key" and fake.handshakes[0]["query"]["with_timestamps"] == "true"
         raw = (tmp_path / "raw.jsonl").read_text()
         assert "secret-key" not in raw
+
+    async def test_an_unaligned_closing_full_stop_ends_on_quiet_once_every_word_is_spoken(self, tmp_path):
+        import websockets
+
+        # The last frame is 2 s late: a pause before the last word is still waited out, not taken for the end.
+        fake = FakeHeyGenSocket(frames=3, last_gap_s=2.0, unaligned_stop=True)
+        text = "Your prescriptions for levothyroxine and metformin are ready for pickup."
+        async with websockets.serve(fake.serve, "127.0.0.1", 0) as server:
+            instance = heygen_streaming_adapter(f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}", tmp_path)
+            async with instance:
+                await instance.open_context("main")
+                await instance.send("main", text)
+                await instance.finish("main")
+                done = await instance.wait("main", 10.0)
+        assert done.error is None and done.meta["ended_by"] == "quiet" and done.t_done is None
+        assert len(done.pcm) == 2 * len(text) and done.t_last_chunk - done.t_first_chunk >= 1.9
+
+    async def test_a_close_while_speaking_is_an_error_not_the_end(self, tmp_path):
+        import websockets
+
+        fake = FakeHeyGenSocket(frames=3, restart_after=1)
+        async with websockets.serve(fake.serve, "127.0.0.1", 0) as server:
+            instance = heygen_streaming_adapter(f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}", tmp_path)
+            async with instance:
+                await instance.open_context("main")
+                await instance.send("main", "So to summarize: you're booked for Thursday.")
+                await instance.finish("main")
+                done = await instance.wait("main", 10.0)
+        assert done.error.startswith("closed while speaking") and "1012" in done.error and not is_refusal(done.error)
+        assert 0 < len(done.pcm) < 2 * len("So to summarize: you're booked for Thursday.")
 
     async def test_a_run_measures_every_probe_over_the_socket(self, tmp_path, monkeypatch):
         import websockets

@@ -12,10 +12,18 @@ limit:
   is closed, but every audio frame carries ``alignment``, the characters of the
   text as sent that the frame speaks (``with_timestamps=true`` makes the
   timings required). A context is done when its frames have spoken every
-  character it was sent: measured on every complete synthesis of a trial, the
-  aligned characters equal the text sent, character for character. This
-  replaces ElevenLabs' end-on-quiet, which would cut a recording at any pause
-  over 1.5 s and record the missing words as misreadings instead of the pause.
+  character it was sent: on 2,441 of the 2,471 complete syntheses of the
+  2026-11-18 campaign the aligned characters equal the text sent, character
+  for character. This replaces ElevenLabs' end-on-quiet, which would cut a
+  recording at any pause over 1.5 s and record the missing words as
+  misreadings instead of the pause.
+* The other 30 (five sentences, every read) were spoken in full, but HeyGen
+  never aligned the closing full stop, so they waited out the timeout. A final
+  punctuation mark normally comes in its own last frame, at most 0.46 s after
+  the frame that speaks the last letter or digit (campaign, both models). So
+  once every letter and digit sent has been spoken, a context may also end on
+  quiet (1.5 s with no audio): every other context still ends on the frame it
+  did, and a pause before the last word is still a stall, not the end.
 * ``auto_mode`` (option, default ``true`` here; HeyGen's default is ``false``)
   is in the URL because it changes the number. Off, HeyGen generates once 120
   characters are buffered or on the flush, but text that arrives after a
@@ -31,6 +39,10 @@ limit:
   arrived after a stop sent 300 ms in), so the cancel probe measures how much
   audio still arrives rather than assuming it stops, as for ElevenLabs'
   ``close_context``. Its ``isFinal`` is the acknowledgement.
+* HeyGen closes the socket after ``close_socket``, or after an error frame. A
+  close while a reply is still being spoken cuts it short (one reply in the
+  campaign: close 1012, "Service restarting; reconnect", 7.6 s into a 21 s
+  answer), so it is that context's error, not its end.
 * The voice, model, rate and language are fixed per socket in the URL. Unknown
   query parameters and unknown frame fields are refused (HTTP 400 at the
   handshake; close 1008 with an error frame), so nothing outside the documented
@@ -60,11 +72,16 @@ from typing import Any, ClassVar
 from urllib.parse import urlencode
 
 from tts_bench.adapters import heygen
-from tts_bench.adapters.base import AdapterError
+from tts_bench.adapters.base import AdapterError, Synthesis
 from tts_bench.adapters.elevenlabs import ElevenLabsAdapter
 from tts_bench.common.audio import SAMPLE_WIDTH
 
 REQUESTS_PER_CELL = 3       # the most a full-suite probe sends on one socket: the handshake and two contexts (repeat, continuation)
+
+
+def _letters(text: str) -> int:
+    """Letters and digits: what has to be spoken, whatever HeyGen does with punctuation."""
+    return sum(ch.isalnum() for ch in text)
 
 
 class HeyGenStreamingAdapter(ElevenLabsAdapter):
@@ -81,6 +98,8 @@ class HeyGenStreamingAdapter(ElevenLabsAdapter):
         super().__init__(*args, **kwargs)
         self._carry: dict[str | None, bytes] = {}
         self._aligned: dict[str | None, int] = {}
+        self._letters_sent: dict[str | None, int] = {}
+        self._letters_spoken: dict[str | None, int] = {}
 
     @property
     def auto_mode(self) -> bool:
@@ -123,8 +142,12 @@ class HeyGenStreamingAdapter(ElevenLabsAdapter):
         if self.config.speed is not None:
             raise AdapterError(f"{self.name}: speed applies only to professional clones, not to {self.config.voice}")
         self._record_request()
-        self._aligned[context_id] = 0
+        self._aligned[context_id] = self._letters_sent[context_id] = self._letters_spoken[context_id] = 0
         await self._send_json({"text": " ", "context_id": context_id})
+
+    async def _send_text(self, context_id: str, text: str, first: bool) -> None:
+        self._letters_sent[context_id] = self._letters_sent.get(context_id, 0) + _letters(text)
+        await super()._send_text(context_id, text, first)
 
     async def _finish(self, context_id: str) -> None:
         await super()._finish(context_id)
@@ -138,6 +161,17 @@ class HeyGenStreamingAdapter(ElevenLabsAdapter):
             return
         if self._aligned.get(context_id, 0) >= synthesis.chars_sent > 0:
             self._on_done(context_id, aligned_chars=self._aligned[context_id])
+
+    def _ends_on_quiet(self, synthesis: Synthesis) -> bool:
+        """Every letter and digit sent has been spoken: an unaligned closing punctuation mark need not be waited for."""
+        sent = self._letters_sent.get(synthesis.context_id, 0)
+        return synthesis.t_input_done is not None and sent > 0 and self._letters_spoken.get(synthesis.context_id, 0) >= sent
+
+    def _on_closed(self, reason: str) -> None:
+        for context_id, synthesis in self.contexts.items():
+            if not synthesis.done.is_set() and synthesis.t_cancel is None:
+                self._on_error(context_id, f"closed while speaking: {reason}")
+        super()._on_closed(reason)
 
     def _on_message(self, message: dict[str, Any]) -> None:
         context_id = message.get("contextId")
@@ -154,7 +188,9 @@ class HeyGenStreamingAdapter(ElevenLabsAdapter):
             if whole < len(pcm):
                 self._carry[context_id] = pcm[whole:]
             self._on_audio(context_id, pcm[:whole])
-            self._aligned[context_id] = self._aligned.get(context_id, 0) + len((message.get("alignment") or {}).get("chars") or ())
+            chars = (message.get("alignment") or {}).get("chars") or ()
+            self._aligned[context_id] = self._aligned.get(context_id, 0) + len(chars)
+            self._letters_spoken[context_id] = self._letters_spoken.get(context_id, 0) + _letters("".join(chars))
         if message.get("isFinal"):
             if self._carry.pop(context_id, b""):
                 self._on_error(context_id, "stream ended inside a sample (1 trailing byte)")

@@ -242,10 +242,11 @@ class TTSAdapter(abc.ABC):
     async def wait(self, context_id: str, timeout_s: float, quiet_s: float = 1.5) -> Synthesis:
         """Until the provider says the context is done, or, where that is all there is, it has gone quiet.
 
-        A protocol with no completion signal (``ends_on_quiet``), or any context
-        after a cancel (a provider need not confirm one), is done when no chunk
-        has arrived for ``quiet_s``. Every other context waits for its done
-        signal, an error, or the timeout. The record says which ended the wait.
+        A protocol with no completion signal (``ends_on_quiet``), a context its
+        adapter says may end on quiet (``_ends_on_quiet``), or any context after
+        a cancel (a provider need not confirm one), is done when no chunk has
+        arrived for ``quiet_s``. Every other context waits for its done signal,
+        an error, or the timeout. The record says which ended the wait.
         """
         synthesis = self.contexts[context_id]
         deadline = self.clock.now() + timeout_s
@@ -263,13 +264,17 @@ class TTSAdapter(abc.ABC):
             if synthesis.error:
                 synthesis.meta["ended_by"] = "error"
                 return synthesis
-            if not (self.ends_on_quiet or synthesis.t_cancel is not None):
+            if not (self._ends_on_quiet(synthesis) or synthesis.t_cancel is not None):
                 continue                    # the provider will say when it is done; a pause is not the end
             last = synthesis.t_last_chunk
             anchor = last if last is not None else (synthesis.t_cancel or synthesis.t_input_done)
             if anchor is not None and self.clock.now() - anchor > quiet_s and (last is not None or synthesis.t_cancel):
                 synthesis.meta["ended_by"] = "quiet"
                 return synthesis
+
+    def _ends_on_quiet(self, synthesis: Synthesis) -> bool:
+        """Whether this context may end on quiet: the protocol's rule, unless the adapter knows more."""
+        return self.ends_on_quiet
 
     # -- what subclasses report back ----------------------------------------
 

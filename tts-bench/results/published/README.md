@@ -33,6 +33,7 @@ replaces the base run's.
 | Hume Octave 2 (preview) | `campaign-1014-hume` | none |
 | Gradium (default), voice Everly | `campaign-1018b-gradium-everly` | none |
 | Inworld TTS-2 Flash and TTS-2 (creative delivery) | `campaign-1019-inworld` | none |
+| Murf Falcon 2.1, voice Judith | `murf-falcon-judith-20261113` | none |
 | HeyGen Voice 1 Turbo and Voice 1, voice Nadine, over the streaming websocket | `heygen-voice-ws-20261119` | none |
 
 `campaign-0928-fix` re-ran the models whose recordings an early stream-end bug

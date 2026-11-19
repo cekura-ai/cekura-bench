@@ -34,7 +34,8 @@ replaces the base run's.
 | Gradium (default), voice Everly | `campaign-1018b-gradium-everly` | none |
 | Inworld TTS-2 Flash and TTS-2 (creative delivery) | `campaign-1019-inworld` | none |
 | Murf Falcon 2.1, voice Judith | `murf-falcon-judith-20261113` | none |
-| HeyGen Voice 1 Turbo and Voice 1, voice Nadine, over the streaming websocket | `heygen-voice-ws-20261119` | none |
+| HeyGen Voice 1 Turbo, voice Nadine, over the streaming websocket | `heygen-voice-ws-20261119` | none |
+| HeyGen Voice 1, voice Nadine, over the streaming websocket | `heygen-voice-ws-20261119` | named in its summary's `amendments` |
 
 `campaign-0928-fix` re-ran the models whose recordings an early stream-end bug
 had cut short, and `campaign-0928-v4` added the two v4 models. Grok's

@@ -12,13 +12,13 @@ limit:
   is closed, but every audio frame carries ``alignment``, the characters of the
   text as sent that the frame speaks (``with_timestamps=true`` makes the
   timings required). A context is done when its frames have spoken every
-  character it was sent: on 2,441 of the 2,471 complete syntheses of the
-  2026-11-18 campaign the aligned characters equal the text sent, character
-  for character. This replaces ElevenLabs' end-on-quiet, which would cut a
-  recording at any pause over 1.5 s and record the missing words as
-  misreadings instead of the pause.
-* The other 30 (five sentences, every read) were spoken in full, but HeyGen
-  never aligned the closing full stop, so they waited out the timeout. A final
+  character it was sent: on 2,495 of the 2,550 syntheses of the 2026-11-18
+  campaign (both models, stop probe aside) the aligned characters equal the
+  text sent, character for character. This replaces ElevenLabs' end-on-quiet,
+  which would cut a recording at any pause over 1.5 s and record the missing
+  words as misreadings instead of the pause.
+* 54 others (on five sentences) were spoken in full, but HeyGen never aligned
+  the closing full stop or question mark, so they waited out the timeout. A final
   punctuation mark normally comes in its own last frame, at most 0.46 s after
   the frame that speaks the last letter or digit (campaign, both models). So
   once every letter and digit sent has been spoken, a context may also end on

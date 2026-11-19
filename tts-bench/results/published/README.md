@@ -34,6 +34,8 @@ replaces the base run's.
 | Gradium (default), voice Everly | `campaign-1018b-gradium-everly` | none |
 | Inworld TTS-2 Flash and TTS-2 (creative delivery) | `campaign-1019-inworld` | none |
 | Murf Falcon 2.1, voice Judith | `murf-falcon-judith-20261113` | none |
+| HeyGen Voice 1 Turbo, voice Nadine, over the streaming websocket | `heygen-voice-ws-20261119` | none |
+| HeyGen Voice 1, voice Nadine, over the streaming websocket | `heygen-voice-ws-20261119` | named in its summary's `amendments` |
 
 `campaign-0928-fix` re-ran the models whose recordings an early stream-end bug
 had cut short, and `campaign-0928-v4` added the two v4 models. Grok's
@@ -49,4 +51,11 @@ transcripts were scored offline with `bin/score-tts.py`.
 `campaign-1110-elevenlabs-norm` re-ran ElevenLabs v4 Turbo and v4 with
 `apply_text_normalization=on`, as ElevenLabs recommends for v4; it replaces their
 `campaign-0928-v4` runs and their `campaign-1004` amendment.
+HeyGen's `heygen-voice-ws-20261119` run measured it over its input-streaming
+websocket; it replaces the `heygen-voice-20261105` run over the HTTP stream,
+which could not measure streaming, stopping or continuation. An earlier
+websocket run, `heygen-voice-ws-20261118`, was set aside: some of its replies
+waited out a false timeout, fixed since, and HeyGen's output changed overnight
+(identical audio on every repeat that night, a different recording on every
+read the next morning).
 Each summary names its runs in `run` and `amendments`.

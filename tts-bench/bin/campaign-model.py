@@ -76,6 +76,9 @@ def main() -> int:
     parser.add_argument("--repeats", type=int, default=3)
     parser.add_argument("--item", action="append", default=[],
                         help="run only these corpus items: an amendment to an earlier campaign, joined at export")
+    parser.add_argument("--probe", action="append", default=[],
+                        help="run only these probes instead of the suite: an amendment that re-measures particular cells")
+    parser.add_argument("--no-sentinel", action="store_true", help="leave the sentinel cells out (with --probe and --item)")
     parser.add_argument("--out", required=True, help="directory the packed run is written to")
     parser.add_argument("--score-concurrency", type=int, default=8)
     parser.add_argument("--skip-scoring", action="store_true", help="pack the run unscored; score it later with bin/score-tts.py")
@@ -94,7 +97,9 @@ def main() -> int:
         status = step("bin/run-tts.py", "--provider", args.provider, "--model", args.model, "--suite", args.suite,
                       "--repeats", str(args.repeats), "--label", args.label,
                       *(("--voice", args.voice) if args.voice else ()),
-                      *(flag for item in args.item for flag in ("--item", item)))
+                      *(flag for item in args.item for flag in ("--item", item)),
+                      *(flag for probe in args.probe for flag in ("--probe", probe)),
+                      *(("--no-sentinel",) if args.no_sentinel else ()))
         run_dir = find_run(root, args.provider, args.model, args.label)
     else:
         status = step("bin/run-tts.py", "--resume", str(run_dir)) if not store.run_status(run_dir)["finished"] else 0

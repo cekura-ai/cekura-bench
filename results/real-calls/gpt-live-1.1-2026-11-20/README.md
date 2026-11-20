@@ -72,16 +72,16 @@ Ratings average each model's three call scores per scenario, apply a five-point 
 - Caller: recorded-human replay through the isolated local Pipecat loopback runtime.
 - Metric code and rubrics: the exported platform definitions, run locally against transcripts, recordings, timing logs and tool events.
 - Text and expected-outcome judges: DeepSeek V4 Flash through OpenRouter, Fireworks pinned.
-- Audio judge: the product's current Gemini Flash-Lite chain; successful selected-call audio judgments used Gemini 3.5 Flash-Lite.
+- Audio judge: configured to the product's current Gemini Flash-Lite chain (3.5 Flash-Lite → 3.1 Flash-Lite → 3.5 Flash). The original grading pass observed 3.5 Flash-Lite; corrected-pass fallback events remain in the private evidence.
 - Scoring: the official `s2s-human-bench` family weights, task blending and pass threshold.
 - Source cohort: `fullrun_gptlive11_final_r1`, `fullrun_gptlive11_final_r2`, `fullrun_gptlive11_final_r3`; existing run/attempt/build membership is preserved.
 - Limits: 100 s setup timeout; 900 s call budget.
 
 ## Corrected grading evidence
 
-The existing recordings were regraded with numeric agent-log timestamps, recovered caller clip timing, 59 executed holds across 50 calls, and fresh word-timed transcription of the recorded agent channel (ElevenLabs scribe_v3, automatic language). Source metric files remain unchanged; all 210 hashes were verified. Six same-call rubric adjudications are recorded in [results.json](results.json).
+The existing recordings were regraded with numeric agent-log timestamps, recovered caller clip timing, 59 executed holds across 50 calls, and fresh word-timed transcription of the recorded agent channel (ElevenLabs scribe_v3, automatic language). Source metric files remain unchanged; all 210 hashes were verified and all 210 caller clocks were available. Six same-call scoring corrections, including one corrupted-caller exclusion, are recorded in [results.json](results.json).
 
-The interruption checker separates a yielded reply from a later answer at measured word gaps of at least two seconds. The tool-latency checker uses actual paired agent-tool events and evaluates all 57 delayed-tool calls; caller-side holds and an unrelated tool-protection notice cannot hide those tests. The prosody checker uses the recovered transcript because the local log-pairing path dropped real confirmations and included caller detector hangover.
+The interruption checker separates a yielded reply from a later answer at measured word gaps of at least two seconds. The prosody checker uses the same word-gap split to separate later confirmations, and uses the recovered transcript because the local log-pairing path dropped real confirmations and included caller detector hangover. The tool-latency checker uses actual paired agent-tool events and evaluates all 57 delayed-tool calls; caller-side holds and unrelated tool-protection notices cannot hide those tests.
 
 Prosodic cue understanding: **28/28 eligible calls (100%)**, with eight targeted calls not reached. Multi-speaker handling: **17/39 (43.6%)**; the audit corrected two single-voice target judgments and one missed executed second voice. Remaining interpretation and simulator limitations are detailed in the QC.
 
@@ -93,6 +93,6 @@ Recovered caller timing includes 435 played clips with interpolated metadata and
 
 All selected calls completed and their recording formats/checksums passed. The 77 targeted verification calls and three separate wait/resume prompt trials also completed and were graded. The benchmark uses the existing 210-call cohort. Claude Opus 5.5 HIGH and Codex reviewed all 36 prosody-targeted calls and 39 multi-person-targeted calls. Several multi-person cases remain ambiguous; this report does not assert that every remaining failure is a confirmed model error.
 
-The original F09 status-lookup fixture defect, occasional simulator branch misfires, and uncertainty about a post-commit prosody target remain relevant execution/interpretation limitations. Repaired F09 diagnostic calls are retained separately. No independent human acoustic listening was performed.
+The original F09 status-lookup fixture defect, occasional simulator branch misfires, and uncertainty about a post-commit prosody target remain relevant execution/interpretation limitations. Ten original calls ended through the harness; incomplete closing-reference diagnostics used a longer watchdog, so those cases require care. Repaired F09 and closing-reference diagnostics are retained separately. The overlapping ELO intervals and three-point lead over Grok Voice 3.0 do not establish a decisive ranking difference. No independent human acoustic listening was performed.
 
 `python validate.py` checks 210 calls, 6,300 entries, cohort membership, all aggregates and ELO metadata. Private transcripts, recordings, task targets and provider credentials are excluded from these artifacts.

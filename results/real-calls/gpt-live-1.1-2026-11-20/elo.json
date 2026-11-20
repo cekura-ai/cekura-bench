@@ -1790,6 +1790,6 @@
   "historical_selection": "Original published round selection, preserving health replacements and Cascade language swap.",
   "new_selection": "210 completed selected calls, three runs on each of 70 scenarios.",
   "comparability": "Local replay; historical hosting and judge parity unconfirmed. Failure QC covers reviewed failures and targeted diagnostic calls.",
-  "gpt_live_1_1_grading": "Corrected grading evidence, unchanged 210-call cohort; three reconfirmed same-call rubric adjudications."
+  "gpt_live_1_1_grading": "Corrected grading evidence, unchanged 210-call cohort; six same-call scoring corrections, including one corrupted-caller exclusion."
  }
 }

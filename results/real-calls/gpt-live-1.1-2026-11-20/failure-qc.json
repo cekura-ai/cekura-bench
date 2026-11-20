@@ -190,9 +190,9 @@
   },
   "agent_transcription": "Recorded agent channel; ElevenLabs scribe_v3; automatic language; source ASR preserved.",
   "speech_activity": "dBFS normalization; max(-55 dBFS, channel p20+18 dB); minimum 120 ms. Diagnostic implementation; hosted VAD parity unconfirmed.",
-  "interruption_response_boundaries": "Metric 275678 only: measured agent-word gaps >=2 seconds separate a yielded reply from its later answer.",
+  "interruption_response_boundaries": "Metrics 275678 and 275651: measured agent-word gaps >=2 seconds separate a yielded reply from its later answer or confirmation.",
   "tool_latency": "Metric 272629 only: actual paired agent-tool start/result times; unrelated tool-protection log notice and caller-side hold telemetry excluded from this input.",
-  "prosody": "Metric 275651 only: recorded agent word timings and recovered caller transcript; partial local log pairing suppressed; raw logs retained. Original approximate rows retained where word timings were unavailable.",
+  "prosody": "Metric 275651: recorded agent word timings and recovered caller transcript; partial local log pairing suppressed; >=2-second word gaps split later confirmations. Raw logs and approximate unrecovered rows retained.",
   "source_metric_hashes_unchanged": 210,
   "evaluated_metric_entries": 6300,
   "reconfirmed_rubric_adjudications": [
@@ -238,7 +238,8 @@
     "passed": true,
     "reason": "single-voice-target-scope"
    }
-  ]
+  ],
+  "caller_clock_available": 210
  },
  "listening_review": {
   "reviewer": "Claude Opus 5.5 HIGH and Codex",

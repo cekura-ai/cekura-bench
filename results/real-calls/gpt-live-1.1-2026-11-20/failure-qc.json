@@ -1,1348 +1,1352 @@
 {
- "scope": "Quick failure QC of the final 210-call cohort (results.json). Raw scores are unchanged; QC verdicts are separate.",
- "method": "Per call: original scenario/profile/expected outcome and task target, the call transcript, actual tool calls and results against the fixture, caller-engine decision logs, metric explanations, and per-channel voice activity/energy from the lossless recording. No utterance was listened to.",
- "inventory": {
-  "failed_calls": 92,
-  "task_failed_calls": 30,
-  "failed_calls_task_done": 70,
-  "scenarios_failed_3of3": [
-   "F02",
-   "F05",
-   "F20",
-   "F22",
-   "F23",
-   "F25",
-   "F27",
-   "H02",
-   "H03",
-   "H07",
-   "H09",
-   "H16",
-   "H23",
-   "H24"
-  ],
-  "scenarios_failed_2of3": [
-   "F01",
-   "F03",
-   "F08",
-   "F14",
-   "F15",
-   "F18",
-   "F26",
-   "F29",
-   "H06",
-   "H12",
-   "H17",
-   "H21",
-   "H29",
-   "H30",
-   "H32"
-  ],
-  "scenarios_failed_1of3": [
-   "F06",
-   "F07",
-   "F09",
-   "F10",
-   "F11",
-   "F13",
-   "F16",
-   "F17",
-   "F21",
-   "F24",
-   "F28",
-   "F30",
-   "F32",
-   "F33",
-   "F35",
-   "H01",
-   "H13",
-   "H19",
-   "H28",
-   "H31"
-  ],
-  "task_failures_by_scenario": {
-   "F02": 2,
-   "F05": 2,
-   "F08": 3,
-   "F09": 1,
-   "F11": 1,
-   "F14": 3,
-   "F16": 1,
-   "F17": 1,
-   "F22": 1,
-   "F23": 1,
-   "F24": 1,
-   "F26": 1,
-   "F33": 1,
-   "H03": 3,
-   "H14": 2,
-   "H16": 2,
-   "H22": 1,
-   "H30": 1,
-   "H33": 1,
-   "H35": 1
+  "scope": "Quick failure QC of the final 210-call cohort (results.json). Raw scores are unchanged; QC verdicts are separate.",
+  "method": "Per call: original scenario/profile/expected outcome and task target, the call transcript, actual tool calls and results against the fixture, caller-engine decision logs, metric explanations, and per-channel voice activity/energy from the lossless recording. No utterance was listened to.",
+  "inventory": {
+    "failed_calls": 92,
+    "task_failed_calls": 30,
+    "failed_calls_task_done": 70,
+    "scenarios_failed_3of3": [
+      "F02",
+      "F05",
+      "F20",
+      "F22",
+      "F23",
+      "F25",
+      "F27",
+      "H02",
+      "H03",
+      "H07",
+      "H09",
+      "H16",
+      "H23",
+      "H24"
+    ],
+    "scenarios_failed_2of3": [
+      "F01",
+      "F03",
+      "F08",
+      "F14",
+      "F15",
+      "F18",
+      "F26",
+      "F29",
+      "H06",
+      "H12",
+      "H17",
+      "H21",
+      "H29",
+      "H30",
+      "H32"
+    ],
+    "scenarios_failed_1of3": [
+      "F06",
+      "F07",
+      "F09",
+      "F10",
+      "F11",
+      "F13",
+      "F16",
+      "F17",
+      "F21",
+      "F24",
+      "F28",
+      "F30",
+      "F32",
+      "F33",
+      "F35",
+      "H01",
+      "H13",
+      "H19",
+      "H28",
+      "H31"
+    ],
+    "task_failures_by_scenario": {
+      "F02": 2,
+      "F05": 2,
+      "F08": 3,
+      "F09": 1,
+      "F11": 1,
+      "F14": 3,
+      "F16": 1,
+      "F17": 1,
+      "F22": 1,
+      "F23": 1,
+      "F24": 1,
+      "F26": 1,
+      "F33": 1,
+      "H03": 3,
+      "H14": 2,
+      "H16": 2,
+      "H22": 1,
+      "H30": 1,
+      "H33": 1,
+      "H35": 1
+    },
+    "skill_failures": {
+      "1.2": {
+        "name": "Entity Extraction Accuracy",
+        "failed": 2,
+        "reached": 42,
+        "failed_scenarios_3of3": []
+      },
+      "1.3": {
+        "name": "Low-Confidence Confirmation",
+        "failed": 29,
+        "reached": 38,
+        "failed_scenarios_3of3": [
+          "F11",
+          "F17",
+          "F20",
+          "F29",
+          "H03",
+          "H06",
+          "H16"
+        ]
+      },
+      "1.4": {
+        "name": "Side-Speech Rejection",
+        "failed": 0,
+        "reached": 45,
+        "failed_scenarios_3of3": []
+      },
+      "1.5": {
+        "name": "Waiting Through Hold",
+        "failed": 11,
+        "reached": 12,
+        "failed_scenarios_3of3": [
+          "F32"
+        ]
+      },
+      "1.6": {
+        "name": "Prosodic Cue Understanding",
+        "failed": 2,
+        "reached": 28,
+        "failed_scenarios_3of3": []
+      },
+      "1.7": {
+        "name": "Emotion Recognition",
+        "failed": 0,
+        "reached": 38,
+        "failed_scenarios_3of3": []
+      },
+      "1.8": {
+        "name": "Degraded-Channel Robustness",
+        "failed": 8,
+        "reached": 36,
+        "failed_scenarios_3of3": [
+          "F10",
+          "H02"
+        ]
+      },
+      "1.10": {
+        "name": "Multi-Speaker Handling",
+        "failed": 26,
+        "reached": 36,
+        "failed_scenarios_3of3": [
+          "F02",
+          "F30",
+          "H02",
+          "H07",
+          "H09",
+          "H27",
+          "H31"
+        ]
+      },
+      "2.1": {
+        "name": "Endpointing",
+        "failed": 7,
+        "reached": 27,
+        "failed_scenarios_3of3": []
+      },
+      "2.2": {
+        "name": "Backchannel vs Barge-in Detection",
+        "failed": 24,
+        "reached": 32,
+        "failed_scenarios_3of3": [
+          "F20",
+          "F27",
+          "H23"
+        ]
+      },
+      "2.4": {
+        "name": "Overlapping-Speech Recovery",
+        "failed": 0,
+        "reached": 41,
+        "failed_scenarios_3of3": []
+      },
+      "2.5": {
+        "name": "Tool-Latency Handling",
+        "failed": 23,
+        "reached": 57,
+        "failed_scenarios_3of3": [
+          "F22",
+          "H13",
+          "H24"
+        ]
+      },
+      "2.7": {
+        "name": "Mid-Utterance Pause Tolerance",
+        "failed": 1,
+        "reached": 11,
+        "failed_scenarios_3of3": []
+      },
+      "2.8": {
+        "name": "Premature-Response Avoidance",
+        "failed": 15,
+        "reached": 75,
+        "failed_scenarios_3of3": [
+          "F21",
+          "H16"
+        ]
+      },
+      "3.2": {
+        "name": "Correction Handling",
+        "failed": 5,
+        "reached": 38,
+        "failed_scenarios_3of3": []
+      },
+      "3.3": {
+        "name": "Human Handoff",
+        "failed": 12,
+        "reached": 36,
+        "failed_scenarios_3of3": []
+      },
+      "3.4": {
+        "name": "Tool Error Handling",
+        "failed": 2,
+        "reached": 28,
+        "failed_scenarios_3of3": []
+      },
+      "3.5a": {
+        "name": "Consent Verification",
+        "failed": 40,
+        "reached": 186,
+        "failed_scenarios_3of3": [
+          "F31",
+          "H01",
+          "H27",
+          "H28"
+        ]
+      },
+      "3.5b": {
+        "name": "Cancellation Handling",
+        "failed": 17,
+        "reached": 38,
+        "failed_scenarios_3of3": [
+          "F30",
+          "H27"
+        ]
+      },
+      "3.6": {
+        "name": "Redundant Re-prompt Avoidance",
+        "failed": 0,
+        "reached": 210,
+        "failed_scenarios_3of3": []
+      },
+      "3.7": {
+        "name": "Hallucinated-Success Avoidance",
+        "failed": 2,
+        "reached": 210,
+        "failed_scenarios_3of3": []
+      },
+      "4.1": {
+        "name": "Numeric Read-back",
+        "failed": 46,
+        "reached": 176,
+        "failed_scenarios_3of3": [
+          "F12",
+          "F20",
+          "H07"
+        ]
+      },
+      "4.2": {
+        "name": "TTS Text Normalization",
+        "failed": 0,
+        "reached": 210,
+        "failed_scenarios_3of3": []
+      },
+      "4.3": {
+        "name": "Style Instruction Following",
+        "failed": 18,
+        "reached": 41,
+        "failed_scenarios_3of3": [
+          "F16",
+          "H09",
+          "H17"
+        ]
+      },
+      "4.4": {
+        "name": "Language Switching",
+        "failed": 8,
+        "reached": 40,
+        "failed_scenarios_3of3": [
+          "F25"
+        ]
+      }
+    },
+    "failed_skills_per_failed_call_median": 2
   },
-  "skill_failures": {
-   "1.2": {
-    "name": "Entity Extraction Accuracy",
-    "failed": 2,
-    "reached": 42,
-    "failed_scenarios_3of3": []
-   },
-   "1.3": {
-    "name": "Low-Confidence Confirmation",
-    "failed": 29,
-    "reached": 38,
-    "failed_scenarios_3of3": [
-     "F11",
-     "F17",
-     "F20",
-     "F29",
-     "H03",
-     "H06",
-     "H16"
-    ]
-   },
-   "1.4": {
-    "name": "Side-Speech Rejection",
-    "failed": 0,
-    "reached": 45,
-    "failed_scenarios_3of3": []
-   },
-   "1.5": {
-    "name": "Waiting Through Hold",
-    "failed": 11,
-    "reached": 12,
-    "failed_scenarios_3of3": [
-     "F32"
-    ]
-   },
-   "1.6": {
-    "name": "Prosodic Cue Understanding",
-    "failed": 2,
-    "reached": 28,
-    "failed_scenarios_3of3": []
-   },
-   "1.7": {
-    "name": "Emotion Recognition",
-    "failed": 0,
-    "reached": 38,
-    "failed_scenarios_3of3": []
-   },
-   "1.8": {
-    "name": "Degraded-Channel Robustness",
-    "failed": 8,
-    "reached": 36,
-    "failed_scenarios_3of3": [
-     "F10",
-     "H02"
-    ]
-   },
-   "1.10": {
-    "name": "Multi-Speaker Handling",
-    "failed": 26,
-    "reached": 36,
-    "failed_scenarios_3of3": [
-     "F02",
-     "F30",
-     "H02",
-     "H07",
-     "H09",
-     "H27",
-     "H31"
-    ]
-   },
-   "2.1": {
-    "name": "Endpointing",
-    "failed": 7,
-    "reached": 27,
-    "failed_scenarios_3of3": []
-   },
-   "2.2": {
-    "name": "Backchannel vs Barge-in Detection",
-    "failed": 24,
-    "reached": 32,
-    "failed_scenarios_3of3": [
-     "F20",
-     "F27",
-     "H23"
-    ]
-   },
-   "2.4": {
-    "name": "Overlapping-Speech Recovery",
-    "failed": 0,
-    "reached": 41,
-    "failed_scenarios_3of3": []
-   },
-   "2.5": {
-    "name": "Tool-Latency Handling",
-    "failed": 23,
-    "reached": 57,
-    "failed_scenarios_3of3": [
-     "F22",
-     "H13",
-     "H24"
-    ]
-   },
-   "2.7": {
-    "name": "Mid-Utterance Pause Tolerance",
-    "failed": 1,
-    "reached": 11,
-    "failed_scenarios_3of3": []
-   },
-   "2.8": {
-    "name": "Premature-Response Avoidance",
-    "failed": 15,
-    "reached": 75,
-    "failed_scenarios_3of3": [
-     "F21",
-     "H16"
-    ]
-   },
-   "3.2": {
-    "name": "Correction Handling",
-    "failed": 5,
-    "reached": 38,
-    "failed_scenarios_3of3": []
-   },
-   "3.3": {
-    "name": "Human Handoff",
-    "failed": 12,
-    "reached": 36,
-    "failed_scenarios_3of3": []
-   },
-   "3.4": {
-    "name": "Tool Error Handling",
-    "failed": 2,
-    "reached": 28,
-    "failed_scenarios_3of3": []
-   },
-   "3.5a": {
-    "name": "Consent Verification",
-    "failed": 40,
-    "reached": 186,
-    "failed_scenarios_3of3": [
-     "F31",
-     "H01",
-     "H27",
-     "H28"
-    ]
-   },
-   "3.5b": {
-    "name": "Cancellation Handling",
-    "failed": 17,
-    "reached": 38,
-    "failed_scenarios_3of3": [
-     "F30",
-     "H27"
-    ]
-   },
-   "3.6": {
-    "name": "Redundant Re-prompt Avoidance",
-    "failed": 0,
-    "reached": 210,
-    "failed_scenarios_3of3": []
-   },
-   "3.7": {
-    "name": "Hallucinated-Success Avoidance",
-    "failed": 2,
-    "reached": 210,
-    "failed_scenarios_3of3": []
-   },
-   "4.1": {
-    "name": "Numeric Read-back",
-    "failed": 46,
-    "reached": 176,
-    "failed_scenarios_3of3": [
-     "F12",
-     "F20",
-     "H07"
-    ]
-   },
-   "4.2": {
-    "name": "TTS Text Normalization",
-    "failed": 0,
-    "reached": 210,
-    "failed_scenarios_3of3": []
-   },
-   "4.3": {
-    "name": "Style Instruction Following",
-    "failed": 18,
-    "reached": 41,
-    "failed_scenarios_3of3": [
-     "F16",
-     "H09",
-     "H17"
-    ]
-   },
-   "4.4": {
-    "name": "Language Switching",
-    "failed": 8,
-    "reached": 40,
-    "failed_scenarios_3of3": [
-     "F25"
-    ]
-   }
+  "deep_review": {
+    "unique_calls": 41,
+    "task_failures_reviewed": 30,
+    "task_failures_total": 30,
+    "verdicts": [
+      {
+        "call": "r1/F08",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task",
+          "3.5a",
+          "3.5b",
+          "1.3"
+        ],
+        "verdict": "model_failure",
+        "cause": "take-back race: delegated committing tool fired ~1 s after the caller's stop began, after an earlier go-ahead; read-back added a digit (tool args correct)"
+      },
+      {
+        "call": "r3/F08",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task",
+          "3.5b"
+        ],
+        "verdict": "model_failure",
+        "cause": "take-back race: committing tool fired ~2 s after the caller's stop began"
+      },
+      {
+        "call": "r2/F08",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task"
+        ],
+        "verdict": "model_failure",
+        "cause": "entity hearing: persisted a misheard letter in a confirmation code despite two corrections; trace returned no match"
+      },
+      {
+        "call": "r1/F05",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task"
+        ],
+        "verdict": "scenario_path",
+        "cause": "agent's single turn satisfied both the main-task condition and the closing condition; caller engine chose the scripted closing line, so the main task was never requested"
+      },
+      {
+        "call": "r3/F05",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task"
+        ],
+        "verdict": "scenario_path",
+        "cause": "same overlapping-condition closing as r1/F05"
+      },
+      {
+        "call": "r1/F09",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task"
+        ],
+        "verdict": "model_failure",
+        "cause": "treated a successful committing result as uncertain after an unnecessary status lookup returned no match; refused to continue to the main task"
+      },
+      {
+        "call": "r1/F11",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task",
+          "1.3"
+        ],
+        "verdict": "model_failure",
+        "cause": "used a noise-masked digit without re-asking; identity verification failed three times"
+      },
+      {
+        "call": "r1/F14",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task"
+        ],
+        "verdict": "testing_agent",
+        "cause": "caller condition matcher scored the scripted go-ahead condition below its gate; the fallback LLM generated an unscripted closing reply, so the payment/cancel path never occurred"
+      },
+      {
+        "call": "r2/F14",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task"
+        ],
+        "verdict": "scenario_path",
+        "cause": "scripted go-ahead answered the agent's 'anything else?' question; the agent had not executed when the scripted cancel followed; it truthfully reported no payment"
+      },
+      {
+        "call": "r3/F14",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task"
+        ],
+        "verdict": "scenario_path",
+        "cause": "scripted go-ahead answered the agent's 'anything else?' question; the agent asked to clarify, then the scripted cancel followed; it truthfully reported no payment"
+      },
+      {
+        "call": "r1/F16",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task",
+          "3.7"
+        ],
+        "verdict": "model_failure",
+        "cause": "entity hearing: misheard the caller's name, identity failed three times; then told the caller a person was connected although the transfer tool said not available"
+      },
+      {
+        "call": "r1/F22",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task"
+        ],
+        "verdict": "model_failure",
+        "cause": "sent the statement keyed by customer instead of asking which account; task requires the specific account (likely)"
+      },
+      {
+        "call": "r1/H03",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task"
+        ],
+        "verdict": "checker_disagreement",
+        "cause": "agent moved the appointment with the fixture-supported change tool (exact fixture row, confirmed); the deterministic task accepts only cancel + book"
+      },
+      {
+        "call": "r2/H03",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task"
+        ],
+        "verdict": "checker_disagreement",
+        "cause": "same as r1/H03"
+      },
+      {
+        "call": "r3/H03",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task"
+        ],
+        "verdict": "checker_disagreement",
+        "cause": "same as r1/H03"
+      },
+      {
+        "call": "r1/H16",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task"
+        ],
+        "verdict": "scenario_path",
+        "cause": "the tool description limits the action to a recent visit; the agent asked about eligibility, the script has no line for it and the caller engine improvised 'no', blocking the main task"
+      },
+      {
+        "call": "r2/H16",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task"
+        ],
+        "verdict": "scenario_path",
+        "cause": "same as r1/H16 (also one initial name mishearing, recovered)"
+      },
+      {
+        "call": "r2/F02",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task",
+          "1.10",
+          "3.5a"
+        ],
+        "verdict": "model_failure",
+        "cause": "multi-speaker: acted on a second speaker's English go-ahead (scenario defines it as not the cardholder's); judged from scenario definition and transcript language, not acoustics"
+      },
+      {
+        "call": "r3/F02",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task",
+          "1.10",
+          "3.5a"
+        ],
+        "verdict": "model_failure",
+        "cause": "same as r2/F02"
+      },
+      {
+        "call": "r1/H30",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task",
+          "1.2"
+        ],
+        "verdict": "model_failure",
+        "cause": "entity hearing: could not capture a Spanish letter-by-letter surname spelling in three tries; then transferred and contradicted the transfer result"
+      },
+      {
+        "call": "r2/F17",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task",
+          "1.2"
+        ],
+        "verdict": "model_failure",
+        "cause": "entity hearing: misheard a letter prefix of the claim number twice; gave up on the booking"
+      },
+      {
+        "call": "r2/F23",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task",
+          "1.2"
+        ],
+        "verdict": "model_failure",
+        "cause": "entity hearing: repeatedly read back the wrong day of birth while the caller repeated it; ended the call"
+      },
+      {
+        "call": "r2/F24",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task"
+        ],
+        "verdict": "model_failure",
+        "cause": "committed the refund with the amount only, never collecting the account and date the task requires (fixture catch-all accepted it) (likely)"
+      },
+      {
+        "call": "r2/F26",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task"
+        ],
+        "verdict": "testing_agent",
+        "cause": "after unscripted turns the call fell into a mutual-wait loop and the caller engine's loop detector ended it before the main task; also one Mandarin fragment in agent speech"
+      },
+      {
+        "call": "r2/F33",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task",
+          "1.2"
+        ],
+        "verdict": "model_failure",
+        "cause": "entity hearing: one consonant of the surname misheard; identity failed three times"
+      },
+      {
+        "call": "r2/H14",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task"
+        ],
+        "verdict": "scenario_path",
+        "cause": "booking turn satisfied both the text-link condition and a mishearing-test condition; caller engine chose the latter and the text-link request never returned"
+      },
+      {
+        "call": "r3/H14",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task"
+        ],
+        "verdict": "scenario_path",
+        "cause": "same overlapping-condition path as r2/H14"
+      },
+      {
+        "call": "r3/H22",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task"
+        ],
+        "verdict": "testing_agent",
+        "cause": "caller condition matcher scored the scripted birth-date condition below its gate twice and generated incomplete birth dates instead; agent then transferred; also a Mandarin fragment in agent speech"
+      },
+      {
+        "call": "r3/H33",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task",
+          "3.5a"
+        ],
+        "verdict": "model_failure",
+        "cause": "booked a slot before the caller's go-ahead and never booked the slot the caller chose"
+      },
+      {
+        "call": "r3/H35",
+        "sample": "task_failure",
+        "skills_or_checks": [
+          "task",
+          "1.2"
+        ],
+        "verdict": "model_failure",
+        "cause": "entity hearing: misheard the caller's name, so the authorised-contact check failed and the refill flow never opened"
+      },
+      {
+        "call": "r1/F15",
+        "sample": "fixture_rerun",
+        "skills_or_checks": [
+          "2.2",
+          "EO"
+        ],
+        "verdict": "mixed",
+        "cause": "fixture now answers (no_match on free-text value, then exact match; main task done); EO: plate read back without phonetic spelling (model); 2.2: metric stop 7.5 s, speech-level stop 2.4 s (measurement interaction, borderline)"
+      },
+      {
+        "call": "r2/F15",
+        "sample": "fixture_rerun",
+        "skills_or_checks": [
+          "1.8",
+          "2.2",
+          "EO"
+        ],
+        "verdict": "model_failure",
+        "cause": "did not check the line or offer a callback after the caller said the line was cutting out; plate read back without phonetic spelling; 2.2 speech-level stop 4.1 s (genuine late stop)"
+      },
+      {
+        "call": "r3/F15",
+        "sample": "fixture_rerun",
+        "skills_or_checks": [
+          "execution"
+        ],
+        "verdict": "pass",
+        "cause": "passed (score 100); execution evidence clean"
+      },
+      {
+        "call": "r1/F01",
+        "sample": "metric_only",
+        "skills_or_checks": [
+          "1.5",
+          "1.3",
+          "EO"
+        ],
+        "verdict": "model_failure",
+        "cause": "continued the task 2.2 s into the caller's hold; transposed two digits in a read-back; stated an order went through while its status was unconfirmed"
+      },
+      {
+        "call": "r1/F32",
+        "sample": "metric_only",
+        "skills_or_checks": [
+          "1.5"
+        ],
+        "verdict": "unknown",
+        "cause": "hold timing ambiguous: the speech-recognised transcript merges the caller's hold request into a later line; voice activity alone does not place the request; not listened to"
+      },
+      {
+        "call": "r1/H07",
+        "sample": "metric_only",
+        "skills_or_checks": [
+          "1.10",
+          "4.1",
+          "2.2"
+        ],
+        "verdict": "model_failure",
+        "cause": "missed a second speaker taking over and shared details without an authorisation check; garbled phone read-back; 2.2 metric stop 8.8 s vs speech-level 2.0 s (measurement interaction); also a Mandarin sentence in agent speech"
+      },
+      {
+        "call": "r1/F30",
+        "sample": "metric_only",
+        "skills_or_checks": [
+          "1.10",
+          "3.5b"
+        ],
+        "verdict": "model_failure",
+        "cause": "never checked the second person's authority; committing tool ran 0.9 s after the caller's take-back"
+      },
+      {
+        "call": "r1/H01",
+        "sample": "metric_only",
+        "skills_or_checks": [
+          "3.5a",
+          "4.1"
+        ],
+        "verdict": "model_failure",
+        "cause": "booked on a yes followed by a question (rubric: not a clear go-ahead) and announced the booking before the tool ran; kept talking 10 s after its own end_call, so the reference agent's backstop cut off the reference number"
+      },
+      {
+        "call": "r1/H09",
+        "sample": "metric_only",
+        "skills_or_checks": [
+          "4.3"
+        ],
+        "verdict": "model_failure",
+        "cause": "used a different honorific than the one the caller asked for throughout the call"
+      },
+      {
+        "call": "r2/H10",
+        "sample": "improvement_check",
+        "skills_or_checks": [
+          "2.5"
+        ],
+        "verdict": "pass_confirmed",
+        "cause": "spoke a working message during the delayed tool; speech-level silence check agrees"
+      },
+      {
+        "call": "r3/H13",
+        "sample": "improvement_check",
+        "skills_or_checks": [
+          "2.8"
+        ],
+        "verdict": "pass_confirmed",
+        "cause": "no agent speech inside designed caller pauses per the metric's timing; consistent with the transcript"
+      }
+    ],
+    "failed_calls_reviewed": 29,
+    "passing_calls_reviewed": 12,
+    "failed_calls_not_deeply_reviewed": 63
   },
-  "failed_skills_per_failed_call_median": 2
- },
- "deep_review": {
-  "unique_calls": 41,
-  "task_failures_reviewed": 30,
-  "task_failures_total": 30,
-  "verdicts": [
-   {
-    "call": "r1/F08",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task",
-     "3.5a",
-     "3.5b",
-     "1.3"
-    ],
-    "verdict": "model_failure",
-    "cause": "take-back race: delegated committing tool fired ~1 s after the caller's stop began, after an earlier go-ahead; read-back added a digit (tool args correct)"
-   },
-   {
-    "call": "r3/F08",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task",
-     "3.5b"
-    ],
-    "verdict": "model_failure",
-    "cause": "take-back race: committing tool fired ~2 s after the caller's stop began"
-   },
-   {
-    "call": "r2/F08",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task"
-    ],
-    "verdict": "model_failure",
-    "cause": "entity hearing: persisted a misheard letter in a confirmation code despite two corrections; trace returned no match"
-   },
-   {
-    "call": "r1/F05",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task"
-    ],
-    "verdict": "scenario_path",
-    "cause": "agent's single turn satisfied both the main-task condition and the closing condition; caller engine chose the scripted closing line, so the main task was never requested"
-   },
-   {
-    "call": "r3/F05",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task"
-    ],
-    "verdict": "scenario_path",
-    "cause": "same overlapping-condition closing as r1/F05"
-   },
-   {
-    "call": "r1/F09",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task"
-    ],
-    "verdict": "model_failure",
-    "cause": "treated a successful committing result as uncertain after an unnecessary status lookup returned no match; refused to continue to the main task"
-   },
-   {
-    "call": "r1/F11",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task",
-     "1.3"
-    ],
-    "verdict": "model_failure",
-    "cause": "used a noise-masked digit without re-asking; identity verification failed three times"
-   },
-   {
-    "call": "r1/F14",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task"
-    ],
-    "verdict": "testing_agent",
-    "cause": "caller condition matcher scored the scripted go-ahead condition below its gate; the fallback LLM generated an unscripted closing reply, so the payment/cancel path never occurred"
-   },
-   {
-    "call": "r2/F14",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task"
-    ],
-    "verdict": "scenario_path",
-    "cause": "scripted go-ahead answered the agent's 'anything else?' question; the agent had not executed when the scripted cancel followed; it truthfully reported no payment"
-   },
-   {
-    "call": "r3/F14",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task"
-    ],
-    "verdict": "scenario_path",
-    "cause": "scripted go-ahead answered the agent's 'anything else?' question; the agent asked to clarify, then the scripted cancel followed; it truthfully reported no payment"
-   },
-   {
-    "call": "r1/F16",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task",
-     "3.7"
-    ],
-    "verdict": "model_failure",
-    "cause": "entity hearing: misheard the caller's name, identity failed three times; then told the caller a person was connected although the transfer tool said not available"
-   },
-   {
-    "call": "r1/F22",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task"
-    ],
-    "verdict": "model_failure",
-    "cause": "sent the statement keyed by customer instead of asking which account; task requires the specific account (likely)"
-   },
-   {
-    "call": "r1/H03",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task"
-    ],
-    "verdict": "checker_disagreement",
-    "cause": "agent moved the appointment with the fixture-supported change tool (exact fixture row, confirmed); the deterministic task accepts only cancel + book"
-   },
-   {
-    "call": "r2/H03",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task"
-    ],
-    "verdict": "checker_disagreement",
-    "cause": "same as r1/H03"
-   },
-   {
-    "call": "r3/H03",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task"
-    ],
-    "verdict": "checker_disagreement",
-    "cause": "same as r1/H03"
-   },
-   {
-    "call": "r1/H16",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task"
-    ],
-    "verdict": "scenario_path",
-    "cause": "the tool description limits the action to a recent visit; the agent asked about eligibility, the script has no line for it and the caller engine improvised 'no', blocking the main task"
-   },
-   {
-    "call": "r2/H16",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task"
-    ],
-    "verdict": "scenario_path",
-    "cause": "same as r1/H16 (also one initial name mishearing, recovered)"
-   },
-   {
-    "call": "r2/F02",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task",
-     "1.10",
-     "3.5a"
-    ],
-    "verdict": "model_failure",
-    "cause": "multi-speaker: acted on a second speaker's English go-ahead (scenario defines it as not the cardholder's); judged from scenario definition and transcript language, not acoustics"
-   },
-   {
-    "call": "r3/F02",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task",
-     "1.10",
-     "3.5a"
-    ],
-    "verdict": "model_failure",
-    "cause": "same as r2/F02"
-   },
-   {
-    "call": "r1/H30",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task",
-     "1.2"
-    ],
-    "verdict": "model_failure",
-    "cause": "entity hearing: could not capture a Spanish letter-by-letter surname spelling in three tries; then transferred and contradicted the transfer result"
-   },
-   {
-    "call": "r2/F17",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task",
-     "1.2"
-    ],
-    "verdict": "model_failure",
-    "cause": "entity hearing: misheard a letter prefix of the claim number twice; gave up on the booking"
-   },
-   {
-    "call": "r2/F23",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task",
-     "1.2"
-    ],
-    "verdict": "model_failure",
-    "cause": "entity hearing: repeatedly read back the wrong day of birth while the caller repeated it; ended the call"
-   },
-   {
-    "call": "r2/F24",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task"
-    ],
-    "verdict": "model_failure",
-    "cause": "committed the refund with the amount only, never collecting the account and date the task requires (fixture catch-all accepted it) (likely)"
-   },
-   {
-    "call": "r2/F26",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task"
-    ],
-    "verdict": "testing_agent",
-    "cause": "after unscripted turns the call fell into a mutual-wait loop and the caller engine's loop detector ended it before the main task; also one Mandarin fragment in agent speech"
-   },
-   {
-    "call": "r2/F33",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task",
-     "1.2"
-    ],
-    "verdict": "model_failure",
-    "cause": "entity hearing: one consonant of the surname misheard; identity failed three times"
-   },
-   {
-    "call": "r2/H14",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task"
-    ],
-    "verdict": "scenario_path",
-    "cause": "booking turn satisfied both the text-link condition and a mishearing-test condition; caller engine chose the latter and the text-link request never returned"
-   },
-   {
-    "call": "r3/H14",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task"
-    ],
-    "verdict": "scenario_path",
-    "cause": "same overlapping-condition path as r2/H14"
-   },
-   {
-    "call": "r3/H22",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task"
-    ],
-    "verdict": "testing_agent",
-    "cause": "caller condition matcher scored the scripted birth-date condition below its gate twice and generated incomplete birth dates instead; agent then transferred; also a Mandarin fragment in agent speech"
-   },
-   {
-    "call": "r3/H33",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task",
-     "3.5a"
-    ],
-    "verdict": "model_failure",
-    "cause": "booked a slot before the caller's go-ahead and never booked the slot the caller chose"
-   },
-   {
-    "call": "r3/H35",
-    "sample": "task_failure",
-    "skills_or_checks": [
-     "task",
-     "1.2"
-    ],
-    "verdict": "model_failure",
-    "cause": "entity hearing: misheard the caller's name, so the authorised-contact check failed and the refill flow never opened"
-   },
-   {
-    "call": "r1/F15",
-    "sample": "fixture_rerun",
-    "skills_or_checks": [
-     "2.2",
-     "EO"
-    ],
-    "verdict": "mixed",
-    "cause": "fixture now answers (no_match on free-text value, then exact match; main task done); EO: plate read back without phonetic spelling (model); 2.2: metric stop 7.5 s, speech-level stop 2.4 s (measurement interaction, borderline)"
-   },
-   {
-    "call": "r2/F15",
-    "sample": "fixture_rerun",
-    "skills_or_checks": [
-     "1.8",
-     "2.2",
-     "EO"
-    ],
-    "verdict": "model_failure",
-    "cause": "did not check the line or offer a callback after the caller said the line was cutting out; plate read back without phonetic spelling; 2.2 speech-level stop 4.1 s (genuine late stop)"
-   },
-   {
-    "call": "r3/F15",
-    "sample": "fixture_rerun",
-    "skills_or_checks": [
-     "execution"
-    ],
-    "verdict": "pass",
-    "cause": "passed (score 100); execution evidence clean"
-   },
-   {
-    "call": "r1/F01",
-    "sample": "metric_only",
-    "skills_or_checks": [
-     "1.5",
-     "1.3",
-     "EO"
-    ],
-    "verdict": "model_failure",
-    "cause": "continued the task 2.2 s into the caller's hold; transposed two digits in a read-back; stated an order went through while its status was unconfirmed"
-   },
-   {
-    "call": "r1/F32",
-    "sample": "metric_only",
-    "skills_or_checks": [
-     "1.5"
-    ],
-    "verdict": "unknown",
-    "cause": "hold timing ambiguous: the speech-recognised transcript merges the caller's hold request into a later line; voice activity alone does not place the request; not listened to"
-   },
-   {
-    "call": "r1/H07",
-    "sample": "metric_only",
-    "skills_or_checks": [
-     "1.10",
-     "4.1",
-     "2.2"
-    ],
-    "verdict": "model_failure",
-    "cause": "missed a second speaker taking over and shared details without an authorisation check; garbled phone read-back; 2.2 metric stop 8.8 s vs speech-level 2.0 s (measurement interaction); also a Mandarin sentence in agent speech"
-   },
-   {
-    "call": "r1/F30",
-    "sample": "metric_only",
-    "skills_or_checks": [
-     "1.10",
-     "3.5b"
-    ],
-    "verdict": "model_failure",
-    "cause": "never checked the second person's authority; committing tool ran 0.9 s after the caller's take-back"
-   },
-   {
-    "call": "r1/H01",
-    "sample": "metric_only",
-    "skills_or_checks": [
-     "3.5a",
-     "4.1"
-    ],
-    "verdict": "model_failure",
-    "cause": "booked on a yes followed by a question (rubric: not a clear go-ahead) and announced the booking before the tool ran; kept talking 10 s after its own end_call, so the reference agent's backstop cut off the reference number"
-   },
-   {
-    "call": "r1/H09",
-    "sample": "metric_only",
-    "skills_or_checks": [
-     "4.3"
-    ],
-    "verdict": "model_failure",
-    "cause": "used a different honorific than the one the caller asked for throughout the call"
-   },
-   {
-    "call": "r2/H10",
-    "sample": "improvement_check",
-    "skills_or_checks": [
-     "2.5"
-    ],
-    "verdict": "pass_confirmed",
-    "cause": "spoke a working message during the delayed tool; speech-level silence check agrees"
-   },
-   {
-    "call": "r3/H13",
-    "sample": "improvement_check",
-    "skills_or_checks": [
-     "2.8"
-    ],
-    "verdict": "pass_confirmed",
-    "cause": "no agent speech inside designed caller pauses per the metric's timing; consistent with the transcript"
-   }
-  ]
- },
- "cohort_checks": {
-  "bargein_2_2_remeasure": {
-   "method": "agent stop after the cut-in = first point after which the agent channel stays below 50 dB (and 40 dB) for at least 1.0 s; the metric's own stop time comes from its explanation",
-   "rows": [
-    {
-     "call": "r1/F15",
-     "pass": false,
-     "metric_stop_s": 7.5,
-     "stop_below_50db_s": 2.43,
-     "stop_below_40db_s": 2.45
+  "cohort_checks": {
+    "bargein_2_2_remeasure": {
+      "method": "agent stop after the cut-in = first point after which the agent channel stays below 50 dB (and 40 dB) for at least 1.0 s; the metric's own stop time comes from its explanation",
+      "rows": [
+        {
+          "call": "r1/F15",
+          "pass": false,
+          "metric_stop_s": 7.5,
+          "stop_below_50db_s": 2.43,
+          "stop_below_40db_s": 2.45
+        },
+        {
+          "call": "r1/F18",
+          "pass": false,
+          "metric_stop_s": 7.3,
+          "stop_below_50db_s": 1.72,
+          "stop_below_40db_s": 2.34
+        },
+        {
+          "call": "r1/F20",
+          "pass": false,
+          "metric_stop_s": 3.68,
+          "stop_below_50db_s": 2.35,
+          "stop_below_40db_s": 2.36
+        },
+        {
+          "call": "r1/F26",
+          "pass": false,
+          "metric_stop_s": 4.02,
+          "stop_below_50db_s": 1.86,
+          "stop_below_40db_s": 1.88
+        },
+        {
+          "call": "r1/F27",
+          "pass": false,
+          "metric_stop_s": 5.96,
+          "stop_below_50db_s": 2.43,
+          "stop_below_40db_s": 2.44
+        },
+        {
+          "call": "r1/F28",
+          "pass": true,
+          "metric_stop_s": 2.1,
+          "stop_below_50db_s": 1.16,
+          "stop_below_40db_s": 1.17
+        },
+        {
+          "call": "r1/H04",
+          "pass": false,
+          "metric_stop_s": 2.82,
+          "stop_below_50db_s": 1.49,
+          "stop_below_40db_s": 1.51
+        },
+        {
+          "call": "r1/H07",
+          "pass": false,
+          "metric_stop_s": 8.78,
+          "stop_below_50db_s": 2.0,
+          "stop_below_40db_s": 2.01
+        },
+        {
+          "call": "r1/H17",
+          "pass": false,
+          "metric_stop_s": 11.5,
+          "stop_below_50db_s": 2.03,
+          "stop_below_40db_s": 2.31
+        },
+        {
+          "call": "r1/H23",
+          "pass": false,
+          "metric_stop_s": 2.68,
+          "stop_below_50db_s": 0.53,
+          "stop_below_40db_s": 0.6
+        },
+        {
+          "call": "r1/H29",
+          "pass": true,
+          "metric_stop_s": 2.1,
+          "stop_below_50db_s": 1.14,
+          "stop_below_40db_s": 1.16
+        },
+        {
+          "call": "r1/H32",
+          "pass": true,
+          "metric_stop_s": null
+        },
+        {
+          "call": "r2/F15",
+          "pass": false,
+          "metric_stop_s": 7.56,
+          "stop_below_50db_s": 4.12,
+          "stop_below_40db_s": 4.16
+        },
+        {
+          "call": "r2/F18",
+          "pass": false,
+          "metric_stop_s": 3.4,
+          "stop_below_50db_s": 1.77,
+          "stop_below_40db_s": 1.78
+        },
+        {
+          "call": "r2/F20",
+          "pass": false,
+          "metric_stop_s": 3.08,
+          "stop_below_50db_s": 2.54,
+          "stop_below_40db_s": 2.54
+        },
+        {
+          "call": "r2/F26",
+          "pass": false,
+          "metric_stop_s": 4.28,
+          "stop_below_50db_s": 0.31,
+          "stop_below_40db_s": 0.32
+        },
+        {
+          "call": "r2/F27",
+          "pass": false,
+          "metric_stop_s": 2.72,
+          "stop_below_50db_s": 1.92,
+          "stop_below_40db_s": 2.21
+        },
+        {
+          "call": "r2/F28",
+          "pass": true,
+          "metric_stop_s": 1.62,
+          "stop_below_50db_s": 1.1,
+          "stop_below_40db_s": 1.42
+        },
+        {
+          "call": "r2/H04",
+          "pass": true,
+          "metric_stop_s": 1.14,
+          "stop_below_50db_s": 0.87,
+          "stop_below_40db_s": 0.88
+        },
+        {
+          "call": "r2/H17",
+          "pass": false,
+          "metric_stop_s": 4.98,
+          "stop_below_50db_s": 2.05,
+          "stop_below_40db_s": 2.09
+        },
+        {
+          "call": "r2/H23",
+          "pass": false,
+          "metric_stop_s": 2.8,
+          "stop_below_50db_s": 1.16,
+          "stop_below_40db_s": 1.2
+        },
+        {
+          "call": "r2/H29",
+          "pass": false,
+          "metric_stop_s": 2.22,
+          "stop_below_50db_s": 2.01,
+          "stop_below_40db_s": 2.03
+        },
+        {
+          "call": "r2/H32",
+          "pass": false,
+          "metric_stop_s": null
+        },
+        {
+          "call": "r3/F18",
+          "pass": true,
+          "metric_stop_s": 2.16,
+          "stop_below_50db_s": 1.73,
+          "stop_below_40db_s": 1.74
+        },
+        {
+          "call": "r3/F20",
+          "pass": false,
+          "metric_stop_s": 4.0,
+          "stop_below_50db_s": 2.51,
+          "stop_below_40db_s": 2.65
+        },
+        {
+          "call": "r3/F26",
+          "pass": true,
+          "metric_stop_s": 0.4,
+          "stop_below_50db_s": 0.21,
+          "stop_below_40db_s": 0.22
+        },
+        {
+          "call": "r3/F27",
+          "pass": false,
+          "metric_stop_s": 6.78,
+          "stop_below_50db_s": 2.3,
+          "stop_below_40db_s": 2.31
+        },
+        {
+          "call": "r3/F28",
+          "pass": false,
+          "metric_stop_s": 4.92,
+          "stop_below_50db_s": 0.11,
+          "stop_below_40db_s": 0.12
+        },
+        {
+          "call": "r3/H04",
+          "pass": true,
+          "metric_stop_s": 1.54,
+          "stop_below_50db_s": 0.25,
+          "stop_below_40db_s": 0.26
+        },
+        {
+          "call": "r3/H23",
+          "pass": false,
+          "metric_stop_s": 7.94,
+          "stop_below_50db_s": 2.44,
+          "stop_below_40db_s": 2.46
+        },
+        {
+          "call": "r3/H29",
+          "pass": false,
+          "metric_stop_s": 5.32,
+          "stop_below_50db_s": 1.63,
+          "stop_below_40db_s": 1.65
+        },
+        {
+          "call": "r3/H32",
+          "pass": false,
+          "metric_stop_s": null
+        }
+      ]
     },
-    {
-     "call": "r1/F18",
-     "pass": false,
-     "metric_stop_s": 7.3,
-     "stop_below_50db_s": 1.72,
-     "stop_below_40db_s": 2.34
+    "tool_wait_silence_2_5": {
+      "method": "longest stretch with no speech from either side during each delayed tool wait (+5 s): metric-style relative agent threshold vs speech-level (>= 50 dB)",
+      "rows": [
+        {
+          "call": "r1/F08",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 0.01,
+          "longest_silence_speech_level_s": 0.14
+        },
+        {
+          "call": "r1/F10",
+          "pass": false,
+          "waits": 2,
+          "longest_silence_metric_style_s": 7.68,
+          "longest_silence_speech_level_s": 7.69
+        },
+        {
+          "call": "r1/F19",
+          "pass": true,
+          "waits": 2,
+          "longest_silence_metric_style_s": 2.64,
+          "longest_silence_speech_level_s": 3.05
+        },
+        {
+          "call": "r1/F21",
+          "pass": false,
+          "waits": 1,
+          "longest_silence_metric_style_s": 6.25,
+          "longest_silence_speech_level_s": 6.27
+        },
+        {
+          "call": "r1/F22",
+          "pass": false,
+          "waits": 1,
+          "longest_silence_metric_style_s": 7.23,
+          "longest_silence_speech_level_s": 7.26
+        },
+        {
+          "call": "r1/F23",
+          "pass": false,
+          "waits": 1,
+          "longest_silence_metric_style_s": 1.46,
+          "longest_silence_speech_level_s": 1.55
+        },
+        {
+          "call": "r1/F24",
+          "pass": false,
+          "waits": 2,
+          "longest_silence_metric_style_s": 6.55,
+          "longest_silence_speech_level_s": 6.57
+        },
+        {
+          "call": "r1/F25",
+          "pass": false,
+          "waits": 1,
+          "longest_silence_metric_style_s": 6.81,
+          "longest_silence_speech_level_s": 6.84
+        },
+        {
+          "call": "r1/F30",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 2.14,
+          "longest_silence_speech_level_s": 2.37
+        },
+        {
+          "call": "r1/F35",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 2.15,
+          "longest_silence_speech_level_s": 2.63
+        },
+        {
+          "call": "r1/H04",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 0.82,
+          "longest_silence_speech_level_s": 0.85
+        },
+        {
+          "call": "r1/H10",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 3.35,
+          "longest_silence_speech_level_s": 3.47
+        },
+        {
+          "call": "r1/H13",
+          "pass": false,
+          "waits": 1,
+          "longest_silence_metric_style_s": 8.67,
+          "longest_silence_speech_level_s": 8.69
+        },
+        {
+          "call": "r1/H15",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 1.85,
+          "longest_silence_speech_level_s": 2.27
+        },
+        {
+          "call": "r1/H19",
+          "pass": false,
+          "waits": 1,
+          "longest_silence_metric_style_s": 2.26,
+          "longest_silence_speech_level_s": 2.26
+        },
+        {
+          "call": "r1/H22",
+          "pass": false,
+          "waits": 2,
+          "longest_silence_metric_style_s": 5.45,
+          "longest_silence_speech_level_s": 5.46
+        },
+        {
+          "call": "r1/H24",
+          "pass": false,
+          "waits": 1,
+          "longest_silence_metric_style_s": 8.37,
+          "longest_silence_speech_level_s": 8.38
+        },
+        {
+          "call": "r1/H27",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 2.37,
+          "longest_silence_speech_level_s": 2.8
+        },
+        {
+          "call": "r1/H31",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 1.04,
+          "longest_silence_speech_level_s": 1.04
+        },
+        {
+          "call": "r2/F05",
+          "pass": true,
+          "waits": 2,
+          "longest_silence_metric_style_s": 4.3,
+          "longest_silence_speech_level_s": 4.31
+        },
+        {
+          "call": "r2/F10",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 3.61,
+          "longest_silence_speech_level_s": 6.25
+        },
+        {
+          "call": "r2/F19",
+          "pass": true,
+          "waits": 2,
+          "longest_silence_metric_style_s": 2.91,
+          "longest_silence_speech_level_s": 3.22
+        },
+        {
+          "call": "r2/F21",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 3.72,
+          "longest_silence_speech_level_s": 3.73
+        },
+        {
+          "call": "r2/F22",
+          "pass": false,
+          "waits": 1,
+          "longest_silence_metric_style_s": 8.52,
+          "longest_silence_speech_level_s": 8.54
+        },
+        {
+          "call": "r2/F24",
+          "pass": false,
+          "waits": 1,
+          "longest_silence_metric_style_s": 3.53,
+          "longest_silence_speech_level_s": 3.85
+        },
+        {
+          "call": "r2/F25",
+          "pass": false,
+          "waits": 2,
+          "longest_silence_metric_style_s": 6.94,
+          "longest_silence_speech_level_s": 6.97
+        },
+        {
+          "call": "r2/F30",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 3.43,
+          "longest_silence_speech_level_s": 3.43
+        },
+        {
+          "call": "r2/F35",
+          "pass": true,
+          "waits": 2,
+          "longest_silence_metric_style_s": 3.02,
+          "longest_silence_speech_level_s": 3.2
+        },
+        {
+          "call": "r2/H04",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 0.89,
+          "longest_silence_speech_level_s": 0.96
+        },
+        {
+          "call": "r2/H10",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 2.57,
+          "longest_silence_speech_level_s": 2.85
+        },
+        {
+          "call": "r2/H13",
+          "pass": false,
+          "waits": 1,
+          "longest_silence_metric_style_s": 10.17,
+          "longest_silence_speech_level_s": 10.17
+        },
+        {
+          "call": "r2/H15",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 1.99,
+          "longest_silence_speech_level_s": 2.23
+        },
+        {
+          "call": "r2/H19",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 2.86,
+          "longest_silence_speech_level_s": 3.3
+        },
+        {
+          "call": "r2/H22",
+          "pass": true,
+          "waits": 2,
+          "longest_silence_metric_style_s": 3.21,
+          "longest_silence_speech_level_s": 3.45
+        },
+        {
+          "call": "r2/H24",
+          "pass": false,
+          "waits": 2,
+          "longest_silence_metric_style_s": 11.56,
+          "longest_silence_speech_level_s": 11.83
+        },
+        {
+          "call": "r2/H27",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 2.69,
+          "longest_silence_speech_level_s": 2.96
+        },
+        {
+          "call": "r2/H30",
+          "pass": false,
+          "waits": 1,
+          "longest_silence_metric_style_s": 6.25,
+          "longest_silence_speech_level_s": 6.42
+        },
+        {
+          "call": "r2/H31",
+          "pass": false,
+          "waits": 1,
+          "longest_silence_metric_style_s": 2.22,
+          "longest_silence_speech_level_s": 2.22
+        },
+        {
+          "call": "r3/F08",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 0.57,
+          "longest_silence_speech_level_s": 0.6
+        },
+        {
+          "call": "r3/F10",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 4.86,
+          "longest_silence_speech_level_s": 6.27
+        },
+        {
+          "call": "r3/F19",
+          "pass": true,
+          "waits": 2,
+          "longest_silence_metric_style_s": 2.46,
+          "longest_silence_speech_level_s": 3.0
+        },
+        {
+          "call": "r3/F21",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 2.85,
+          "longest_silence_speech_level_s": 3.42
+        },
+        {
+          "call": "r3/F22",
+          "pass": false,
+          "waits": 1,
+          "longest_silence_metric_style_s": 8.91,
+          "longest_silence_speech_level_s": 8.95
+        },
+        {
+          "call": "r3/F23",
+          "pass": false,
+          "waits": 1,
+          "longest_silence_metric_style_s": 4.31,
+          "longest_silence_speech_level_s": 4.32
+        },
+        {
+          "call": "r3/F24",
+          "pass": true,
+          "waits": 3,
+          "longest_silence_metric_style_s": 3.26,
+          "longest_silence_speech_level_s": 3.26
+        },
+        {
+          "call": "r3/F25",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 0.29,
+          "longest_silence_speech_level_s": 1.26
+        },
+        {
+          "call": "r3/F30",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 1.56,
+          "longest_silence_speech_level_s": 1.57
+        },
+        {
+          "call": "r3/F35",
+          "pass": false,
+          "waits": 2,
+          "longest_silence_metric_style_s": 2.56,
+          "longest_silence_speech_level_s": 2.73
+        },
+        {
+          "call": "r3/H04",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 0.42,
+          "longest_silence_speech_level_s": 0.42
+        },
+        {
+          "call": "r3/H10",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 3.04,
+          "longest_silence_speech_level_s": 3.28
+        },
+        {
+          "call": "r3/H13",
+          "pass": false,
+          "waits": 1,
+          "longest_silence_metric_style_s": 10.17,
+          "longest_silence_speech_level_s": 10.17
+        },
+        {
+          "call": "r3/H15",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 2.22,
+          "longest_silence_speech_level_s": 2.39
+        },
+        {
+          "call": "r3/H19",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 2.77,
+          "longest_silence_speech_level_s": 3.22
+        },
+        {
+          "call": "r3/H24",
+          "pass": false,
+          "waits": 1,
+          "longest_silence_metric_style_s": 11.32,
+          "longest_silence_speech_level_s": 12.0
+        },
+        {
+          "call": "r3/H27",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 2.35,
+          "longest_silence_speech_level_s": 2.54
+        },
+        {
+          "call": "r3/H30",
+          "pass": false,
+          "waits": 1,
+          "longest_silence_metric_style_s": 8.25,
+          "longest_silence_speech_level_s": 8.27
+        },
+        {
+          "call": "r3/H31",
+          "pass": true,
+          "waits": 1,
+          "longest_silence_metric_style_s": 2.53,
+          "longest_silence_speech_level_s": 2.58
+        }
+      ]
     },
-    {
-     "call": "r1/F20",
-     "pass": false,
-     "metric_stop_s": 3.68,
-     "stop_below_50db_s": 2.35,
-     "stop_below_40db_s": 2.36
+    "latency_onset_bias": {
+      "sample_calls": 40,
+      "replies": 554,
+      "speech_onset_after_metric_agent_start_s_p50": 0.03,
+      "p90": 0.08
     },
-    {
-     "call": "r1/F26",
-     "pass": false,
-     "metric_stop_s": 4.02,
-     "stop_below_50db_s": 1.86,
-     "stop_below_40db_s": 1.88
+    "tool_delays_applied": {
+      "calls": 210,
+      "match_fixture": 210,
+      "calls_with_delays": 63
     },
-    {
-     "call": "r1/F27",
-     "pass": false,
-     "metric_stop_s": 5.96,
-     "stop_below_50db_s": 2.43,
-     "stop_below_40db_s": 2.44
+    "tool_handler_exceptions_final_cohort": 0,
+    "agent_turns_with_cjk_text": {
+      "calls": 8,
+      "list": [
+        "r1/F15",
+        "r1/F31",
+        "r1/H07",
+        "r2/F12",
+        "r2/F26",
+        "r2/H04",
+        "r2/H32",
+        "r3/H22"
+      ],
+      "interpretation": "Chinese-language fragments detected in model-reported transcripts; their presence in audible speech was not verified. Transcription artifacts remain possible."
     },
-    {
-     "call": "r1/F28",
-     "pass": true,
-     "metric_stop_s": 2.1,
-     "stop_below_50db_s": 1.16,
-     "stop_below_40db_s": 1.17
-    },
-    {
-     "call": "r1/H04",
-     "pass": false,
-     "metric_stop_s": 2.82,
-     "stop_below_50db_s": 1.49,
-     "stop_below_40db_s": 1.51
-    },
-    {
-     "call": "r1/H07",
-     "pass": false,
-     "metric_stop_s": 8.78,
-     "stop_below_50db_s": 2.0,
-     "stop_below_40db_s": 2.01
-    },
-    {
-     "call": "r1/H17",
-     "pass": false,
-     "metric_stop_s": 11.5,
-     "stop_below_50db_s": 2.03,
-     "stop_below_40db_s": 2.31
-    },
-    {
-     "call": "r1/H23",
-     "pass": false,
-     "metric_stop_s": 2.68,
-     "stop_below_50db_s": 0.53,
-     "stop_below_40db_s": 0.6
-    },
-    {
-     "call": "r1/H29",
-     "pass": true,
-     "metric_stop_s": 2.1,
-     "stop_below_50db_s": 1.14,
-     "stop_below_40db_s": 1.16
-    },
-    {
-     "call": "r1/H32",
-     "pass": true,
-     "metric_stop_s": null
-    },
-    {
-     "call": "r2/F15",
-     "pass": false,
-     "metric_stop_s": 7.56,
-     "stop_below_50db_s": 4.12,
-     "stop_below_40db_s": 4.16
-    },
-    {
-     "call": "r2/F18",
-     "pass": false,
-     "metric_stop_s": 3.4,
-     "stop_below_50db_s": 1.77,
-     "stop_below_40db_s": 1.78
-    },
-    {
-     "call": "r2/F20",
-     "pass": false,
-     "metric_stop_s": 3.08,
-     "stop_below_50db_s": 2.54,
-     "stop_below_40db_s": 2.54
-    },
-    {
-     "call": "r2/F26",
-     "pass": false,
-     "metric_stop_s": 4.28,
-     "stop_below_50db_s": 0.31,
-     "stop_below_40db_s": 0.32
-    },
-    {
-     "call": "r2/F27",
-     "pass": false,
-     "metric_stop_s": 2.72,
-     "stop_below_50db_s": 1.92,
-     "stop_below_40db_s": 2.21
-    },
-    {
-     "call": "r2/F28",
-     "pass": true,
-     "metric_stop_s": 1.62,
-     "stop_below_50db_s": 1.1,
-     "stop_below_40db_s": 1.42
-    },
-    {
-     "call": "r2/H04",
-     "pass": true,
-     "metric_stop_s": 1.14,
-     "stop_below_50db_s": 0.87,
-     "stop_below_40db_s": 0.88
-    },
-    {
-     "call": "r2/H17",
-     "pass": false,
-     "metric_stop_s": 4.98,
-     "stop_below_50db_s": 2.05,
-     "stop_below_40db_s": 2.09
-    },
-    {
-     "call": "r2/H23",
-     "pass": false,
-     "metric_stop_s": 2.8,
-     "stop_below_50db_s": 1.16,
-     "stop_below_40db_s": 1.2
-    },
-    {
-     "call": "r2/H29",
-     "pass": false,
-     "metric_stop_s": 2.22,
-     "stop_below_50db_s": 2.01,
-     "stop_below_40db_s": 2.03
-    },
-    {
-     "call": "r2/H32",
-     "pass": false,
-     "metric_stop_s": null
-    },
-    {
-     "call": "r3/F18",
-     "pass": true,
-     "metric_stop_s": 2.16,
-     "stop_below_50db_s": 1.73,
-     "stop_below_40db_s": 1.74
-    },
-    {
-     "call": "r3/F20",
-     "pass": false,
-     "metric_stop_s": 4.0,
-     "stop_below_50db_s": 2.51,
-     "stop_below_40db_s": 2.65
-    },
-    {
-     "call": "r3/F26",
-     "pass": true,
-     "metric_stop_s": 0.4,
-     "stop_below_50db_s": 0.21,
-     "stop_below_40db_s": 0.22
-    },
-    {
-     "call": "r3/F27",
-     "pass": false,
-     "metric_stop_s": 6.78,
-     "stop_below_50db_s": 2.3,
-     "stop_below_40db_s": 2.31
-    },
-    {
-     "call": "r3/F28",
-     "pass": false,
-     "metric_stop_s": 4.92,
-     "stop_below_50db_s": 0.11,
-     "stop_below_40db_s": 0.12
-    },
-    {
-     "call": "r3/H04",
-     "pass": true,
-     "metric_stop_s": 1.54,
-     "stop_below_50db_s": 0.25,
-     "stop_below_40db_s": 0.26
-    },
-    {
-     "call": "r3/H23",
-     "pass": false,
-     "metric_stop_s": 7.94,
-     "stop_below_50db_s": 2.44,
-     "stop_below_40db_s": 2.46
-    },
-    {
-     "call": "r3/H29",
-     "pass": false,
-     "metric_stop_s": 5.32,
-     "stop_below_50db_s": 1.63,
-     "stop_below_40db_s": 1.65
-    },
-    {
-     "call": "r3/H32",
-     "pass": false,
-     "metric_stop_s": null
+    "caller_reply_paths": {
+      "scripted": 1745,
+      "generated": 1561
     }
-   ]
-  },
-  "tool_wait_silence_2_5": {
-   "method": "longest stretch with no speech from either side during each delayed tool wait (+5 s): metric-style relative agent threshold vs speech-level (>= 50 dB)",
-   "rows": [
-    {
-     "call": "r1/F08",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 0.01,
-     "longest_silence_speech_level_s": 0.14
-    },
-    {
-     "call": "r1/F10",
-     "pass": false,
-     "waits": 2,
-     "longest_silence_metric_style_s": 7.68,
-     "longest_silence_speech_level_s": 7.69
-    },
-    {
-     "call": "r1/F19",
-     "pass": true,
-     "waits": 2,
-     "longest_silence_metric_style_s": 2.64,
-     "longest_silence_speech_level_s": 3.05
-    },
-    {
-     "call": "r1/F21",
-     "pass": false,
-     "waits": 1,
-     "longest_silence_metric_style_s": 6.25,
-     "longest_silence_speech_level_s": 6.27
-    },
-    {
-     "call": "r1/F22",
-     "pass": false,
-     "waits": 1,
-     "longest_silence_metric_style_s": 7.23,
-     "longest_silence_speech_level_s": 7.26
-    },
-    {
-     "call": "r1/F23",
-     "pass": false,
-     "waits": 1,
-     "longest_silence_metric_style_s": 1.46,
-     "longest_silence_speech_level_s": 1.55
-    },
-    {
-     "call": "r1/F24",
-     "pass": false,
-     "waits": 2,
-     "longest_silence_metric_style_s": 6.55,
-     "longest_silence_speech_level_s": 6.57
-    },
-    {
-     "call": "r1/F25",
-     "pass": false,
-     "waits": 1,
-     "longest_silence_metric_style_s": 6.81,
-     "longest_silence_speech_level_s": 6.84
-    },
-    {
-     "call": "r1/F30",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 2.14,
-     "longest_silence_speech_level_s": 2.37
-    },
-    {
-     "call": "r1/F35",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 2.15,
-     "longest_silence_speech_level_s": 2.63
-    },
-    {
-     "call": "r1/H04",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 0.82,
-     "longest_silence_speech_level_s": 0.85
-    },
-    {
-     "call": "r1/H10",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 3.35,
-     "longest_silence_speech_level_s": 3.47
-    },
-    {
-     "call": "r1/H13",
-     "pass": false,
-     "waits": 1,
-     "longest_silence_metric_style_s": 8.67,
-     "longest_silence_speech_level_s": 8.69
-    },
-    {
-     "call": "r1/H15",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 1.85,
-     "longest_silence_speech_level_s": 2.27
-    },
-    {
-     "call": "r1/H19",
-     "pass": false,
-     "waits": 1,
-     "longest_silence_metric_style_s": 2.26,
-     "longest_silence_speech_level_s": 2.26
-    },
-    {
-     "call": "r1/H22",
-     "pass": false,
-     "waits": 2,
-     "longest_silence_metric_style_s": 5.45,
-     "longest_silence_speech_level_s": 5.46
-    },
-    {
-     "call": "r1/H24",
-     "pass": false,
-     "waits": 1,
-     "longest_silence_metric_style_s": 8.37,
-     "longest_silence_speech_level_s": 8.38
-    },
-    {
-     "call": "r1/H27",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 2.37,
-     "longest_silence_speech_level_s": 2.8
-    },
-    {
-     "call": "r1/H31",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 1.04,
-     "longest_silence_speech_level_s": 1.04
-    },
-    {
-     "call": "r2/F05",
-     "pass": true,
-     "waits": 2,
-     "longest_silence_metric_style_s": 4.3,
-     "longest_silence_speech_level_s": 4.31
-    },
-    {
-     "call": "r2/F10",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 3.61,
-     "longest_silence_speech_level_s": 6.25
-    },
-    {
-     "call": "r2/F19",
-     "pass": true,
-     "waits": 2,
-     "longest_silence_metric_style_s": 2.91,
-     "longest_silence_speech_level_s": 3.22
-    },
-    {
-     "call": "r2/F21",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 3.72,
-     "longest_silence_speech_level_s": 3.73
-    },
-    {
-     "call": "r2/F22",
-     "pass": false,
-     "waits": 1,
-     "longest_silence_metric_style_s": 8.52,
-     "longest_silence_speech_level_s": 8.54
-    },
-    {
-     "call": "r2/F24",
-     "pass": false,
-     "waits": 1,
-     "longest_silence_metric_style_s": 3.53,
-     "longest_silence_speech_level_s": 3.85
-    },
-    {
-     "call": "r2/F25",
-     "pass": false,
-     "waits": 2,
-     "longest_silence_metric_style_s": 6.94,
-     "longest_silence_speech_level_s": 6.97
-    },
-    {
-     "call": "r2/F30",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 3.43,
-     "longest_silence_speech_level_s": 3.43
-    },
-    {
-     "call": "r2/F35",
-     "pass": true,
-     "waits": 2,
-     "longest_silence_metric_style_s": 3.02,
-     "longest_silence_speech_level_s": 3.2
-    },
-    {
-     "call": "r2/H04",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 0.89,
-     "longest_silence_speech_level_s": 0.96
-    },
-    {
-     "call": "r2/H10",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 2.57,
-     "longest_silence_speech_level_s": 2.85
-    },
-    {
-     "call": "r2/H13",
-     "pass": false,
-     "waits": 1,
-     "longest_silence_metric_style_s": 10.17,
-     "longest_silence_speech_level_s": 10.17
-    },
-    {
-     "call": "r2/H15",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 1.99,
-     "longest_silence_speech_level_s": 2.23
-    },
-    {
-     "call": "r2/H19",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 2.86,
-     "longest_silence_speech_level_s": 3.3
-    },
-    {
-     "call": "r2/H22",
-     "pass": true,
-     "waits": 2,
-     "longest_silence_metric_style_s": 3.21,
-     "longest_silence_speech_level_s": 3.45
-    },
-    {
-     "call": "r2/H24",
-     "pass": false,
-     "waits": 2,
-     "longest_silence_metric_style_s": 11.56,
-     "longest_silence_speech_level_s": 11.83
-    },
-    {
-     "call": "r2/H27",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 2.69,
-     "longest_silence_speech_level_s": 2.96
-    },
-    {
-     "call": "r2/H30",
-     "pass": false,
-     "waits": 1,
-     "longest_silence_metric_style_s": 6.25,
-     "longest_silence_speech_level_s": 6.42
-    },
-    {
-     "call": "r2/H31",
-     "pass": false,
-     "waits": 1,
-     "longest_silence_metric_style_s": 2.22,
-     "longest_silence_speech_level_s": 2.22
-    },
-    {
-     "call": "r3/F08",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 0.57,
-     "longest_silence_speech_level_s": 0.6
-    },
-    {
-     "call": "r3/F10",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 4.86,
-     "longest_silence_speech_level_s": 6.27
-    },
-    {
-     "call": "r3/F19",
-     "pass": true,
-     "waits": 2,
-     "longest_silence_metric_style_s": 2.46,
-     "longest_silence_speech_level_s": 3.0
-    },
-    {
-     "call": "r3/F21",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 2.85,
-     "longest_silence_speech_level_s": 3.42
-    },
-    {
-     "call": "r3/F22",
-     "pass": false,
-     "waits": 1,
-     "longest_silence_metric_style_s": 8.91,
-     "longest_silence_speech_level_s": 8.95
-    },
-    {
-     "call": "r3/F23",
-     "pass": false,
-     "waits": 1,
-     "longest_silence_metric_style_s": 4.31,
-     "longest_silence_speech_level_s": 4.32
-    },
-    {
-     "call": "r3/F24",
-     "pass": true,
-     "waits": 3,
-     "longest_silence_metric_style_s": 3.26,
-     "longest_silence_speech_level_s": 3.26
-    },
-    {
-     "call": "r3/F25",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 0.29,
-     "longest_silence_speech_level_s": 1.26
-    },
-    {
-     "call": "r3/F30",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 1.56,
-     "longest_silence_speech_level_s": 1.57
-    },
-    {
-     "call": "r3/F35",
-     "pass": false,
-     "waits": 2,
-     "longest_silence_metric_style_s": 2.56,
-     "longest_silence_speech_level_s": 2.73
-    },
-    {
-     "call": "r3/H04",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 0.42,
-     "longest_silence_speech_level_s": 0.42
-    },
-    {
-     "call": "r3/H10",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 3.04,
-     "longest_silence_speech_level_s": 3.28
-    },
-    {
-     "call": "r3/H13",
-     "pass": false,
-     "waits": 1,
-     "longest_silence_metric_style_s": 10.17,
-     "longest_silence_speech_level_s": 10.17
-    },
-    {
-     "call": "r3/H15",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 2.22,
-     "longest_silence_speech_level_s": 2.39
-    },
-    {
-     "call": "r3/H19",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 2.77,
-     "longest_silence_speech_level_s": 3.22
-    },
-    {
-     "call": "r3/H24",
-     "pass": false,
-     "waits": 1,
-     "longest_silence_metric_style_s": 11.32,
-     "longest_silence_speech_level_s": 12.0
-    },
-    {
-     "call": "r3/H27",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 2.35,
-     "longest_silence_speech_level_s": 2.54
-    },
-    {
-     "call": "r3/H30",
-     "pass": false,
-     "waits": 1,
-     "longest_silence_metric_style_s": 8.25,
-     "longest_silence_speech_level_s": 8.27
-    },
-    {
-     "call": "r3/H31",
-     "pass": true,
-     "waits": 1,
-     "longest_silence_metric_style_s": 2.53,
-     "longest_silence_speech_level_s": 2.58
-    }
-   ]
-  },
-  "latency_onset_bias": {
-   "sample_calls": 40,
-   "replies": 554,
-   "speech_onset_after_metric_agent_start_s_p50": 0.03,
-   "p90": 0.08
-  },
-  "tool_delays_applied": {
-   "calls": 210,
-   "match_fixture": 210,
-   "calls_with_delays": 63
-  },
-  "tool_handler_exceptions_final_cohort": 0,
-  "agent_turns_with_cjk_text": {
-   "calls": 8,
-   "list": [
-    "r1/F15",
-    "r1/F31",
-    "r1/H07",
-    "r2/F12",
-    "r2/F26",
-    "r2/H04",
-    "r2/H32",
-    "r3/H22"
-   ]
-  },
-  "caller_reply_paths": {
-   "scripted": 1745,
-   "generated": 1561
   }
- }
 }

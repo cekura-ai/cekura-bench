@@ -16,8 +16,9 @@ are in [failure-qc.json](failure-qc.json).
     cancellation and style;
   - two passes checking the apparent tool-latency and premature-response improvements.
 
-  The other 51 failed calls were covered by the inventory and the cohort-wide checks only, not reviewed
-  one by one.
+  These 41 calls include 29 of the 92 calls below the overall pass threshold and 12 passing calls
+  (some still fail the main task or an individual skill). The other 63 failed calls were covered by
+  the inventory and cohort-wide checks only, not reviewed one by one.
 - **Evidence per call:**
   - the original scenario (caller script, expected outcome, main-task target);
   - the call transcript;
@@ -29,7 +30,7 @@ are in [failure-qc.json](failure-qc.json).
   - tool-handler exceptions;
   - whether each call applied its scenario's tool delays;
   - unscripted caller replies;
-  - non-requested languages in agent speech;
+  - non-requested language fragments in agent transcripts;
   - a speech-level re-measurement of every barge-in (2.2) verdict and every slow-tool wait (2.5);
   - a sampled check of response-latency onsets.
 - **Limits:**
@@ -126,10 +127,10 @@ qualifies.
 
 ## Other observations
 
-- **Non-requested language.** 8 calls contain short Mandarin fragments in agent speech, in English,
+- **Transcript language anomalies.** 8 calls contain short Chinese-language fragments in agent transcripts, in English,
   Spanish or Hindi conversations: r1/F15, r1/F31, r1/H07, r2/F12, r2/F26, r2/H04, r2/H32, r3/H22. They
-  range from single words to one full sentence. Some agent transcripts also use full-width punctuation;
-  that is text only.
+  range from single words to one full sentence. Their presence in audible speech was not verified;
+  model-reported transcription artifacts remain possible. Some transcripts also use full-width punctuation.
 - **Unscripted caller replies are routine.** 1,561 of 3,306 caller replies were generated rather than
   scripted, mostly to agent questions the script doesn't cover. Only a few derailed a call: the F14 r1,
   H22 r3 and F26 r2 cases above.
@@ -145,7 +146,8 @@ qualifies.
    caller engine's choice can make the main task unreachable. H16's tool description invites an
    eligibility question the script doesn't answer.
 3. **H03 task definition:** decide whether an equivalent fixture-supported change should count as done.
-4. **Mandarin fragments:** report to the model provider as a model behavior.
+4. **Transcript language anomalies:** verify the corresponding audio before attributing them to spoken
+   model behavior or reporting a speech-language defect to the provider.
 
 ## Reviewed calls
 

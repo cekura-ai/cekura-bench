@@ -32,6 +32,7 @@ from tts_bench.adapters.gemini_tts import GeminiTTSAdapter
 from tts_bench.adapters.gradium import GradiumAdapter
 from tts_bench.adapters.hume import HumeAdapter
 from tts_bench.adapters.inworld import InworldAdapter
+from tts_bench.adapters.murf import MurfAdapter
 from tts_bench.adapters.openai_tts import OpenAITTSAdapter
 from tts_bench.adapters.rime import RimeAdapter
 from tts_bench.adapters.smallest import SmallestAdapter
@@ -88,6 +89,7 @@ SARAH = "933563129e564b19a115bedd57b7406a"              # Fish Official, female 
 DELIA = "c70cfb98867a4bfb9ae20d2401257b92"              # Fish Audio, female US English, from its Drama 3 voice cast
 AVA = "5bb7de05-c8fe-426a-8fcc-ba4fc4ce9f9c"           # Hume "Ava Song", female US English, from its Voice Library
 AUDREY = "49c443a4-8a1d-5f7e-b70b-98bdbd9823c3"        # AssemblyAI "Audrey", female US English, the voice AssemblyAI chose
+JUDITH = "en-US-judith"                              # Murf Falcon 2.1, female US English, first on Murf's Falcon voice recommendations
 
 PROVIDERS: dict[str, ProviderEntry] = {
     "fake": ProviderEntry("fake", FakeTTSAdapter, "FAKE_KEY_UNUSED", (Model("scripted", "tone"),)),
@@ -155,6 +157,14 @@ PROVIDERS: dict[str, ProviderEntry] = {
               "done ends the batch; sequential contexts; no cancel (clear only drops unsubmitted text); "
               "Coda replaces the retired Arcana family",
     ),
+    "murf": ProviderEntry(
+        "murf", MurfAdapter, "MURF_API_KEY",
+        (Model("falcon-2.1", JUDITH),),
+        notes="Falcon 2.1 websocket, named contexts and 24 kHz PCM; voice_config, with the style name the voice's "
+              "catalog entry lists (option style), is sent before t0; "
+              "clear drops queued audio but cannot retract audio already received by the player; "
+              "the documented predictive_chunking default is strict (record --option to change it)",
+    ),
     "fish-audio": ProviderEntry(
         "fish-audio", FishAudioAdapter, "FISH_AUDIO_API_KEY",
         (Model("s2.1-pro", SARAH), Model("drama-3-preview", DELIA)),
@@ -211,7 +221,7 @@ PROVIDERS: dict[str, ProviderEntry] = {
 
 # Protocols not yet spoken. Listed so the gap is a fact, not an oversight.
 PENDING = ("qwen-audio", "speechify", "minimax",
-           "murf", "hume", "lmnt", "google-cloud-tts", "polly")
+           "hume", "lmnt", "google-cloud-tts", "polly")
 
 
 def lineup() -> list[tuple[str, Model]]:

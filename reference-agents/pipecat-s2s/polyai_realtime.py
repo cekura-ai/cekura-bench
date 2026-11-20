@@ -755,9 +755,21 @@ def describe_error(error: dict[str, Any]) -> str:
 
 
 def token_usage(usage: dict[str, Any]) -> LLMTokenUsage:
-    """A ``response.done`` usage block in the framework's names."""
+    """A ``response.done`` usage block in the framework's names.
+
+    The cached and audio counts sit inside the input and output totals, as in
+    OpenAI's shape; they are kept because the cached prompt is billed at a tenth
+    of the fresh rate, so the totals alone cannot be priced.
+    """
+    input_details = usage.get("input_token_details") or {}
+    output_details = usage.get("output_token_details") or {}
+    cached_details = input_details.get("cached_tokens_details") or {}
     return LLMTokenUsage(
         prompt_tokens=usage.get("input_tokens") or 0,
         completion_tokens=usage.get("output_tokens") or 0,
         total_tokens=usage.get("total_tokens") or 0,
+        cache_read_input_tokens=input_details.get("cached_tokens"),
+        input_audio_tokens=input_details.get("audio_tokens"),
+        output_audio_tokens=output_details.get("audio_tokens"),
+        cache_read_input_audio_tokens=cached_details.get("audio_tokens"),
     )

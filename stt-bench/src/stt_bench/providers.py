@@ -1,5 +1,5 @@
 """Provider registry used by capture, replay and readiness checks."""
-from . import deepgram, provider_protocol, chirp, trial_providers, gradium, reson8, zoom, assemblyai, assemblyai_min_latency, speechmatics_agent
+from . import deepgram, provider_protocol, chirp, trial_providers, gradium, reson8, zoom, assemblyai, assemblyai_min_latency, speechmatics_agent, murf
 from .credentials import credential
 from .streaming import transmitted_silence_frames
 from . import gemini_live
@@ -16,6 +16,7 @@ MODELS = {
     'elevenlabs': {'scribe_v2_realtime', 'scribe_v3_live'},
     'speechmatics': {'standard', 'enhanced', 'linden-1'},
     'cartesia': {'ink-2'},
+    'murf': {'finch_global_1.0'},
     'google': {'chirp_2', 'chirp_3'},
 }
 ENDPOINTS = {
@@ -30,6 +31,7 @@ ENDPOINTS = {
     'elevenlabs': {'wss://api.elevenlabs.io/v1/speech-to-text/realtime'},
     'speechmatics': {'wss://us.rt.speechmatics.com/v2', 'wss://global.rt.speechmatics.com/v2/agent'},
     'cartesia': {'wss://api.cartesia.ai/stt/websocket'},
+    'murf': {'wss://us-east.api.murf.ai/v1/transcription/stream-input'},
     'google': {'https://us-speech.googleapis.com', 'https://us-central1-speech.googleapis.com'},
 }
 
@@ -60,6 +62,8 @@ def validate(config):
         reson8.validate(config)
     if p == 'zoom':
         zoom.validate(config)
+    if p == 'murf':
+        murf.validate(config)
     if p in trial_providers.MODELS:
         trial_providers.validate(config)
     if is_nova(config):
@@ -90,6 +94,7 @@ async def transcribe(pcm, speech_frames, config, key, log):
                else gradium if config['provider'] == 'gradium'
                else reson8 if config['provider'] == 'reson8'
                else zoom if config['provider'] == 'zoom'
+               else murf if config['provider'] == 'murf'
                else trial_providers if config['provider'] in trial_providers.MODELS else provider_protocol)
     await adapter.transcribe(pcm, speech_frames, config, key, log)
 
@@ -109,6 +114,8 @@ def reduce_events(events, config):
         return reson8.replay(events, config)[1]
     if config['provider'] == 'zoom':
         return zoom.replay(events, config)[1]
+    if config['provider'] == 'murf':
+        return murf.replay(events, config)[1]
     if config['provider'] == 'gradium':
         return gradium.replay(events, config)[1]
     if config['provider'] in trial_providers.MODELS:
@@ -132,6 +139,8 @@ def transcript_at(events, cutoff, config=None):
         return reson8.replay(events, config, cutoff)[0]
     if config['provider'] == 'zoom':
         return zoom.replay(events, config, cutoff)[0]
+    if config['provider'] == 'murf':
+        return murf.replay(events, config, cutoff)[0]
     if config['provider'] == 'gradium':
         return gradium.replay(events, config, cutoff)[0]
     if config['provider'] in trial_providers.MODELS:

@@ -5155,6 +5155,22 @@ class TestAGoodbyeLeftOpenIsClosedForTheAgent:
         # Past an acknowledgement's length, only saying outright that they are done counts.
         ("Perfect, got it. Thank you, that’s all I needed", True),
         ("Okay great, I think my last appointment was with Doctor Lee sometime in May", False),
+        # A caller saying their question or request has been answered is done, although
+        # "question" on its own would start something new.
+        ("That answers my question. Goodbye.", True),
+        ("That answers my request, thank you. I have nothing further to add.", True),
+        ("The outcome answers my request, and I have nothing further to add.", True),
+        ("That answers my question, but I also need to book another visit", False),
+        ("That answers my question. What time do you open tomorrow", False),
+        ("I have one more question", False),
+        # Each sentence on its own: a closing word in one does not cover a request in the next.
+        ("Okay. I would like to discuss my options.", False),
+        ("That answers my question. I need to reschedule my appointment.", False),
+        # A reply that ends on a sign-off and asks for nothing is a goodbye, whatever it says first.
+        ("Thanks. I understand. Goodbye.", True),
+        ("That is the right next step. Goodbye.", True),
+        ("That works. Goodbye.", True),
+        ("Great, thank you. That's everything.", True),
     ])
     def test_only_a_goodbye_or_an_acknowledgement_answers_one(self, text, closes):
         assert bot.is_closing_reply(text) is closes
@@ -5176,6 +5192,13 @@ class TestAGoodbyeLeftOpenIsClosedForTheAgent:
         watch = self._after_goodbye()
         assert not watch.due(14.9)
         assert watch.due(15.0)
+
+    def test_a_caller_who_says_their_question_is_answered_is_hung_up_on_three_seconds_after_it(self):
+        watch = self._after_goodbye()
+        watch._caller_stopped = 14.0
+        watch.caller_said("That answers my question. Goodbye.")
+        assert not watch.due(16.9)
+        assert watch.due(17.0)
 
     def test_a_caller_who_asks_something_is_answered_not_hung_up_on(self):
         watch = self._after_goodbye()

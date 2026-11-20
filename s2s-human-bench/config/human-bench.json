@@ -406,6 +406,24 @@
         "setting": "Server VAD: threshold 0.35, 1,000 ms silence, 300 ms prefix padding",
         "sampleRateHz": 24000
       }
+    },
+    {
+      "key": "gpt-live-1.1",
+      "name": "GPT-Live 1.1 + GPT-6 Sol",
+      "vendor": "OpenAI",
+      "siteId": "gpt-live-1-1",
+      "runs": [
+        "fullrun_gptlive11_rerunsel_r1",
+        "fullrun_gptlive11_rerunsel_r2",
+        "fullrun_gptlive11_rerunsel_r3"
+      ],
+      "details": {
+        "modelId": "gpt-live-1.1",
+        "voice": "marin",
+        "setting": "Sol on low thinking",
+        "sampleRateHz": 24000,
+        "turns": "Service turn detection"
+      }
     }
   ],
   "suites": [

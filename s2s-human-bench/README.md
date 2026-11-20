@@ -81,3 +81,9 @@ transcripts, the task file and clip picks stay out of this repository.
 ```sh
 uv run --locked pytest
 ```
+
+## Result snapshots
+
+Snapshots of individual model runs are stored under [`results/real-calls/`](../results/real-calls/).
+The [GPT-Live 1.1 + GPT-6 Sol result from 20 November 2026](../results/real-calls/gpt-live-1.1-2026-11-20/README.md)
+includes the report, per-call scores and metric values, and a local validator.

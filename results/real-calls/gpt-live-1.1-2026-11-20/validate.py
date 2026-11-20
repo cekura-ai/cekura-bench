@@ -3,7 +3,8 @@
     python validate.py
 
 Checks the cohort (3 runs x 70 unique scenarios, 210 calls, 30 metric results per call, 6,300 in
-total, no timed-out originals) and recomputes, per run, per domain and overall:
+total, roles and builds, no superseded attempt selected) and recomputes, overall, per run, per domain
+and per language group:
 calls, passed calls (score >= 80), pass³ (scenario passed in all three runs), main task done,
 mean call score, the four family scores (mean of skill pass rates with at least 3 reaching calls;
 Task Handling blended half-and-half with the task outcome) and latency percentiles
@@ -84,8 +85,14 @@ def main() -> int:
         ("metric results", sum(len(c["metrics"]) for c in calls), 6300),
         ("calls with all 30 metrics", sum(sorted(m["id"] for m in c["metrics"]) == metric_ids for c in calls), 210),
         ("metric results not evaluated", sum(m["status"] != "evaluated" for c in calls for m in c["metrics"]), 0),
-        ("roles", dict(sorted(Counter(c["role"] for c in calls).items())), {"cohort_valid": 208, "timeout_rerun": 2}),
+        ("roles", dict(sorted(Counter(c["role"] for c in calls).items())), {"fixture_rerun": 3, "original": 206, "timeout_rerun": 1}),
+        ("roles match cohort header", dict(sorted(Counter(c["role"] for c in calls).items())), data["cohort"]["roles"]),
+        ("builds match cohort header", dict(sorted(Counter(c["build"] for c in calls).items())), data["cohort"]["builds"]),
         ("cohort header", (data["cohort"]["calls"], data["cohort"]["metric_entries"]), (210, 6300)),
+        ("superseded attempts selected", sorted({(x["run"], x["scenario"], x["attempt"]) for x in data["cohort"]["superseded"]}
+                                                & {(c["run"], c["scenario"], c["attempt"]) for c in calls}), []),
+        ("replacements name their superseded attempts", sorted((c["run"], c["scenario"]) for c in calls if c["role"] != "original"),
+         sorted({(x["run"], x["scenario"]) for x in data["cohort"]["superseded"]})),
     ]
     for name, got, want in cohort:
         if got != want:
@@ -97,6 +104,9 @@ def main() -> int:
         checks.append((run, [c for c in calls if c["run"] == run], view["runs"][f"fullrun_gptlive11_rerunsel_{run}"]))
     for suite, prefix in (("banking", "F"), ("healthcare", "H")):
         checks.append((suite, [c for c in calls if c["scenario"].startswith(prefix)], view["suites"][suite]))
+    for gid, g in view["languages"].items():
+        codes = set(g["scenario_codes"])
+        checks.append((f"language:{gid}", [c for c in calls if c["scenario"] in codes], g))
     for name, rows, published in checks:
         got = summary(rows, family_of)
         for key, value in got.items():
@@ -104,8 +114,8 @@ def main() -> int:
             if value != want:
                 bad += 1
                 print(f"MISMATCH {name}.{key}: recomputed {value} != published {want}")
-    reruns = sum(c["role"] == "timeout_rerun" for c in calls)
-    print(f"{len(calls)} calls checked ({reruns} reruns replacing call-budget timeouts), "
+    reruns = sum(c["role"] != "original" for c in calls)
+    print(f"{len(calls)} calls checked ({reruns} replacement calls), "
           f"{sum(len(c['metrics']) for c in calls)} metric results; {len(cohort)} cohort checks and {len(checks)} aggregates; "
           f"{'all match' if not bad else f'{bad} mismatches'}")
     return 1 if bad else 0

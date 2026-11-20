@@ -11,9 +11,11 @@ every F15 call had run on a defective local tool fixture (its matcher raised `Na
 so F15 was rerun in all three runs on a repaired build (v4) and only those three calls were graded again. r1/F15 was
 therefore replaced twice. The superseded attempts are excluded from every number; see [Replaced calls](#replaced-calls).
 
-**New comparative ELO is pending.** The rating is fitted on every model's per-scenario scores, and only the other
-models' published aggregates are available to this run, so no rating or rank is claimed. The comparison with the
-published GPT-Live 1 row is aggregate-to-aggregate; see [Comparability](#comparability).
+**ELO: 1083, rank 4 of 16 ranked models; 95% bootstrap interval 1031–1135.** Historical per-scenario
+scores were recovered read-only from S3. Before adding this model, the official scorer reproduced all 105 historical
+pair counts, all 15 published rounded model ratings, and the Cascade reference and suite/language ratings.
+All ranked ratings are now refitted together; Cascade is anchored afterwards. Hosting and judge parity remain
+unconfirmed; see [Comparability](#comparability). Numeric inputs and exact fits are in [elo.json](elo.json).
 
 ## Headline
 
@@ -30,16 +32,39 @@ published GPT-Live 1 row is aggregate-to-aggregate; see [Comparability](#compara
 | Response latency p50 / p90 (passive metric) | 1,850 / 2,260 ms | 2,270 / 2,720 ms |
 | Median words per agent turn | 18.0 | 15.0 |
 | Cost per call (live model + delegated backend) | $0.2869 | $0.2861 |
-| ELO | pending | 1122 (rank 2 of 16 rated) |
+| ELO (16-model refit) | 1083 (rank 4; CI 1031–1135) | 1117 (rank 2; previously published 1122) |
 
 Latency covers the 208 calls on which the latency metric returned a value. It returns none on r1/H32, r2/H32:
 H32's recorded caller audio carries constant loud background sound, so the metric's energy threshold finds no caller
 speech to time a reply from (its rule, applied correctly; r3/H32 yields a single reply).
 
-**Failure QC:** [failure-qc.md](failure-qc.md) reviews the failures against the evidence (raw grades unchanged). Of the
-30 main-task failures, 16 are model failures and 14 trace to the scenario path, the caller engine or the task checker; for
-barge-in (2.2), the metric counts GPT-Live's low-level post-speech signal as talking; re-measured at speech level, 11 of
-the 22 timed failures stop within the 2 s limit and 10 more within 2.7 s.
+**Failure QC:** [failure-qc.md](failure-qc.md) records Claude's review of 41 calls, including all 30 task
+failures. The independent [Codex review summary](codex-failure-qc-summary.md) covers all 92 overall-failed calls:
+68 have at least one supported failure; 24 cannot confidently be attributed to the main agent. Some judge flags
+are questionable, including calls with other supported failures. Audio-dependent findings remain provisional;
+neither review independently listened to the recordings. All grades are unchanged.
+
+## Comparative ELO
+
+| View | GPT-Live 1.1 + GPT-6 Sol ELO | Scenarios |
+| --- | ---: | ---: |
+| All calls | 1083 | 70 |
+| Banking | 1058 | 35 |
+| Healthcare | 1109 | 35 |
+| English only | 1067 | 55 |
+| Switches to Spanish | 1113 | 7 |
+| Switches to Hindi | 1197 | 8 |
+
+The official method averages each model's three call scores per scenario, uses a five-point tie margin,
+and fits Bradley–Terry ratings on the 400-point ELO scale with ranked-model mean 1000 (200 iterations).
+The overall interval resamples scenarios 1,000 times, seed 20261103, with 60 fitting iterations per draw.
+Cascade remains an unranked reference, anchored at 977 after fixing the ranked ratings.
+Adding a model changes the fitted ratings of the existing models; their call scores and historical pair counts
+remain unchanged. GPT Realtime 2.1 is third at 1084: its one-point gap from this model is within uncertainty.
+Language slices are small and use their own fits, so read them with care.
+
+Run `python recompute-elo.py` to validate every suite/language fit from the published numeric vectors;
+add `--bootstrap` to reproduce confidence intervals. No transcripts, task targets or credentials are needed.
 
 ## By run
 
@@ -206,7 +231,7 @@ Caller-side services, superseded attempts and voided attempts are excluded.
   Cartesia caller voices mapped to their ElevenLabs clones) and its decision models through OpenRouter.
 - **Replacements.** Four of the 210 calls are reruns: one replaced a call stopped at the call budget, three replaced
   F15 calls whose tool fixture raised an error (build v4).
-- **ELO pending**, see above.
+- **ELO is calculated from the existing grades.** QC disagreements have not been applied as score corrections; the rating does not establish historical hosting/judge parity.
 - **Builds.** 5 calls ran on v1 (continuous caller stream in those scenarios), 35 on v2, 167 on v3 and 3 on v4.
 - **No example calls.** Recordings and transcripts stay private; none is published with this snapshot.
 

@@ -51,7 +51,7 @@ class TestAnswering:
 
     def test_calls_are_recorded_in_order(self, server):
         server.call("lookup_patient", {"phone": "2025550188"})
-        server.call("check_availability", {"date": "2026-07-08"})
+        server.call("check_availability", {"date": "2026-12-09"})
         assert [c.name for c in server.calls] == ["lookup_patient", "check_availability"]
         server.reset()
         assert server.calls == []
@@ -62,7 +62,7 @@ class TestVerifier:
         verdict = verify_trace(
             [
                 {"name": "lookup_patient", "arguments": {"phone": "2025550188"}},
-                {"name": "check_availability", "arguments": {"date": "2026-07-08"}},
+                {"name": "check_availability", "arguments": {"date": "2026-12-09"}},
                 {"name": "book_appointment", "arguments": {"patient_id": "p_1002"}},
             ],
             [

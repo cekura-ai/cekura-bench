@@ -4,9 +4,9 @@
  "cohort": {
   "definition": "per run, one completed call for each of the 70 scenarios: the original valid call, or its user-authorized replacement -- the single rerun of a call stopped at the 900 s call budget, or the build-v4 rerun of a call whose mock-tool fixture raised an error. Superseded attempts are excluded from all results.",
   "runs": [
-   "fullrun_gptlive11_rerunsel_r1",
-   "fullrun_gptlive11_rerunsel_r2",
-   "fullrun_gptlive11_rerunsel_r3"
+   "fullrun_gptlive11_final_r1",
+   "fullrun_gptlive11_final_r2",
+   "fullrun_gptlive11_final_r3"
   ],
   "calls": 210,
   "roles": {
@@ -231,7 +231,7 @@
    "name": "Main Task Completion"
   }
  ],
- "metric_value_note": "value: the final scalar metric result (bool/number or null); passed: the scorer-normalized skill verdict (null = not reached). Results are validated against the configured benchmark rubrics. No explanations, transcripts, recordings, task targets or provider payloads are included.",
+ "metric_value_note": "value: the final scalar metric result (bool/number or null); passed: the scorer-normalized skill verdict (null = not reached). Failure QC covers reviewed failures and targeted diagnostic calls under the configured benchmark rubrics. No explanations, transcripts, recordings, task targets or provider payloads are included.",
  "views": {
   "completed": {
    "runs": {

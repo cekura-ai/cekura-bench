@@ -20,11 +20,11 @@ The Real Calls benchmark covers 70 recorded-human scenarios (35 banking, 35 heal
 
 ## By run
 
-| Run | Passed | Pass³ | Task completed | Mean score |
-| --- | ---: | ---: | ---: | ---: |
-| r1 | 37/70 | 37/70 | 60/70 | 79.46 |
-| r2 | 41/70 | 41/70 | 59/70 | 80.2 |
-| r3 | 44/70 | 44/70 | 61/70 | 82.66 |
+| Run | Passed | Task completed | Mean score |
+| --- | ---: | ---: | ---: |
+| r1 | 37/70 | 60/70 | 79.46 |
+| r2 | 41/70 | 59/70 | 80.2 |
+| r3 | 44/70 | 61/70 | 82.66 |
 
 ## Domain and language
 
@@ -69,7 +69,7 @@ Numeric inputs and fits: [elo.json](elo.json). Run `python recompute-elo.py --bo
 - Caller: recorded-human audio replay in the isolated local loopback runtime.
 - Text and expected-outcome judges: DeepSeek V4 Flash through OpenRouter, Fireworks pinned.
 - Audio judge: the product’s current Gemini Flash-Lite chain; selected calls used Gemini 3.5 Flash-Lite.
-- Scoring: configured `s2s-human-bench` family weights, task blending and pass threshold; final verdicts validated against the published rubrics.
+- Scoring: configured `s2s-human-bench` family weights, task blending and pass threshold; failure QC covers reviewed failures and targeted diagnostic calls under those rubrics.
 - Source runs: `fullrun_gptlive11_final_r1`, `fullrun_gptlive11_final_r2`, `fullrun_gptlive11_final_r3`.
 - Build mix: v1 5 calls, v2 35, v3 167, v4 3. Functions and classes preserve the original fixture source; archive container byte identity is not claimed.
 - Runtime limits: 100 s setup timeout; 900 s call budget.

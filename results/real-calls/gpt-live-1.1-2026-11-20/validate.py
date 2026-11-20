@@ -79,6 +79,7 @@ def main() -> int:
     cohort = [
         ("calls", len(calls), 210),
         ("runs", sorted(by_run), ["r1", "r2", "r3"]),
+        ("run labels match exports", data["cohort"]["runs"], list(view["runs"])),
         ("unique scenarios per run", {r: len(set(v)) for r, v in by_run.items()}, {r: 70 for r in ("r1", "r2", "r3")}),
         ("calls per run", {r: len(v) for r, v in by_run.items()}, {r: 70 for r in ("r1", "r2", "r3")}),
         ("metric definitions", len(metric_ids), 30),

@@ -1784,6 +1784,6 @@
   "baseline_task_rules": "task-completion-2026-11-16/tasks_v6.json",
   "historical_selection": "Original published round selection, preserving health replacements and Cascade language swap.",
   "new_selection": "210 completed selected calls, three runs on each of 70 scenarios.",
-  "comparability": "Local replay; historical hosting and judge parity unconfirmed. Final metric verdicts validated against configured rubrics."
+  "comparability": "Local replay; historical hosting and judge parity unconfirmed. Failure QC covers reviewed failures and targeted diagnostic calls."
  }
 }

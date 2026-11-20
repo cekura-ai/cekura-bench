@@ -5,6 +5,11 @@ recorded-caller scenarios (35 banking, 35 healthcare), three runs each, scored b
 `config/human-bench.json` (model key `gpt-live-1.1`, runs `fullrun_gptlive11_rerunsel_r1..r3`). Every per-call score,
 verdict and metric value is in [results.json](results.json); `python validate.py` recomputes the tables below.
 
+**Final execution audit found a fixture defect in all three F15 calls.** `file_claim` raised
+`NameError: FALSE_WORDS is not defined` in the local tool matcher. Each call continued and completed, but the
+failed fixture response can affect subsequent behavior and scores. F15 needs a matcher fix and three fresh runs.
+The tables below retain the recorded results before that correction; see [Final execution audit](#final-execution-audit).
+
 **The cohort is 210 completed calls.** Two original calls ran into the 900 s call budget (r1/F15 and r2/F02). At the
 user's instruction each was rerun once with the identical configuration, both reruns completed, and the reruns stand in
 for them; the timed-out originals are excluded from every number here. So the cohort is 208 calls from the main
@@ -192,6 +197,8 @@ Caller-side services, timed-out originals and voided attempts are excluded.
 
 ## Files
 
+- [execution-audit.json](execution-audit.json): final checks of all 210 execution records and decoded recording
+  checksums, with per-call termination details, warnings and the confirmed F15 fixture defect.
 - [results.json](results.json): the cohort definition; aggregates overall, per run, per domain and per language group;
   skills; latency; turn length; cost; grading provenance; collection counts; the published GPT-Live 1 aggregates used
   above; and one row per cohort call with its score, family scores, skill verdicts and all 30 metric values and statuses
@@ -199,3 +206,33 @@ Caller-side services, timed-out originals and voided attempts are excluded.
 - [validate.py](validate.py): checks the cohort (3 × 70 scenarios, 210 calls, 6,300 metric results, no timed-out
   originals) and recomputes passed calls, pass³, task completion, mean score, family scores and latency percentiles
   overall, per run and per domain.
+
+## Final execution audit
+
+All 210 selected calls reached `completed`, both parties spoke in every call, every main-agent process exited with
+code 0, and all 210 lossless recordings decoded with matching PCM checksums, frame counts, rates and channels.
+Every call used GPT-Live 1.1 with GPT-6 Sol low and the configured voice/rate. The longest completed call was
+659.2 s, below the 900 s budget. No additional setup timeout, provider connection loss or audio starvation was found.
+
+| Run | Completed calls | Verified recordings | Tool-matcher errors |
+| --- | --- | --- | --- |
+| r1 | 70 | 70 | F15-a3: `FALSE_WORDS` NameError |
+| r2 | 70 | 70 | F15-a1: `FALSE_WORDS` NameError |
+| r3 | 70 | 70 | F15-a1: `FALSE_WORDS` NameError |
+
+The generated matcher omits both `TRUE_WORDS` and `FALSE_WORDS`, although its boolean-string comparison uses them.
+The false and true branches reproduce the respective NameErrors without making provider calls. This is a local
+fixture defect, so those three calls need a repaired matcher and fresh runs before their scores are considered final.
+The earlier completion classifier did not reject these errors because the sessions remained connected and completed.
+
+Other recorded observations:
+
+- Two calls had isolated audio scheduling slips (r1/F08 and r2/H10), below the exclusion threshold. No completed
+  call exceeded the 1 s input-drift threshold; the largest absolute drift was 812 ms.
+- Ten calls ended through the reference agent's goodbye backstop. These are deliberate hangups, not call-budget timeouts.
+- The latency metric returned no value for r1/H32 and r2/H32; latency aggregates cover the other 208 calls.
+- The benchmark records 33 stalled calls, 30 main-task failures and 93 calls below the pass threshold. These are
+  outcome/behavior observations; execution completion alone does not imply benchmark success. F15's fixture defect
+  may affect its behavior observations and scores.
+
+This audit checked execution evidence and recording integrity. It did not regrade calls or listen to every utterance.

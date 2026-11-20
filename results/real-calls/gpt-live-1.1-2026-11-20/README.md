@@ -91,7 +91,7 @@ The largest gaps against the published row are 1.5 Waiting Through Hold, 2.2 Bac
 and 1.10 Multi-Speaker Handling (lower here) and 2.5 Tool-Latency Handling and 2.8 Premature-Response Avoidance
 (higher here). This run did not establish how much of each gap comes from the model, the judges or the local runtime.
 
-Expected-outcome lines met (mean share per call): 87.5% (published GPT-Live 1: 79.0%). Agent ended the call with its end-call tool on 147/210 calls; stalled (>10 s of silence owed to the caller) on 33; silent throughout on 0; simulation-health failures: 0.
+Expected-outcome lines met (mean share per call): 87.5%. The published baseline's EO field measures main-task completion, compared in the headline table; its expected-outcome line share is unavailable. Agent ended the call with its end-call tool on 147/210 calls; stalled (>10 s of silence owed to the caller) on 33; silent throughout on 0; simulation-health failures: 0.
 
 ## Call-budget timeouts
 
@@ -101,7 +101,7 @@ Expected-outcome lines met (mean share per call): 87.5% (published GPT-Live 1: 7
 | r2 | F02 | conversation reached the 900 s call budget; excluded | rerun (attempt 2), same configuration, completed |
 
 The reruns ran after the main collection, once each, through the same launch path. Infrastructure retries (below)
-are a separate policy; no call was rerun for a model failure.
+are a separate policy; metric verdicts did not trigger reruns.
 
 ## Configuration
 

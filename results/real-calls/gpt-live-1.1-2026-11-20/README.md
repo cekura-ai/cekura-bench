@@ -180,8 +180,9 @@ Caller-side services, timed-out originals and voided attempts are excluded.
   listed here; production scoring parity was not established.
 - **Judges.** Text judges were DeepSeek V4 Flash and the audio judge the product's current Gemini Flash-Lite chain,
   by decision for this run. Which model judged each metric for the published rows is not recorded in the copied
-  benchmark data, so part of any difference can come from the judges. The audio-judge prompt follows the backend
-  source available to this run (dated 2026-08-06); the model order follows current backend main.
+  benchmark data, so part of any difference can come from the judges. The audio judge's prompt template, mono
+  downmix and model order match current backend main for 4.1's path (no audio channel requested); this covers the
+  judge call only, not full platform parity.
 - **Caller side.** The recorded-caller engine ran locally with ElevenLabs speech recognition and voices (the four
   Cartesia caller voices mapped to their ElevenLabs clones) and its decision models through OpenRouter.
 - **Timeout replacement.** Two of the 210 calls are reruns that replaced originals stopped at the call budget.

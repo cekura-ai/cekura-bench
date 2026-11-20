@@ -114,9 +114,26 @@ def main() -> int:
             if value != want:
                 bad += 1
                 print(f"MISMATCH {name}.{key}: recomputed {value} != published {want}")
+    elo = json.loads((HERE / "elo.json").read_text())
+    computed = data["elo"]
+    model = computed["model"]
+    ranked = sorted(elo["ranked_models"], key=lambda m: elo["group_ratings"]["all"][m], reverse=True)
+    elo_checks = [
+        ("status", computed["status"], "computed"),
+        ("source", computed["source"], "elo.json"),
+        ("rating", computed["rating"], elo["group_ratings"]["all"][model]),
+        ("rounded rating", computed["rounded_rating"], round(elo["group_ratings"]["all"][model])),
+        ("rank", computed["rank"], ranked.index(model) + 1),
+        ("ranked model count", computed["ranked_models"], len(ranked)),
+        ("confidence interval", computed["confidence_interval"], elo["confidence_intervals"][model]),
+    ]
+    for name, got, want in elo_checks:
+        if got != want:
+            bad += 1
+            print(f"MISMATCH ELO {name}: {got} != {want}")
     reruns = sum(c["role"] != "original" for c in calls)
     print(f"{len(calls)} calls checked ({reruns} replacement calls), "
-          f"{sum(len(c['metrics']) for c in calls)} metric results; {len(cohort)} cohort checks and {len(checks)} aggregates; "
+          f"{sum(len(c['metrics']) for c in calls)} metric results; {len(cohort)} cohort checks, {len(checks)} aggregates, {len(elo_checks)} ELO checks; "
           f"{'all match' if not bad else f'{bad} mismatches'}")
     return 1 if bad else 0
 

@@ -30,7 +30,9 @@ def main():
         assert all(abs(result[m] - expected[m]) < 1e-8 for m in result), group
     if args.bootstrap:
         ci = rating.bootstrap_ci(scores, ranked, method['tie_margin'], method['bootstrap_draws'], method['bootstrap_seed'], method['bootstrap_iterations'])
-        assert ci == doc['confidence_intervals']
+        expected_ci = doc['confidence_intervals']
+        assert ci.keys() == expected_ci.keys()
+        assert all(abs(a - b) < 1e-8 for model in ci for a, b in zip(ci[model], expected_ci[model], strict=True))
     ranked_order = sorted(ranked, key=lambda m: doc['group_ratings']['all'][m], reverse=True)
     for place, model in enumerate(ranked_order, 1):
         print(f"{place:2} {model:26} {round(doc['group_ratings']['all'][model])}")

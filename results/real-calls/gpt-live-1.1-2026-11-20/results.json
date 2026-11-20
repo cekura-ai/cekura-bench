@@ -47088,7 +47088,17 @@
   }
  },
  "elo": {
-  "status": "pending",
-  "reason": "Bradley-Terry ELO is fitted on every compared model's per-scenario call scores; only the other models' published aggregates are available here"
+  "status": "computed",
+  "model": "gpt-live-1-1",
+  "rating": 1082.7080941015047,
+  "rounded_rating": 1083,
+  "rank": 4,
+  "ranked_models": 16,
+  "confidence_interval": [
+   1031.4231847287897,
+   1135.0066865084464
+  ],
+  "source": "elo.json",
+  "grades_changed": false
  }
 }

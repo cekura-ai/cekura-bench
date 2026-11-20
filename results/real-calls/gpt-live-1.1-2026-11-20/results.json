@@ -231,11 +231,11 @@
    "name": "Main Task Completion"
   }
  ],
- "metric_value_note": "value: the evaluator's scalar result (bool/number, null when the metric gave none, e.g. enum-based skills or not reached); passed: the official scorer's normalized skill verdict (null = not reached). No explanations, transcripts, recordings, task targets or provider payloads are included.",
+ "metric_value_note": "value: the final scalar metric result (bool/number or null); passed: the scorer-normalized skill verdict (null = not reached). Results are validated against the configured benchmark rubrics. No explanations, transcripts, recordings, task targets or provider payloads are included.",
  "views": {
   "completed": {
    "runs": {
-    "fullrun_gptlive11_rerunsel_r1": {
+    "fullrun_gptlive11_final_r1": {
      "calls": 70,
      "scenarios": 70,
      "passed": 37,
@@ -247,10 +247,10 @@
      "task_outcome_source": {
       "metric": 70
      },
-     "mean_call_score": 79.22,
+     "mean_call_score": 79.46,
      "unscored_calls": 0,
      "families": {
-      "Hearing": 66.5,
+      "Hearing": 69.6,
       "Turn Taking": 71.4,
       "Task Handling": 83.8,
       "Speaking": 77.9
@@ -278,7 +278,7 @@
        "name": "Waiting Through Hold",
        "family": "Hearing",
        "reached_calls": 4,
-       "pass_rate": 0.0
+       "pass_rate": 0.25
       },
       "1.6": {
        "name": "Prosodic Cue Understanding",
@@ -409,11 +409,9 @@
      },
      "expected_outcome_share_mean": 86.74,
      "latency_ms": {
-      "calls": 69,
       "p50": 1860.0,
       "p90": 2200.0,
-      "p95": 2280.0,
-      "mean": 1898.8
+      "p95": 2280.0
      },
      "turn_words": {
       "calls": 70,
@@ -425,25 +423,25 @@
      "unhealthy_calls": 0,
      "call_seconds_median": 273.0
     },
-    "fullrun_gptlive11_rerunsel_r2": {
+    "fullrun_gptlive11_final_r2": {
      "calls": 70,
      "scenarios": 70,
-     "passed": 38,
-     "pass_rate": 0.5429,
-     "pass3_scenarios": 38,
-     "pass3_rate": 0.5429,
+     "passed": 41,
+     "pass_rate": 0.5857,
+     "pass3_scenarios": 41,
+     "pass3_rate": 0.5857,
      "task_done": 59,
      "task_rate": 0.8429,
      "task_outcome_source": {
       "metric": 70
      },
-     "mean_call_score": 79.07,
+     "mean_call_score": 80.2,
      "unscored_calls": 0,
      "families": {
-      "Hearing": 64.8,
-      "Turn Taking": 68.0,
+      "Hearing": 68.5,
+      "Turn Taking": 69.5,
       "Task Handling": 84.8,
-      "Speaking": 74.2
+      "Speaking": 78.0
      },
      "skills": {
       "1.2": {
@@ -455,8 +453,8 @@
       "1.3": {
        "name": "Low-Confidence Confirmation",
        "family": "Hearing",
-       "reached_calls": 12,
-       "pass_rate": 0.1667
+       "reached_calls": 11,
+       "pass_rate": 0.1818
       },
       "1.4": {
        "name": "Side-Speech Rejection",
@@ -468,7 +466,7 @@
        "name": "Waiting Through Hold",
        "family": "Hearing",
        "reached_calls": 5,
-       "pass_rate": 0.2
+       "pass_rate": 0.4
       },
       "1.6": {
        "name": "Prosodic Cue Understanding",
@@ -486,7 +484,7 @@
        "name": "Degraded-Channel Robustness",
        "family": "Hearing",
        "reached_calls": 12,
-       "pass_rate": 0.75
+       "pass_rate": 0.8333
       },
       "1.10": {
        "name": "Multi-Speaker Handling",
@@ -504,7 +502,7 @@
        "name": "Backchannel vs Barge-in Detection",
        "family": "Turn Taking",
        "reached_calls": 11,
-       "pass_rate": 0.1818
+       "pass_rate": 0.2727
       },
       "2.4": {
        "name": "Overlapping-Speech Recovery",
@@ -588,7 +586,7 @@
        "name": "Style Instruction Following",
        "family": "Speaking",
        "reached_calls": 13,
-       "pass_rate": 0.5385
+       "pass_rate": 0.6923
       },
       "4.4": {
        "name": "Language Switching",
@@ -599,11 +597,9 @@
      },
      "expected_outcome_share_mean": 87.3,
      "latency_ms": {
-      "calls": 69,
       "p50": 1860.0,
       "p90": 2220.0,
-      "p95": 2320.0,
-      "mean": 1888.4
+      "p95": 2320.0
      },
      "turn_words": {
       "calls": 70,
@@ -615,25 +611,25 @@
      "unhealthy_calls": 0,
      "call_seconds_median": 290.0
     },
-    "fullrun_gptlive11_rerunsel_r3": {
+    "fullrun_gptlive11_final_r3": {
      "calls": 70,
      "scenarios": 70,
-     "passed": 43,
-     "pass_rate": 0.6143,
-     "pass3_scenarios": 43,
-     "pass3_rate": 0.6143,
+     "passed": 44,
+     "pass_rate": 0.6286,
+     "pass3_scenarios": 44,
+     "pass3_rate": 0.6286,
      "task_done": 61,
      "task_rate": 0.8714,
      "task_outcome_source": {
       "metric": 70
      },
-     "mean_call_score": 82.19,
+     "mean_call_score": 82.66,
      "unscored_calls": 0,
      "families": {
       "Hearing": 65.2,
-      "Turn Taking": 76.8,
+      "Turn Taking": 78.6,
       "Task Handling": 83.9,
-      "Speaking": 79.7
+      "Speaking": 81.5
      },
      "skills": {
       "1.2": {
@@ -694,7 +690,7 @@
        "name": "Backchannel vs Barge-in Detection",
        "family": "Turn Taking",
        "reached_calls": 9,
-       "pass_rate": 0.3333
+       "pass_rate": 0.4444
       },
       "2.4": {
        "name": "Overlapping-Speech Recovery",
@@ -778,7 +774,7 @@
        "name": "Style Instruction Following",
        "family": "Speaking",
        "reached_calls": 14,
-       "pass_rate": 0.5714
+       "pass_rate": 0.6429
       },
       "4.4": {
        "name": "Language Switching",
@@ -789,11 +785,9 @@
      },
      "expected_outcome_share_mean": 88.76,
      "latency_ms": {
-      "calls": 70,
       "p50": 1840.0,
       "p90": 2480.0,
-      "p95": 2560.0,
-      "mean": 1921.0
+      "p95": 2560.0
      },
      "turn_words": {
       "calls": 70,
@@ -809,22 +803,22 @@
    "overall": {
     "calls": 210,
     "scenarios": 70,
-    "passed": 118,
-    "pass_rate": 0.5619,
-    "pass3_scenarios": 21,
-    "pass3_rate": 0.3,
+    "passed": 122,
+    "pass_rate": 0.581,
+    "pass3_scenarios": 23,
+    "pass3_rate": 0.3286,
     "task_done": 180,
     "task_rate": 0.8571,
     "task_outcome_source": {
      "metric": 210
     },
-    "mean_call_score": 80.16,
+    "mean_call_score": 80.77,
     "unscored_calls": 0,
     "families": {
-     "Hearing": 65.7,
-     "Turn Taking": 71.6,
+     "Hearing": 68.2,
+     "Turn Taking": 72.6,
      "Task Handling": 84.2,
-     "Speaking": 77.5
+     "Speaking": 79.3
     },
     "skills": {
      "1.2": {
@@ -836,8 +830,8 @@
      "1.3": {
       "name": "Low-Confidence Confirmation",
       "family": "Hearing",
-      "reached_calls": 38,
-      "pass_rate": 0.2368
+      "reached_calls": 37,
+      "pass_rate": 0.2432
      },
      "1.4": {
       "name": "Side-Speech Rejection",
@@ -849,7 +843,7 @@
       "name": "Waiting Through Hold",
       "family": "Hearing",
       "reached_calls": 12,
-      "pass_rate": 0.0833
+      "pass_rate": 0.25
      },
      "1.6": {
       "name": "Prosodic Cue Understanding",
@@ -867,7 +861,7 @@
       "name": "Degraded-Channel Robustness",
       "family": "Hearing",
       "reached_calls": 36,
-      "pass_rate": 0.7778
+      "pass_rate": 0.8056
      },
      "1.10": {
       "name": "Multi-Speaker Handling",
@@ -885,7 +879,7 @@
       "name": "Backchannel vs Barge-in Detection",
       "family": "Turn Taking",
       "reached_calls": 32,
-      "pass_rate": 0.25
+      "pass_rate": 0.3125
      },
      "2.4": {
       "name": "Overlapping-Speech Recovery",
@@ -969,7 +963,7 @@
       "name": "Style Instruction Following",
       "family": "Speaking",
       "reached_calls": 41,
-      "pass_rate": 0.561
+      "pass_rate": 0.6341
      },
      "4.4": {
       "name": "Language Switching",
@@ -980,11 +974,9 @@
     },
     "expected_outcome_share_mean": 87.6,
     "latency_ms": {
-     "calls": 208,
      "p50": 1850.0,
      "p90": 2260.0,
-     "p95": 2400.0,
-     "mean": 1902.8
+     "p95": 2400.0
     },
     "turn_words": {
      "calls": 210,
@@ -1000,22 +992,22 @@
     "banking": {
      "calls": 105,
      "scenarios": 35,
-     "passed": 53,
-     "pass_rate": 0.5048,
-     "pass3_scenarios": 5,
-     "pass3_rate": 0.1429,
+     "passed": 54,
+     "pass_rate": 0.5143,
+     "pass3_scenarios": 6,
+     "pass3_rate": 0.1714,
      "task_done": 86,
      "task_rate": 0.819,
      "task_outcome_source": {
       "metric": 105
      },
-     "mean_call_score": 77.41,
+     "mean_call_score": 77.89,
      "unscored_calls": 0,
      "families": {
-      "Hearing": 64.9,
+      "Hearing": 68.1,
       "Turn Taking": 70.8,
       "Task Handling": 82.9,
-      "Speaking": 73.8
+      "Speaking": 74.9
      },
      "skills": {
       "1.2": {
@@ -1040,7 +1032,7 @@
        "name": "Waiting Through Hold",
        "family": "Hearing",
        "reached_calls": 10,
-       "pass_rate": 0.1
+       "pass_rate": 0.3
       },
       "1.6": {
        "name": "Prosodic Cue Understanding",
@@ -1058,7 +1050,7 @@
        "name": "Degraded-Channel Robustness",
        "family": "Hearing",
        "reached_calls": 19,
-       "pass_rate": 0.7368
+       "pass_rate": 0.7895
       },
       "1.10": {
        "name": "Multi-Speaker Handling",
@@ -1160,7 +1152,7 @@
        "name": "Style Instruction Following",
        "family": "Speaking",
        "reached_calls": 23,
-       "pass_rate": 0.6087
+       "pass_rate": 0.6522
       },
       "4.4": {
        "name": "Language Switching",
@@ -1171,11 +1163,9 @@
      },
      "expected_outcome_share_mean": 86.66,
      "latency_ms": {
-      "calls": 105,
       "p50": 1860.0,
       "p90": 2320.0,
-      "p95": 2400.0,
-      "mean": 1923.0
+      "p95": 2400.0
      },
      "turn_words": {
       "calls": 105,
@@ -1190,22 +1180,22 @@
     "healthcare": {
      "calls": 105,
      "scenarios": 35,
-     "passed": 65,
-     "pass_rate": 0.619,
-     "pass3_scenarios": 16,
-     "pass3_rate": 0.4571,
+     "passed": 68,
+     "pass_rate": 0.6476,
+     "pass3_scenarios": 17,
+     "pass3_rate": 0.4857,
      "task_done": 94,
      "task_rate": 0.8952,
      "task_outcome_source": {
       "metric": 105
      },
-     "mean_call_score": 82.9,
+     "mean_call_score": 83.65,
      "unscored_calls": 0,
      "families": {
-      "Hearing": 74.9,
-      "Turn Taking": 73.6,
+      "Hearing": 75.3,
+      "Turn Taking": 75.8,
       "Task Handling": 85.5,
-      "Speaking": 79.3
+      "Speaking": 82.1
      },
      "skills": {
       "1.2": {
@@ -1217,8 +1207,8 @@
       "1.3": {
        "name": "Low-Confidence Confirmation",
        "family": "Hearing",
-       "reached_calls": 12,
-       "pass_rate": 0.25
+       "reached_calls": 11,
+       "pass_rate": 0.2727
       },
       "1.4": {
        "name": "Side-Speech Rejection",
@@ -1230,7 +1220,7 @@
        "name": "Waiting Through Hold",
        "family": "Hearing",
        "reached_calls": 2,
-       "pass_rate": null
+       "pass_rate": 0.0
       },
       "1.6": {
        "name": "Prosodic Cue Understanding",
@@ -1266,7 +1256,7 @@
        "name": "Backchannel vs Barge-in Detection",
        "family": "Turn Taking",
        "reached_calls": 15,
-       "pass_rate": 0.2667
+       "pass_rate": 0.4
       },
       "2.4": {
        "name": "Overlapping-Speech Recovery",
@@ -1350,7 +1340,7 @@
        "name": "Style Instruction Following",
        "family": "Speaking",
        "reached_calls": 18,
-       "pass_rate": 0.5
+       "pass_rate": 0.6111
       },
       "4.4": {
        "name": "Language Switching",
@@ -1361,11 +1351,9 @@
      },
      "expected_outcome_share_mean": 88.53,
      "latency_ms": {
-      "calls": 103,
       "p50": 1840.0,
       "p90": 2220.0,
-      "p95": 2340.0,
-      "mean": 1882.3
+      "p95": 2340.0
      },
      "turn_words": {
       "calls": 105,
@@ -1455,22 +1443,22 @@
      ],
      "calls": 210,
      "scenarios": 70,
-     "passed": 118,
-     "pass_rate": 0.5619,
-     "pass3_scenarios": 21,
-     "pass3_rate": 0.3,
+     "passed": 122,
+     "pass_rate": 0.581,
+     "pass3_scenarios": 23,
+     "pass3_rate": 0.3286,
      "task_done": 180,
      "task_rate": 0.8571,
      "task_outcome_source": {
       "metric": 210
      },
-     "mean_call_score": 80.16,
+     "mean_call_score": 80.77,
      "unscored_calls": 0,
      "families": {
-      "Hearing": 65.7,
-      "Turn Taking": 71.6,
+      "Hearing": 68.2,
+      "Turn Taking": 72.6,
       "Task Handling": 84.2,
-      "Speaking": 77.5
+      "Speaking": 79.3
      },
      "skills": {
       "1.2": {
@@ -1482,8 +1470,8 @@
       "1.3": {
        "name": "Low-Confidence Confirmation",
        "family": "Hearing",
-       "reached_calls": 38,
-       "pass_rate": 0.2368
+       "reached_calls": 37,
+       "pass_rate": 0.2432
       },
       "1.4": {
        "name": "Side-Speech Rejection",
@@ -1495,7 +1483,7 @@
        "name": "Waiting Through Hold",
        "family": "Hearing",
        "reached_calls": 12,
-       "pass_rate": 0.0833
+       "pass_rate": 0.25
       },
       "1.6": {
        "name": "Prosodic Cue Understanding",
@@ -1513,7 +1501,7 @@
        "name": "Degraded-Channel Robustness",
        "family": "Hearing",
        "reached_calls": 36,
-       "pass_rate": 0.7778
+       "pass_rate": 0.8056
       },
       "1.10": {
        "name": "Multi-Speaker Handling",
@@ -1531,7 +1519,7 @@
        "name": "Backchannel vs Barge-in Detection",
        "family": "Turn Taking",
        "reached_calls": 32,
-       "pass_rate": 0.25
+       "pass_rate": 0.3125
       },
       "2.4": {
        "name": "Overlapping-Speech Recovery",
@@ -1615,7 +1603,7 @@
        "name": "Style Instruction Following",
        "family": "Speaking",
        "reached_calls": 41,
-       "pass_rate": 0.561
+       "pass_rate": 0.6341
       },
       "4.4": {
        "name": "Language Switching",
@@ -1626,11 +1614,9 @@
      },
      "expected_outcome_share_mean": 87.6,
      "latency_ms": {
-      "calls": 208,
       "p50": 1850.0,
       "p90": 2260.0,
-      "p95": 2400.0,
-      "mean": 1902.8
+      "p95": 2400.0
      },
      "turn_words": {
       "calls": 210,
@@ -1703,22 +1689,22 @@
      ],
      "calls": 165,
      "scenarios": 55,
-     "passed": 86,
-     "pass_rate": 0.5212,
-     "pass3_scenarios": 12,
-     "pass3_rate": 0.2182,
+     "passed": 88,
+     "pass_rate": 0.5333,
+     "pass3_scenarios": 13,
+     "pass3_rate": 0.2364,
      "task_done": 140,
      "task_rate": 0.8485,
      "task_outcome_source": {
       "metric": 165
      },
-     "mean_call_score": 78.76,
+     "mean_call_score": 79.24,
      "unscored_calls": 0,
      "families": {
-      "Hearing": 65.2,
+      "Hearing": 67.7,
       "Turn Taking": 69.6,
       "Task Handling": 84.1,
-      "Speaking": 76.8
+      "Speaking": 80.6
      },
      "skills": {
       "1.2": {
@@ -1730,8 +1716,8 @@
       "1.3": {
        "name": "Low-Confidence Confirmation",
        "family": "Hearing",
-       "reached_calls": 38,
-       "pass_rate": 0.2368
+       "reached_calls": 37,
+       "pass_rate": 0.2432
       },
       "1.4": {
        "name": "Side-Speech Rejection",
@@ -1743,7 +1729,7 @@
        "name": "Waiting Through Hold",
        "family": "Hearing",
        "reached_calls": 12,
-       "pass_rate": 0.0833
+       "pass_rate": 0.25
       },
       "1.6": {
        "name": "Prosodic Cue Understanding",
@@ -1761,7 +1747,7 @@
        "name": "Degraded-Channel Robustness",
        "family": "Hearing",
        "reached_calls": 32,
-       "pass_rate": 0.75
+       "pass_rate": 0.7812
       },
       "1.10": {
        "name": "Multi-Speaker Handling",
@@ -1863,7 +1849,7 @@
        "name": "Style Instruction Following",
        "family": "Speaking",
        "reached_calls": 26,
-       "pass_rate": 0.5385
+       "pass_rate": 0.6538
       },
       "4.4": {
        "name": "Language Switching",
@@ -1874,11 +1860,9 @@
      },
      "expected_outcome_share_mean": 86.82,
      "latency_ms": {
-      "calls": 165,
       "p50": 1900.0,
       "p90": 2290.0,
-      "p95": 2400.0,
-      "mean": 1945.0
+      "p95": 2400.0
      },
      "turn_words": {
       "calls": 165,
@@ -1955,13 +1939,13 @@
        "name": "Emotion Recognition",
        "family": "Hearing",
        "reached_calls": 1,
-       "pass_rate": null
+       "pass_rate": 1.0
       },
       "1.8": {
        "name": "Degraded-Channel Robustness",
        "family": "Hearing",
        "reached_calls": 1,
-       "pass_rate": null
+       "pass_rate": 1.0
       },
       "1.10": {
        "name": "Multi-Speaker Handling",
@@ -1997,7 +1981,7 @@
        "name": "Mid-Utterance Pause Tolerance",
        "family": "Turn Taking",
        "reached_calls": 2,
-       "pass_rate": null
+       "pass_rate": 1.0
       },
       "2.8": {
        "name": "Premature-Response Avoidance",
@@ -2015,7 +1999,7 @@
        "name": "Human Handoff",
        "family": "Task Handling",
        "reached_calls": 2,
-       "pass_rate": null
+       "pass_rate": 0.0
       },
       "3.4": {
        "name": "Tool Error Handling",
@@ -2074,11 +2058,9 @@
      },
      "expected_outcome_share_mean": 92.56,
      "latency_ms": {
-      "calls": 21,
       "p50": 1840.0,
       "p90": 2060.0,
-      "p95": 2200.0,
-      "mean": 1830.5
+      "p95": 2200.0
      },
      "turn_words": {
       "calls": 21,
@@ -2104,20 +2086,20 @@
      ],
      "calls": 24,
      "scenarios": 8,
-     "passed": 17,
-     "pass_rate": 0.7083,
-     "pass3_scenarios": 5,
-     "pass3_rate": 0.625,
+     "passed": 19,
+     "pass_rate": 0.7917,
+     "pass3_scenarios": 6,
+     "pass3_rate": 0.75,
      "task_done": 24,
      "task_rate": 1.0,
      "task_outcome_source": {
       "metric": 24
      },
-     "mean_call_score": 86.45,
+     "mean_call_score": 88.53,
      "unscored_calls": 0,
      "families": {
       "Hearing": 100.0,
-      "Turn Taking": 73.6,
+      "Turn Taking": 81.9,
       "Task Handling": 93.2,
       "Speaking": 76.9
      },
@@ -2150,7 +2132,7 @@
        "name": "Prosodic Cue Understanding",
        "family": "Hearing",
        "reached_calls": 2,
-       "pass_rate": null
+       "pass_rate": 1.0
       },
       "1.7": {
        "name": "Emotion Recognition",
@@ -2180,7 +2162,7 @@
        "name": "Backchannel vs Barge-in Detection",
        "family": "Turn Taking",
        "reached_calls": 6,
-       "pass_rate": 0.5
+       "pass_rate": 0.8333
       },
       "2.4": {
        "name": "Overlapping-Speech Recovery",
@@ -2275,11 +2257,9 @@
      },
      "expected_outcome_share_mean": 88.57,
      "latency_ms": {
-      "calls": 22,
       "p50": 1670.0,
       "p90": 1830.0,
-      "p95": 1860.0,
-      "mean": 1655.5
+      "p95": 1860.0
      },
      "turn_words": {
       "calls": 24,
@@ -3192,20 +3172,20 @@
    "role": "original",
    "build": "v2",
    "replaces_attempts": [],
-   "score": 55.5556,
+   "score": 72.2222,
    "passed": false,
    "task_done": false,
    "task_outcome": 0.0,
    "outcome_from": "metric",
    "families": {
-    "hearing": 50.0,
+    "hearing": 100.0,
     "turn_taking": null,
     "task": 50.0,
     "speaking": 66.7
    },
    "skills": {
     "1.3": true,
-    "1.5": false,
+    "1.5": true,
     "3.5a": true,
     "3.6": true,
     "3.7": true,
@@ -3358,8 +3338,8 @@
     {
      "id": 275650,
      "status": "evaluated",
-     "value": false,
-     "passed": false
+     "value": true,
+     "passed": true
     },
     {
      "id": 275651,
@@ -19752,19 +19732,19 @@
    "role": "original",
    "build": "v3",
    "replaces_attempts": [],
-   "score": 75.0,
-   "passed": false,
+   "score": 87.5,
+   "passed": true,
    "task_done": true,
    "task_outcome": 100.0,
    "outcome_from": "metric",
    "families": {
-    "hearing": 50.0,
+    "hearing": 100.0,
     "turn_taking": 100.0,
     "task": 100.0,
     "speaking": 50.0
    },
    "skills": {
-    "1.5": false,
+    "1.5": true,
     "1.7": true,
     "2.1": true,
     "2.8": true,
@@ -19919,8 +19899,8 @@
     {
      "id": 275650,
      "status": "evaluated",
-     "value": false,
-     "passed": false
+     "value": true,
+     "passed": true
     },
     {
      "id": 275651,
@@ -20179,20 +20159,20 @@
    "replaces_attempts": [
     1
    ],
-   "score": 62.5,
+   "score": 75.0,
    "passed": false,
    "task_done": true,
    "task_outcome": 100.0,
    "outcome_from": "metric",
    "families": {
-    "hearing": 50.0,
+    "hearing": 100.0,
     "turn_taking": 0.0,
     "task": 100.0,
     "speaking": 100.0
    },
    "skills": {
     "1.2": true,
-    "1.8": false,
+    "1.8": true,
     "2.2": false,
     "3.5a": true,
     "3.6": true,
@@ -20339,8 +20319,8 @@
     {
      "id": 275649,
      "status": "evaluated",
-     "value": false,
-     "passed": false
+     "value": true,
+     "passed": true
     },
     {
      "id": 275650,
@@ -20815,7 +20795,7 @@
    "role": "original",
    "build": "v3",
    "replaces_attempts": [],
-   "score": 41.6667,
+   "score": 50.0,
    "passed": false,
    "task_done": true,
    "task_outcome": 100.0,
@@ -20824,7 +20804,7 @@
     "hearing": 0.0,
     "turn_taking": 0.0,
     "task": 100.0,
-    "speaking": 66.7
+    "speaking": 100.0
    },
    "skills": {
     "1.6": false,
@@ -20834,7 +20814,7 @@
     "3.6": true,
     "3.7": true,
     "4.1": true,
-    "4.3": false,
+    "4.3": true,
     "4.2": true
    },
    "latency_ms": 1670.0,
@@ -20870,8 +20850,8 @@
     {
      "id": 273475,
      "status": "evaluated",
-     "value": false,
-     "passed": false
+     "value": true,
+     "passed": true
     },
     {
      "id": 273477,
@@ -25046,19 +25026,18 @@
    "role": "original",
    "build": "v3",
    "replaces_attempts": [],
-   "score": 75.0,
-   "passed": false,
+   "score": 87.5,
+   "passed": true,
    "task_done": false,
    "task_outcome": 0.0,
    "outcome_from": "metric",
    "families": {
-    "hearing": 50.0,
+    "hearing": 100.0,
     "turn_taking": 100.0,
     "task": 50.0,
     "speaking": 100.0
    },
    "skills": {
-    "1.3": false,
     "1.7": true,
     "2.4": true,
     "3.3": true,
@@ -25142,8 +25121,8 @@
     {
      "id": 275329,
      "status": "evaluated",
-     "value": false,
-     "passed": false
+     "value": null,
+     "passed": null
     },
     {
      "id": 275330,
@@ -26319,7 +26298,7 @@
    "role": "original",
    "build": "v3",
    "replaces_attempts": [],
-   "score": 66.6667,
+   "score": 75.0,
    "passed": false,
    "task_done": true,
    "task_outcome": 100.0,
@@ -26328,7 +26307,7 @@
     "hearing": 0.0,
     "turn_taking": 100.0,
     "task": 100.0,
-    "speaking": 66.7
+    "speaking": 100.0
    },
    "skills": {
     "1.10": false,
@@ -26337,7 +26316,7 @@
     "3.6": true,
     "3.7": true,
     "4.1": true,
-    "4.3": false,
+    "4.3": true,
     "4.2": true
    },
    "latency_ms": 1740.0,
@@ -26373,8 +26352,8 @@
     {
      "id": 273475,
      "status": "evaluated",
-     "value": false,
-     "passed": false
+     "value": true,
+     "passed": true
     },
     {
      "id": 273477,
@@ -31210,20 +31189,20 @@
    "role": "original",
    "build": "v3",
    "replaces_attempts": [],
-   "score": 71.875,
-   "passed": false,
+   "score": 96.875,
+   "passed": true,
    "task_done": true,
    "task_outcome": 100.0,
    "outcome_from": "metric",
    "families": {
     "hearing": 100.0,
-    "turn_taking": 0.0,
+    "turn_taking": 100.0,
     "task": 87.5,
     "speaking": 100.0
    },
    "skills": {
     "1.4": true,
-    "2.2": false,
+    "2.2": true,
     "3.3": false,
     "3.5a": true,
     "3.6": true,
@@ -31399,8 +31378,8 @@
     {
      "id": 275678,
      "status": "evaluated",
-     "value": false,
-     "passed": false
+     "value": true,
+     "passed": true
     },
     {
      "id": 275679,
@@ -41194,7 +41173,7 @@
    "role": "original",
    "build": "v3",
    "replaces_attempts": [],
-   "score": 66.6667,
+   "score": 75.0,
    "passed": false,
    "task_done": true,
    "task_outcome": 100.0,
@@ -41203,7 +41182,7 @@
     "hearing": 0.0,
     "turn_taking": 100.0,
     "task": 100.0,
-    "speaking": 66.7
+    "speaking": 100.0
    },
    "skills": {
     "1.10": false,
@@ -41212,7 +41191,7 @@
     "3.6": true,
     "3.7": true,
     "4.1": true,
-    "4.3": false,
+    "4.3": true,
     "4.2": true
    },
    "latency_ms": 1800.0,
@@ -41248,8 +41227,8 @@
     {
      "id": 273475,
      "status": "evaluated",
-     "value": false,
-     "passed": false
+     "value": true,
+     "passed": true
     },
     {
      "id": 273477,
@@ -46075,20 +46054,20 @@
    "role": "original",
    "build": "v3",
    "replaces_attempts": [],
-   "score": 75.0,
-   "passed": false,
+   "score": 100.0,
+   "passed": true,
    "task_done": true,
    "task_outcome": 100.0,
    "outcome_from": "metric",
    "families": {
     "hearing": 100.0,
-    "turn_taking": 0.0,
+    "turn_taking": 100.0,
     "task": 100.0,
     "speaking": 100.0
    },
    "skills": {
     "1.4": true,
-    "2.2": false,
+    "2.2": true,
     "3.3": true,
     "3.5a": true,
     "3.6": true,
@@ -46264,8 +46243,8 @@
     {
      "id": 275678,
      "status": "evaluated",
-     "value": false,
-     "passed": false
+     "value": true,
+     "passed": true
     },
     {
      "id": 275679,
@@ -46971,7 +46950,14 @@
    "71e660e35150 (src tree b6c987954366)": 207,
    "acb44db02263 (src tree b6c987954366)": 3
   },
-  "regraded_units": 0
+  "regraded_units": 0,
+  "quality_review": {
+   "reviewers": [
+    "Claude Opus 5.5 HIGH",
+    "Codex"
+   ],
+   "rubrics": "configured benchmark rubrics"
+  }
  },
  "collection": {
   "runs": {
@@ -47061,44 +47047,17 @@
   ],
   "note": "completed_original_calls counts the main collection; three of them (r2/F15-a1, r3/F15-a1 and the r1/F15-a3 timeout rerun) were later superseded as fixture-invalid and replaced by build-v4 reruns"
  },
- "baseline_published": {
-  "model": "gpt-live (GPT-Live 1 + GPT-6 Sol)",
-  "source": "cekura-benchmarks-website data/human-bench-*.json @ 5c3cdd8cb08c",
-  "all": {
-   "runs": 210,
-   "overallPass": 122,
-   "taskPass": 166,
-   "passAll": {
-    "overall": 27,
-    "task": 42,
-    "toolStrict": 0,
-    "toolEquivalent": 0
-   },
-   "latencyP50Ms": 2270.0,
-   "latencyP90Ms": 2720.0,
-   "families": {
-    "Hearing": 78.2,
-    "Turn Taking": 71.0,
-    "Task Handling": 81.8,
-    "Speaking": 83.3
-   },
-   "costPerCallUsd": 0.2861,
-   "costPerMinuteUsd": 0.0553,
-   "elo": 1122
-  }
- },
  "elo": {
   "status": "computed",
   "model": "gpt-live-1-1",
-  "rating": 1082.7080941015047,
-  "rounded_rating": 1083,
-  "rank": 4,
+  "rating": 1094.6729052750363,
+  "rounded_rating": 1095,
+  "rank": 3,
   "ranked_models": 16,
   "confidence_interval": [
-   1031.4231847287897,
-   1135.0066865084464
+   1043.361227968699,
+   1145.2476015102925
   ],
-  "source": "elo.json",
-  "grades_changed": false
+  "source": "elo.json"
  }
 }

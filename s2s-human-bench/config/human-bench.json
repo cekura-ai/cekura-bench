@@ -413,9 +413,9 @@
       "vendor": "OpenAI",
       "siteId": "gpt-live-1-1",
       "runs": [
-        "fullrun_gptlive11_rerunsel_r1",
-        "fullrun_gptlive11_rerunsel_r2",
-        "fullrun_gptlive11_rerunsel_r3"
+        "fullrun_gptlive11_final_r1",
+        "fullrun_gptlive11_final_r2",
+        "fullrun_gptlive11_final_r3"
       ],
       "details": {
         "modelId": "gpt-live-1.1",

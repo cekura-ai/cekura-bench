@@ -8,68 +8,68 @@
  },
  "confidence_intervals": {
   "openai-realtime": [
-   1038.363088104342,
-   1126.3595705378902
+   1037.7327665077034,
+   1126.1567838497583
   ],
   "gemini-live-standard": [
-   918.9577409468502,
-   1010.1357366383107
+   918.4780505348148,
+   1009.5586511460788
   ],
   "azure-realtime": [
-   992.2830380761283,
-   1083.853155205315
+   992.2449492857679,
+   1083.3650202371539
   ],
   "nova-sonic": [
-   773.0829079688715,
-   866.849764625058
+   772.2468306212613,
+   866.4558685808981
   ],
   "grok-realtime": [
-   998.5257251703457,
-   1075.7429919249184
+   997.8918383868527,
+   1074.8573246184806
   ],
   "grok-realtime-3": [
-   1112.0276423171022,
-   1194.3401121608033
+   1111.4035230590098,
+   1193.6451503794701
   ],
   "gpt-live": [
-   1073.560000778957,
-   1166.1254256877633
+   1072.5923280292975,
+   1164.8836476713657
   ],
   "openai-realtime-mini": [
-   875.5253165828913,
-   950.5507527147096
+   875.4423790447862,
+   949.8902838481092
   ],
   "gemini-live": [
-   965.1303875718131,
-   1040.4238680087726
+   962.8294588502629,
+   1038.6357308550262
   ],
   "gemini-flash-live": [
-   996.348541694681,
-   1085.786445556559
+   995.5931927094157,
+   1085.0194514262853
   ],
   "deepslate": [
-   783.4995307729321,
-   892.7308095832527
+   782.3831022778254,
+   892.2042806041641
   ],
   "phonic-1": [
-   1023.0722176483673,
-   1107.3909583302934
+   1022.2742654189566,
+   1106.5416701055847
   ],
   "eleven-realtime-v1-max": [
-   953.4745824335727,
-   1040.2046623019212
+   953.3393351402344,
+   1040.1963698213071
   ],
   "eleven-realtime-v1-mini": [
-   905.444115633953,
-   1000.9163852432184
+   904.3963914422498,
+   1000.2497699476202
   ],
   "higgs-realtime": [
-   834.6928958186513,
-   925.0142276978447
+   833.4113736476554,
+   924.6952939287545
   ],
   "gpt-live-1-1": [
-   1031.4231847287897,
-   1135.0066865084464
+   1043.361227968699,
+   1145.2476015102925
   ]
  },
  "groups": {
@@ -298,80 +298,80 @@
  },
  "group_ratings": {
   "all": {
-   "openai-realtime": 1083.7488522336246,
-   "gemini-live-standard": 966.1737210246404,
-   "azure-realtime": 1039.8391843237644,
-   "nova-sonic": 823.1743674167974,
-   "grok-realtime": 1036.1543700255545,
-   "grok-realtime-3": 1152.15234510267,
-   "gpt-live": 1117.0533243347356,
-   "openai-realtime-mini": 914.5523714173763,
-   "gemini-live": 1002.8461105138043,
-   "gemini-flash-live": 1042.8589796255908,
-   "deepslate": 842.1006499937366,
-   "phonic-1": 1063.4751316477793,
-   "eleven-realtime-v1-max": 997.1962661232263,
-   "eleven-realtime-v1-mini": 954.7310782960831,
-   "higgs-realtime": 881.2351538191116,
-   "gpt-live-1-1": 1082.7080941015047,
-   "cascade-baseline": 976.9056382892647
+   "openai-realtime": 1083.1410794453557,
+   "gemini-live-standard": 965.8058473268283,
+   "azure-realtime": 1039.5469689150468,
+   "nova-sonic": 822.5972836353661,
+   "grok-realtime": 1034.8542398088189,
+   "grok-realtime-3": 1151.5296790807806,
+   "gpt-live": 1115.721331705179,
+   "openai-realtime-mini": 913.7669353897112,
+   "gemini-live": 1000.8557391636256,
+   "gemini-flash-live": 1041.8972678638215,
+   "deepslate": 841.1605082632302,
+   "phonic-1": 1062.5201215340137,
+   "eleven-realtime-v1-max": 997.1960335791761,
+   "eleven-realtime-v1-mini": 954.3493343202279,
+   "higgs-realtime": 880.3847246937822,
+   "gpt-live-1-1": 1094.6729052750363,
+   "cascade-baseline": 975.8825562269635
   },
   "banking": {
-   "openai-realtime": 1091.3009766574676,
-   "gemini-live-standard": 961.1517385700242,
-   "azure-realtime": 1053.7106297313292,
-   "nova-sonic": 815.2028350841508,
-   "grok-realtime": 1038.6693853011893,
-   "grok-realtime-3": 1158.7870823659146,
-   "gpt-live": 1109.1918325946465,
-   "openai-realtime-mini": 919.9412659006243,
-   "gemini-live": 1031.8640871008263,
-   "gemini-flash-live": 1057.1460592610872,
-   "deepslate": 803.9774634751338,
-   "phonic-1": 1104.862268782472,
-   "eleven-realtime-v1-max": 1013.5471933481921,
-   "eleven-realtime-v1-mini": 962.5259937687031,
-   "higgs-realtime": 820.2871641583916,
-   "gpt-live-1-1": 1057.8340238998476,
-   "cascade-baseline": 983.0610294089272
+   "openai-realtime": 1090.6859615765272,
+   "gemini-live-standard": 961.1826287067424,
+   "azure-realtime": 1053.7899384817472,
+   "nova-sonic": 815.1281848191533,
+   "grok-realtime": 1038.0606082477839,
+   "grok-realtime-3": 1158.1128040556273,
+   "gpt-live": 1108.5669937370176,
+   "openai-realtime-mini": 919.9448446548757,
+   "gemini-live": 1029.894107706932,
+   "gemini-flash-live": 1055.8511798480238,
+   "deepslate": 802.1390294632922,
+   "phonic-1": 1103.521341333314,
+   "eleven-realtime-v1-max": 1013.607918473125,
+   "eleven-realtime-v1-mini": 962.5577410856839,
+   "higgs-realtime": 819.3724234408303,
+   "gpt-live-1-1": 1067.5842943693242,
+   "cascade-baseline": 982.4255813016111
   },
   "healthcare": {
-   "openai-realtime": 1077.7013469244332,
-   "gemini-live-standard": 971.0868983319173,
-   "azure-realtime": 1027.240868962527,
-   "nova-sonic": 829.0389613235079,
-   "grok-realtime": 1034.5411260036867,
-   "grok-realtime-3": 1147.6076286331452,
-   "gpt-live": 1126.6186023682494,
-   "openai-realtime-mini": 908.7183109929847,
-   "gemini-live": 975.0643766457865,
-   "gemini-flash-live": 1029.8929399994859,
-   "deepslate": 875.0786269828693,
-   "phonic-1": 1025.253538620441,
-   "eleven-realtime-v1-max": 981.6814708863889,
-   "eleven-realtime-v1-mini": 947.0535640437863,
-   "higgs-realtime": 934.2067334429131,
-   "gpt-live-1-1": 1109.2150058378777,
-   "cascade-baseline": 971.1422884557242
+   "openai-realtime": 1077.0984395010892,
+   "gemini-live-standard": 970.3286602311936,
+   "azure-realtime": 1026.5754035186067,
+   "nova-sonic": 827.9504170964717,
+   "grok-realtime": 1032.5551535189593,
+   "grok-realtime-3": 1147.047550299833,
+   "gpt-live": 1124.582012939238,
+   "openai-realtime-mini": 907.1318664777899,
+   "gemini-live": 972.9858411357145,
+   "gemini-flash-live": 1029.2312955072298,
+   "deepslate": 874.8497807801862,
+   "phonic-1": 1024.585174403318,
+   "eleven-realtime-v1-max": 981.6045573292699,
+   "eleven-realtime-v1-mini": 946.2492276990254,
+   "higgs-realtime": 933.3762496995594,
+   "gpt-live-1-1": 1123.8483698625157,
+   "cascade-baseline": 969.7219465145472
   },
   "en": {
-   "openai-realtime": 1063.1186601045654,
-   "gemini-live-standard": 973.4979390173847,
-   "azure-realtime": 1028.6380204684963,
-   "nova-sonic": 813.8498005936676,
-   "grok-realtime": 1010.1155506356167,
-   "grok-realtime-3": 1146.3849003032465,
-   "gpt-live": 1106.709943513683,
-   "openai-realtime-mini": 920.585242322873,
-   "gemini-live": 994.9876931435934,
-   "gemini-flash-live": 1051.5439010719645,
-   "deepslate": 867.1508911867114,
-   "phonic-1": 1084.8671897213655,
-   "eleven-realtime-v1-max": 1014.3193278403778,
-   "eleven-realtime-v1-mini": 976.4558437018079,
-   "higgs-realtime": 880.3423866277634,
-   "gpt-live-1-1": 1067.432709746883,
-   "cascade-baseline": 999.1926142072277
+   "openai-realtime": 1062.7343726395939,
+   "gemini-live-standard": 973.0624684193987,
+   "azure-realtime": 1028.6623728710176,
+   "nova-sonic": 813.7396212070848,
+   "grok-realtime": 1008.8660581753826,
+   "grok-realtime-3": 1145.9958980274173,
+   "gpt-live": 1105.8782958207391,
+   "openai-realtime-mini": 920.0970589031788,
+   "gemini-live": 992.8861506927658,
+   "gemini-flash-live": 1050.7289572258694,
+   "deepslate": 866.1157518557106,
+   "phonic-1": 1084.0473114279953,
+   "eleven-realtime-v1-max": 1014.3342393948838,
+   "eleven-realtime-v1-mini": 976.4454820167645,
+   "higgs-realtime": 879.8034895227913,
+   "gpt-live-1-1": 1076.6024717994067,
+   "cascade-baseline": 998.7774664646604
   },
   "es": {
    "openai-realtime": 1223.6949452264087,
@@ -393,23 +393,23 @@
    "cascade-baseline": 865.4019083313349
   },
   "hi": {
-   "openai-realtime": 1143.7104426416638,
-   "gemini-live-standard": 921.843796264641,
-   "azure-realtime": 1077.0076547575213,
-   "nova-sonic": 831.1998476052381,
-   "grok-realtime": 1169.8420553672054,
-   "grok-realtime-3": 1305.5227214780625,
-   "gpt-live": 1169.8420553672054,
-   "openai-realtime-mini": 908.4258886168873,
-   "gemini-live": 1007.2923892815348,
-   "gemini-flash-live": 1000.7482201804632,
-   "deepslate": 800.861663094389,
-   "phonic-1": 984.4046257635731,
-   "eleven-realtime-v1-max": 881.1297117253914,
-   "eleven-realtime-v1-mini": 780.9809200233008,
-   "higgs-realtime": 820.0103445529601,
-   "gpt-live-1-1": 1197.1776632799629,
-   "cascade-baseline": 899.1055367148911
+   "openai-realtime": 1141.2158628198765,
+   "gemini-live-standard": 920.284360643343,
+   "azure-realtime": 1073.8288861441629,
+   "nova-sonic": 825.192606306577,
+   "grok-realtime": 1167.5775128049563,
+   "grok-realtime-3": 1303.7231897598335,
+   "gpt-live": 1163.7456438469037,
+   "openai-realtime-mini": 903.3390279079832,
+   "gemini-live": 1003.3321637801039,
+   "gemini-flash-live": 996.7136707268456,
+   "deepslate": 798.3976060934101,
+   "phonic-1": 980.1843270535011,
+   "eleven-realtime-v1-max": 879.2179486902277,
+   "eleven-realtime-v1-mini": 774.3080215907006,
+   "higgs-realtime": 813.8612093411044,
+   "gpt-live-1-1": 1255.0779624904703,
+   "cascade-baseline": 890.5253699203288
   }
  },
  "validation": {
@@ -423,8 +423,7 @@
   "reference_ranked": false,
   "s3_operations": [
    "GetObject"
-  ],
-  "grades_changed": false
+  ]
  },
  "ranked_models": [
   "openai-realtime",
@@ -540,7 +539,7 @@
    "eleven-realtime-v1-max": 73.0324074074074,
    "eleven-realtime-v1-mini": 42.01388888888889,
    "higgs-realtime": 47.22222222222222,
-   "gpt-live-1-1": 57.40740740740741,
+   "gpt-live-1-1": 62.96296296296297,
    "cascade-baseline": 34.95370370370371
   },
   "F06": {
@@ -692,7 +691,7 @@
    "eleven-realtime-v1-max": 88.88888888888889,
    "eleven-realtime-v1-mini": 90.27777777777779,
    "higgs-realtime": 52.77777777777778,
-   "gpt-live-1-1": 87.5,
+   "gpt-live-1-1": 91.66666666666667,
    "cascade-baseline": 95.83333333333333
   },
   "F14": {
@@ -730,7 +729,7 @@
    "eleven-realtime-v1-max": 81.01851851851852,
    "eleven-realtime-v1-mini": 93.05555555555556,
    "higgs-realtime": 84.72222222222223,
-   "gpt-live-1-1": 79.16666666666667,
+   "gpt-live-1-1": 83.33333333333333,
    "cascade-baseline": 90.27777777777779
   },
   "F16": {
@@ -787,7 +786,7 @@
    "eleven-realtime-v1-max": 94.09722222222223,
    "eleven-realtime-v1-mini": 90.625,
    "higgs-realtime": 87.84722222222221,
-   "gpt-live-1-1": 67.36111111111111,
+   "gpt-live-1-1": 70.13888888888889,
    "cascade-baseline": 90.97222222222221
   },
   "F19": {
@@ -1167,7 +1166,7 @@
    "eleven-realtime-v1-max": 77.08333333333333,
    "eleven-realtime-v1-mini": 86.45833333333333,
    "higgs-realtime": 78.125,
-   "gpt-live-1-1": 75.0,
+   "gpt-live-1-1": 79.16666666666667,
    "cascade-baseline": 85.41666666666667
   },
   "H04": {
@@ -1281,7 +1280,7 @@
    "eleven-realtime-v1-max": 59.02777777777778,
    "eleven-realtime-v1-mini": 79.16666666666667,
    "higgs-realtime": 58.333333333333336,
-   "gpt-live-1-1": 66.66666666666667,
+   "gpt-live-1-1": 72.22222222222223,
    "cascade-baseline": 78.125
   },
   "H10": {
@@ -1718,7 +1717,7 @@
    "eleven-realtime-v1-max": 73.61111111111111,
    "eleven-realtime-v1-mini": 83.68055555555556,
    "higgs-realtime": 95.13888888888889,
-   "gpt-live-1-1": 81.25,
+   "gpt-live-1-1": 97.91666666666667,
    "cascade-baseline": 91.55092592592592
   },
   "H33": {
@@ -1784,7 +1783,7 @@
   "baseline_rescore": "metric-rescore-2026-11-19/verdict_overrides.json",
   "baseline_task_rules": "task-completion-2026-11-16/tasks_v6.json",
   "historical_selection": "Original published round selection, preserving health replacements and Cascade language swap.",
-  "new_selection": "206 original calls + one timeout replacement + three repaired F15 replacements.",
-  "comparability": "Local replay; historical hosting and judge parity unconfirmed. QC disagreements have not changed grades."
+  "new_selection": "210 completed selected calls, three runs on each of 70 scenarios.",
+  "comparability": "Local replay; historical hosting and judge parity unconfirmed. Final metric verdicts validated against configured rubrics."
  }
 }

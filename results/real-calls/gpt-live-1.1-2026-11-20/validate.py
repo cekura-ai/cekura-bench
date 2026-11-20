@@ -101,7 +101,7 @@ def main() -> int:
     family_of = {sid: s["family"] for sid, s in view["overall"]["skills"].items()}
     checks = [("overall", calls, view["overall"])]
     for run in sorted({c["run"] for c in calls}):
-        checks.append((run, [c for c in calls if c["run"] == run], view["runs"][f"fullrun_gptlive11_rerunsel_{run}"]))
+        checks.append((run, [c for c in calls if c["run"] == run], view["runs"][f"fullrun_gptlive11_final_{run}"]))
     for suite, prefix in (("banking", "F"), ("healthcare", "H")):
         checks.append((suite, [c for c in calls if c["scenario"].startswith(prefix)], view["suites"][suite]))
     for gid, g in view["languages"].items():
@@ -131,9 +131,19 @@ def main() -> int:
         if got != want:
             bad += 1
             print(f"MISMATCH ELO {name}: {got} != {want}")
+    definitions = {m["id"]: m for m in data["metric_definitions"]}
+    for call in calls:
+        normalized = {}
+        for metric in call["metrics"]:
+            skill = definitions[metric["id"]].get("skill")
+            if skill is not None and metric.get("passed") is not None:
+                normalized[skill] = metric["passed"]
+        if normalized != call["skills"]:
+            bad += 1
+            print(f"MISMATCH final metric verdicts: {call['run']}/{call['scenario']}")
     reruns = sum(c["role"] != "original" for c in calls)
     print(f"{len(calls)} calls checked ({reruns} replacement calls), "
-          f"{sum(len(c['metrics']) for c in calls)} metric results; {len(cohort)} cohort checks, {len(checks)} aggregates, {len(elo_checks)} ELO checks; "
+          f"{sum(len(c['metrics']) for c in calls)} metric results; {len(cohort)} cohort checks, {len(checks)} aggregates, {len(elo_checks)} ELO checks; final metric verdicts checked; "
           f"{'all match' if not bad else f'{bad} mismatches'}")
     return 1 if bad else 0
 

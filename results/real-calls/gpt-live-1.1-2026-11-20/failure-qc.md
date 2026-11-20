@@ -1,26 +1,13 @@
 # GPT-Live 1.1 + GPT-6 Sol: failure QC
 
-The final cohort contains 88 overall-failed calls across 47 scenarios.
-Codex reviewed the failure evidence against the configured rubrics. Claude Opus 5.5 HIGH reviewed
-targeted calls and 13 diagnostic calls, using transcripts, tool outcomes, caller playback logs,
-agent utterance logs and per-channel recording timing. [Structured QC](failure-qc.json).
+The corrected cohort has **82 failed calls across 47 scenarios**. All 210 selected executions and recording checks pass. [Structured QC](failure-qc.json).
 
-All 13 diagnostic calls completed and were graded, with no agent/tool errors or judge errors.
-Their lossless recordings were verified. Diagnostic concurrency was capped at 15 with paced starts.
+The exported platform rubrics run in the private local runner. Timing, hold, ASR and tool-wait input defects were repaired; all 6,300 metric entries are evaluated. Every affected input change is recorded in the report and results metadata. Source attempts and their original metric files remain preserved.
 
-Supported failure patterns include numeric read-back errors, speaking over unfinished caller digits,
-incorrect value confirmation, and failure to complete the requested tool workflow.
+Claude Opus 5.5 HIGH and Codex reviewed all 36 prosody-targeted and 39 multi-person-targeted calls. The prosody audit reproduced lost agent confirmations, late caller endpoints and conflicting log/transcript clocks. The repaired transcript path yields 28/28 eligible passes; eight targeted cases remain not reached.
 
-The final metric results follow the configured rubrics: permitted bad-line repetition, courtesy-title
-exceptions, actual hold timing and answers to interruptions are evaluated within their stated scope.
-A corrupted caller moment is excluded from the affected skill evaluation.
+The multi-person audit corrected two single-voice target exclusions and a missed executed second voice, giving 17/39 passes. Supported failures include acting on an unverified second speaker's go-ahead. H02 privacy scope, H07 adjacent questions/branch misfires, F30 authority interpretation and H27 holder-confirmation handling remain ambiguous. H30 also has a post-commit prosody scope conflict. Historical comparison calls contain some grading inconsistencies and have not been regraded, so exact judge parity is unconfirmed.
 
-Remaining limits:
+The 77 verification reruns completed, passed recording/model/prompt/tool checks and were graded without remaining judge errors. The three generic wait/resume prompt pilots remain separate experiments. F29's same-prompt repeat still showed conversational resumption trouble. The F09 status-lookup fixture was repaired for diagnostics; the existing main cohort is preserved.
 
-- No independent listening or speaker-identity verification was performed.
-- Speech-stop times near the two-second limit remain uncertain; waveform energy alone is insufficient.
-- H03 uses the configured task workflow checker.
-- Some F05/F26 caller branches were not reached; task interpretation requires care.
-- Language conclusions from model-reported transcript fragments do not establish audible speech.
-
-Recordings, transcripts, task values and private evidence remain in the task workspace.
+Review used transcripts, tool outcomes, playback logs, agent logs, waveform measurements and machine audio judgments. Independent human listening was not performed. Private recordings/transcripts remain in the workspace. Do not interpret the remaining failed-call count as a count of fully confirmed model errors.

@@ -1,89 +1,98 @@
 # GPT-Live 1.1 + GPT-6 Sol on Real Human Calls · 20 November 2026
 
-The Real Calls benchmark covers 70 recorded-human scenarios (35 banking, 35 healthcare), three runs each. The final results contain **210 completed calls and 6,300 metric entries**. Full results: [results.json](results.json).
+The Real Calls benchmark covers 70 recorded-human scenarios (35 banking, 35 healthcare), three runs each: **210 completed calls and 6,300 evaluated metric entries**. [Full results](results.json).
 
-**ELO 1095, rank 3/16; 95% interval 1043–1145.**
+**ELO 1154, rank 1/16; 95% interval 1115–1204.**
 
 ## Results
 
 | Metric | Result |
 | --- | ---: |
-| Calls passed | 122/210 (58.1%) |
+| Calls passed | 128/210 (61.0%) |
 | Pass³ | 23/70 (32.9%) |
 | Main task completed | 180/210 (85.7%) |
-| Mean call score | 80.77 |
-| Hearing / Turn Taking / Task Handling / Speaking | 68.2 / 72.6 / 84.2 / 79.3 |
+| Mean call score | 83.97 |
+| Hearing / Turn Taking / Task Handling / Speaking | 82.5 / 73.4 / 85.6 / 83.2 |
 | Latency P50 / P90 / P95 | 1850 / 2260 / 2400 ms (208 eligible calls) |
-| Median words per turn | 18.0 |
+| Median words per turn | 17.0 |
 | Cost per call / minute | $0.2869 / $0.0591 |
 | Selected-call cost | $60.25 |
+
+Pass³ counts scenarios that pass all three repetitions. The 23 scenarios above equal 32.9%; counts and percentages have different denominators.
 
 ## By run
 
 | Run | Passed | Task completed | Mean score |
 | --- | ---: | ---: | ---: |
-| r1 | 37/70 | 60/70 | 79.46 |
-| r2 | 41/70 | 59/70 | 80.2 |
-| r3 | 44/70 | 61/70 | 82.66 |
+| r1 | 45/70 | 60/70 | 84.88 |
+| r2 | 41/70 | 59/70 | 83.05 |
+| r3 | 42/70 | 61/70 | 83.97 |
 
 ## Domain and language
 
 | View | Scenarios | Passed calls | Pass³ | ELO |
 | --- | ---: | ---: | ---: | ---: |
-| banking | 35 | 54/105 | 6/35 | 1068 |
-| healthcare | 35 | 68/105 | 17/35 | 1124 |
-| en | 55 | 88/165 | 13/55 | 1077 |
-| es | 7 | 15/21 | 4/7 | 1113 |
-| hi | 8 | 19/24 | 6/8 | 1255 |
+| banking | 35 | 57/105 | 8/35 | 1168 |
+| healthcare | 35 | 71/105 | 15/35 | 1142 |
+| all | 70 | 128/210 | 23/70 | 1154 |
+| en | 55 | 96/165 | 16/55 | 1148 |
+| es | 7 | 14/21 | 3/7 | 1175 |
+| hi | 8 | 18/24 | 4/8 | 1211 |
 
 ## ELO ratings
 
 | Rank | Model | ELO | 95% interval |
 | ---: | --- | ---: | --- |
-| 1 | Grok Voice 3.0 | 1152 | 1111–1194 |
-| 2 | GPT-Live 1 + GPT-6 Sol | 1116 | 1073–1165 |
-| 3 | GPT-Live 1.1 + GPT-6 Sol | 1095 | 1043–1145 |
-| 4 | GPT Realtime 2.1 | 1083 | 1038–1126 |
-| 5 | Phonic-1 | 1063 | 1022–1107 |
-| 6 | Gemini 3.1 Flash Live Preview | 1042 | 996–1085 |
-| 7 | Azure Realtime | 1040 | 992–1083 |
-| 8 | Grok Voice Think Fast 2.0 | 1035 | 998–1075 |
-| 9 | Gemini 3.8 Live Extended Thinking | 1001 | 963–1039 |
-| 10 | Eleven Realtime v1 Max | 997 | 953–1040 |
-| 11 | Gemini 3.8 Live | 966 | 918–1010 |
-| 12 | Eleven Realtime v1 Mini | 954 | 904–1000 |
-| 13 | GPT Realtime 2.1 Mini | 914 | 875–950 |
-| 14 | Higgs Realtime | 880 | 833–925 |
-| 15 | Deepslate Opal | 841 | 782–892 |
-| 16 | Amazon Nova 2 Sonic | 823 | 772–866 |
+| 1 | GPT-Live 1.1 + GPT-6 Sol | 1154 | 1115–1204 |
+| 2 | Grok Voice 3.0 | 1151 | 1110–1194 |
+| 3 | GPT-Live 1 + GPT-6 Sol | 1111 | 1068–1160 |
+| 4 | GPT Realtime 2.1 | 1079 | 1033–1123 |
+| 5 | Phonic-1 | 1060 | 1020–1104 |
+| 6 | Gemini 3.1 Flash Live Preview | 1040 | 994–1083 |
+| 7 | Azure Realtime | 1036 | 989–1080 |
+| 8 | Grok Voice Think Fast 2.0 | 1033 | 994–1075 |
+| 9 | Gemini 3.8 Live Extended Thinking | 996 | 958–1035 |
+| 10 | Eleven Realtime v1 Max | 992 | 947–1037 |
+| 11 | Gemini 3.8 Live | 962 | 914–1007 |
+| 12 | Eleven Realtime v1 Mini | 950 | 899–996 |
+| 13 | GPT Realtime 2.1 Mini | 909 | 870–945 |
+| 14 | Higgs Realtime | 874 | 825–920 |
+| 15 | Deepslate Opal | 837 | 777–889 |
+| 16 | Amazon Nova 2 Sonic | 816 | 764–859 |
 
-Cascade is an unranked reference at 976.
+Cascade is an unranked reference at 970.
 
-The rating averages each model’s three call scores per scenario, uses a five-point tie margin, and jointly fits 16 ranked models with Bradley–Terry on the 400-point ELO scale (mean 1000; 200 iterations). Cascade is anchored afterwards. Intervals use 1,000 scenario bootstrap draws, seed 20261103, 60 fitting iterations per draw.
+Ratings average each model's three call scores per scenario, apply a five-point tie margin, and jointly fit 16 ranked models using Bradley–Terry on the 400-point ELO scale (mean 1000; 200 iterations). Cascade is anchored afterwards. Intervals use 1,000 scenario bootstrap draws, seed 20261103, and 60 fitting iterations per draw. Every model's ELO and interval is refitted when an input vector changes.
 
-Numeric inputs and fits: [elo.json](elo.json). Run `python recompute-elo.py --bootstrap` to validate every domain/language fit and confidence interval.
+[Numeric inputs and fits](elo.json). `python recompute-elo.py --bootstrap` reproduces the domain/language fits and confidence intervals.
 
 ## Configuration and evaluation
 
-- Main agent: `gpt-live-1.1` with delegated `gpt-6-sol`, reasoning low, marin voice, 24 kHz.
-- Caller: recorded-human audio replay in the isolated local loopback runtime.
+- Main agent: `gpt-live-1.1` with delegated `gpt-6-sol`, reasoning low, marin voice, 24 kHz, provider-controlled turns.
+- Caller: recorded-human replay through the isolated local Pipecat loopback runtime.
+- Metric code and rubrics: the exported platform definitions, run locally against transcripts, recordings, timing logs and tool events.
 - Text and expected-outcome judges: DeepSeek V4 Flash through OpenRouter, Fireworks pinned.
-- Audio judge: the product’s current Gemini Flash-Lite chain; selected calls used Gemini 3.5 Flash-Lite.
-- Scoring: configured `s2s-human-bench` family weights, task blending and pass threshold; failure QC covers reviewed failures and targeted diagnostic calls under those rubrics.
-- Source runs: `fullrun_gptlive11_final_r1`, `fullrun_gptlive11_final_r2`, `fullrun_gptlive11_final_r3`.
-- Build mix: v1 5 calls, v2 35, v3 167, v4 3. Functions and classes preserve the original fixture source; archive container byte identity is not claimed.
-- Runtime limits: 100 s setup timeout; 900 s call budget.
+- Audio judge: the product's current Gemini Flash-Lite chain; successful selected-call audio judgments used Gemini 3.5 Flash-Lite.
+- Scoring: the official `s2s-human-bench` family weights, task blending and pass threshold.
+- Source cohort: `fullrun_gptlive11_final_r1`, `fullrun_gptlive11_final_r2`, `fullrun_gptlive11_final_r3`; existing run/attempt/build membership is preserved.
+- Limits: 100 s setup timeout; 900 s call budget.
+
+## Corrected grading evidence
+
+The existing recordings were regraded with numeric agent-log timestamps, recovered caller clip timing, 59 executed holds across 50 calls, and fresh word-timed transcription of the recorded agent channel (ElevenLabs scribe_v3, automatic language). Source metric files remain unchanged; all 210 hashes were verified. Six same-call rubric adjudications are recorded in [results.json](results.json).
+
+The interruption checker separates a yielded reply from a later answer at measured word gaps of at least two seconds. The tool-latency checker uses actual paired agent-tool events and evaluates all 57 delayed-tool calls; caller-side holds and an unrelated tool-protection notice cannot hide those tests. The prosody checker uses the recovered transcript because the local log-pairing path dropped real confirmations and included caller detector hangover.
+
+Prosodic cue understanding: **28/28 eligible calls (100%)**, with eight targeted calls not reached. Multi-speaker handling: **17/39 (43.6%)**; the audit corrected two single-voice target judgments and one missed executed second voice. Remaining interpretation and simulator limitations are detailed in the QC.
+
+Recovered caller timing includes 435 played clips with interpolated metadata and 1,242 fallback transcript rows. The recording activity threshold is `max(-55 dBFS, p20 + 18 dB)`, with 120 ms minimum activity; hosted VAD equivalence is unconfirmed. Historical judge and caller-model provenance is incomplete. Cached comparison calls exhibit some of the same checker defects; their historical verdicts have not been regraded.
 
 ## QC and verification
 
-[Failure QC](failure-qc.md) · [Execution audit](execution-audit.json) · [Metric and aggregate validation](validate.py).
+[Failure QC](failure-qc.md) · [Execution audit](execution-audit.json) · [Validation](validate.py).
 
-All 210 selected calls completed, recording formats/checksums passed, and no selected call has a tool-handler error. Thirteen targeted diagnostic calls also completed and were graded without judge errors.
+All selected calls completed and their recording formats/checksums passed. The 77 targeted verification calls and three separate wait/resume prompt trials also completed and were graded. The benchmark uses the existing 210-call cohort. Claude Opus 5.5 HIGH and Codex reviewed all 36 prosody-targeted calls and 39 multi-person-targeted calls. Several multi-person cases remain ambiguous; this report does not assert that every remaining failure is a confirmed model error.
 
-`python validate.py` verifies 210 calls, 6,300 metric entries, cohort membership, all report aggregates and ELO metadata. `python recompute-elo.py --bootstrap` reproduces the ratings and intervals.
+The original F09 status-lookup fixture defect, occasional simulator branch misfires, and uncertainty about a post-commit prosody target remain relevant execution/interpretation limitations. Repaired F09 diagnostic calls are retained separately. No independent human acoustic listening was performed.
 
-Response latency is unavailable on r1/H32 and r2/H32 because their caller recording has constant loud background sound; 208 calls contribute to latency statistics.
-
-Historical hosting and judge parity is unconfirmed: this is local replay, and published comparison models may have different hosting/judges. Audio-dependent QC uses logs and waveform timing; independent listening was not performed. Some scenario/checker interpretation limits are documented in the QC.
-
-Provider credentials, transcripts, recordings and private task targets are excluded from published artifacts.
+`python validate.py` checks 210 calls, 6,300 entries, cohort membership, all aggregates and ELO metadata. Private transcripts, recordings, task targets and provider credentials are excluded from these artifacts.

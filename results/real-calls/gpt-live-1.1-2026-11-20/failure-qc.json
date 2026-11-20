@@ -5,69 +5,63 @@
  ],
  "coverage": {
   "selected_calls": 210,
-  "overall_failed_calls": 88,
+  "overall_failed_calls": 82,
   "failed_scenarios": 47,
-  "diagnostic_calls": 13,
-  "diagnostic_completed": 13,
-  "diagnostic_graded": 13,
+  "diagnostic_calls": 77,
+  "diagnostic_completed": 77,
+  "diagnostic_graded": 77,
   "diagnostic_judge_errors": 0,
-  "diagnostic_recordings_verified": 13
+  "diagnostic_recordings_verified": 77,
+  "prosody_targeted_calls": 36,
+  "multi_person_targeted_calls": 39
  },
  "cases": [
   {
    "slot": "r2/F07",
-   "score": 79.1667,
+   "score": 75.0,
    "passed": false,
    "task_done": true,
    "failed_skills": [
-    "2.1",
+    "2.8",
     "4.1"
    ]
   },
   {
    "slot": "r2/F13",
-   "score": 87.5,
+   "score": 100.0,
    "passed": true,
    "task_done": true,
-   "failed_skills": [
-    "4.1"
-   ]
+   "failed_skills": []
   },
   {
    "slot": "r1/F15",
-   "score": 75.0,
-   "passed": false,
+   "score": 100.0,
+   "passed": true,
    "task_done": true,
-   "failed_skills": [
-    "2.2"
-   ]
+   "failed_skills": []
   },
   {
    "slot": "r3/H23",
-   "score": 75.0,
-   "passed": false,
+   "score": 100.0,
+   "passed": true,
    "task_done": true,
-   "failed_skills": [
-    "2.2"
-   ]
+   "failed_skills": []
   },
   {
    "slot": "r2/H29",
-   "score": 75.0,
-   "passed": false,
+   "score": 95.8333,
+   "passed": true,
    "task_done": true,
    "failed_skills": [
-    "2.2"
+    "3.5a"
    ]
   },
   {
    "slot": "r1/F05",
-   "score": 72.2222,
-   "passed": false,
+   "score": 83.3333,
+   "passed": true,
    "task_done": false,
-   "failed_skills": [
-    "4.3"
-   ]
+   "failed_skills": []
   },
   {
    "slot": "r1/F09",
@@ -87,22 +81,18 @@
   },
   {
    "slot": "r2/F18",
-   "score": 50.0,
-   "passed": false,
+   "score": 100.0,
+   "passed": true,
    "task_done": true,
-   "failed_skills": [
-    "1.6",
-    "2.2"
-   ]
+   "failed_skills": []
   },
   {
    "slot": "r2/F26",
-   "score": 38.8889,
+   "score": 72.2222,
    "passed": false,
    "task_done": false,
    "failed_skills": [
-    "2.2",
-    "4.4"
+    "4.3"
    ]
   },
   {
@@ -114,19 +104,22 @@
   },
   {
    "slot": "r2/H32",
-   "score": 96.875,
+   "score": 88.5417,
    "passed": true,
    "task_done": true,
    "failed_skills": [
-    "3.3"
+    "3.3",
+    "4.4"
    ]
   },
   {
    "slot": "r3/H32",
-   "score": 100.0,
-   "passed": true,
+   "score": 75.0,
+   "passed": false,
    "task_done": true,
-   "failed_skills": []
+   "failed_skills": [
+    "2.2"
+   ]
   }
  ],
  "limitations": [
@@ -135,5 +128,140 @@
   "H03 task grading uses the configured workflow checker.",
   "Some F05/F26 caller branches were not reached.",
   "Historical hosting and judge parity is unconfirmed."
- ]
+ ],
+ "adjudications": [
+  {
+   "run": "r2",
+   "scenario": "H03",
+   "skill": "1.3",
+   "passed": null,
+   "reason": "corrupted-caller-moment"
+  },
+  {
+   "run": "r2",
+   "scenario": "H09",
+   "skill": "4.3",
+   "passed": true,
+   "reason": "courtesy-title-exception"
+  },
+  {
+   "run": "r3",
+   "scenario": "H09",
+   "skill": "4.3",
+   "passed": true,
+   "reason": "courtesy-title-exception"
+  },
+  {
+   "run": "r1",
+   "scenario": "F03",
+   "skill": "1.10",
+   "passed": false,
+   "reason": "executed-second-voice"
+  },
+  {
+   "run": "r1",
+   "scenario": "H13",
+   "skill": "1.10",
+   "passed": true,
+   "reason": "single-voice-target-scope"
+  },
+  {
+   "run": "r2",
+   "scenario": "H13",
+   "skill": "1.10",
+   "passed": true,
+   "reason": "single-voice-target-scope"
+  }
+ ],
+ "grading_repairs": {
+  "version": "agent-log-word-timing-v2",
+  "scope": "Corrected grading of the existing 210 selected calls; run/attempt/role/build membership preserved.",
+  "agent_logs": "Agent logs with numeric UTC timestamps.",
+  "caller_timing": {
+   "recovered_rows": 2582,
+   "fallback_rows": 1242,
+   "interpolated_played_clips": 435,
+   "note": "Stored clip metadata; interpolated and fallback caller timing remains approximate."
+  },
+  "holds": {
+   "recovered": 59,
+   "calls": 50,
+   "source": "executed inline-hold telemetry"
+  },
+  "agent_transcription": "Recorded agent channel; ElevenLabs scribe_v3; automatic language; source ASR preserved.",
+  "speech_activity": "dBFS normalization; max(-55 dBFS, channel p20+18 dB); minimum 120 ms. Diagnostic implementation; hosted VAD parity unconfirmed.",
+  "interruption_response_boundaries": "Metric 275678 only: measured agent-word gaps >=2 seconds separate a yielded reply from its later answer.",
+  "tool_latency": "Metric 272629 only: actual paired agent-tool start/result times; unrelated tool-protection log notice and caller-side hold telemetry excluded from this input.",
+  "prosody": "Metric 275651 only: recorded agent word timings and recovered caller transcript; partial local log pairing suppressed; raw logs retained. Original approximate rows retained where word timings were unavailable.",
+  "source_metric_hashes_unchanged": 210,
+  "evaluated_metric_entries": 6300,
+  "reconfirmed_rubric_adjudications": [
+   {
+    "run": "r2",
+    "scenario": "H03",
+    "skill": "1.3",
+    "passed": null,
+    "reason": "corrupted-caller-moment"
+   },
+   {
+    "run": "r2",
+    "scenario": "H09",
+    "skill": "4.3",
+    "passed": true,
+    "reason": "courtesy-title-exception"
+   },
+   {
+    "run": "r3",
+    "scenario": "H09",
+    "skill": "4.3",
+    "passed": true,
+    "reason": "courtesy-title-exception"
+   },
+   {
+    "run": "r1",
+    "scenario": "F03",
+    "skill": "1.10",
+    "passed": false,
+    "reason": "executed-second-voice"
+   },
+   {
+    "run": "r1",
+    "scenario": "H13",
+    "skill": "1.10",
+    "passed": true,
+    "reason": "single-voice-target-scope"
+   },
+   {
+    "run": "r2",
+    "scenario": "H13",
+    "skill": "1.10",
+    "passed": true,
+    "reason": "single-voice-target-scope"
+   }
+  ]
+ },
+ "listening_review": {
+  "reviewer": "Claude Opus 5.5 HIGH and Codex",
+  "prosody": {
+   "targeted": 36,
+   "reached": 28,
+   "passed": 28,
+   "not_reached": 8,
+   "finding": "Local paired-log replacement dropped confirmations and included caller detector hangover; repaired inputs use recorded word timings and the recovered caller transcript."
+  },
+  "multi_person": {
+   "targeted": 39,
+   "reached": 39,
+   "passed": 17,
+   "finding": "Confirmed scope corrections for two single-voice targets and one missed executed second voice. Several remaining cases have privacy/speaker-attribution or simulator ambiguity."
+  },
+  "unresolved": {
+   "H02": "Whether the other participant remains listening after the handover is underspecified; transcript row starts can also precede the actual detail words.",
+   "H07": "Near-adjacent caller/proxy questions and some branch misfires confound attribution of the agent reply.",
+   "F30": "Authority-check interpretation differs from historical judgments; privacy concerns remain.",
+   "H27": "Speaker identification and holder-confirmation branch interpretation remain ambiguous.",
+   "H30": "One repeat follows a completed action; prompt and target timing scope differ."
+  },
+  "historical_parity": "Cached historical calls show some of the same checker defects and grading inconsistencies. Historical model verdicts have not been regraded."
+ }
 }

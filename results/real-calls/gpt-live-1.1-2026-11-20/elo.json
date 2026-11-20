@@ -8,68 +8,68 @@
  },
  "confidence_intervals": {
   "openai-realtime": [
-   1037.7327665077034,
-   1126.1567838497583
+   1033.2093158075909,
+   1122.5175193109735
   ],
   "gemini-live-standard": [
-   918.4780505348148,
-   1009.5586511460788
+   913.8743961142695,
+   1006.8800875020187
   ],
   "azure-realtime": [
-   992.2449492857679,
-   1083.3650202371539
+   989.3617870991845,
+   1079.9603645839857
   ],
   "nova-sonic": [
-   772.2468306212613,
-   866.4558685808981
+   764.2674082699212,
+   859.1264758572336
   ],
   "grok-realtime": [
-   997.8918383868527,
-   1074.8573246184806
+   993.9697186857799,
+   1075.2523419338643
   ],
   "grok-realtime-3": [
-   1111.4035230590098,
-   1193.6451503794701
+   1109.8631400309955,
+   1194.059218452297
   ],
   "gpt-live": [
-   1072.5923280292975,
-   1164.8836476713657
+   1068.174353202812,
+   1160.129897131875
   ],
   "openai-realtime-mini": [
-   875.4423790447862,
-   949.8902838481092
+   869.9008986882205,
+   945.0278276959544
   ],
   "gemini-live": [
-   962.8294588502629,
-   1038.6357308550262
+   958.0258637774244,
+   1034.7830080470187
   ],
   "gemini-flash-live": [
-   995.5931927094157,
-   1085.0194514262853
+   994.1999505387197,
+   1083.272531028564
   ],
   "deepslate": [
-   782.3831022778254,
-   892.2042806041641
+   777.0412148587163,
+   888.5797247001348
   ],
   "phonic-1": [
-   1022.2742654189566,
-   1106.5416701055847
+   1019.8688517894789,
+   1103.5564491209018
   ],
   "eleven-realtime-v1-max": [
-   953.3393351402344,
-   1040.1963698213071
+   947.2993766589772,
+   1036.70640361836
   ],
   "eleven-realtime-v1-mini": [
-   904.3963914422498,
-   1000.2497699476202
+   898.5993734520684,
+   995.585186604893
   ],
   "higgs-realtime": [
-   833.4113736476554,
-   924.6952939287545
+   824.888482228607,
+   920.4126191706275
   ],
   "gpt-live-1-1": [
-   1043.361227968699,
-   1145.2476015102925
+   1115.0299896676318,
+   1203.671258904811
   ]
  },
  "groups": {
@@ -298,118 +298,118 @@
  },
  "group_ratings": {
   "all": {
-   "openai-realtime": 1083.1410794453557,
-   "gemini-live-standard": 965.8058473268283,
-   "azure-realtime": 1039.5469689150468,
-   "nova-sonic": 822.5972836353661,
-   "grok-realtime": 1034.8542398088189,
-   "grok-realtime-3": 1151.5296790807806,
-   "gpt-live": 1115.721331705179,
-   "openai-realtime-mini": 913.7669353897112,
-   "gemini-live": 1000.8557391636256,
-   "gemini-flash-live": 1041.8972678638215,
-   "deepslate": 841.1605082632302,
-   "phonic-1": 1062.5201215340137,
-   "eleven-realtime-v1-max": 997.1960335791761,
-   "eleven-realtime-v1-mini": 954.3493343202279,
-   "higgs-realtime": 880.3847246937822,
-   "gpt-live-1-1": 1094.6729052750363,
-   "cascade-baseline": 975.8825562269635
+   "openai-realtime": 1079.1554953831542,
+   "gemini-live-standard": 961.9454629229683,
+   "azure-realtime": 1035.9943115139738,
+   "nova-sonic": 816.084595339594,
+   "grok-realtime": 1032.6170525131304,
+   "grok-realtime-3": 1150.7450225267708,
+   "gpt-live": 1111.4722166311467,
+   "openai-realtime-mini": 908.9801281371709,
+   "gemini-live": 996.3207020636574,
+   "gemini-flash-live": 1040.053645790239,
+   "deepslate": 836.5700313115988,
+   "phonic-1": 1060.1474325526663,
+   "eleven-realtime-v1-max": 991.9563828490052,
+   "eleven-realtime-v1-mini": 949.6875891948972,
+   "higgs-realtime": 874.4179424063685,
+   "gpt-live-1-1": 1153.8519888636588,
+   "cascade-baseline": 969.7628904042451
   },
   "banking": {
-   "openai-realtime": 1090.6859615765272,
-   "gemini-live-standard": 961.1826287067424,
-   "azure-realtime": 1053.7899384817472,
-   "nova-sonic": 815.1281848191533,
-   "grok-realtime": 1038.0606082477839,
-   "grok-realtime-3": 1158.1128040556273,
-   "gpt-live": 1108.5669937370176,
-   "openai-realtime-mini": 919.9448446548757,
-   "gemini-live": 1029.894107706932,
-   "gemini-flash-live": 1055.8511798480238,
-   "deepslate": 802.1390294632922,
-   "phonic-1": 1103.521341333314,
-   "eleven-realtime-v1-max": 1013.607918473125,
-   "eleven-realtime-v1-mini": 962.5577410856839,
-   "higgs-realtime": 819.3724234408303,
-   "gpt-live-1-1": 1067.5842943693242,
-   "cascade-baseline": 982.4255813016111
+   "openai-realtime": 1085.4652612865752,
+   "gemini-live-standard": 953.5520932108524,
+   "azure-realtime": 1048.921324038412,
+   "nova-sonic": 803.8913061695561,
+   "grok-realtime": 1030.9341266374522,
+   "grok-realtime-3": 1156.2818951001507,
+   "gpt-live": 1102.7360825740495,
+   "openai-realtime-mini": 911.4766912617317,
+   "gemini-live": 1023.3548382917654,
+   "gemini-flash-live": 1051.7011172529224,
+   "deepslate": 794.101342097945,
+   "phonic-1": 1099.1110425450877,
+   "eleven-realtime-v1-max": 1006.8461957682654,
+   "eleven-realtime-v1-mini": 954.2526291430495,
+   "higgs-realtime": 809.1382814172756,
+   "gpt-live-1-1": 1168.235773204909,
+   "cascade-baseline": 973.8046190571581
   },
   "healthcare": {
-   "openai-realtime": 1077.0984395010892,
-   "gemini-live-standard": 970.3286602311936,
-   "azure-realtime": 1026.5754035186067,
-   "nova-sonic": 827.9504170964717,
-   "grok-realtime": 1032.5551535189593,
-   "grok-realtime-3": 1147.047550299833,
-   "gpt-live": 1124.582012939238,
-   "openai-realtime-mini": 907.1318664777899,
-   "gemini-live": 972.9858411357145,
-   "gemini-flash-live": 1029.2312955072298,
-   "deepslate": 874.8497807801862,
-   "phonic-1": 1024.585174403318,
-   "eleven-realtime-v1-max": 981.6045573292699,
-   "eleven-realtime-v1-mini": 946.2492276990254,
-   "higgs-realtime": 933.3762496995594,
-   "gpt-live-1-1": 1123.8483698625157,
-   "cascade-baseline": 969.7219465145472
+   "openai-realtime": 1074.4905947757297,
+   "gemini-live-standard": 970.1683481424095,
+   "azure-realtime": 1024.5777211463424,
+   "nova-sonic": 825.8372549653486,
+   "grok-realtime": 1035.2413569251212,
+   "grok-realtime-3": 1147.4028068912958,
+   "gpt-live": 1121.933529572771,
+   "openai-realtime-mini": 906.1069536877237,
+   "gemini-live": 970.8347113342558,
+   "gemini-flash-live": 1029.9037195261596,
+   "deepslate": 872.977743415683,
+   "phonic-1": 1024.5777211463424,
+   "eleven-realtime-v1-max": 978.1538549856958,
+   "eleven-realtime-v1-mini": 945.3490493739864,
+   "higgs-realtime": 930.383455367449,
+   "gpt-live-1-1": 1142.0611787436862,
+   "cascade-baseline": 966.2308021521085
   },
   "en": {
-   "openai-realtime": 1062.7343726395939,
-   "gemini-live-standard": 973.0624684193987,
-   "azure-realtime": 1028.6623728710176,
-   "nova-sonic": 813.7396212070848,
-   "grok-realtime": 1008.8660581753826,
-   "grok-realtime-3": 1145.9958980274173,
-   "gpt-live": 1105.8782958207391,
-   "openai-realtime-mini": 920.0970589031788,
-   "gemini-live": 992.8861506927658,
-   "gemini-flash-live": 1050.7289572258694,
-   "deepslate": 866.1157518557106,
-   "phonic-1": 1084.0473114279953,
-   "eleven-realtime-v1-max": 1014.3342393948838,
-   "eleven-realtime-v1-mini": 976.4454820167645,
-   "higgs-realtime": 879.8034895227913,
-   "gpt-live-1-1": 1076.6024717994067,
-   "cascade-baseline": 998.7774664646604
+   "openai-realtime": 1057.0661684677734,
+   "gemini-live-standard": 968.8062590688309,
+   "azure-realtime": 1023.6419194517529,
+   "nova-sonic": 807.8044057834918,
+   "grok-realtime": 1005.3799924835279,
+   "grok-realtime-3": 1143.75217079288,
+   "gpt-live": 1099.8688828558268,
+   "openai-realtime-mini": 914.336585328994,
+   "gemini-live": 987.1288283907513,
+   "gemini-flash-live": 1048.8683619826752,
+   "deepslate": 861.9555792834731,
+   "phonic-1": 1082.4314267169525,
+   "eleven-realtime-v1-max": 1007.9256519049521,
+   "eleven-realtime-v1-mini": 971.3702748409833,
+   "higgs-realtime": 872.0214087425329,
+   "gpt-live-1-1": 1147.642083904602,
+   "cascade-baseline": 992.236090484934
   },
   "es": {
-   "openai-realtime": 1223.6949452264087,
-   "gemini-live-standard": 949.4769629164407,
-   "azure-realtime": 1105.4851883035517,
-   "nova-sonic": 863.9308668742807,
-   "grok-realtime": 1132.0496932037406,
-   "grok-realtime-3": 1086.9543880097751,
-   "gpt-live": 1171.787287454588,
-   "openai-realtime-mini": 855.5722889162439,
-   "gemini-live": 1068.692047996588,
-   "gemini-flash-live": 1025.4875080091135,
-   "deepslate": 558.7785318739346,
-   "phonic-1": 985.9761797336531,
-   "eleven-realtime-v1-max": 978.7407550555893,
-   "eleven-realtime-v1-mini": 942.0556349009499,
-   "higgs-realtime": 938.3255733499025,
-   "gpt-live-1-1": 1112.9921481752394,
-   "cascade-baseline": 865.4019083313349
+   "openai-realtime": 1222.6402344610924,
+   "gemini-live-standard": 946.1190060776795,
+   "azure-realtime": 1104.0880841185062,
+   "nova-sonic": 850.329587805755,
+   "grok-realtime": 1130.8311924656464,
+   "grok-realtime-3": 1089.1172978064508,
+   "gpt-live": 1170.7322989611607,
+   "openai-realtime-mini": 854.6224258580594,
+   "gemini-live": 1070.6369875963644,
+   "gemini-flash-live": 1023.2644025865021,
+   "deepslate": 530.2225620367186,
+   "phonic-1": 975.8582818141058,
+   "eleven-realtime-v1-max": 979.534586246152,
+   "eleven-realtime-v1-mini": 938.5692703898355,
+   "higgs-realtime": 938.5692703898355,
+   "gpt-live-1-1": 1174.864511386136,
+   "cascade-baseline": 851.9786338681415
   },
   "hi": {
-   "openai-realtime": 1141.2158628198765,
-   "gemini-live-standard": 920.284360643343,
-   "azure-realtime": 1073.8288861441629,
-   "nova-sonic": 825.192606306577,
-   "grok-realtime": 1167.5775128049563,
-   "grok-realtime-3": 1303.7231897598335,
-   "gpt-live": 1163.7456438469037,
-   "openai-realtime-mini": 903.3390279079832,
-   "gemini-live": 1003.3321637801039,
-   "gemini-flash-live": 996.7136707268456,
-   "deepslate": 798.3976060934101,
-   "phonic-1": 980.1843270535011,
-   "eleven-realtime-v1-max": 879.2179486902277,
-   "eleven-realtime-v1-mini": 774.3080215907006,
-   "higgs-realtime": 813.8612093411044,
-   "gpt-live-1-1": 1255.0779624904703,
-   "cascade-baseline": 890.5253699203288
+   "openai-realtime": 1148.4820349978938,
+   "gemini-live-standard": 920.8016649558826,
+   "azure-realtime": 1080.8287168132576,
+   "nova-sonic": 822.04858339371,
+   "grok-realtime": 1175.029002708521,
+   "grok-realtime-3": 1313.326738080349,
+   "gpt-live": 1171.1668262099101,
+   "openai-realtime-mini": 903.878058467539,
+   "gemini-live": 1003.6924059389403,
+   "gemini-flash-live": 997.089953247988,
+   "deepslate": 799.0194127256623,
+   "phonic-1": 980.5978144916725,
+   "eleven-realtime-v1-max": 879.783125806405,
+   "eleven-realtime-v1-mini": 774.9401612383763,
+   "higgs-realtime": 818.2739253849594,
+   "gpt-live-1-1": 1211.0415755389333,
+   "cascade-baseline": 894.4891358135571
   }
  },
  "validation": {
@@ -423,7 +423,12 @@
   "reference_ranked": false,
   "s3_operations": [
    "GetObject"
-  ]
+  ],
+  "corrected_cohort": {
+   "calls": 210,
+   "source_hashes_unchanged": 210,
+   "metric_entries": 6300
+  }
  },
  "ranked_models": [
   "openai-realtime",
@@ -463,7 +468,7 @@
    "eleven-realtime-v1-max": 66.66666666666667,
    "eleven-realtime-v1-mini": 81.25,
    "higgs-realtime": 43.75,
-   "gpt-live-1-1": 75.0,
+   "gpt-live-1-1": 83.33333333333333,
    "cascade-baseline": 72.91666666666667
   },
   "F02": {
@@ -482,7 +487,7 @@
    "eleven-realtime-v1-max": 66.11111111111111,
    "eleven-realtime-v1-mini": 75.0,
    "higgs-realtime": 75.0,
-   "gpt-live-1-1": 44.44444444444444,
+   "gpt-live-1-1": 72.22222222222223,
    "cascade-baseline": 75.0
   },
   "F03": {
@@ -501,7 +506,7 @@
    "eleven-realtime-v1-max": 78.70370370370371,
    "eleven-realtime-v1-mini": 70.83333333333334,
    "higgs-realtime": 76.38888888888889,
-   "gpt-live-1-1": 76.85185185185186,
+   "gpt-live-1-1": 72.22222222222223,
    "cascade-baseline": 75.0
   },
   "F04": {
@@ -539,7 +544,7 @@
    "eleven-realtime-v1-max": 73.0324074074074,
    "eleven-realtime-v1-mini": 42.01388888888889,
    "higgs-realtime": 47.22222222222222,
-   "gpt-live-1-1": 62.96296296296297,
+   "gpt-live-1-1": 79.16666666666667,
    "cascade-baseline": 34.95370370370371
   },
   "F06": {
@@ -558,7 +563,7 @@
    "eleven-realtime-v1-max": 79.16666666666667,
    "eleven-realtime-v1-mini": 87.5,
    "higgs-realtime": 48.611111111111114,
-   "gpt-live-1-1": 83.33333333333333,
+   "gpt-live-1-1": 87.5,
    "cascade-baseline": 75.0
   },
   "F07": {
@@ -577,7 +582,7 @@
    "eleven-realtime-v1-max": 80.55555555555556,
    "eleven-realtime-v1-mini": 84.72222222222223,
    "higgs-realtime": 61.574074074074076,
-   "gpt-live-1-1": 93.05555555555556,
+   "gpt-live-1-1": 91.66666666666667,
    "cascade-baseline": 76.38888888888889
   },
   "F08": {
@@ -596,7 +601,7 @@
    "eleven-realtime-v1-max": 68.05555555555556,
    "eleven-realtime-v1-mini": 65.27777777777777,
    "higgs-realtime": 45.833333333333336,
-   "gpt-live-1-1": 73.61111111111111,
+   "gpt-live-1-1": 73.33333333333334,
    "cascade-baseline": 68.05555555555556
   },
   "F09": {
@@ -634,7 +639,7 @@
    "eleven-realtime-v1-max": 75.34722222222223,
    "eleven-realtime-v1-mini": 91.66666666666667,
    "higgs-realtime": 57.291666666666664,
-   "gpt-live-1-1": 83.33333333333333,
+   "gpt-live-1-1": 77.77777777777779,
    "cascade-baseline": 83.33333333333333
   },
   "F11": {
@@ -653,7 +658,7 @@
    "eleven-realtime-v1-max": 90.27777777777777,
    "eleven-realtime-v1-mini": 85.5324074074074,
    "higgs-realtime": 62.5,
-   "gpt-live-1-1": 79.16666666666667,
+   "gpt-live-1-1": 83.33333333333333,
    "cascade-baseline": 85.41666666666667
   },
   "F12": {
@@ -691,7 +696,7 @@
    "eleven-realtime-v1-max": 88.88888888888889,
    "eleven-realtime-v1-mini": 90.27777777777779,
    "higgs-realtime": 52.77777777777778,
-   "gpt-live-1-1": 91.66666666666667,
+   "gpt-live-1-1": 100.0,
    "cascade-baseline": 95.83333333333333
   },
   "F14": {
@@ -710,7 +715,7 @@
    "eleven-realtime-v1-max": 90.27777777777779,
    "eleven-realtime-v1-mini": 69.79166666666667,
    "higgs-realtime": 63.19444444444445,
-   "gpt-live-1-1": 75.0,
+   "gpt-live-1-1": 77.77777777777779,
    "cascade-baseline": 87.5
   },
   "F15": {
@@ -729,7 +734,7 @@
    "eleven-realtime-v1-max": 81.01851851851852,
    "eleven-realtime-v1-mini": 93.05555555555556,
    "higgs-realtime": 84.72222222222223,
-   "gpt-live-1-1": 83.33333333333333,
+   "gpt-live-1-1": 91.66666666666667,
    "cascade-baseline": 90.27777777777779
   },
   "F16": {
@@ -767,7 +772,7 @@
    "eleven-realtime-v1-max": 85.06944444444444,
    "eleven-realtime-v1-mini": 78.125,
    "higgs-realtime": 58.333333333333336,
-   "gpt-live-1-1": 78.125,
+   "gpt-live-1-1": 61.458333333333336,
    "cascade-baseline": 78.81944444444444
   },
   "F18": {
@@ -786,7 +791,7 @@
    "eleven-realtime-v1-max": 94.09722222222223,
    "eleven-realtime-v1-mini": 90.625,
    "higgs-realtime": 87.84722222222221,
-   "gpt-live-1-1": 70.13888888888889,
+   "gpt-live-1-1": 97.91666666666667,
    "cascade-baseline": 90.97222222222221
   },
   "F19": {
@@ -824,7 +829,7 @@
    "eleven-realtime-v1-max": 58.61111111111111,
    "eleven-realtime-v1-mini": 64.16666666666667,
    "higgs-realtime": 57.5,
-   "gpt-live-1-1": 50.0,
+   "gpt-live-1-1": 100.0,
    "cascade-baseline": 60.0
   },
   "F21": {
@@ -843,7 +848,7 @@
    "eleven-realtime-v1-max": 72.22222222222223,
    "eleven-realtime-v1-mini": 50.0,
    "higgs-realtime": 61.11111111111111,
-   "gpt-live-1-1": 83.33333333333334,
+   "gpt-live-1-1": 77.77777777777779,
    "cascade-baseline": 66.66666666666667
   },
   "F22": {
@@ -862,7 +867,7 @@
    "eleven-realtime-v1-max": 77.77777777777777,
    "eleven-realtime-v1-mini": 54.16666666666667,
    "higgs-realtime": 68.05555555555556,
-   "gpt-live-1-1": 61.111111111111114,
+   "gpt-live-1-1": 75.0,
    "cascade-baseline": 72.22222222222223
   },
   "F23": {
@@ -881,7 +886,7 @@
    "eleven-realtime-v1-max": 61.111111111111114,
    "eleven-realtime-v1-mini": 70.37037037037038,
    "higgs-realtime": 72.22222222222221,
-   "gpt-live-1-1": 68.51851851851852,
+   "gpt-live-1-1": 72.22222222222223,
    "cascade-baseline": 75.0
   },
   "F24": {
@@ -900,7 +905,7 @@
    "eleven-realtime-v1-max": 54.16666666666667,
    "eleven-realtime-v1-mini": 65.27777777777779,
    "higgs-realtime": 69.44444444444444,
-   "gpt-live-1-1": 75.0,
+   "gpt-live-1-1": 79.16666666666667,
    "cascade-baseline": 65.27777777777779
   },
   "F25": {
@@ -919,7 +924,7 @@
    "eleven-realtime-v1-max": 77.77777777777779,
    "eleven-realtime-v1-mini": 64.35185185185186,
    "higgs-realtime": 51.38888888888889,
-   "gpt-live-1-1": 65.27777777777779,
+   "gpt-live-1-1": 76.3888888888889,
    "cascade-baseline": 58.333333333333336
   },
   "F26": {
@@ -938,7 +943,7 @@
    "eleven-realtime-v1-max": 91.66666666666667,
    "eleven-realtime-v1-mini": 71.2962962962963,
    "higgs-realtime": 53.7037037037037,
-   "gpt-live-1-1": 62.96296296296296,
+   "gpt-live-1-1": 90.74074074074075,
    "cascade-baseline": 70.37037037037038
   },
   "F27": {
@@ -957,7 +962,7 @@
    "eleven-realtime-v1-max": 69.44444444444444,
    "eleven-realtime-v1-mini": 71.52777777777777,
    "higgs-realtime": 76.62037037037038,
-   "gpt-live-1-1": 64.58333333333333,
+   "gpt-live-1-1": 97.91666666666667,
    "cascade-baseline": 83.68055555555556
   },
   "F28": {
@@ -976,7 +981,7 @@
    "eleven-realtime-v1-max": 84.375,
    "eleven-realtime-v1-mini": 78.47222222222223,
    "higgs-realtime": 69.44444444444444,
-   "gpt-live-1-1": 86.45833333333333,
+   "gpt-live-1-1": 82.29166666666667,
    "cascade-baseline": 96.18055555555556
   },
   "F29": {
@@ -995,7 +1000,7 @@
    "eleven-realtime-v1-max": 82.29166666666667,
    "eleven-realtime-v1-mini": 79.16666666666667,
    "higgs-realtime": 68.05555555555556,
-   "gpt-live-1-1": 66.66666666666667,
+   "gpt-live-1-1": 70.83333333333333,
    "cascade-baseline": 44.44444444444444
   },
   "F30": {
@@ -1014,7 +1019,7 @@
    "eleven-realtime-v1-max": 73.26388888888889,
    "eleven-realtime-v1-mini": 46.18055555555556,
    "higgs-realtime": 61.458333333333336,
-   "gpt-live-1-1": 80.20833333333333,
+   "gpt-live-1-1": 71.875,
    "cascade-baseline": 45.833333333333336
   },
   "F31": {
@@ -1052,7 +1057,7 @@
    "eleven-realtime-v1-max": 92.70833333333333,
    "eleven-realtime-v1-mini": 91.66666666666667,
    "higgs-realtime": 47.22222222222222,
-   "gpt-live-1-1": 79.16666666666667,
+   "gpt-live-1-1": 87.5,
    "cascade-baseline": 70.83333333333333
   },
   "F33": {
@@ -1071,7 +1076,7 @@
    "eleven-realtime-v1-max": 73.14814814814815,
    "eleven-realtime-v1-mini": 76.85185185185185,
    "higgs-realtime": 78.70370370370371,
-   "gpt-live-1-1": 83.33333333333333,
+   "gpt-live-1-1": 77.77777777777779,
    "cascade-baseline": 72.68518518518519
   },
   "F34": {
@@ -1090,7 +1095,7 @@
    "eleven-realtime-v1-max": 72.22222222222223,
    "eleven-realtime-v1-mini": 57.63888888888889,
    "higgs-realtime": 63.541666666666664,
-   "gpt-live-1-1": 100.0,
+   "gpt-live-1-1": 84.72222222222223,
    "cascade-baseline": 71.52777777777779
   },
   "F35": {
@@ -1128,7 +1133,7 @@
    "eleven-realtime-v1-max": 79.62962962962963,
    "eleven-realtime-v1-mini": 81.48148148148148,
    "higgs-realtime": 75.0,
-   "gpt-live-1-1": 88.8888888888889,
+   "gpt-live-1-1": 90.74074074074075,
    "cascade-baseline": 83.33333333333334
   },
   "H02": {
@@ -1147,7 +1152,7 @@
    "eleven-realtime-v1-max": 79.51388888888889,
    "eleven-realtime-v1-mini": 79.16666666666667,
    "higgs-realtime": 66.66666666666667,
-   "gpt-live-1-1": 64.58333333333333,
+   "gpt-live-1-1": 71.875,
    "cascade-baseline": 79.16666666666667
   },
   "H03": {
@@ -1185,7 +1190,7 @@
    "eleven-realtime-v1-max": 55.55555555555556,
    "eleven-realtime-v1-mini": 70.83333333333333,
    "higgs-realtime": 86.11111111111111,
-   "gpt-live-1-1": 93.05555555555556,
+   "gpt-live-1-1": 100.0,
    "cascade-baseline": 87.5
   },
   "H05": {
@@ -1204,7 +1209,7 @@
    "eleven-realtime-v1-max": 83.33333333333333,
    "eleven-realtime-v1-mini": 83.33333333333333,
    "higgs-realtime": 55.55555555555556,
-   "gpt-live-1-1": 95.83333333333333,
+   "gpt-live-1-1": 93.75,
    "cascade-baseline": 73.8425925925926
   },
   "H06": {
@@ -1223,7 +1228,7 @@
    "eleven-realtime-v1-max": 69.79166666666667,
    "eleven-realtime-v1-mini": 68.40277777777777,
    "higgs-realtime": 58.333333333333336,
-   "gpt-live-1-1": 75.0,
+   "gpt-live-1-1": 81.94444444444444,
    "cascade-baseline": 82.63888888888889
   },
   "H07": {
@@ -1242,7 +1247,7 @@
    "eleven-realtime-v1-max": 74.07407407407408,
    "eleven-realtime-v1-mini": 68.51851851851852,
    "higgs-realtime": 81.94444444444444,
-   "gpt-live-1-1": 66.20370370370371,
+   "gpt-live-1-1": 74.53703703703704,
    "cascade-baseline": 75.0
   },
   "H08": {
@@ -1280,7 +1285,7 @@
    "eleven-realtime-v1-max": 59.02777777777778,
    "eleven-realtime-v1-mini": 79.16666666666667,
    "higgs-realtime": 58.333333333333336,
-   "gpt-live-1-1": 72.22222222222223,
+   "gpt-live-1-1": 68.05555555555556,
    "cascade-baseline": 78.125
   },
   "H10": {
@@ -1318,7 +1323,7 @@
    "eleven-realtime-v1-max": 73.61111111111111,
    "eleven-realtime-v1-mini": 73.61111111111111,
    "higgs-realtime": 33.333333333333336,
-   "gpt-live-1-1": 98.61111111111111,
+   "gpt-live-1-1": 94.44444444444444,
    "cascade-baseline": 50.0
   },
   "H12": {
@@ -1337,7 +1342,7 @@
    "eleven-realtime-v1-max": 60.41666666666667,
    "eleven-realtime-v1-mini": 42.592592592592595,
    "higgs-realtime": 33.333333333333336,
-   "gpt-live-1-1": 78.125,
+   "gpt-live-1-1": 76.04166666666667,
    "cascade-baseline": 61.458333333333336
   },
   "H13": {
@@ -1356,7 +1361,7 @@
    "eleven-realtime-v1-max": 81.25,
    "eleven-realtime-v1-mini": 62.5,
    "higgs-realtime": 75.0,
-   "gpt-live-1-1": 79.16666666666667,
+   "gpt-live-1-1": 86.45833333333334,
    "cascade-baseline": 68.40277777777777
   },
   "H14": {
@@ -1375,7 +1380,7 @@
    "eleven-realtime-v1-max": 83.33333333333333,
    "eleven-realtime-v1-mini": 62.96296296296296,
    "higgs-realtime": 72.22222222222221,
-   "gpt-live-1-1": 86.11111111111111,
+   "gpt-live-1-1": 85.18518518518519,
    "cascade-baseline": 79.16666666666667
   },
   "H15": {
@@ -1394,7 +1399,7 @@
    "eleven-realtime-v1-max": 90.27777777777777,
    "eleven-realtime-v1-mini": 70.83333333333333,
    "higgs-realtime": 95.83333333333333,
-   "gpt-live-1-1": 94.44444444444444,
+   "gpt-live-1-1": 97.22222222222221,
    "cascade-baseline": 62.5
   },
   "H16": {
@@ -1413,7 +1418,7 @@
    "eleven-realtime-v1-max": 47.916666666666664,
    "eleven-realtime-v1-mini": 44.44444444444444,
    "higgs-realtime": 55.55555555555556,
-   "gpt-live-1-1": 50.0,
+   "gpt-live-1-1": 54.166666666666664,
    "cascade-baseline": 58.333333333333336
   },
   "H17": {
@@ -1432,7 +1437,7 @@
    "eleven-realtime-v1-max": 79.16666666666667,
    "eleven-realtime-v1-mini": 61.111111111111114,
    "higgs-realtime": 66.66666666666667,
-   "gpt-live-1-1": 69.44444444444444,
+   "gpt-live-1-1": 86.11111111111111,
    "cascade-baseline": 79.16666666666667
   },
   "H18": {
@@ -1451,7 +1456,7 @@
    "eleven-realtime-v1-max": 86.11111111111111,
    "eleven-realtime-v1-mini": 77.31481481481482,
    "higgs-realtime": 84.72222222222221,
-   "gpt-live-1-1": 94.44444444444444,
+   "gpt-live-1-1": 100.0,
    "cascade-baseline": 93.05555555555556
   },
   "H19": {
@@ -1470,7 +1475,7 @@
    "eleven-realtime-v1-max": 66.66666666666667,
    "eleven-realtime-v1-mini": 72.91666666666667,
    "higgs-realtime": 86.45833333333333,
-   "gpt-live-1-1": 88.54166666666667,
+   "gpt-live-1-1": 81.25,
    "cascade-baseline": 97.91666666666667
   },
   "H20": {
@@ -1489,7 +1494,7 @@
    "eleven-realtime-v1-max": 97.91666666666667,
    "eleven-realtime-v1-mini": 92.5925925925926,
    "higgs-realtime": 89.58333333333333,
-   "gpt-live-1-1": 93.75,
+   "gpt-live-1-1": 87.5,
    "cascade-baseline": 93.05555555555556
   },
   "H21": {
@@ -1508,7 +1513,7 @@
    "eleven-realtime-v1-max": 72.22222222222223,
    "eleven-realtime-v1-mini": 81.01851851851852,
    "higgs-realtime": 77.08333333333334,
-   "gpt-live-1-1": 78.81944444444444,
+   "gpt-live-1-1": 84.375,
    "cascade-baseline": 66.66666666666667
   },
   "H22": {
@@ -1527,7 +1532,7 @@
    "eleven-realtime-v1-max": 86.45833333333333,
    "eleven-realtime-v1-mini": 75.23148148148148,
    "higgs-realtime": 75.0,
-   "gpt-live-1-1": 85.41666666666667,
+   "gpt-live-1-1": 80.55555555555556,
    "cascade-baseline": 73.0324074074074
   },
   "H23": {
@@ -1546,7 +1551,7 @@
    "eleven-realtime-v1-max": 91.66666666666667,
    "eleven-realtime-v1-mini": 77.31481481481482,
    "higgs-realtime": 61.11111111111111,
-   "gpt-live-1-1": 75.0,
+   "gpt-live-1-1": 94.44444444444444,
    "cascade-baseline": 82.87037037037037
   },
   "H24": {
@@ -1565,7 +1570,7 @@
    "eleven-realtime-v1-max": 68.75,
    "eleven-realtime-v1-mini": 63.19444444444445,
    "higgs-realtime": 72.22222222222223,
-   "gpt-live-1-1": 67.70833333333333,
+   "gpt-live-1-1": 68.75,
    "cascade-baseline": 44.44444444444444
   },
   "H25": {
@@ -1584,7 +1589,7 @@
    "eleven-realtime-v1-max": 73.14814814814815,
    "eleven-realtime-v1-mini": 80.55555555555556,
    "higgs-realtime": 79.16666666666667,
-   "gpt-live-1-1": 95.83333333333333,
+   "gpt-live-1-1": 91.66666666666667,
    "cascade-baseline": 75.92592592592594
   },
   "H26": {
@@ -1603,7 +1608,7 @@
    "eleven-realtime-v1-max": 72.91666666666667,
    "eleven-realtime-v1-mini": 61.111111111111114,
    "higgs-realtime": 66.31944444444444,
-   "gpt-live-1-1": 98.95833333333333,
+   "gpt-live-1-1": 82.29166666666667,
    "cascade-baseline": 64.58333333333333
   },
   "H27": {
@@ -1622,7 +1627,7 @@
    "eleven-realtime-v1-max": 72.5,
    "eleven-realtime-v1-mini": 76.66666666666667,
    "higgs-realtime": 76.66666666666667,
-   "gpt-live-1-1": 82.5,
+   "gpt-live-1-1": 83.33333333333333,
    "cascade-baseline": 73.33333333333333
   },
   "H28": {
@@ -1641,7 +1646,7 @@
    "eleven-realtime-v1-max": 65.625,
    "eleven-realtime-v1-mini": 78.125,
    "higgs-realtime": 54.51388888888889,
-   "gpt-live-1-1": 82.29166666666667,
+   "gpt-live-1-1": 73.95833333333333,
    "cascade-baseline": 75.0
   },
   "H29": {
@@ -1660,7 +1665,7 @@
    "eleven-realtime-v1-max": 83.33333333333333,
    "eleven-realtime-v1-mini": 75.0,
    "higgs-realtime": 86.11111111111111,
-   "gpt-live-1-1": 83.33333333333333,
+   "gpt-live-1-1": 94.44444444444444,
    "cascade-baseline": 73.95833333333333
   },
   "H30": {
@@ -1679,7 +1684,7 @@
    "eleven-realtime-v1-max": 59.72222222222222,
    "eleven-realtime-v1-mini": 56.94444444444444,
    "higgs-realtime": 45.833333333333336,
-   "gpt-live-1-1": 66.66666666666667,
+   "gpt-live-1-1": 69.44444444444444,
    "cascade-baseline": 83.33333333333333
   },
   "H31": {
@@ -1698,7 +1703,7 @@
    "eleven-realtime-v1-max": 61.458333333333336,
    "eleven-realtime-v1-mini": 86.11111111111111,
    "higgs-realtime": 87.5,
-   "gpt-live-1-1": 78.125,
+   "gpt-live-1-1": 79.16666666666667,
    "cascade-baseline": 76.73611111111111
   },
   "H32": {
@@ -1717,7 +1722,7 @@
    "eleven-realtime-v1-max": 73.61111111111111,
    "eleven-realtime-v1-mini": 83.68055555555556,
    "higgs-realtime": 95.13888888888889,
-   "gpt-live-1-1": 97.91666666666667,
+   "gpt-live-1-1": 86.80555555555556,
    "cascade-baseline": 91.55092592592592
   },
   "H33": {
@@ -1736,7 +1741,7 @@
    "eleven-realtime-v1-max": 80.90277777777777,
    "eleven-realtime-v1-mini": 91.66666666666667,
    "higgs-realtime": 79.16666666666667,
-   "gpt-live-1-1": 94.79166666666667,
+   "gpt-live-1-1": 93.75,
    "cascade-baseline": 72.91666666666667
   },
   "H34": {
@@ -1755,7 +1760,7 @@
    "eleven-realtime-v1-max": 81.94444444444444,
    "eleven-realtime-v1-mini": 79.51388888888889,
    "higgs-realtime": 78.24074074074073,
-   "gpt-live-1-1": 93.33333333333333,
+   "gpt-live-1-1": 86.38888888888889,
    "cascade-baseline": 61.11111111111111
   },
   "H35": {
@@ -1774,7 +1779,7 @@
    "eleven-realtime-v1-max": 100.0,
    "eleven-realtime-v1-mini": 90.27777777777777,
    "higgs-realtime": 86.11111111111111,
-   "gpt-live-1-1": 88.88888888888889,
+   "gpt-live-1-1": 86.11111111111111,
    "cascade-baseline": 87.03703703703704
   }
  },
@@ -1784,6 +1789,7 @@
   "baseline_task_rules": "task-completion-2026-11-16/tasks_v6.json",
   "historical_selection": "Original published round selection, preserving health replacements and Cascade language swap.",
   "new_selection": "210 completed selected calls, three runs on each of 70 scenarios.",
-  "comparability": "Local replay; historical hosting and judge parity unconfirmed. Failure QC covers reviewed failures and targeted diagnostic calls."
+  "comparability": "Local replay; historical hosting and judge parity unconfirmed. Failure QC covers reviewed failures and targeted diagnostic calls.",
+  "gpt_live_1_1_grading": "Corrected grading evidence, unchanged 210-call cohort; three reconfirmed same-call rubric adjudications."
  }
 }

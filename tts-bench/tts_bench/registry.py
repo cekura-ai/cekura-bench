@@ -33,6 +33,7 @@ from tts_bench.adapters.gradium import GradiumAdapter
 from tts_bench.adapters.hume import HumeAdapter
 from tts_bench.adapters.inworld import InworldAdapter
 from tts_bench.adapters.mistral_realtime import MistralRealtimeAdapter
+from tts_bench.adapters.murf import MurfAdapter
 from tts_bench.adapters.openai_tts import OpenAITTSAdapter
 from tts_bench.adapters.rime import RimeAdapter
 from tts_bench.adapters.smallest import SmallestAdapter
@@ -48,6 +49,8 @@ class Model:
     model: str
     voice: str
     rate: int = DEFAULT_RATE    # a model that emits only one PCM rate names it here
+    # Adapter options this row is run with (key, value); recorded in every cell.
+    options: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -66,6 +69,10 @@ class ProviderEntry:
         """The lineup's sample rate for ``model``; the harness default for a model outside the lineup."""
         return next((m.rate for m in self.models if m.model == model), DEFAULT_RATE)
 
+    def options_for(self, model: str) -> tuple[tuple[str, str], ...]:
+        """The lineup's adapter options for ``model``; none for a model outside the lineup."""
+        return next((m.options for m in self.models if m.model == model), ())
+
     def voice_for(self, model: str) -> str:
         """The lineup's voice for ``model``; the default model's voice for a model outside the lineup."""
         return next((m.voice for m in self.models if m.model == model), self.models[0].voice)
@@ -75,12 +82,15 @@ class ProviderEntry:
 # model string, so there the voice is the model.
 SKYLAR = "db6b0ed5-d5d3-463d-ae85-518a07d3c2b4"       # Cartesia
 RACHEL = "21m00Tcm4TlvDq8ikWAM"                       # ElevenLabs
+# ElevenLabs' text normalizer (numbers, abbreviations) for v4, on at ElevenLabs' recommendation.
+V4_NORMALIZATION = ("apply_text_normalization", "on")
 EVERLY = "vjFyp2BcCyTlUmYb"     # Gradium, its first choice of its recommended voices
 ASTRA = "astra"                                      # Rime, female US English on Coda and Mist v3
 SARAH = "933563129e564b19a115bedd57b7406a"              # Fish Official, female US English
 DELIA = "c70cfb98867a4bfb9ae20d2401257b92"              # Fish Audio, female US English, from its Drama 3 voice cast
 AVA = "5bb7de05-c8fe-426a-8fcc-ba4fc4ce9f9c"           # Hume "Ava Song", female US English, from its Voice Library
 AUDREY = "49c443a4-8a1d-5f7e-b70b-98bdbd9823c3"        # AssemblyAI "Audrey", female US English, the voice AssemblyAI chose
+JUDITH = "en-US-judith"                              # Murf Falcon 2.1, female US English, first on Murf's Falcon voice recommendations
 MARGARET = "voice_447"                                  # Mistral "Margaret", female US English, the realtime session's default voice
 
 PROVIDERS: dict[str, ProviderEntry] = {
@@ -102,9 +112,10 @@ PROVIDERS: dict[str, ProviderEntry] = {
     ),
     "elevenlabs-dialogue-multi": ProviderEntry(
         "elevenlabs-dialogue-multi", ElevenLabsDialogueMultiAdapter, "ELEVENLABS_API_KEY",
-        (Model("eleven_v4_turbo", RACHEL), Model("eleven_v4", RACHEL)),
+        (Model("eleven_v4_turbo", RACHEL, options=(V4_NORMALIZATION,)), Model("eleven_v4", RACHEL, options=(V4_NORMALIZATION,))),
         notes="multi-context text-to-dialogue websocket (v4 is served only there); text in pieces per context; "
-              "close_context flushes, so the cancel is measured, not assumed",
+              "close_context flushes, so the cancel is measured, not assumed; text normalization on, as ElevenLabs "
+              "recommends for v4",
     ),
     "deepgram": ProviderEntry(
         "deepgram", DeepgramSpeakAdapter, "DEEPGRAM_API_KEY",
@@ -147,6 +158,14 @@ PROVIDERS: dict[str, ProviderEntry] = {
         notes="/ws3 JSON websocket; segment=never buffers concatenable text until finish flushes; "
               "done ends the batch; sequential contexts; no cancel (clear only drops unsubmitted text); "
               "Coda replaces the retired Arcana family",
+    ),
+    "murf": ProviderEntry(
+        "murf", MurfAdapter, "MURF_API_KEY",
+        (Model("falcon-2.1", JUDITH),),
+        notes="Falcon 2.1 websocket, named contexts and 24 kHz PCM; voice_config, with the style name the voice's "
+              "catalog entry lists (option style), is sent before t0; "
+              "clear drops queued audio but cannot retract audio already received by the player; "
+              "the documented predictive_chunking default is strict (record --option to change it)",
     ),
     "fish-audio": ProviderEntry(
         "fish-audio", FishAudioAdapter, "FISH_AUDIO_API_KEY",
@@ -212,7 +231,7 @@ PROVIDERS: dict[str, ProviderEntry] = {
 
 # Protocols not yet spoken. Listed so the gap is a fact, not an oversight.
 PENDING = ("qwen-audio", "speechify", "minimax",
-           "murf", "hume", "lmnt", "google-cloud-tts", "polly")
+           "hume", "lmnt", "google-cloud-tts", "polly")
 
 
 def lineup() -> list[tuple[str, Model]]:

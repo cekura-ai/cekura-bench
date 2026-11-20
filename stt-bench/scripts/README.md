@@ -84,6 +84,10 @@ describes the selected runs, required inputs, metric definitions, and exports.
 transcript differences. The default summary export excludes private transcripts
 and audio; including them requires the explicit private-review option.
 
+[site_row.py](site_row.py) builds one model's website row, with its 95% ranges and
+timing percentiles, from a finished full run and turn run. See
+[Adding a provider](../ADDING_A_PROVIDER.md).
+
 For concurrent runs:
 
 | Script | Purpose |

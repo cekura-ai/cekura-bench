@@ -9,6 +9,9 @@ For the private conversational-turn workflow, including local listening review,
 immutable audio/transcript pairs, and TTFT/TTFS measurement, see
 [Private turn benchmark](TURN_BENCHMARK.md).
 
+To add a new model and publish it on the website, follow
+[Adding a provider](ADDING_A_PROVIDER.md).
+
 ## Quick start
 
 Use Python 3.12 or 3.13 and `uv`. In this repository, first run `cd stt-bench`

@@ -56,7 +56,7 @@ def moments(cfg: Config, calls: list[tuple[str, Call]], titles: dict[str, str | 
             start = max(0, min(ts) - x["clipLeadSeconds"])
             end = min(max(ts) + x["clipTailSeconds"], start + x["clipMaxSeconds"])
             out.setdefault(sid, {})[kind] = dict(
-                model=model, scenario=c.code, title=titles.get(c.code), text=clean(text, x["momentMaxChars"]), url=c.url, start_s=start, end_s=end
+                model=model, scenario=c.code, title=titles.get(c.code), text=clean(text, x["momentMaxChars"]), start_s=start, end_s=end
             )
             picks.append(dict(check=sid, kind=kind, model=model, scenario=c.code, url=c.url, call_id=c.call_id, start_s=start, end_s=end))
             used.add((sid, model))
@@ -126,6 +126,7 @@ def reviewed_moments(cfg: Config, entries: list[Entry], clips: dict[str, Any]) -
                 raise ValueError(f"reviewed clips: {sid} {slot} needs {', '.join(MOMENT_FIELDS)}")
             if m["model"] not in models:
                 raise ValueError(f"reviewed clips: {sid} {slot} names unknown model {m['model']}")
+            m.pop("url", None)
             m["domain"] = next((d for p, d in domain.items() if m["scenario"].startswith(p)), None)
     return clips
 

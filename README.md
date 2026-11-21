@@ -10,6 +10,7 @@ repository. Each project keeps its own runtime, configuration, and results.
 | Voice agents | Complete Appointment and Medicare workflows against a Cekura-connected agent | Repository root; Node.js 20+ |
 | [Speech-to-text](stt-bench/README.md) | Streaming transcription accuracy, text availability, completion, and reliability | `stt-bench/`; Python 3.12 or 3.13 and `uv` |
 | [Text-to-speech](tts-bench/README.md) | A TTS service at its own interface: time to first audio, playout continuity, cancel, continuation, and round-trip accuracy | `tts-bench/`; Python 3.12 or 3.13 and `uv` |
+| [Real-caller S2S](s2s-human-bench/README.md) | Speech-to-speech models on calls with recorded human callers: call score, pass³ and ELO, from exported Cekura runs | `s2s-human-bench/`; Python 3.12 or 3.13 and `uv` |
 
 For speech-to-text setup and a local model listing (no provider requests):
 
@@ -287,6 +288,12 @@ Appointment and Medicare runs. Providers may host equivalent tools themselves
 or use their platform's mock-tool mechanism.
 
 ## Methodology
+
+Published workflow result snapshots are stored under
+[`results/voice-agent-workflows/`](results/voice-agent-workflows/). The
+[Retell tell-1 result from 10 November 2026](results/voice-agent-workflows/retell-tell-1-2026-11-10/README.md)
+includes the approved report, per-call scores, its five-gate policy and a local
+validator for Pass¹ and Pass³.
 
 ### The agents under test
 

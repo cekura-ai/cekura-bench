@@ -5,6 +5,8 @@ from pathlib import Path
 DATASETS = {'pipecat-stt-benchmark': Path('config/datasets/pipecat-stt-benchmark.json')}
 MODELS = {name: Path('config/models') / (name + '.json') for name in (
     'assemblyai-universal-3-5-pro',
+    'assemblyai-universal-3-5-pro-min-latency',
+    'assemblyai-universal-3-6-pro-min-latency',
     'reson8-realtime',
     'gradium-default',
     'deepgram-nova-3',
@@ -18,6 +20,7 @@ MODELS = {name: Path('config/models') / (name + '.json') for name in (
     'gemini-3.8-live',
     'gemini-3.8-live-extended-thinking',
     'elevenlabs-scribe-v2-realtime',
+    'elevenlabs-scribe-v3-live',
     'speechmatics-standard',
     'speechmatics-enhanced',
     'speechmatics-linden-1',
@@ -31,6 +34,7 @@ MODELS = {name: Path('config/models') / (name + '.json') for name in (
     'zoom-scribe-live',
     'zoom-scribe-pro-live',
     'zoom-scribe-pro-v2-1-live',
+    'murf-finch-global',
     'mistral-voxtral-realtime-3',
 )}
 BLOCKED_MODELS = {}

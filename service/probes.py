@@ -129,7 +129,8 @@ class ProbeContext:
                 if self._activity() != mark:
                     break
             else:
-                return True
+                if not self.adapter.transcripts_pending:
+                    return True
         return False
 
 
@@ -145,9 +146,18 @@ async def pump_tools(ctx: ProbeContext, stop: asyncio.Event) -> None:
         while ctx.tools is not None and served < len(ctx.adapter.tool_calls):
             call = ctx.adapter.tool_calls[served]
             served += 1
+            if call.get("cancelled"):
+                continue  # withdrawn by the provider before we answered; a reply would be dropped
             output = ctx.tools.call(call["name"], call.get("arguments", {}))
             await ctx.adapter.send_tool_result(call.get("call_id", ""), output)
         await asyncio.sleep(0.01)
+
+
+def made_calls(adapter: RealtimeAdapter) -> list[dict[str, Any]]:
+    """The tool calls the agent stood by. A call the provider withdrew (the caller
+    kept talking before the turn was confirmed) stays in the record, marked, but
+    neither completes a scenario nor counts in its verdict."""
+    return [call for call in adapter.tool_calls if not call.get("cancelled")]
 
 
 @dataclass
@@ -581,7 +591,7 @@ class TaskScenario:
                     ended_by = f"no reply after {clip_id}"
                     break
                 last = ctx.adapter.agent_text[-1] if ctx.adapter.agent_text else ""
-                if self.spec.finished(last, ctx.adapter.tool_calls):
+                if self.spec.finished(last, made_calls(ctx.adapter)):
                     ended_by = "scenario complete"
                     break
                 clip_id = self.spec.route(last)
@@ -592,7 +602,8 @@ class TaskScenario:
             if isinstance(outcome, Exception):
                 ctx.log.emit(ev.SESSION_ERROR, error=repr(outcome), where="tool-pump")
 
-        verdict = verify_trace(ctx.adapter.tool_calls, expected=self.spec.expected, forbidden=self.spec.forbidden)
+        made = made_calls(ctx.adapter)
+        verdict = verify_trace(made, expected=self.spec.expected, forbidden=self.spec.forbidden)
         return ProbeResult(
             self.name,
             verdict="pass" if verdict.passed else "fail",
@@ -604,8 +615,10 @@ class TaskScenario:
                 "turns": len(script),
                 "script": script,
                 "ended_by": ended_by,
-                "tool_calls": [
-                    {"name": c["name"], "arguments": c.get("arguments", {})} for c in ctx.adapter.tool_calls
+                "tool_calls": [{"name": c["name"], "arguments": c.get("arguments", {})} for c in made],
+                "cancelled_tool_calls": [
+                    {"name": c["name"], "arguments": c.get("arguments", {})}
+                    for c in ctx.adapter.tool_calls if c.get("cancelled")
                 ],
                 "unmatched_tool_inputs": sum(1 for c in ctx.tools.calls if not c.matched),
                 "agent_text": " ".join(ctx.adapter.agent_text)[:1200],

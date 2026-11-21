@@ -189,6 +189,33 @@ class TestPricingACall:
         price = price_call("phonic", {"call_seconds": 90})
         assert price.usd == pytest.approx(0.14 * 1.5) and price.publishable
 
+    def test_a_minute_row_with_text_tokens_on_top_prices_both(self):
+        usage = {"usage_reports": 6, "call_seconds": 90, "prompt_tokens": 40_000,
+                 "cache_read_input_tokens": 36_000, "input_audio_tokens": 500, "completion_tokens": 400}
+        price = price_call("polyai-dialog", usage)
+        assert price.lines["dialog-rsn-1 connected time"] == pytest.approx(0.02 * 1.5)
+        # Speech rides on the minute rate; only the text lanes are billed by the token.
+        assert price.lines["dialog-rsn-1 text tokens"] == pytest.approx(
+            (3_500 * 2 + 36_000 * 0.2 + 400 * 5) / 1e6)
+        assert price.publishable
+
+    def test_a_record_without_the_cache_split_is_not_priced_at_the_fresh_rate(self):
+        # Most of every prompt is cached at a tenth of the rate; the total alone would overstate it.
+        price = price_call("polyai-dialog", {"usage_reports": 11, "call_seconds": 99,
+                                             "prompt_tokens": 53_842, "completion_tokens": 545})
+        assert price.usd is None and "cache_read_input_tokens" in price.reason
+
+    def test_polyai_reports_its_cache_and_speech_split(self):
+        import polyai_realtime
+
+        usage = polyai_realtime.token_usage({
+            "input_tokens": 6_458, "output_tokens": 61, "total_tokens": 6_519,
+            "input_token_details": {"text_tokens": 6_400, "audio_tokens": 58, "cached_tokens": 6_384,
+                                    "cached_tokens_details": {"text_tokens": 6_384, "audio_tokens": 0}},
+            "output_token_details": {"text_tokens": 21, "audio_tokens": 40},
+        })
+        assert (usage.cache_read_input_tokens, usage.input_audio_tokens, usage.output_audio_tokens) == (6_384, 58, 40)
+
     def test_a_row_with_no_rate_yields_a_reason_not_a_zero(self):
         price = price_call("qwen-realtime", {"call_seconds": 60})
         assert price.usd is None and price.reason

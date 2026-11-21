@@ -77,8 +77,9 @@ A provider may require additional account access for a particular model.
 | Sarvam | Saaras v3 Realtime | `SARVAM_API_KEY` |
 | Inworld | STT-1 | `INWORLD_API_KEY` |
 | Gradium | Default | `GRADIUM_API_KEY` |
-| Reson8 | Realtime | `RESON_API_KEY` |
+| Reson8 | rumble-2 (US/global endpoint) | `RESON_API_KEY` |
 | Zoom | Scribe (live mode) | `ZOOM_API_KEY` |
+| Murf | Finch Global (beta) | `MURF_API_KEY` |
 | Mistral | Voxtral Mini Transcribe Realtime 3 | `MISTRAL_API_KEY` |
 
 Environment variables take precedence over `.env`. Accepted aliases are defined in

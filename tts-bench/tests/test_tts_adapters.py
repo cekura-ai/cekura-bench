@@ -113,6 +113,16 @@ class TestElevenLabsDialogueMulti:
         assert not ElevenLabsDialogueMultiAdapter.ends_on_quiet
         assert ElevenLabsDialogueMultiAdapter.unsupported_reason(TTSConfig("eleven_v4", "v"), ("streamed_input", "cancel", "continuation")) is None
 
+    def test_the_lineup_runs_v4_with_text_normalization_on(self):
+        entry = PROVIDERS["elevenlabs-dialogue-multi"]
+        for model in ("eleven_v4_turbo", "eleven_v4"):
+            options = entry.options_for(model)
+            assert dict(options) == {"apply_text_normalization": "on"}
+            config = TTSConfig(model=model, voice="v", options=options)
+            multi = ElevenLabsDialogueMultiAdapter(config, "unused", EventLog(Clock()), Clock())
+            assert multi.url.endswith("&apply_text_normalization=on")
+            assert config.label.endswith(",apply_text_normalization=on")
+
 
 class TestLineup:
     def test_each_model_runs_with_its_own_voice_and_names_its_run(self, tmp_path):
@@ -416,6 +426,122 @@ class TestRime:
         assert "secret-key" not in raw and "secret-key" not in str(log.events) and "<640 b64 chars>" in raw
 
 
+class TestMurf:
+    async def test_context_configuration_precedes_incremental_text_and_final_ends_the_turn(self):
+        import base64
+
+        from tts_bench.adapters.murf import MurfAdapter
+
+        murf, sent = adapter(MurfAdapter, "falcon-2.1", "en-US-judith")
+        synthesis = await murf.open_context("main")
+        assert synthesis.t0 is None and sent == [{
+            "voice_config": {"voiceId": "en-US-judith", "locale": "en-US", "style": "Conversational", "rate": 0, "pitch": 0},
+            "context_id": "main",
+        }]
+        await murf.send("main", "Hello ")
+        await murf.send("main", "there.")
+        await murf.finish("main")
+        assert sent[1:] == [
+            {"text": "Hello ", "context_id": "main", "end": False},
+            {"text": "there.", "context_id": "main", "end": False},
+            {"text": "", "context_id": "main", "end": True},
+        ]
+        murf._on_message({"context_id": "main", "audio": base64.b64encode(b"\x01\x00" * 2).decode(), "trace_id": "t1"})
+        murf._on_message({"context_id": "main", "timestamps": {"words": [{"word": "Hello", "start_s": 0, "end_s": 0.2}]}})
+        murf._on_message({"context_id": "main", "final": True, "trace_id": "t1", "concurrency": {"region": "us-east", "used": 1}})
+        assert bytes(synthesis.pcm) == b"\x01\x00" * 2 and synthesis.done.is_set()
+        assert synthesis.meta["trace_ids"] == ["t1", "t1"]
+        assert synthesis.meta["word_timestamps"][0]["word"] == "Hello"
+        assert synthesis.meta["concurrency"]["region"] == "us-east"
+
+    async def test_style_is_the_name_the_voice_lists_and_an_option_overrides_it(self):
+        from tts_bench.adapters.murf import MurfAdapter
+
+        murf, sent = adapter(MurfAdapter, "falcon-2.1", "en-US-natalie")
+        await murf.open_context("main")
+        assert sent[0]["voice_config"]["style"] == "Conversation"
+
+        clock = Clock()
+        murf = MurfAdapter(TTSConfig("falcon-2.1", "en-US-judith", options=(("style", "Narration"),)), "unused", EventLog(clock), clock)
+        overridden: list[dict] = []
+
+        async def capture(payload):
+            overridden.append(payload)
+
+        murf._send_json = capture
+        synthesis = await murf.open_context("main")
+        assert overridden[0]["voice_config"]["style"] == "Narration" and synthesis.meta["request"]["style"] == "Narration"
+
+    async def test_clear_is_the_cancel_and_final_acknowledges_it(self):
+        from tts_bench.adapters.murf import MurfAdapter
+
+        murf, sent = adapter(MurfAdapter, "falcon-2.1", "en-US-judith")
+        synthesis = await murf.open_context("main")
+        await murf.send("main", "A long answer.")
+        await murf.cancel("main")
+        assert sent[-1] == {"clear": True, "context_id": "main"}
+        murf._on_message({"context_id": "main", "final": True})
+        assert synthesis.t_cancel_ack is not None and synthesis.done.is_set()
+
+    async def test_protocol_capabilities_and_rejected_key_are_honest(self):
+        from tts_bench.adapters.murf import MurfAdapter
+        from tts_bench.probes import ProbeResult
+        from tts_bench.registry import PENDING
+        from tts_bench.runner import _refused
+
+        murf, _ = adapter(MurfAdapter, "falcon-2.1", "en-US-judith")
+        synthesis = await murf.open_context("main")
+        murf._on_closed("received 1008 (policy violation) Invalid api key used")
+        result = _refused(ProbeResult("one_shot", verdict="fail", syntheses=[synthesis]))
+        assert result.void and "Invalid api key" in result.void
+        assert murf.url.startswith("wss://global.api.murf.ai/v1/speech/stream-input?")
+        assert "api-key" not in murf.url and murf._headers() == {"api-key": "unused"}
+        assert MurfAdapter.native_rates == (24000,) and not MurfAdapter.native_mulaw_8k
+        assert MurfAdapter.unsupported_reason(TTSConfig("other", "en-US-judith")) == "murf WebSocket serves Falcon 2.1 only"
+        assert MurfAdapter.unsupported_reason(TTSConfig("falcon-2.1", "en-US-judith"), ("streamed_input", "cancel", "continuation")) is None
+        assert "murf" not in PENDING
+
+    async def test_reusable_socket_routes_contexts_and_keeps_the_key_out_of_logs(self, tmp_path):
+        import base64
+        import json
+
+        import websockets
+
+        from tts_bench.adapters.murf import MurfAdapter
+
+        seen: list[dict] = []
+        headers: dict = {}
+        pcm = b"\x01\x00" * 240
+
+        async def serve(ws):
+            headers.update(ws.request.headers)
+            async for raw in ws:
+                frame = json.loads(raw)
+                seen.append(frame)
+                if frame.get("end"):
+                    context_id = frame["context_id"]
+                    await ws.send(json.dumps({"context_id": context_id, "audio": base64.b64encode(pcm).decode()}))
+                    await ws.send(json.dumps({"context_id": context_id, "final": True}))
+
+        clock = Clock()
+        log = EventLog(clock, raw_path=tmp_path / "raw.jsonl")
+        murf = MurfAdapter(TTSConfig("falcon-2.1", "en-US-judith"), "secret-key", log, clock)
+        async with websockets.serve(serve, "127.0.0.1", 0) as server:
+            murf.base = f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}"
+            async with murf:
+                for context_id in ("first", "repeat"):
+                    synthesis = await murf.open_context(context_id)
+                    await murf.send(context_id, "Hello ")
+                    await murf.send(context_id, "there.")
+                    await murf.finish(context_id)
+                    done = await murf.wait(context_id, 5.0)
+                    assert bytes(done.pcm) == pcm and done.meta["ended_by"] == "provider"
+        assert [frame.get("context_id") for frame in seen if "voice_config" in frame] == ["first", "repeat"]
+        assert headers["api-key"] == "secret-key"
+        raw = (tmp_path / "raw.jsonl").read_text()
+        assert "secret-key" not in raw and "secret-key" not in str(log.events) and "<640 b64 chars>" in raw
+
+
 class TestFishAudio:
     async def test_start_is_before_t0_and_only_finish_ends_the_utterance(self):
         import msgpack
@@ -564,6 +690,55 @@ class TestDeepInfra:
         deepinfra, _ = adapter(DeepInfraTTSAdapter, "Qwen/Qwen3-TTS", "Vivian")
         assert f"{deepinfra.base}{deepinfra.speech_path}" == "https://api.deepinfra.com/v1/openai/audio/speech"
         assert deepinfra._prewarm_url() == "https://api.deepinfra.com/models/Qwen/Qwen3-TTS"
+
+
+class TestAssemblyAI:
+    def test_the_voice_is_sent_as_voice_id_and_never_as_voice(self):
+        from tts_bench.adapters.assemblyai import AssemblyAITTSAdapter
+
+        aai, _ = adapter(AssemblyAITTSAdapter, "assemblyai-tts-1", "110c952f-38ba-54b6-b3b4-b49e96c30eaa")
+        assert f"{aai.base}{aai.speech_path}" == "https://tts.us.assemblyai.com/v1/openai/audio/speech"
+        assert aai._prewarm_url() == "https://tts.us.assemblyai.com/v1/openai/models"
+        assert aai._request_args("Text to synthesize.")["json"] == {
+            "model": "assemblyai-tts-1", "voice_id": "110c952f-38ba-54b6-b3b4-b49e96c30eaa",
+            "input": "Text to synthesize.", "response_format": "pcm"}
+        assert not (aai.supports_streamed_input or aai.supports_cancel or aai.supports_continuation)
+
+
+class TestAssemblyAIStreaming:
+    async def test_generate_flush_and_cancel_on_one_socket(self):
+        from tts_bench.adapters.assemblyai_ws import AssemblyAIStreamingAdapter
+
+        aai, sent = adapter(AssemblyAIStreamingAdapter, "assemblyai-tts-1", "110c952f-38ba-54b6-b3b4-b49e96c30eaa")
+        assert aai.url.startswith("wss://tts.us.assemblyai.com/v1/ws?model_id=assemblyai-tts-1&voice_id=110c952f")
+        assert "sample_rate=24000" in aai.url and "encoding=pcm_s16le" in aai.url and "word_boundaries=false" in aai.url
+        assert aai._headers() == {"Authorization": "unused"}
+        synthesis = await aai.open_context("main")
+        await aai.send("main", "Hello ")
+        await aai.send("main", "there.")
+        await aai.finish("main")
+        assert sent == [{"type": "Generate", "text": "Hello "}, {"type": "Generate", "text": "there."}, {"type": "Flush"}]
+        aai._on_message({"type": "Audio", "audio": "AAAA", "flush_id": 0})
+        aai._on_message({"type": "FlushDone", "flush_id": 0, "audio_duration_ms": 0})
+        assert synthesis.done.is_set() and synthesis.pcm == bytearray(3) and synthesis.t_cancel_ack is None
+
+        second = await aai.open_context("next")
+        await aai.send("next", "A long reply. ")
+        await aai.cancel("next")
+        assert sent[-1] == {"type": "Cancel"}
+        aai._on_message({"type": "Cancelled", "audio_duration_seconds": 0.4})
+        assert second.t_cancel_ack is not None and second.done.is_set()
+
+    async def test_a_refused_session_is_an_adapter_error_that_reads_as_a_refusal(self):
+        import asyncio
+
+        from tts_bench.adapters.assemblyai_ws import AssemblyAIStreamingAdapter
+        from tts_bench.adapters.base import is_refusal
+
+        aai, _ = adapter(AssemblyAIStreamingAdapter, "assemblyai-tts-1", "v")
+        aai._begin = asyncio.get_running_loop().create_future()
+        aai._on_message({"type": "Error", "error_code": 3009, "error_type": "rate_limited", "error": "New sessions per minute exceeded"})
+        assert "error" in aai._begin.result() and is_refusal(aai._begin.result()["error"])
 
 
 class TestEndOfUtterance:

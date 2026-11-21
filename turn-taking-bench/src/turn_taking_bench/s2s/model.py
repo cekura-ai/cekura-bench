@@ -46,6 +46,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import threading
 import time
 from pathlib import Path
@@ -173,6 +174,11 @@ def api_key(config: dict[str, Any]) -> str:
     entry = provider_entry(config["provider"])
     if config["provider"] == "fake":
         return ""
+    # A provider that reads a second key itself (Deepgram's text model on our
+    # own OpenAI account) finds it in this process's environment.
+    for name in entry.extra_credentials:
+        if not os.environ.get(name):
+            os.environ[name] = credential(name, config.get("env_file"))
     return credential(entry.credential_env, config.get("env_file"))
 
 

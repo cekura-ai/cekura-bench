@@ -14,15 +14,19 @@ out of a footnote and inside the published cell.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from typing import Type
 
 from service.adapters.base import RealtimeAdapter
+from service.adapters.deepgram_voice_agent import THINK_KEY_ENV, DeepgramVoiceAgentAdapter
 from service.adapters.fake import FakeAdapter
 from service.adapters.gemini_live import GeminiLiveAdapter
 from service.adapters.grok_realtime import GrokRealtimeAdapter
 from service.adapters.higgs_realtime import HiggsRealtimeAdapter
 from service.adapters.openai_realtime import OpenAIRealtimeAdapter
+from service.adapters.smallest_hydra import SmallestHydraAdapter
+from service.adapters.rime_prism import RimePrismAdapter
 
 
 @dataclass(frozen=True)
@@ -33,6 +37,8 @@ class ProviderEntry:
     credential_env: str
     default_voice: str | None = None
     discloses: tuple[str, ...] = field(default_factory=tuple)
+    # Credentials the adapter reads from the environment besides its own key.
+    extra_credentials: tuple[str, ...] = ()
 
 
 PROVIDERS: dict[str, ProviderEntry] = {
@@ -65,6 +71,48 @@ PROVIDERS: dict[str, ProviderEntry] = {
         credential_env="BOSON_API_KEY",
         default_voice="default",
     ),
+    "deepgram-voice-agent": ProviderEntry(
+        key="deepgram-voice-agent",
+        adapter=DeepgramVoiceAgentAdapter,
+        default_model="open_ai/gpt-4.1",
+        credential_env="DEEPGRAM_API_KEY",
+        default_voice="aura-2-thalia-en",
+        extra_credentials=(THINK_KEY_ENV,),
+        discloses=(
+            "a managed pipeline, not one speech model: Flux (flux-general-en) hears the caller, "
+            "the named text model replies and an Aura voice speaks; latency covers all three",
+            "the text model runs on our own OpenAI account through Deepgram's bring-your-own endpoint: "
+            "Deepgram's hosted models cut prompts past 25,000 characters, and the medicare contract's is longer",
+            "Deepgram bills per minute and OpenAI bills the text model's tokens on our account; "
+            "the service bench records no cost for this row",
+            "a fixed silence duration is sent as Flux's eot_timeout_ms, a ceiling: Flux may end a turn sooner",
+        ),
+    ),
+    "smallest-hydra": ProviderEntry(
+        key="smallest-hydra",
+        adapter=SmallestHydraAdapter,
+        default_model="hydra-v1.1",
+        credential_env="SMALLEST_API_KEY",
+        default_voice="sterling",  # the server's default on hydra-v1.1, sent so the record names it
+        discloses=(
+            "agent transcript is Hydra's own undocumented reply text, Pulse Pro where a reply has none",
+            "Hydra does not transcribe the caller; each caller turn is transcribed by Smallest's Pulse Pro",
+            "turn detection is server-side with no settings; the 500 ms in the cell label is not applied",
+        ),
+    ),
+    "rime-prism": ProviderEntry(
+        key="rime-prism",
+        adapter=RimePrismAdapter,
+        default_model="prism",
+        credential_env="RIME_API_KEY",
+        default_voice="astra",
+        discloses=(
+            "the turn boundary is always the provider's: there is no manual commit and no VAD parameter, "
+            "so the 500 ms in the cell label is not applied",
+            "barge-in is reported to the provider: the client sends how much of the cut reply the "
+            "playout model played, and when an uncut reply finished playing",
+        ),
+    ),
     # Not a provider: a scripted agent with known reply timing, registered so the
     # whole harness can be run end to end with no API key and no network. Anyone
     # checking that our runner produces artifacts a number can be recomputed from
@@ -79,3 +127,18 @@ PROVIDERS: dict[str, ProviderEntry] = {
 
 # Not adapted here yet: gpt-live-1 (a separate /v1/live product with a delegated
 # backend), qwen-omni (needs a DashScope key) and nova-sonic (needs Bedrock).
+
+
+def load_extra_credentials(entry: ProviderEntry, env_file: str | None = None) -> list[str]:
+    """Put ``entry``'s extra credentials into this process's environment, from
+    ``env_file`` when they are not already set there. Returns the names found
+    nowhere. Values stay in-process and are never printed."""
+    missing = [name for name in entry.extra_credentials if not os.environ.get(name)]
+    if missing and env_file:
+        from dotenv import dotenv_values
+
+        values = dotenv_values(env_file)
+        for name in missing:
+            if values.get(name):
+                os.environ[name] = values[name]
+    return [name for name in entry.extra_credentials if not os.environ.get(name)]

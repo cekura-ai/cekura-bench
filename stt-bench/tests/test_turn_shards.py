@@ -49,3 +49,16 @@ def test_explicit_completed_empty_smoke_preserves_missing_metrics():
     assert row['turn_timing']['ttft_ms'] is None
     assert not smoke_row_passed(dict(row,valid=False), profile, 'completed-empty-allowed-v1')
     assert not smoke_row_passed(dict(row,turn_timing=dict(row['turn_timing'],ttfs_status='incomplete_stream')), profile, 'completed-empty-allowed-v1')
+
+
+def test_timeout_counts_as_failure_smoke_policy():
+    from stt_bench.turn_runner import smoke_row_passed
+    profile={'turn_finalization_class':'controlled'}
+    policy='timeout-counts-as-failure-v1'
+    timed_out={'valid':False,'failure_class':'transient','turn_timing':{'ttft_status':'invalid_attempt'}}
+    assert smoke_row_passed(timed_out, profile, policy)  # scored later as a lost clip
+    assert not smoke_row_passed(timed_out, profile)
+    paced={'valid':False,'failure_class':None,'turn_timing':{'ttft_status':'invalid_pacing'}}
+    assert not smoke_row_passed(paced, profile, policy)  # our own pacing failure still blocks
+    empty={'valid':True,'turn_timing':{'ttft_ms':None,'ttfs_ms':None,'ttft_status':'no_text','ttfs_status':'no_final_text'}}
+    assert smoke_row_passed(empty, profile, policy)

@@ -272,6 +272,15 @@ class RealtimeAdapter(ABC):
         self.log.emit(ev.AGENT_INTERRUPTED, at=at)
 
     @property
+    def transcripts_pending(self) -> bool:
+        """A transcript of speech already received is still being made.
+
+        Only an adapter that transcribes audio after the fact has any. A caller
+        that picks its next line from the agent's last words must wait for them.
+        """
+        return False
+
+    @property
     def agent_speaking(self) -> bool:
         """Still audible to a listener: either arriving, or received but not yet played out."""
         if self._speaking:

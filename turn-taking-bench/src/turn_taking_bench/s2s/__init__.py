@@ -45,7 +45,8 @@ from typing import Any
 # interface, registered in model.EXTRA_PROVIDERS). Model variants of a provider
 # (e.g. gpt-realtime-2.1-mini) are run with --config model=<id>.
 S2S_PROVIDERS: tuple[str, ...] = (
-    "openai-realtime", "gemini-live", "grok-realtime", "higgs-realtime", "fake",
+    "openai-realtime", "gemini-live", "grok-realtime", "higgs-realtime", "smallest-hydra", "rime-prism",
+    "deepgram-voice-agent", "fake",
     "azure-realtime", "gpt-live", "nova-sonic", "phonic", "deepslate", "gemini-live-thinking",
 )
 
@@ -80,12 +81,15 @@ MODES: tuple[str, ...] = ("agent", "vad_only")
 # so the two benchmarks measure the same models (the service registry's own
 # defaults differ for Gemini). The id the run actually resolved to is written to
 # run.json under model.provenance.model. Later additions: gpt-realtime-2.1-mini,
-# gemini-3.8-live-extended-thinking, gemini-3.1-flash-live-preview, grok-voice-3.0.
+# gemini-3.8-live-extended-thinking, gemini-3.1-flash-live-preview, grok-voice-3.0, hydra-v1.1.
 PINNED_MODELS: dict[str, str] = {
     "openai-realtime": "gpt-realtime-2.1",  # GPT Realtime 2.1
     "gemini-live": "gemini-3.8-live",  # Gemini 3.8 Live (reference-agents/pipecat-s2s/bot.py, pricing/prices.json)
     "grok-realtime": "grok-voice-think-fast-2.0",  # Grok Voice Think Fast 2.0
     "higgs-realtime": "higgs-realtime",  # Boson AI Higgs Realtime
+    "smallest-hydra": "hydra-v1.1",  # Smallest AI Hydra
+    "rime-prism": "prism",  # Rime Prism (one model per endpoint; the release is session.version)
+    "deepgram-voice-agent": "open_ai/gpt-4.1",  # Deepgram Voice Agent: Flux, GPT-4.1, Aura-2
 }
 
 

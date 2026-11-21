@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from s2s_human_bench.bench import Entry, load_bench
+from s2s_human_bench.comparisons import comparisons_doc
 from s2s_human_bench.config import Config, load_config
 from s2s_human_bench.examples import examples_doc
 from s2s_human_bench.languages import languages_doc
@@ -91,6 +92,7 @@ def build(
         languages=languages_doc(cfg, entries),
         skills=skills_doc(cfg, entries, public_s2s, clips, day),
         examples=examples,
+        comparisons=comparisons_doc(cfg, entries),
     )
     return docs, picks
 

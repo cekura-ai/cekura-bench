@@ -22,7 +22,12 @@
     },
     "stallSeconds": 10.0,
     "minSkillCalls": 3,
-    "taskFamily": "task"
+    "taskFamily": "task",
+    "comparisons": {
+      "level": 0.95,
+      "skillQ": 0.1,
+      "minSkillCallsPerRun": 5
+    }
   },
   "metrics": {
     "latency": 275642,
@@ -637,6 +642,7 @@
     "reports": "human-bench-reports.json",
     "languages": "human-bench-languages.json",
     "skills": "human-bench-skills.json",
-    "examples": "human-bench-examples.json"
+    "examples": "human-bench-examples.json",
+    "comparisons": "human-bench-comparisons.json"
   }
 }

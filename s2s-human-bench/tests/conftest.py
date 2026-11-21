@@ -100,7 +100,7 @@ def config_dict() -> dict:
             "clipTailSeconds": 5,
             "clipMaxSeconds": 30,
         },
-        "outputs": {k: f"{k}.json" for k in ("benchmark", "insights", "reports", "languages", "skills", "examples")},
+        "outputs": {k: f"{k}.json" for k in ("benchmark", "insights", "reports", "languages", "skills", "examples", "comparisons")},
     }
 
 

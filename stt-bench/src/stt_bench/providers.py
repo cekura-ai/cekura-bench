@@ -5,7 +5,7 @@ from .streaming import transmitted_silence_frames
 from . import gemini_live
 
 MODELS = {
-    'assemblyai': {'universal-3-5-pro', 'universal-3-6-pro'},
+    'assemblyai': {'universal-3-5-pro', 'universal-3-6-pro', 'assemblyai-stt-3-7-realtime-agent'},
     'reson8': {'realtime', 'rumble-2'},
     'zoom': {'zoom-asr-en-v1', 'zoom-scribe-en', 'zoom-scribe-en-pro', 'zoom-scribe-en-pro-v2.1'},
     'gradium': {'default'},

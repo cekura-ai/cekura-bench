@@ -37,7 +37,7 @@ from .streaming import EventLog, read_events
 MODELS = ('assemblyai-universal-3-5-pro-min-latency',)
 # One model per plan. The first model is the default; plans for later models
 # share the same dataset, worker count and global session-start gate.
-FULL_MODELS = (*MODELS, 'assemblyai-universal-3-6-pro-min-latency')
+FULL_MODELS = (*MODELS, 'assemblyai-universal-3-6-pro-min-latency', 'assemblyai-stt-3-7-realtime-agent-min-latency')
 PUBLIC = Path('datasets/pipecat-stt-benchmark/3fe50170d520c951957b86996ef082a6ab87b394/full')
 PRIVATE = Path('reports/assemblyai-private-20260914/dataset')
 PRIVATE_MANIFEST = Path('workspaces/private-longform-recovery-v2/dataset/manifest.json')
@@ -538,6 +538,7 @@ def main():
         if controller.exists():
             control=json.loads(controller.read_text())
             report['execution']={k:control.get(k) for k in ('status','startedAt','captureFinishedAt','finishedAt','availableWorkersPerModel','errors')}
+            report['execution']['start_rate_limit']=(control.get('startRate') or {}).get('limit')
             report['execution']['models']={m:{k:v.get(k) for k in ('ceiling','peak','reductions','blocked','privateBlocked')} for m,v in control['models'].items()}
             report['execution']['all_compute_stopped']=all(w.get('computeStopped') for w in control['workers'].values()) and control['preparation'].get('computeStopped',False)
         write_json(root/'results.json',report)

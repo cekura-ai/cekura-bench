@@ -343,6 +343,7 @@ class Settings:
         "agent_dir",
         "s2s_backend_model",
         "s2s_backend_reasoning",
+        "s2s_backend_service_tier",
         "aws_region",
         "qwen_region",
         "qwen_workspace_id",
@@ -932,6 +933,7 @@ def _gpt_live(api_key: str, model: str, voice: str, instructions: str, settings:
                 system_instruction=instructions,
                 reasoning=OpenAIResponsesReasoningConfig(effort=backend_reasoning(settings)),
             ),
+            service_tier=backend_service_tier(settings),
         ),
     )
 
@@ -1081,6 +1083,15 @@ def backend_reasoning(settings: Settings) -> str:
     after a tool result, then a dropped connection.
     """
     return settings.get("s2s_backend_reasoning", "low")
+
+
+def backend_service_tier(settings: Settings) -> str | None:
+    """The processing tier the backend's requests ask for, or None for the account's default.
+
+    A tier changes the backend's speed and price, not the model, so it is sent
+    only when a session names one, and the record says which.
+    """
+    return settings.get("s2s_backend_service_tier")
 
 
 def aws_region(settings: Settings) -> str:
@@ -1351,6 +1362,7 @@ PROVIDERS: dict[str, Provider] = {
         discloses=lambda settings: {
             "s2s_backend_model": backend_model(settings),
             "s2s_backend_reasoning": backend_reasoning(settings),
+            "s2s_backend_service_tier": backend_service_tier(settings) or "not sent",
             # Named *and* hashed. The name alone would let the section be
             # rewritten without any digest on the record changing, and
             # ``system_prompt_sha256`` covers the agent prompt the row shares

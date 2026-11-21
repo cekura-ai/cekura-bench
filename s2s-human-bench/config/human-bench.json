@@ -194,7 +194,7 @@
           "id": "3.7",
           "metric": 275643,
           "name": "Hallucinated-Success Avoidance",
-          "description": "Never says an action worked when the system said it failed (share of calls with none).",
+          "description": "Never says an action worked when the system said it failed or never did it (share of calls with none).",
           "verdict": "count"
         }
       ]

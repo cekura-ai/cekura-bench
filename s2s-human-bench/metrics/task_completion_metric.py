@@ -154,7 +154,18 @@ def _separate(options, used=frozenset()):
     return not options or any((_separate(options[1:], used | {i}) for i in options[0] if i not in used))
 
 def task_verdict(spec, transcript):
-    """(passed, short reason) for one call against its scenario's task."""
+    """(passed, short reason) for one call against its scenario's task.
+
+    A task may list ``alternatives``: other complete outcomes that also follow the caller's final wish
+    (a take-back that came before the action, so the action correctly never ran). The call passes when
+    the task or any alternative passes; a failing call keeps the main task's reason.
+    """
+    passed, reason = _verdict(spec, transcript)
+    if not passed and any((_verdict(alt, transcript)[0] for alt in spec.get('alternatives', []))):
+        return (True, 'done (alternative outcome)')
+    return (passed, reason)
+
+def _verdict(spec, transcript):
     calls = tool_calls(transcript)
     names = {name for _, name, _ in calls}
     for tool in spec.get('must_not_run', []):

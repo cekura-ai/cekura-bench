@@ -4836,6 +4836,20 @@ class TestVendorDefaultsAreExplicitAndOnTheRecord:
         assert service._delegation.service_tier == "ultrafast"
         assert record_for("gpt-live", s2s_backend_service_tier="ultrafast")["s2s_backend_service_tier"] == "ultrafast"
 
+    def test_the_live_backend_sends_no_cache_key_unless_asked(self):
+        provider = bot.PROVIDERS["gpt-live"]
+        service = provider.build("k", provider.default_model, provider.default_voice, "p", asked())
+        assert "prompt_cache_key" not in service._delegation.settings.extra
+        assert record_for("gpt-live")["s2s_backend_prompt_cache_key"] == "not sent"
+
+    def test_the_session_names_the_backends_cache_key(self):
+        provider = bot.PROVIDERS["gpt-live"]
+        settings = asked(s2s_backend_prompt_cache_key="s2shb-run-1")
+        service = provider.build("k", provider.default_model, provider.default_voice, "p", settings)
+        assert service._delegation.settings.extra == {"prompt_cache_key": "s2shb-run-1"}
+        record = record_for("gpt-live", s2s_backend_prompt_cache_key="s2shb-run-1")
+        assert record["s2s_backend_prompt_cache_key"] == "s2shb-run-1"
+
     def test_the_live_backend_keeps_optional_arguments_optional(self):
         # A tool without ``strict`` is strict to the Responses API, which makes
         # every optional parameter required; the framework drops the field.

@@ -23,5 +23,5 @@
     "status": "account_rate_unverified",
     "billing_basis": "submitted audio including silence and retries; rate-dependent estimate, not an invoice"
   },
-  "protocol_caveat": "Same session, audio, commit and events as OpenAI's Realtime transcription, and the session echoes the requested model. Owl streams a few append-only transcription deltas early in an utterance and then none until the commit, so its partial text can disagree with the completed transcript; the completed item is the transcript."
+  "protocol_caveat": "Same session, audio, commit and events as OpenAI's Realtime transcription, and the session echoes the requested model. With turn_detection null, Owl streams append-only transcription deltas about once a second, but on some utterances they stop early and none arrive later than about 30 s into an utterance, so its partial text can be incomplete and can disagree with the completed transcript; the completed item is the transcript."
 }

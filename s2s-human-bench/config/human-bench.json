@@ -334,6 +334,20 @@
       "agentId": 26893
     },
     {
+      "key": "gpt-live-1.1",
+      "name": "GPT-Live 1.1 + GPT-6 Sol",
+      "vendor": "OpenAI",
+      "siteId": "gpt-live-1-1",
+      "agentId": 28045,
+      "details": {
+        "modelId": "gpt-live-1.1",
+        "voice": "marin",
+        "setting": "Sol on low thinking",
+        "sampleRateHz": 24000,
+        "turns": "Service turn detection"
+      }
+    },
+    {
       "key": "gpt-realtime-2.1-mini",
       "name": "GPT Realtime 2.1 Mini",
       "vendor": "OpenAI",

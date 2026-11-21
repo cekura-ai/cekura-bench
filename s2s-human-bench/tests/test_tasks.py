@@ -146,3 +146,19 @@ def test_task_file_sets_the_outcome(cfg, tmp_path):
     cfg.tasks = {"C01": PAY}
     with pytest.raises(TaskFileError):
         load_call(cfg, call_json)
+
+
+def test_alternative_outcome_passes_and_failure_keeps_main_reason():
+    # take-back B (book, then cancel) with stage A as an alternative: searched, never booked
+    spec = task(
+        ("book_appointment", [{"slot_id": "S2"}]),
+        then_undo=["cancel_appointment"],
+        alternatives=[task(("find_slots", [{}]), must_not_run=["book_appointment"])],
+    )
+    assert task_verdict(spec, [fc("find_slots", 1)]) == (True, "done (alternative outcome)")
+    assert task_verdict(spec, [fc("find_slots", 1), fc("book_appointment", 2, slot_id="S2"), fc("cancel_appointment", 3)]) == (True, "done")
+    # booked and never cancelled: neither outcome holds, the main reason is kept
+    ok, why = task_verdict(spec, [fc("find_slots", 1), fc("book_appointment", 2, slot_id="S2")])
+    assert not ok and why == "cancel_appointment not called after the caller took it back"
+    # no search at all: the alternative's lookup is missing too
+    assert task_verdict(spec, [])[0] is False

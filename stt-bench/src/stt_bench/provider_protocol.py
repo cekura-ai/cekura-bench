@@ -17,10 +17,15 @@ class ProviderError(RuntimeError):
     pass
 
 
+# Providers that speak OpenAI's Realtime transcription protocol message for message. The protocol
+# runs each of them as 'openai'; the provider's own name still selects its endpoint, models and key.
+OPENAI_REALTIME = frozenset({'openai', 'polyai'})
+
+
 class Protocol:
     def __init__(self, config):
         self.config = config
-        self.provider = config['provider']
+        self.provider = 'openai' if config['provider'] in OPENAI_REALTIME else config['provider']
         self.ready = self.provider in ('cartesia',)
         self.requested = False
         self.closing = False
@@ -274,7 +279,7 @@ def connection(config, key):
     p, model, url = config['provider'], config['model'], config['endpoint']
     query = {}
     headers = {'Authorization': f'Bearer {key}'}
-    if p == 'openai':
+    if p in OPENAI_REALTIME:
         query = {'intent': 'transcription'}
     elif p == 'gemini':
         query = {'key': key}

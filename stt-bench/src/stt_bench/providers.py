@@ -12,6 +12,7 @@ MODELS = {
     **trial_providers.MODELS,
     'deepgram': {'nova-2', 'nova-3', 'flux-general-en', 'flux-general-multi'},
     'openai': {'gpt-realtime-whisper', 'gpt-4o-transcribe', 'gpt-4o-mini-transcribe'},
+    'polyai': {'dialog-owl-1.0'},
     'gemini': {'gemini-3.5-transcribe-live', *gemini_live.MODELS},
     'elevenlabs': {'scribe_v2_realtime', 'scribe_v3_live'},
     'speechmatics': {'standard', 'enhanced', 'linden-1'},
@@ -27,6 +28,7 @@ ENDPOINTS = {
     **trial_providers.ENDPOINTS,
     'deepgram': {'wss://api.deepgram.com/v1/listen', 'wss://api.deepgram.com/v2/listen'},
     'openai': {'wss://api.openai.com/v1/realtime'},
+    'polyai': {'wss://owl.polyai-tools.com/v1/realtime'},
     'gemini': {'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent'},
     'elevenlabs': {'wss://api.elevenlabs.io/v1/speech-to-text/realtime'},
     'speechmatics': {'wss://us.rt.speechmatics.com/v2', 'wss://global.rt.speechmatics.com/v2/agent'},
@@ -69,7 +71,7 @@ def validate(config):
     if is_nova(config):
         deepgram.query_url(config)
     else:
-        if config.get('sample_rate') != (24000 if p in ('openai', 'gradium') else 16000):
+        if config.get('sample_rate') != (24000 if p in (*provider_protocol.OPENAI_REALTIME, 'gradium') else 16000):
             raise ValueError('Provider sample rate mismatch')
         if p == 'deepgram' and not config['endpoint'].endswith('/v2/listen'):
             raise ValueError('Flux requires the v2 endpoint')

@@ -80,6 +80,7 @@ A provider may require additional account access for a particular model.
 | Reson8 | rumble-2 (US/global endpoint) | `RESON_API_KEY` |
 | Zoom | Scribe (live mode) | `ZOOM_API_KEY` |
 | Murf | Finch Global (beta) | `MURF_API_KEY` |
+| PolyAI | Owl (`dialog-owl-1.0`) | `POLY_AI_OWL_STT_API_KEY` |
 
 Environment variables take precedence over `.env`. Accepted aliases are defined in
 [credentials.py](src/stt_bench/credentials.py). Keep credentials in the environment

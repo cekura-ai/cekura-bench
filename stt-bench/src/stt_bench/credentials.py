@@ -14,6 +14,7 @@ NAMES = {
     'inworld': ('INWORLD_API_KEY',),
     'deepgram': ('DEEPGRAM_API_KEY',),
     'openai': ('OPENAI_API_KEY', 'OpenAI'),
+    'polyai': ('POLY_AI_OWL_STT_API_KEY',),
     'gemini': ('GEMINI_API_KEY', 'GOOGLE_API_KEY', 'Google'),
     'google': ('GOOGLE_SERVICE_ACCOUNT_JSON', 'VERTEX_CREDS', 'GOOGLE_APPLICATION_CREDENTIALS', 'GCP'),
     'elevenlabs': ('ELEVENLABS_API_KEY', 'ElevenLabs'),

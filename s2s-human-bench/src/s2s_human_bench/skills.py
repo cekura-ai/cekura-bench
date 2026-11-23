@@ -7,6 +7,7 @@ from typing import Any
 
 from s2s_human_bench import rating
 from s2s_human_bench.bench import Entry, elo, family_means, mean_or_none, published_price, scenario_scores
+from s2s_human_bench.comparisons import shared_places
 from s2s_human_bench.config import Config, site_order
 
 
@@ -39,12 +40,18 @@ def skills_doc(cfg: Config, entries: list[Entry], live: dict[str, Any], human_cl
     ratings = elo(cfg, entries, scores)
     ranked = [e.model.site_id for e in entries if not e.model.reference]
     ci: dict[str, list[float]] = {}
+    places: dict[str, list[int]] = {}
+    place: dict[str, int] = {}
     won: dict[str, list[float]] = {}
     pairs: list[dict[str, Any]] = []
     if ratings:
         won, pairs = head_to_head(cfg, entries, scores)
         boot = cfg.scoring["bootstrap"]
-        ci = rating.bootstrap_ci(scores, ranked, cfg.scoring["tieMargin"], boot["draws"], boot["seed"], boot["btIterations"])
+        draws = rating.bootstrap_draws(
+            scores, ranked, cfg.scoring["tieMargin"], boot["draws"], boot["seed"], boot["btIterations"], cfg.scoring.get("ratingScale")
+        )
+        ci, places = rating.interval(draws, ranked), rating.rank_ranges(draws, ranked)
+        place = shared_places([e for e in entries if not e.model.reference], cfg.scoring.get("comparisons", {}).get("level", 0.95))
 
     models, results, passive, elos = [], [], [], []
     for e in entries:
@@ -89,6 +96,7 @@ def skills_doc(cfg: Config, entries: list[Entry], live: dict[str, Any], human_cl
             {"model": m.site_id, "metric": "P4", "value": round(statistics.median(words), 1) if words else None, "n": len(calls), "unit": "words"},
         ]
         lo, hi = (round(x) for x in ci[m.site_id]) if m.site_id in ci else (None, None)
+        rank_lo, rank_hi = places.get(m.site_id, (None, None))
         w = won.get(m.site_id)
         elos.append(
             {
@@ -97,6 +105,9 @@ def skills_doc(cfg: Config, entries: list[Entry], live: dict[str, Any], human_cl
                 "win_rate": round(w[0] / w[1], 3) if w and w[1] else None,
                 "lo": lo,
                 "hi": hi,
+                "place": place.get(m.site_id),
+                "rank_lo": rank_lo,
+                "rank_hi": rank_hi,
                 "score": mean_or_none(c.score for c in calls if c.score is not None),
                 "families": family_means(cfg, calls),
             }
@@ -120,6 +131,7 @@ def skills_doc(cfg: Config, entries: list[Entry], live: dict[str, Any], human_cl
         },
         "weights": dict(cfg.weights),
         "tieMargin": cfg.scoring["tieMargin"],
+        "ratingScale": cfg.scoring.get("ratingScale"),
         "limits": [line.format(scenarios=len(codes)) for line in conf["limits"]],
         "models": models,
         "metrics": metric_entries(cfg),

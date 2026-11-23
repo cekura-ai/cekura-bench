@@ -4,8 +4,10 @@ A run folder holds ``calls/<code>/<call id>/`` with ``call.json``, ``metrics.jso
 ``transcript.json`` and ``expected_outcome.json`` per call.
 
 The call score (0-100) is the weighted mean of the skill families the call reached. A
-family's value is the share of its reached skills that passed; Task Handling blends that
-with the call's task outcome: 100 or 0, whether the agent completed the scenario's main task,
+family's value is the share of its reached skills that passed; a failed critical skill zeroes
+it, and a family with a measured share blends in the share of turns with no flow problem,
+measured from the word timings (``flow.py``). The task family blends in the call's task
+outcome: 100 or 0, whether the agent completed the scenario's main task,
 decided from its tool calls (``tasks.py``). The verdict comes from the task file when one is
 given, else from the platform's task metric (``metrics.task`` in the config, ``task_metric.py``)
 when the run carries it. Runs with neither use the share of the scenario's expected-outcome
@@ -20,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from s2s_human_bench.config import Config, Model, Skill
+from s2s_human_bench.flow import Flow, measure
 from s2s_human_bench.tasks import TaskFileError, task_verdict
 
 MET, MISSED = "✅", "❌"
@@ -49,6 +52,7 @@ class Call:
     unhealthy: bool = False
     tested: list[str] = field(default_factory=list)  # site order
     misses: list[str] = field(default_factory=list)  # site order
+    flow: Flow = field(default_factory=Flow)  # what the caller heard, from the word timings (flow.py)
 
 
 def _read(path: Path) -> Any:
@@ -76,11 +80,18 @@ def outcome_share(lines: list[str]) -> float | None:
     return 100 * met / (met + missed) if met + missed else None
 
 
-def family_scores(cfg: Config, verdicts: dict[str, bool | None], outcome: float | None) -> dict[str, float | None]:
+def family_scores(cfg: Config, verdicts: dict[str, bool | None], outcome: float | None, clean: float | None = None) -> dict[str, float | None]:
+    """Each family's value on one call: the share of its reached skills that passed. A failed critical skill zeroes the
+    family; a family with a measured share blends in ``clean``, the share of turns with no flow problem (flow.py)."""
     fam: dict[str, float | None] = {}
     for key in cfg.families:
         vals = [v for s in cfg.skills if s.family == key and (v := verdicts.get(s.id)) is not None]
         fam[key] = 100 * sum(vals) / len(vals) if vals else None
+        if any(verdicts.get(s) is False for s in cfg.critical.get(key, ())):
+            fam[key] = 0.0
+        if key in cfg.measured and clean is not None:
+            m = cfg.measured[key]
+            fam[key] = clean if fam[key] is None else (1 - m) * fam[key] + m * clean
     task = cfg["scoring"].get("taskFamily", "task")
     if outcome is not None:
         w = cfg.scoring["outcomeInTask"]
@@ -138,7 +149,8 @@ def load_call(cfg: Config, call_json: Path) -> Call:
         outcome = outcome_share(lines)
         task_done = sum(x.startswith(MISSED) for x in lines) == 0 and sum(x.startswith(MET) for x in lines) > 0
         outcome_from = "lines"
-    families = family_scores(cfg, verdicts, outcome)
+    flow = measure(transcript, inputs["agentRolePrefix"], inputs["callerRolePrefix"], cfg.scoring["flow"]) if "flow" in cfg.scoring else Flow()
+    families = family_scores(cfg, verdicts, outcome, flow.clean)
     agent = [t for t in transcript if _speaker(t, inputs["agentRolePrefix"])]
     caller = [t for t in transcript if _speaker(t, inputs["callerRolePrefix"])]
     tools = [(t.get("data") or {}).get("name") for t in transcript if (t.get("data") or {}).get("name")]
@@ -167,6 +179,7 @@ def load_call(cfg: Config, call_json: Path) -> Call:
         unhealthy=any(health in (r.get("name") or "") and r.get("score") is False for r in results.values()),
         tested=[s.id for s in site if verdicts[s.id] is not None],
         misses=[s.id for s in site if verdicts[s.id] is False],
+        flow=flow,
     )
 
 

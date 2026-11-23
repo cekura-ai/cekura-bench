@@ -16,11 +16,13 @@ from pathlib import Path
 from typing import Any
 
 from s2s_human_bench.bench import Entry, load_bench
+from s2s_human_bench.board import board_doc
 from s2s_human_bench.comparisons import comparisons_doc
 from s2s_human_bench.config import Config, load_config
 from s2s_human_bench.examples import examples_doc
 from s2s_human_bench.languages import languages_doc
 from s2s_human_bench.s2s import s2s_docs
+from s2s_human_bench.scenarios import scenarios_doc
 from s2s_human_bench.skills import skills_doc
 from s2s_human_bench.tasks import load_tasks
 
@@ -85,14 +87,17 @@ def build(
         print(gap, file=sys.stderr)
     bench, insights, reports = s2s_docs(cfg, entries, public_s2s, day)
     examples, picks = examples_doc(cfg, entries, call_titles, reviewed or {}, clips_reviewed)
+    skills = skills_doc(cfg, entries, public_s2s, clips, day)
     docs = dict(
         benchmark=bench,
         insights=insights,
         reports=reports,
         languages=languages_doc(cfg, entries),
-        skills=skills_doc(cfg, entries, public_s2s, clips, day),
+        skills=skills,
         examples=examples,
         comparisons=comparisons_doc(cfg, entries),
+        board=board_doc(cfg, entries, skills["elo"], day),
+        scenarios=scenarios_doc(cfg, entries, call_titles),
     )
     return docs, picks
 

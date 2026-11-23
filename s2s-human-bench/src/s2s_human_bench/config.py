@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-OUTPUT_KINDS = ("benchmark", "insights", "reports", "languages", "skills", "examples", "comparisons")
+OUTPUT_KINDS = ("benchmark", "insights", "reports", "languages", "skills", "examples", "comparisons", "board", "scenarios")
 
 
 class ConfigError(SystemExit):
@@ -53,6 +53,8 @@ class Config:
     raw: dict[str, Any]
     families: dict[str, str] = field(default_factory=dict)  # key -> label, in display order
     weights: dict[str, float] = field(default_factory=dict)
+    measured: dict[str, float] = field(default_factory=dict)  # family key -> share of its value from measured call flow
+    critical: dict[str, tuple[str, ...]] = field(default_factory=dict)  # family key -> skills whose failure zeroes the family on that call
     skills: list[Skill] = field(default_factory=list)  # family order
     models: list[Model] = field(default_factory=list)
     tasks: dict[str, dict[str, Any]] | None = None  # per-scenario main tasks (private --tasks file); None = expected-outcome share
@@ -82,6 +84,10 @@ def load_config(path: Path) -> Config:
     for fam in raw["families"]:
         cfg.families[fam["key"]] = fam["label"]
         cfg.weights[fam["key"]] = fam["weight"]
+        if "measured" in fam:
+            cfg.measured[fam["key"]] = fam["measured"]
+        if fam.get("critical"):
+            cfg.critical[fam["key"]] = tuple(fam["critical"])
         for s in fam["skills"]:
             cfg.skills.append(
                 Skill(
@@ -117,6 +123,16 @@ def load_config(path: Path) -> Config:
         unknown = set(cat["skills"]) - set(ids)
         if unknown:
             raise ConfigError(f"category {cat['key']}: unknown skills {sorted(unknown)}")
+    for fam in raw["families"]:
+        stray = set(fam.get("critical", [])) - {s["id"] for s in fam["skills"]}
+        if stray:
+            raise ConfigError(f"family {fam['key']}: critical skills {sorted(stray)} are not in the family")
+    if cfg.measured and "flow" not in raw["scoring"]:
+        raise ConfigError("a family takes measured call flow, but scoring.flow is missing")
+    keys = [u["key"] for u in raw.get("useCases", [])]
+    codes = [c for u in raw.get("useCases", []) for c in u["scenarios"]]
+    if len(set(keys)) != len(keys) or len(set(codes)) != len(codes):
+        raise ConfigError("use-case keys must be unique and every scenario in at most one use case")
     if raw["languages"]["skill"] not in ids:
         raise ConfigError("languages.skill is not a configured skill")
     missing = set(OUTPUT_KINDS) - set(raw["outputs"])

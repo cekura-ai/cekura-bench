@@ -94,7 +94,7 @@ def elo(cfg: Config, entries: list[Entry], scores: rating.Scores) -> dict[str, f
     if len(ranked) < 2:
         return {}
     refs = [e.model.site_id for e in entries if e.model.reference]
-    return rating.ratings(scores, ranked, refs, cfg.scoring["tieMargin"], cfg.scoring["btIterations"])
+    return rating.ratings(scores, ranked, refs, cfg.scoring["tieMargin"], cfg.scoring["btIterations"], cfg.scoring.get("ratingScale"))
 
 
 def passed(cfg: Config, call: Call) -> bool:

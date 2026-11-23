@@ -115,6 +115,33 @@ def skill_changes(cfg: Config, a: Entry, b: Entry, settings: dict[str, Any]) -> 
     return clear, within
 
 
+def flow_pairs(cfg: Config, a: Entry, b: Entry, level: float) -> dict[str, Any] | None:
+    """Measured call flow, b minus a, per call: long waits, talking over the caller, and the share of clean turns."""
+    if "flow" not in cfg.scoring:
+        return None
+    long_wait = cfg.scoring["flow"]["longWaitSeconds"]
+    return {
+        "longWaits": paired(a, b, lambda c: sum(1 for w in c.flow.waits if w >= long_wait), level, digits=3),
+        "talkOver": paired(a, b, lambda c: len(c.flow.talk_over) + c.flow.pause_jumps, level, digits=3),
+        "clean": paired(a, b, lambda c: c.flow.clean, level),
+    }
+
+
+def shared_places(entries: list[Entry], level: float = 0.95) -> dict[str, int]:
+    """Each model's place: 1 plus the number of models whose call score is separably above it, so models the runs
+    cannot tell apart share a place (the "rank (UB)" convention of public model arenas)."""
+    above = {e.model.site_id: 0 for e in entries}
+    for a, b in combinations(entries, 2):
+        d = paired(a, b, lambda c: c.score, level)
+        if d is None:
+            continue
+        if d["lo"] > 0:
+            above[a.model.site_id] += 1
+        elif d["hi"] < 0:
+            above[b.model.site_id] += 1
+    return {k: 1 + v for k, v in above.items()}
+
+
 def comparisons_doc(cfg: Config, entries: list[Entry]) -> dict[str, Any]:
     """Every pair of models, in config order (a before b); a page shows b - a or flips the sign."""
     settings = {**DEFAULTS, **cfg.scoring.get("comparisons", {})}
@@ -134,6 +161,7 @@ def comparisons_doc(cfg: Config, entries: list[Entry]) -> dict[str, Any]:
                 "families": {label: paired(a, b, lambda c, k=key: c.families.get(k), level) for key, label in families.items()},
                 "task": paired(a, b, lambda c: c.outcome, level),
                 "replySeconds": paired(a, b, lambda c: c.latency_ms / 1000 if c.latency_ms else None, level, digits=2),
+                "flow": flow_pairs(cfg, a, b, level),
                 "skills": clear,
                 "withinChance": within,
             }

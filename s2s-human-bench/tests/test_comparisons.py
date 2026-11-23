@@ -6,7 +6,7 @@ from test_site_export import export, make_inputs
 
 from s2s_human_bench.bench import Entry
 from s2s_human_bench.calls import Call
-from s2s_human_bench.comparisons import bh, paired, skill_changes, t_quantile
+from s2s_human_bench.comparisons import bh, paired, shared_places, skill_changes, t_quantile
 
 
 def call(code, score, tested=(), misses=()):
@@ -89,3 +89,10 @@ def test_export_writes_every_pair(cfg, tmp_path):
     assert ab["score"]["diff"] < 0 and ab["score"]["scenarios"] == 4  # beta is worse; b minus a
     assert set(ab["families"]) == {"Hearing", "Task"} and doc["skills"]["1.1"] == "Skill 1.1"
     json.dumps(doc)  # serialisable as written
+
+
+def test_models_the_runs_cannot_separate_share_a_place(cfg):
+    base = [{f"S{i}": call(f"S{i}", 70 + i % 5) for i in range(20)} for _ in range(3)]
+    better = [{f"S{i}": call(f"S{i}", 80 + i % 7) for i in range(20)} for _ in range(3)]
+    places = shared_places([entry(cfg, 0, better), entry(cfg, 1, base), entry(cfg, 2, base)])
+    assert places == {"alpha-site": 1, "beta-site": 2, "gamma-site": 2}

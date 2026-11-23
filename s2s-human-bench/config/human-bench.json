@@ -1,5 +1,5 @@
 {
-  "version": "2026-11-03",
+  "version": "2026-11-23",
   "inputs": {
     "agentRunPattern": "fullrun_a{agent_id}_fix_r*",
     "callsPerRun": 70,
@@ -11,7 +11,7 @@
     "endCallTool": "end_call"
   },
   "scoring": {
-    "outcomeInTask": 0.5,
+    "outcomeInTask": 1.0,
     "passScore": 80.0,
     "tieMargin": 5.0,
     "btIterations": 200,
@@ -22,11 +22,87 @@
     },
     "stallSeconds": 10.0,
     "minSkillCalls": 3,
-    "taskFamily": "task",
+    "taskFamily": "done",
     "comparisons": {
       "level": 0.95,
       "skillQ": 0.1,
       "minSkillCallsPerRun": 5
+    },
+    "ratingScale": 12.0,
+    "flow": {
+      "backchannelMaxWords": 2,
+      "backchannelListMaxWords": 4,
+      "backchannelWords": [
+        "mm",
+        "mhm",
+        "mmhmm",
+        "mm-hmm",
+        "hmm",
+        "uh",
+        "uh-huh",
+        "huh",
+        "yeah",
+        "yes",
+        "yep",
+        "yup",
+        "ok",
+        "okay",
+        "right",
+        "sure",
+        "alright",
+        "all",
+        "got",
+        "it",
+        "i",
+        "see",
+        "great",
+        "thanks",
+        "thank",
+        "you",
+        "oh",
+        "ah",
+        "fine",
+        "cool"
+      ],
+      "waits": [
+        [
+          3.0,
+          0.5
+        ],
+        [
+          5.0,
+          1.0
+        ],
+        [
+          8.0,
+          2.0
+        ]
+      ],
+      "stops": [
+        [
+          2.0,
+          0.5
+        ],
+        [
+          3.0,
+          1.0
+        ]
+      ],
+      "talkOverSeconds": 0.5,
+      "pauseJumpSeconds": 1.0,
+      "longWaitSeconds": 5.0,
+      "slowStopSeconds": 2.0
+    },
+    "board": {
+      "level": 0.95,
+      "minGap": 10,
+      "minScenarios": 5,
+      "momentMinShare": 0.25,
+      "flowGaps": {
+        "longWaits": 2.0,
+        "talkOver": 2.0,
+        "slowStops": 10.0
+      }
     }
   },
   "metrics": {
@@ -37,9 +113,20 @@
   },
   "families": [
     {
-      "key": "hearing",
-      "label": "Hearing",
+      "key": "done",
+      "label": "Got It Done",
+      "weight": 0.35,
+      "description": "The caller's main task got done with the details they gave, judged from the agent's tool calls.",
+      "skills": []
+    },
+    {
+      "key": "right",
+      "label": "Right and Safe",
       "weight": 0.25,
+      "critical": [
+        "3.7"
+      ],
+      "description": "Details right and actions safe: names and numbers, asking when unsure, corrections, cancellations, consent, handing over when needed, and honesty when a system fails. Claiming an action worked when it did not zeroes this part for the call.",
       "skills": [
         {
           "id": "1.2",
@@ -56,53 +143,55 @@
           "condition": "Noisy line"
         },
         {
-          "id": "1.4",
-          "metric": 275327,
-          "name": "Side-Speech Rejection",
-          "description": "Ignores details the caller says to someone else in the room.",
-          "condition": "Background voices"
+          "id": "3.2",
+          "metric": 275291,
+          "name": "Correction Handling",
+          "description": "Uses the new detail when the caller corrects something they said earlier.",
+          "condition": "Changes their mind"
         },
         {
-          "id": "1.5",
-          "metric": 275650,
-          "name": "Waiting Through Hold",
-          "description": "Waits quietly through hold music or the phone being set down, then picks up when the caller is back.",
-          "condition": "Hold music"
+          "id": "3.3",
+          "metric": 275343,
+          "name": "Human Handoff",
+          "description": "Hands over to a person when the caller asks or the request needs one.",
+          "condition": "Needs a person"
         },
         {
-          "id": "1.6",
-          "metric": 275651,
-          "name": "Prosodic Cue Understanding",
-          "description": "Hears meaning in tone of voice, such as a doubtful 'Monday?' being a question, not a yes.",
-          "condition": "Hesitant caller"
+          "id": "3.4",
+          "metric": 273644,
+          "name": "Tool Error Handling",
+          "description": "Tells the caller honestly when a system action fails, instead of claiming success.",
+          "condition": "System error"
         },
         {
-          "id": "1.7",
-          "metric": 273449,
-          "name": "Emotion Recognition",
-          "description": "Notices when the caller is upset or anxious and still gets the task done.",
-          "condition": "Upset caller"
+          "id": "3.5b",
+          "metric": 275641,
+          "name": "Cancellation Handling",
+          "description": "Stops or undoes an action when the caller changes their mind, and says truthfully what happened.",
+          "condition": "Cancels"
         },
         {
-          "id": "1.8",
-          "metric": 275649,
-          "name": "Degraded-Channel Robustness",
-          "description": "Copes when the phone line breaks up and words drop out.",
-          "condition": "Bad connection"
+          "id": "3.5a",
+          "metric": 273448,
+          "name": "Consent Verification",
+          "description": "Gets a clear yes from the right person before acting on the caller's behalf.",
+          "condition": "Needs consent"
         },
         {
-          "id": "1.10",
-          "metric": 275330,
-          "name": "Multi-Speaker Handling",
-          "description": "Keeps track when more than one person speaks on the caller's side.",
-          "condition": "Several people"
+          "id": "3.7",
+          "metric": 275643,
+          "name": "Hallucinated-Success Avoidance",
+          "description": "Never says an action worked when the system said it failed or never did it (share of calls with none).",
+          "verdict": "count"
         }
       ]
     },
     {
-      "key": "turn_taking",
-      "label": "Turn Taking",
+      "key": "flow",
+      "label": "Call Flow",
       "weight": 0.25,
+      "measured": 0.5,
+      "description": "How the call felt. Half is measured from the call's timing: long waits, talking over the caller, and slow stops when the caller cuts in. Half is judged: waiting for the caller to finish, mid-sentence pauses, interruptions, slow lookups, holds and asking again.",
       "skills": [
         {
           "id": "2.1",
@@ -145,48 +234,13 @@
           "name": "Mid-Utterance Pause Tolerance",
           "description": "Waits when the caller says 'hold on', then picks up when they're back.",
           "condition": "Asks to hold"
-        }
-      ]
-    },
-    {
-      "key": "task",
-      "label": "Task Handling",
-      "weight": 0.25,
-      "skills": [
-        {
-          "id": "3.2",
-          "metric": 275291,
-          "name": "Correction Handling",
-          "description": "Uses the new detail when the caller corrects something they said earlier.",
-          "condition": "Changes their mind"
         },
         {
-          "id": "3.3",
-          "metric": 275343,
-          "name": "Human Handoff",
-          "description": "Hands over to a person when the caller asks or the request needs one.",
-          "condition": "Needs a person"
-        },
-        {
-          "id": "3.4",
-          "metric": 273644,
-          "name": "Tool Error Handling",
-          "description": "Tells the caller honestly when a system action fails, instead of claiming success.",
-          "condition": "System error"
-        },
-        {
-          "id": "3.5b",
-          "metric": 275641,
-          "name": "Cancellation Handling",
-          "description": "Stops or undoes an action when the caller changes their mind, and says truthfully what happened.",
-          "condition": "Cancels"
-        },
-        {
-          "id": "3.5a",
-          "metric": 273448,
-          "name": "Consent Verification",
-          "description": "Gets a clear yes from the right person before acting on the caller's behalf.",
-          "condition": "Needs consent"
+          "id": "1.5",
+          "metric": 275650,
+          "name": "Waiting Through Hold",
+          "description": "Waits quietly through hold music or the phone being set down, then picks up when the caller is back.",
+          "condition": "Hold music"
         },
         {
           "id": "3.6",
@@ -194,21 +248,50 @@
           "name": "Redundant Re-prompt Avoidance",
           "description": "Does not ask again for details the caller already gave (share of calls with none).",
           "verdict": "count"
-        },
-        {
-          "id": "3.7",
-          "metric": 275643,
-          "name": "Hallucinated-Success Avoidance",
-          "description": "Never says an action worked when the system said it failed or never did it (share of calls with none).",
-          "verdict": "count"
         }
       ]
     },
     {
-      "key": "speaking",
-      "label": "Speaking",
-      "weight": 0.25,
+      "key": "clear",
+      "label": "Understood and Clear",
+      "weight": 0.15,
+      "description": "Heard the caller and spoke clearly: bad lines, other voices, tone and mood, language switches, reading numbers back and style requests.",
       "skills": [
+        {
+          "id": "1.4",
+          "metric": 275327,
+          "name": "Side-Speech Rejection",
+          "description": "Ignores details the caller says to someone else in the room.",
+          "condition": "Background voices"
+        },
+        {
+          "id": "1.6",
+          "metric": 275651,
+          "name": "Prosodic Cue Understanding",
+          "description": "Hears meaning in tone of voice, such as a doubtful 'Monday?' being a question, not a yes.",
+          "condition": "Hesitant caller"
+        },
+        {
+          "id": "1.7",
+          "metric": 273449,
+          "name": "Emotion Recognition",
+          "description": "Notices when the caller is upset or anxious and still gets the task done.",
+          "condition": "Upset caller"
+        },
+        {
+          "id": "1.8",
+          "metric": 275649,
+          "name": "Degraded-Channel Robustness",
+          "description": "Copes when the phone line breaks up and words drop out.",
+          "condition": "Bad connection"
+        },
+        {
+          "id": "1.10",
+          "metric": 275330,
+          "name": "Multi-Speaker Handling",
+          "description": "Keeps track when more than one person speaks on the caller's side.",
+          "condition": "Several people"
+        },
         {
           "id": "4.1",
           "metric": 275342,
@@ -325,7 +408,23 @@
       "reference": true,
       "scenarioSwap": {
         "agentId": 26907,
-        "scenarios": ["F23", "F26", "F33", "H08", "H10", "H14", "H25", "F12", "F25", "F34", "H04", "H05", "H12", "H32", "H34"]
+        "scenarios": [
+          "F23",
+          "F26",
+          "F33",
+          "H08",
+          "H10",
+          "H14",
+          "H25",
+          "F12",
+          "F25",
+          "F34",
+          "H04",
+          "H05",
+          "H12",
+          "H32",
+          "H34"
+        ]
       },
       "details": {
         "modelId": "flux-general-en (English callers) or nova-3 multi (callers who switch language) → gpt-4.1 → eleven_flash_v2_5"
@@ -618,9 +717,9 @@
     "limits": [
       "{scenarios} scenarios; callers are recorded human voices.",
       "Each model ran three times on the same agent build; results pool across runs.",
-      "Task Handling counts the skills and the share of the caller's task completed, half each.",
       "Cost per minute is the model's API cost as published on the Cekura S2S benchmark.",
-      "ELO gaps under about 50 points are within run-to-run noise."
+      "ELO gaps under about 50 points are within run-to-run noise.",
+      "The call score is 35% task done, 25% right and safe, 25% call flow (half measured from the call's timing) and 15% understood and clear."
     ]
   },
   "examples": {
@@ -643,6 +742,108 @@
     "languages": "human-bench-languages.json",
     "skills": "human-bench-skills.json",
     "examples": "human-bench-examples.json",
-    "comparisons": "human-bench-comparisons.json"
-  }
+    "comparisons": "human-bench-comparisons.json",
+    "board": "human-bench-board.json",
+    "scenarios": "human-bench-scenarios.json"
+  },
+  "useCases": [
+    {
+      "key": "cards",
+      "label": "Cards and payments",
+      "suite": "banking",
+      "scenarios": [
+        "F01",
+        "F02",
+        "F03",
+        "F08",
+        "F12",
+        "F13",
+        "F23",
+        "F24",
+        "F25",
+        "F26",
+        "F27",
+        "F31",
+        "F33",
+        "F34",
+        "F35"
+      ]
+    },
+    {
+      "key": "accounts",
+      "label": "Accounts, loans and insurance",
+      "suite": "banking",
+      "scenarios": [
+        "F04",
+        "F05",
+        "F06",
+        "F07",
+        "F09",
+        "F10",
+        "F11",
+        "F14",
+        "F15",
+        "F16",
+        "F17",
+        "F18",
+        "F19",
+        "F20",
+        "F21",
+        "F22",
+        "F28",
+        "F29",
+        "F30",
+        "F32"
+      ]
+    },
+    {
+      "key": "appointments",
+      "label": "Appointments",
+      "suite": "healthcare",
+      "scenarios": [
+        "H01",
+        "H02",
+        "H03",
+        "H08",
+        "H09",
+        "H10",
+        "H11",
+        "H12",
+        "H13",
+        "H14",
+        "H17",
+        "H20",
+        "H27",
+        "H28",
+        "H29",
+        "H32",
+        "H33",
+        "H34"
+      ]
+    },
+    {
+      "key": "care",
+      "label": "Prescriptions, results and records",
+      "suite": "healthcare",
+      "scenarios": [
+        "H04",
+        "H05",
+        "H06",
+        "H07",
+        "H15",
+        "H16",
+        "H18",
+        "H19",
+        "H21",
+        "H22",
+        "H23",
+        "H24",
+        "H25",
+        "H26",
+        "H30",
+        "H31",
+        "H35"
+      ]
+    }
+  ]
 }

@@ -62,3 +62,9 @@ whole-text request cannot measure, from the websocket runs
 summaries are published; the site row names the HTTP run in `run` and the
 websocket run in `streamedFrom`.
 Each summary names its runs in `run` and `amendments`.
+
+On 2026-11-23 every summary except AssemblyAI TTS 1's was rescored from its
+runs' stored transcripts with `rescore_run`, after hard parts began accepting
+more written forms of a correct reading ("6.05 a.m.", "36°F", "the 2-4 window",
+"control plus shift plus T"). Only hard parts changed. AssemblyAI TTS 1 keeps
+its earlier hard parts until its run's records are rescored.

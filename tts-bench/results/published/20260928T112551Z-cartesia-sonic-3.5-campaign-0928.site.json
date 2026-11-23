@@ -779,9 +779,9 @@
    },
    "spans": {
     "all": {
-     "passed": 155,
+     "passed": 171,
      "n": 219,
-     "rate": 0.7078
+     "rate": 0.7808
     },
     "byCategory": {
      "context": {
@@ -790,14 +790,14 @@
       "rate": 0.5833
      },
      "sequence": {
-      "passed": 33,
+      "passed": 35,
       "n": 42,
-      "rate": 0.7857
+      "rate": 0.8333
      },
      "shorthand": {
-      "passed": 74,
+      "passed": 88,
       "n": 117,
-      "rate": 0.6325
+      "rate": 0.7521
      },
      "term": {
       "passed": 34,

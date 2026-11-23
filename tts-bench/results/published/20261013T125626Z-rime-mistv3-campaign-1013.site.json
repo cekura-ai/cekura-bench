@@ -563,9 +563,9 @@
    },
    "spans": {
     "all": {
-     "passed": 176,
+     "passed": 182,
      "n": 219,
-     "rate": 0.8037
+     "rate": 0.8311
     },
     "byCategory": {
      "context": {
@@ -574,14 +574,14 @@
       "rate": 0.75
      },
      "sequence": {
-      "passed": 32,
+      "passed": 35,
       "n": 42,
-      "rate": 0.7619
+      "rate": 0.8333
      },
      "shorthand": {
-      "passed": 90,
+      "passed": 93,
       "n": 117,
-      "rate": 0.7692
+      "rate": 0.7949
      },
      "term": {
       "passed": 36,
@@ -719,9 +719,9 @@
    },
    "spans": {
     "all": {
-     "passed": 162,
+     "passed": 180,
      "n": 219,
-     "rate": 0.7397
+     "rate": 0.8219
     },
     "byCategory": {
      "context": {
@@ -730,14 +730,14 @@
       "rate": 0.6667
      },
      "sequence": {
-      "passed": 33,
+      "passed": 36,
       "n": 42,
-      "rate": 0.7857
+      "rate": 0.8571
      },
      "shorthand": {
-      "passed": 77,
+      "passed": 92,
       "n": 117,
-      "rate": 0.6581
+      "rate": 0.7863
      },
      "term": {
       "passed": 36,

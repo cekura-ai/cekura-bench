@@ -51,3 +51,9 @@ transcripts were scored offline with `bin/score-tts.py`.
 `apply_text_normalization=on`, as ElevenLabs recommends for v4; it replaces their
 `campaign-0928-v4` runs and their `campaign-1004` amendment.
 Each summary names its runs in `run` and `amendments`.
+
+On 2026-11-23 every summary except AssemblyAI TTS 1's was rescored from its
+runs' stored transcripts with `rescore_run`, after hard parts began accepting
+more written forms of a correct reading ("6.05 a.m.", "36°F", "the 2-4 window",
+"control plus shift plus T"). Only hard parts changed. AssemblyAI TTS 1 keeps
+its earlier hard parts until its run's records are rescored.

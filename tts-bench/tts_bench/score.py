@@ -31,6 +31,7 @@ from typing import Any, Sequence
 
 import aiohttp
 
+from tts_bench import corpus
 from tts_bench.common.transcript import edit_distance, normalize as _fallback_normalize
 from tts_bench.store import append_line, cell_dir, latest_cells, read_jsonl, write_manifest
 
@@ -120,18 +121,40 @@ def _spoken_digits(text: str) -> str:
     return "".join(out)
 
 
+_WORD_FOR_DIGIT = {digit: word for word, digit in _DIGIT_WORDS.items() if digit != "0"}
+_WRITTEN_FORMS = (
+    (re.compile(r"°\s*F\b", re.IGNORECASE), " degrees fahrenheit"),
+    (re.compile(r"°\s*C\b", re.IGNORECASE), " degrees celsius"),
+    (re.compile(r"°"), " degrees"),
+    (re.compile(r"(?<![\d.,:/-])(\d{1,2})\s*[-–]\s*(\d{1,2})(?![\d.,:/-])"), r"\1 to \2"),
+    (re.compile(r"(?<![\d.,:/-])0([1-9])(?![\d.,:/])"), lambda m: "oh " + _WORD_FOR_DIGIT[m.group(1)]),
+)
+
+
+def _spoken_form(text: str) -> str:
+    """How a transcriber's written shorthand was said: ``36°F``, ``the 2-4 window``, ``class of 09``.
+
+    The normaliser reads these as ``36 f``, ``2 4`` and ``9``, which no
+    accepted reading can match, so a correct reading would fail on spelling.
+    Used for hard parts only; the word error rate keeps the plain normaliser.
+    """
+    for pattern, replacement in _WRITTEN_FORMS:
+        text = pattern.sub(replacement, text)
+    return text
+
+
 def score_spans(spans: Sequence[dict[str, Any]], hypothesis: str) -> list[dict[str, Any]]:
     """Each labelled span: did one of its accepted readings come through, after the same normaliser as WER.
 
     A span marked for a listener is carried through unscored, so its count is
     visible beside the scored ones rather than silently dropped.
     """
-    heard = " " + " ".join(normalize(hypothesis)) + " "
+    heard = " " + " ".join(normalize(_spoken_form(hypothesis))) + " "
     out = []
     for span in spans:
         row = {"text": span["text"], "category": span["category"], "check": span.get("check", "transcript")}
         if row["check"] == "transcript":
-            forms = [" ".join(normalize(form)) for form in span.get("accept", ())]
+            forms = [" ".join(normalize(_spoken_form(form))) for form in span.get("accept", ())]
             row["pass"] = any(form and f" {form} " in heard for form in forms)
             digits = "".join(re.findall(r"[0-9]", span["text"]))
             if span["category"] == "sequence" and digits and not row["pass"]:
@@ -253,12 +276,25 @@ def _write_scores(run_dir: Path, rows: list[dict[str, Any]]) -> None:
     write_manifest(run_dir)              # the run changed on purpose; the manifest follows it
 
 
+def _with_current_readings(item_id: str, spans: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """A run's spans plus any reading the corpus has accepted since the run was recorded.
+
+    Accepted readings are a scoring rule like the normaliser, so a rescore
+    applies the current list to every run; a span whose text changed is left as recorded.
+    """
+    item = corpus.by_id().get(item_id)
+    current = {span.text: span.accept for span in (item.spans if item else ())}
+    return [{**span, "accept": list(dict.fromkeys([*span.get("accept", ()), *current.get(span["text"], ())]))}
+            for span in spans]
+
+
 def _targets(run_dir: Path) -> list[dict[str, Any]]:
     """Every (cell, audio file) pair that has text to score against."""
     out = []
     corpus_path = run_dir / "corpus.json"
     spans = {} if not corpus_path.exists() else {
-        item["id"]: item.get("spans", []) for item in json.loads(corpus_path.read_text())["items"]}
+        item["id"]: _with_current_readings(item["id"], item.get("spans", []))
+        for item in json.loads(corpus_path.read_text())["items"]}
     for cell in latest_cells(run_dir):
         if cell.get("void") or cell.get("probe") == "cancel":
             continue                         # a cancelled utterance is partial by design; its transcript scores nothing

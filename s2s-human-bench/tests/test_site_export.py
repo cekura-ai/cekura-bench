@@ -50,7 +50,7 @@ def export(tmp_path, cfg, out, reviewed=None, clips=None, tasks=None):
 def test_site_export(cfg, tmp_path):
     make_inputs(tmp_path)
     docs = export(tmp_path, cfg, tmp_path / "out1")
-    assert sorted(docs) == ["benchmark.json", "examples.json", "insights.json", "lang.json", "reports.json", "skills.json"]
+    assert sorted(docs) == ["benchmark.json", "comparisons.json", "examples.json", "insights.json", "lang.json", "reports.json", "skills.json"]
     assert export(tmp_path, cfg, tmp_path / "out2") == docs  # deterministic
 
     bench = docs["benchmark.json"]

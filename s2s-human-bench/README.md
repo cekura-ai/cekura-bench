@@ -42,6 +42,12 @@ holds none of them.
   models with their ratings held fixed, so it moves no one else. A model's `scenarioSwap`
   takes the listed scenarios from another agent's runs, run by run; the cascade uses it to
   answer English callers with English speech-to-text and language switchers with multilingual.
+* **Comparisons**: for every pair of models, per scenario the call score averaged over runs, one
+  minus the other, then the mean over scenarios with a 95% t-interval; *separable* when the
+  interval excludes zero. The same for each family, the task outcome and reply time. A skill
+  change is listed only when every run of one model beats every run of the other and the pooled
+  pass rates differ with a Benjamini-Hochberg q under `comparisons.skillQ`; skills that move in
+  every run but within chance are only counted (`withinChance`).
 * **Runs**: a model is published only with three usable runs. A run is usable when it was
   fully exported and the agent spoke on all but at most 7 calls; a run where it stayed
   silent on more is a throttled or broken run, not model behaviour.

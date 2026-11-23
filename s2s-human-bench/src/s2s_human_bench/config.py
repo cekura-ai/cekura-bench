@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-OUTPUT_KINDS = ("benchmark", "insights", "reports", "languages", "skills", "examples")
+OUTPUT_KINDS = ("benchmark", "insights", "reports", "languages", "skills", "examples", "comparisons")
 
 
 class ConfigError(SystemExit):

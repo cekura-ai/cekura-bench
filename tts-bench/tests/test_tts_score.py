@@ -65,6 +65,7 @@ def _passes(item_id: str, hypothesis: str) -> dict[str, bool]:
     ("dense.shipment", "Your package left our Reno hub at 6.05 a.m. and should arrive Thursday before 8 p.m.", "6:05 AM"),
     ("tech.alert", "CPU usage peaked at 94% at 2.15 a.m. and was back under 60% by 3 o'clock.", "2:15 AM"),
     ("numbers.apostrophe", "The class of 09 meets on September 9th this year in the third floor lounge.", "'09"),
+    ("numbers.apostrophe", "the class of o9 meets on september ninth this year in the third floor lounge", "'09"),
     ("numbers.temperature", "Store the vaccine between 36°F and 46°F, never below minus 4°F.", "36°F"),
     ("numbers.temperature", "Store the vaccine between 36°F and 46°F, never below minus 4°F.", "-4°F"),
     ("worded.time", "The driver scanned it at 3.47, so that's inside the 2-4 window.", "three forty-seven"),

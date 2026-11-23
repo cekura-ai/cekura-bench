@@ -402,7 +402,7 @@ ITEMS: tuple[Item, ...] = (
               _s("3,400", "shorthand", "3400", "3,400"))),
     _i("numbers.apostrophe", "numbers", "The class of '09 meets on 9/9 this year, in the 3rd Fl. lounge.",
        "the class of oh nine meets on september ninth this year in the third floor lounge",
-       spans=(_s("'09", "shorthand", "class of oh nine", "class of o nine", "class of two thousand nine", "class of twenty oh nine",
+       spans=(_s("'09", "shorthand", "class of oh nine", "class of o nine", "class of o9", "class of two thousand nine", "class of twenty oh nine",
                  note="the normaliser keeps a spoken leading zero (oh nine) but drops a written one (09), so the readings are words"),
               _s("9/9", "shorthand", "september 9th", "september ninth", "september 9", "9th of september", "ninth of september"),
               _s("3rd Fl.", "shorthand", "3rd floor", "third floor"))),

@@ -34,11 +34,18 @@ from websockets.asyncio.client import connect
 from . import provider_protocol as shared
 from .credentials import redact
 
-ENDPOINT = 'wss://api.mistral.ai/v1/audio/transcriptions/realtime'
+# Mistral's global host does not commit to an inference location; its US host runs inference in US data centers,
+# next to the Vercel iad1 region every model is measured from, at 1.1x list price. New runs use the US host, as the
+# TTS bench's Mistral adapter does; runs frozen on the global host (5 Nov 2026) still validate and replay.
+ENDPOINTS = {'us': 'wss://api.us.mistral.ai/v1/audio/transcriptions/realtime',
+             'global': 'wss://api.mistral.ai/v1/audio/transcriptions/realtime'}
+ENDPOINT = ENDPOINTS['us']
 
 
 def validate(config):
-    # The provider registry already pins the endpoint and requested model.
+    # The provider registry already pins the requested model; the endpoint must be one of Mistral's two hosts.
+    if config.get('endpoint') not in ENDPOINTS.values():
+        raise ValueError('Mistral Voxtral requires its US or global realtime transcription endpoint')
     expected = dict(language='en', sample_rate=16000, encoding='pcm_s16le', channels=1, frame_ms=20,
                     target_streaming_delay_ms=480, verbatim=True, finalization='manual_at_speech_end',
                     completion_basis='transcription_done_after_input_audio_end',

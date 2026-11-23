@@ -33,7 +33,7 @@ ENDPOINTS = {
     'speechmatics': {'wss://us.rt.speechmatics.com/v2', 'wss://global.rt.speechmatics.com/v2/agent'},
     'cartesia': {'wss://api.cartesia.ai/stt/websocket'},
     'murf': {'wss://us-east.api.murf.ai/v1/transcription/stream-input'},
-    'mistral': {mistral.ENDPOINT},
+    'mistral': set(mistral.ENDPOINTS.values()),
     'google': {'https://us-speech.googleapis.com', 'https://us-central1-speech.googleapis.com'},
 }
 

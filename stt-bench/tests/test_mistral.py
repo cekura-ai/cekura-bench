@@ -95,6 +95,23 @@ def test_config_connection_and_credentials():
             validate(dict(c, **{key: value}))
 
 
+def test_new_runs_use_the_us_host_and_frozen_global_runs_still_validate():
+    c = config()
+    assert c['endpoint'] == mistral.ENDPOINTS['us'] == 'wss://api.us.mistral.ai/v1/audio/transcriptions/realtime'
+    assert urlsplit(mistral.connection(c, 'fixture')[0]).hostname == 'api.us.mistral.ai'
+    # Regional endpoints are billed at 1.1x Mistral's $0.008 per minute list rate.
+    assert c['pricing']['usd_per_minute'] == pytest.approx(0.008 * 1.1)
+    assert c['pricing']['usd_per_hour'] == pytest.approx(c['pricing']['usd_per_minute'] * 60)
+    # The 5 Nov 2026 runs were frozen on the global host; their saved config still validates.
+    old = dict(c, endpoint='wss://api.mistral.ai/v1/audio/transcriptions/realtime')
+    assert validate(old) == old and mistral.validate(old) == old
+    for endpoint in ('wss://api.eu.mistral.ai/v1/audio/transcriptions/realtime',
+                     'wss://api.us.mistral.ai/v1/audio/speech/realtime', None):
+        for check in (validate, mistral.validate):
+            with pytest.raises(ValueError):
+                check(dict(c, endpoint=endpoint))
+
+
 def test_turn_profile_and_run_lists_include_the_model():
     profile = json.loads(PROFILE.read_text())
     assert {k: v for k, v in profile.items() if k in config()} == config()

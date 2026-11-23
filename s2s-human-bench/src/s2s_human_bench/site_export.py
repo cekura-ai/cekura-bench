@@ -166,6 +166,10 @@ def run_site_export(args: Any) -> int:
         write_json(args.clip_picks, picks)
     models = docs["skills"]["models"]
     print(f"{len(models)} models, {docs['skills']['callSummary']['total']} scenarios -> {args.out}")
+    if cfg.clip_seconds:
+        print(f"  call flow: clip lengths for {sum(len(v) for v in cfg.clip_seconds.values())} clips in {len(cfg.clip_seconds)} scenarios")
+    elif "flow" in cfg.scoring:
+        print("  call flow: no clip lengths in the clips file, so each caller line ends at its last transcribed word", file=sys.stderr)
     if cfg.tasks is not None:
         overall = [r for r in docs["benchmark"]["results"] if r["suite"] == "all"]
         print(f"  main task done on {sum(r['taskPass'] for r in overall)} of {sum(r['runs'] for r in overall)} calls (task file {args.tasks})")

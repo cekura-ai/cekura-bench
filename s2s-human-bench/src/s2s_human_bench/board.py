@@ -197,7 +197,7 @@ def strengths(
             parts = [(sum(s.id not in c.misses for c in cs if s.id in c.tested), sum(s.id in c.tested for c in cs)) for cs in by_scenario(e).values()]
             parts = [p for p in parts if p[1]]
             rates[e.model.site_id][s.id] = ratio_range(parts, level) if len(parts) >= settings["minScenarios"] else None
-    labels = {"longWaits": "Long silences", "talkOver": "Talking over the caller", "slowStops": "Slow stops when cut off"}
+    labels = {"longWaits": "Long silences", "slowStops": "Slow stops when cut off"}
     out: dict[str, dict[str, list[dict[str, Any]]]] = {}
     for e in entries:
         me = e.model.site_id

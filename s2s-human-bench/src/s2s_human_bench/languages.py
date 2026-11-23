@@ -1,4 +1,4 @@
-"""ELO and pass³ per caller-language group.
+"""ELO, pass³ and task done per caller-language group.
 
 A scenario switches language when the configured language-switch skill applies to it in
 any call. Each switching scenario's language is named in the config, and the configured
@@ -46,6 +46,8 @@ def languages_doc(cfg: Config, entries: list[Entry]) -> dict[str, Any]:
         for e in entries:
             ok = sum(pass_all(cfg, e.runs, c) for c in codes)
             r = ratings.get(e.model.site_id)
-            models[e.model.site_id] = dict(elo=round(r) if r is not None else None, passAll=round(100 * ok / len(codes), 1))
+            calls = [run[c] for run in e.runs for c in codes if c in run]
+            done = round(100 * sum(c.task_done for c in calls) / len(calls), 1) if calls else None
+            models[e.model.site_id] = dict(elo=round(r) if r is not None else None, passAll=round(100 * ok / len(codes), 1), done=done)
         groups.append(dict(id=g["id"], label=g["label"], note=g["note"], calls=len(codes), models=models))
     return {"groups": groups}

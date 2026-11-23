@@ -92,7 +92,8 @@ def test_site_export(cfg, tmp_path):
     lang = docs["lang.json"]["groups"]
     assert [g["id"] for g in lang] == ["all", "en", "xx"] and [g["calls"] for g in lang] == [4, 3, 1]
     assert lang[0]["models"]["alpha-site"]["elo"] == elo["alpha-site"]["elo"]
-    assert lang[2]["models"]["beta-site"]["passAll"] == 0.0
+    assert lang[2]["models"]["beta-site"]["passAll"] == 0.0 and lang[2]["models"]["beta-site"]["done"] == 0.0
+    assert lang[0]["models"]["alpha-site"]["done"] == 100.0
 
     assert docs["reports.json"]["reports"]["alpha-site"] == {k: "https://example.test/run_a1_r1" for k in ("all", "bank", "clinic")}
     ins = docs["insights.json"]

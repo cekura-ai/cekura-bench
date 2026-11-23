@@ -63,17 +63,16 @@ def skill_rates(cfg: Config, facts: list[Call]) -> dict[str, float]:
 
 
 def family_means(cfg: Config, calls: list[Call]) -> dict[str, float | None]:
-    """Each family's score by label: the mean of its skills' pass rates, so every skill counts once however many
-    calls tested it. The task family blends in the mean task outcome by ``outcomeInTask``, as each call's score does."""
-    rates = skill_rates(cfg, calls)
-    outcome = mean_or_none((c.outcome for c in calls if c.outcome is not None), None)
+    """Each family's score by label: its per-call value (the same one the call score is built from) averaged over each
+    scenario's calls, then over scenarios. The board's ranges use the same scenario means, so every view of a family
+    shows the same number, and the families add up to the call score."""
     out: dict[str, float | None] = {}
     for key, label in cfg.families.items():
-        fam = mean_or_none((100 * rates[s.id] for s in cfg.skills if s.family == key and s.id in rates), None)
-        if key == cfg.scoring.get("taskFamily", "task") and outcome is not None:
-            w = cfg.scoring["outcomeInTask"]
-            fam = outcome if fam is None else (1 - w) * fam + w * outcome
-        out[label] = round(fam, 1) if fam is not None else None
+        per: dict[str, list[float]] = {}
+        for c in calls:
+            if (v := c.families.get(key)) is not None:
+                per.setdefault(c.code, []).append(v)
+        out[label] = round(statistics.mean(statistics.mean(v) for v in per.values()), 1) if per else None
     return out
 
 

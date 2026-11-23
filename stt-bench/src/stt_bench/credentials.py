@@ -20,6 +20,7 @@ NAMES = {
     'speechmatics': ('SPEECHMATICS_API_KEY', 'Speechmatics'),
     'cartesia': ('CARTESIA_API_KEY', 'Cartesia'),
     'murf': ('MURF_API_KEY',),
+    'mistral': ('MISTRAL_API_KEY', 'MISTRAL'),
 }
 
 

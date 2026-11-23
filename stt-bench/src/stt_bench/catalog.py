@@ -35,6 +35,7 @@ MODELS = {name: Path('config/models') / (name + '.json') for name in (
     'zoom-scribe-pro-live',
     'zoom-scribe-pro-v2-1-live',
     'murf-finch-global',
+    'mistral-voxtral-realtime-3',
 )}
 BLOCKED_MODELS = {}
 

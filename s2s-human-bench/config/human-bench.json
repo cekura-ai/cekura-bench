@@ -91,7 +91,27 @@
       "talkOverSeconds": 0.5,
       "pauseJumpSeconds": 1.0,
       "longWaitSeconds": 5.0,
-      "slowStopSeconds": 2.0
+      "slowStopSeconds": 2.0,
+      "holdPhrases": [
+        "hold on",
+        "hang on",
+        "one moment",
+        "one sec",
+        "one second",
+        "just a moment",
+        "just a second",
+        "give me a",
+        "bear with me",
+        "let me find",
+        "let me get",
+        "let me grab",
+        "let me look",
+        "let me check",
+        "be right back",
+        "wait a minute",
+        "wait a second"
+      ],
+      "stopPauseSeconds": 0.6
     },
     "board": {
       "level": 0.95,

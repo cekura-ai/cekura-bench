@@ -116,12 +116,13 @@ def skill_changes(cfg: Config, a: Entry, b: Entry, settings: dict[str, Any]) -> 
 
 
 def flow_pairs(cfg: Config, a: Entry, b: Entry, level: float) -> dict[str, Any] | None:
-    """Measured call flow, b minus a, per call: long waits, talking over the caller, and the share of clean turns."""
+    """Measured call flow, b minus a, per call: long silences while the caller waits, talking over the caller, and the
+    share of clean turns."""
     if "flow" not in cfg.scoring:
         return None
     long_wait = cfg.scoring["flow"]["longWaitSeconds"]
     return {
-        "longWaits": paired(a, b, lambda c: sum(1 for w in c.flow.waits if w >= long_wait), level, digits=3),
+        "longWaits": paired(a, b, lambda c: sum(1 for w in c.flow.silences if w >= long_wait), level, digits=3),
         "talkOver": paired(a, b, lambda c: len(c.flow.talk_over) + c.flow.pause_jumps, level, digits=3),
         "clean": paired(a, b, lambda c: c.flow.clean, level),
     }

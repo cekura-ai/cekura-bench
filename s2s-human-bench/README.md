@@ -26,11 +26,13 @@ holds none of them.
   (neither a task file nor the platform metric) use the share of the scenario's
   expected-outcome lines met, leaving out lines not reached.
 * **Measured call flow** ([`flow.py`](src/s2s_human_bench/flow.py)), from the transcript's word
-  timings only: the wait before each reply (3 s counts half a problem, 5 s one, 8 s two), the
-  agent talking over a caller who is still mid-turn, the agent jumping into a pause the caller
-  then fills, and how long the agent keeps talking after the caller cuts in (2 s counts half,
-  3 s one). Short acknowledgements ("mhm", "okay sure") on either side are not turns. The
-  measured half of Call Flow is the share of turns with no problem.
+  timings only: every silence the agent ends while the caller waits, before its reply or after
+  a short "okay" (3 s counts half a problem, 5 s one, 8 s two; not after the caller asked to hold
+  or the agent asked a question), the agent talking over a caller who is still mid-turn, the
+  agent jumping into a pause the caller then fills, and how long the agent's speech runs on
+  after the caller cuts in (2 s counts half, 3 s one). Short acknowledgements ("mhm", "okay
+  sure") are not real turns. The measured half of Call Flow is the share of turns with no
+  problem. On 21 sampled moments the timings agree with the stereo recordings on 16.
 * **Main task**: decided from the call's tool calls. Each scenario's task lists the tool
   calls it needs and the values each must carry. It can also list tools that must not run
   (the caller took the action back first) and the undo expected after an action. Values are

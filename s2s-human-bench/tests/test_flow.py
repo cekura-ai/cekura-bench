@@ -21,6 +21,8 @@ SETTINGS = {
     "pauseJumpSeconds": 1.0,
     "longWaitSeconds": 5.0,
     "slowStopSeconds": 2.0,
+    "holdPhrases": ["hold on", "one moment"],
+    "stopPauseSeconds": 0.6,
 }
 
 
@@ -48,11 +50,26 @@ def flow(*turns):
     return measure(list(turns), "Main", "Testing", SETTINGS)
 
 
-def test_waits_are_weighted_by_length():
+def test_silences_are_weighted_by_length():
     f = flow(caller("I need to move my appointment", 0, 2), agent("Sure, which day works for you", 8.5, 10))
-    assert f.replies == 1 and f.waits == [6.5] and f.problems == 1.0 and f.clean == 0.0
+    assert f.replies == 1 and f.waits == [6.5] and f.silences == [6.5] and f.problems == 1.0 and f.clean == 0.0
+    assert f.events == [("wait", 2.0, 6.5), ("silence", 2.0, 6.5)]
     f = flow(caller("I need to move my appointment", 0, 2), agent("Sure, which day works for you", 3.0, 4.5))
-    assert f.waits == [1.0] and f.problems == 0 and f.clean == 100.0
+    assert f.waits == [1.0] and f.silences == [] and f.problems == 0 and f.clean == 100.0
+
+
+def test_silence_after_an_acknowledgement_counts():
+    f = flow(caller("What is my balance please", 0, 2), agent("Okay", 2.5, 3.0), agent("Your balance is one hundred dollars", 9.0, 11.0))
+    assert f.waits == [0.5] and f.silences == [6.0] and f.problems == 1.0
+
+
+def test_a_hold_or_a_question_is_the_callers_silence():
+    f = flow(caller("Hold on let me find my card", 0, 2), agent("Are you still there", 14, 15))
+    assert f.silences == []
+    f = flow(agent("What is your date of birth?", 0, 2), agent("Take your time, I am here when you are ready", 9, 12))
+    assert f.silences == []
+    f = flow(agent("Let me look that up for you now", 0, 2), agent("I found your booking for Friday", 9, 12))
+    assert f.silences == [7.0]  # the caller is waiting on the agent
 
 
 def test_talking_over_a_caller_mid_turn():
@@ -74,9 +91,18 @@ def test_jumping_into_a_pause():
     assert f.pause_jumps == 1 and f.problems == 1.0
 
 
+def test_a_slow_stop_runs_across_turns():
+    f = flow(
+        agent("Your balance is one hundred and twenty dollars", 0, 4),
+        caller("Wait, that is wrong", 2.0, 3.5),
+        agent("and the next payment is due on Friday", 4.3, 7.0),
+    )
+    assert f.stops == [5.0] and f.problems == 1.0
+
+
 def test_slow_stop_after_the_caller_cuts_in():
     f = flow(agent("Your balance is one hundred and twenty dollars and the next payment is due on Friday", 0, 6), caller("Wait, that is wrong", 2.0, 3.5))
-    assert f.stops == [4.0] and f.problems == 1.0
+    assert f.stops == [4.0] and f.problems == 1.0 and f.events == [("stop", 2.0, 4.0)]
     f = flow(agent("Your balance is one hundred and twenty dollars and the next payment is due on Friday", 0, 6), caller("Okay sure", 2.0, 2.6))
     assert f.stops == []  # a backchannel, not an interruption
 

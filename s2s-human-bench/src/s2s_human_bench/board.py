@@ -1,7 +1,7 @@
 """The board file: what a deployer would check before picking a model, with every number's 95% range.
 
 * **Models**: call score, task done, each family (part) of the score and the measured call flow
-  (long waits and talking over the caller per 10 calls, slow stops after an interruption), with
+  (long silences and talking over the caller per 10 calls, slow stops after an interruption), with
   the rating, the shared place (1 plus the models clearly above) and the range of places from the
   skills file.
 * **Hard moments**: per call type, over every call of the scenarios built for it: how often the
@@ -73,7 +73,8 @@ def ratio_range(parts: list[tuple[float, float]], level: float) -> dict[str, Any
 
 
 def flow_summary(cfg: Config, entry: Entry, level: float) -> dict[str, Any]:
-    """Measured call flow: long waits and talking over the caller per 10 calls, slow stops per interruption, median wait."""
+    """Measured call flow: long silences while the caller waits and talking over the caller per 10 calls, slow stops per
+    interruption, and the typical wait before a reply."""
     settings = cfg.scoring["flow"]
     long_wait, slow_stop = settings["longWaitSeconds"], settings["slowStopSeconds"]
     calls = entry.calls
@@ -89,7 +90,7 @@ def flow_summary(cfg: Config, entry: Entry, level: float) -> dict[str, Any]:
         "replies": len(waits),
         "waitP50": round(statistics.median(waits), 2) if waits else None,
         "waitP90": round(sorted(waits)[int(0.9 * len(waits))], 2) if waits else None,
-        "longWaits": per10(lambda c: sum(1 for w in c.flow.waits if w >= long_wait)),
+        "longWaits": per10(lambda c: sum(1 for w in c.flow.silences if w >= long_wait)),
         "talkOver": per10(lambda c: len(c.flow.talk_over) + c.flow.pause_jumps),
         "interruptions": len(stops),
         "slowStops": ratio_range(
@@ -185,7 +186,7 @@ def strengths(
     cfg: Config, entries: list[Entry], flows: dict[str, dict[str, Any] | None], settings: dict[str, Any]
 ) -> dict[str, dict[str, list[dict[str, Any]]]]:
     """Skills and measured call flow where each model's 95% range clears the median of the other ranked models: by
-    ``minGap`` points for a skill, by ``flowGaps`` for long waits and talking over the caller (per 10 calls) and slow
+    ``minGap`` points for a skill, by ``flowGaps`` for long silences and talking over the caller (per 10 calls) and slow
     stops (percent). Fewer flow problems is better."""
     level, gap = settings["level"], settings["minGap"]
     ranked = [e.model.site_id for e in entries if not e.model.reference]
@@ -196,7 +197,7 @@ def strengths(
             parts = [(sum(s.id not in c.misses for c in cs if s.id in c.tested), sum(s.id in c.tested for c in cs)) for cs in by_scenario(e).values()]
             parts = [p for p in parts if p[1]]
             rates[e.model.site_id][s.id] = ratio_range(parts, level) if len(parts) >= settings["minScenarios"] else None
-    labels = {"longWaits": "Long waits", "talkOver": "Talking over the caller", "slowStops": "Slow stops when cut off"}
+    labels = {"longWaits": "Long silences", "talkOver": "Talking over the caller", "slowStops": "Slow stops when cut off"}
     out: dict[str, dict[str, list[dict[str, Any]]]] = {}
     for e in entries:
         me = e.model.site_id

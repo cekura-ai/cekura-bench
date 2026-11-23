@@ -149,7 +149,8 @@ def load_call(cfg: Config, call_json: Path) -> Call:
         outcome = outcome_share(lines)
         task_done = sum(x.startswith(MISSED) for x in lines) == 0 and sum(x.startswith(MET) for x in lines) > 0
         outcome_from = "lines"
-    flow = measure(transcript, inputs["agentRolePrefix"], inputs["callerRolePrefix"], cfg.scoring["flow"]) if "flow" in cfg.scoring else Flow()
+    clips = (cfg.clip_seconds or {}).get(meta["code"])
+    flow = measure(transcript, inputs["agentRolePrefix"], inputs["callerRolePrefix"], cfg.scoring["flow"], clips) if "flow" in cfg.scoring else Flow()
     families = family_scores(cfg, verdicts, outcome, flow.clean)
     agent = [t for t in transcript if _speaker(t, inputs["agentRolePrefix"])]
     caller = [t for t in transcript if _speaker(t, inputs["callerRolePrefix"])]

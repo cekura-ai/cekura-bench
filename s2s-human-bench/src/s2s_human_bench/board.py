@@ -1,7 +1,7 @@
 """The board file: what a deployer would check before picking a model, with every number's 95% range.
 
 * **Models**: call score, task done, each family (part) of the score and the measured call flow
-  (long silences and talking over the caller per 10 calls, slow stops after an interruption), with
+  (long silences per 10 calls, slow stops after an interruption, the typical reply wait), with
   the rating, the shared place (1 plus the models clearly above) and the range of places from the
   skills file.
 * **Hard moments**: per call type, over every call of the scenarios built for it: how often the
@@ -28,7 +28,7 @@ from s2s_human_bench.calls import Call
 from s2s_human_bench.comparisons import t_quantile
 from s2s_human_bench.config import Config
 
-DEFAULTS = {"level": 0.95, "minGap": 10, "minScenarios": 5, "momentMinShare": 0.25, "flowGaps": {"longWaits": 2.0, "talkOver": 2.0, "slowStops": 10.0}}
+DEFAULTS = {"level": 0.95, "minGap": 10, "minScenarios": 5, "momentMinShare": 0.25, "flowGaps": {"longWaits": 2.0, "slowStops": 10.0}}
 
 
 def scenario_mean(entry: Entry, value: Callable[[Call], float | None], keep: Callable[[str], bool] = lambda code: True) -> dict[str, float]:
@@ -73,8 +73,8 @@ def ratio_range(parts: list[tuple[float, float]], level: float) -> dict[str, Any
 
 
 def flow_summary(cfg: Config, entry: Entry, level: float) -> dict[str, Any]:
-    """Measured call flow: long silences while the caller waits and talking over the caller per 10 calls, slow stops per
-    interruption, and the typical wait before a reply."""
+    """Measured call flow: long silences while the caller waits per 10 calls, slow stops per interruption, the typical
+    wait before a reply, and (recorded, not scored) talking over the caller per 10 calls."""
     settings = cfg.scoring["flow"]
     long_wait, slow_stop = settings["longWaitSeconds"], settings["slowStopSeconds"]
     calls = entry.calls
@@ -186,7 +186,7 @@ def strengths(
     cfg: Config, entries: list[Entry], flows: dict[str, dict[str, Any] | None], settings: dict[str, Any]
 ) -> dict[str, dict[str, list[dict[str, Any]]]]:
     """Skills and measured call flow where each model's 95% range clears the median of the other ranked models: by
-    ``minGap`` points for a skill, by ``flowGaps`` for long silences and talking over the caller (per 10 calls) and slow
+    ``minGap`` points for a skill, by ``flowGaps`` for long silences (per 10 calls) and slow
     stops (percent). Fewer flow problems is better."""
     level, gap = settings["level"], settings["minGap"]
     ranked = [e.model.site_id for e in entries if not e.model.reference]
@@ -274,7 +274,11 @@ def board_doc(cfg: Config, entries: list[Entry], elo_rows: list[dict[str, Any]],
                 }
                 for f in cfg["families"]
             ],
-            "flow": {k: flow[k] for k in ("waits", "stops", "talkOverSeconds", "pauseJumpSeconds", "longWaitSeconds", "slowStopSeconds") if k in flow},
+            "flow": {
+                k: flow[k]
+                for k in ("waits", "stops", "talkOverSeconds", "pauseJumpSeconds", "longWaitSeconds", "slowStopSeconds", "stopMinWords", "talkOverWeight")
+                if k in flow
+            },
             "strengths": {"minGap": settings["minGap"], "minScenarios": settings["minScenarios"]},
         },
         "models": models,

@@ -20,6 +20,7 @@ from s2s_human_bench.board import board_doc
 from s2s_human_bench.comparisons import comparisons_doc
 from s2s_human_bench.config import Config, load_config
 from s2s_human_bench.examples import examples_doc
+from s2s_human_bench.flow import clip_key
 from s2s_human_bench.languages import languages_doc
 from s2s_human_bench.s2s import s2s_docs
 from s2s_human_bench.scenarios import scenarios_doc
@@ -51,6 +52,18 @@ def read_public_s2s(path: Path, ref: str = "origin/main") -> dict[str, Any]:
 def human_clips(path: Path | None) -> int:
     """Recorded caller clips, from ``{scenario: [clip, ...]}``; 0 when no file is given."""
     return sum(len(v) for v in read_json(path).values()) if path else 0
+
+
+def clip_seconds(path: Path | None) -> dict[str, dict[str, float]] | None:
+    """Recorded caller clip lengths by scenario and clip text, from ``{scenario: [{text, seconds}, ...]}``; None when no
+    file is given or it carries no lengths (the flow measure then ends each caller line at its last word)."""
+    if not path:
+        return None
+    out = {
+        code: {clip_key(c["text"]): c["seconds"] for c in clips if isinstance(c, dict) and c.get("text") and c.get("seconds")}
+        for code, clips in read_json(path).items()
+    }
+    return out if any(out.values()) else None
 
 
 def titles(path: Path | None) -> dict[str, str | None]:
@@ -134,6 +147,7 @@ def run_site_export(args: Any) -> int:
             raise ExportError(f"--name expects KIND=FILE with KIND in {sorted(names)}, got {pair!r}")
         names[kind] = file
     clips = args.clips if args.clips else (args.runs / "scenario_clips.json")
+    cfg.clip_seconds = clip_seconds(clips if clips.exists() else None)
     call_titles = args.titles if args.titles else (args.runs / "scenario_titles.json")
     docs, picks = build(
         cfg,

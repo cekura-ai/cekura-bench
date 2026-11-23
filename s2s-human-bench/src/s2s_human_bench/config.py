@@ -58,6 +58,7 @@ class Config:
     skills: list[Skill] = field(default_factory=list)  # family order
     models: list[Model] = field(default_factory=list)
     tasks: dict[str, dict[str, Any]] | None = None  # per-scenario main tasks (private --tasks file); None = expected-outcome share
+    clip_seconds: dict[str, dict[str, float]] | None = None  # per scenario, recorded caller clip length by clip text (flow.clip_key)
 
     def __getitem__(self, key: str) -> Any:
         return self.raw[key]

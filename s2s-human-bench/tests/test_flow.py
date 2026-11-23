@@ -23,6 +23,11 @@ SETTINGS = {
     "slowStopSeconds": 2.0,
     "holdPhrases": ["hold on", "one moment"],
     "stopPauseSeconds": 0.6,
+    "splitGapSeconds": 1.0,
+    "stopMinWords": 4,
+    "talkOverWeight": 1.0,
+    "pauseJumpWeight": 1.0,
+    "checkInPhrases": ["are you still there"],
 }
 
 
@@ -145,3 +150,35 @@ def test_rank_ranges():
     boots = [{"a": 3.0, "b": 2.0, "c": 1.0}] * 30 + [{"a": 2.0, "b": 3.0, "c": 1.0}] * 10
     places = rating.rank_ranges(boots, ["a", "b", "c"])
     assert places == {"a": [1, 2], "b": [1, 2], "c": [3, 3]}
+
+
+def test_background_voices_and_markers_are_not_the_caller():
+    f = flow(
+        agent("Your balance is one hundred and twenty dollars and the next payment is due on Friday", 0, 6),
+        caller("[colleague in the background: can you pass me that folder please]", 2.0, 4.5),
+    )
+    assert f.stops == [] and f.talk_over == []
+    f = flow(agent("Let me look that up for you now", 0, 2), caller("[noise:hold-music]", 2.5, 20), agent("I found your booking for Friday", 21, 23))
+    assert f.silences == []  # the caller's side was on hold music, not waiting in silence
+
+
+def test_a_hold_inside_one_caller_line_is_not_talking():
+    c = caller("give me a moment okay I am back now", 0, 31)
+    starts = [0, 0.4, 0.8, 1.2, 30, 30.4, 30.8, 31.2, 31.6]
+    c["words"] = [{"text": w, "start": s, "end": s + 0.3} for w, s in zip("give me a moment okay I am back now".split(), starts, strict=True)]
+    f = flow(c, agent("Take your time, I will be right here", 10, 12))
+    assert f.talk_over == []
+
+
+def test_a_short_question_or_a_check_in_is_not_an_interruption():
+    f = flow(agent("Yes I am here, would you like me to request the refill", 0, 5), caller("Are you there?", 1.0, 1.8))
+    assert f.stops == []
+    f = flow(agent("Yes I am here, would you like me to request the refill", 0, 5), caller("Are you still there?", 1.0, 1.8))
+    assert f.stops == []
+
+
+def test_a_recorded_clip_keeps_the_caller_busy_to_its_end():
+    turns = (caller("I need to move my appointment please", 0, 2), agent("Sure, which day works for you", 9, 10))
+    assert measure(list(turns), "Main", "Testing", SETTINGS).silences == [7.0]
+    clips = {"i need to move my appointment please": 5.5}  # the clip plays on for 3.5 s after the line's last word
+    assert measure(list(turns), "Main", "Testing", SETTINGS, clips).silences == [3.5]

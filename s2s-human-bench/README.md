@@ -26,13 +26,15 @@ holds none of them.
   (neither a task file nor the platform metric) use the share of the scenario's
   expected-outcome lines met, leaving out lines not reached.
 * **Measured call flow** ([`flow.py`](src/s2s_human_bench/flow.py)), from the transcript's word
-  timings only: every silence the agent ends while the caller waits, before its reply or after
-  a short "okay" (3 s counts half a problem, 5 s one, 8 s two; not after the caller asked to hold
-  or the agent asked a question), the agent talking over a caller who is still mid-turn, the
-  agent jumping into a pause the caller then fills, and how long the agent's speech runs on
-  after the caller cuts in (2 s counts half, 3 s one). Short acknowledgements ("mhm", "okay
-  sure") are not real turns. The measured half of Call Flow is the share of turns with no
-  problem. On 21 sampled moments the timings agree with the stereo recordings on 16.
+  timings only, with leeway for timing error: every silence the agent ends while the caller waits,
+  before its reply or after a short "okay" (6 s counts half a problem, 9 s one; not after the caller
+  asked to hold or the agent asked a question), and how long the agent's speech runs on after the
+  caller cuts in to say something (3.5 s counts half, 5 s one). Bracketed directions in the caller's
+  script (a scripted pause, hold music, background voices) are not the caller talking, and with clip
+  lengths in the clips file (`seconds`) the caller's side stays busy until each recorded clip ends.
+  Talking over the caller is recorded but weighted 0: listening found most timing-detected overlaps
+  were not real, so the judged skills cover it. The measured half of Call Flow is the share of turns
+  with no problem.
 * **Main task**: decided from the call's tool calls. Each scenario's task lists the tool
   calls it needs and the values each must carry. It can also list tools that must not run
   (the caller took the action back first) and the undo expected after an action. Values are
@@ -93,7 +95,8 @@ uv run --locked s2s-human-bench site-export \
 * `--runs` holds one folder per run (`<run>/calls/<scenario>/<call id>/` with `call.json`,
   `metrics.json`, `transcript.json`, `expected_outcome.json`), named as the config's models
   list says, and optionally `scenario_clips.json` (`--clips`) for the recorded-clip count
-  and `scenario_titles.json` (`--titles`) for the scenario titles shown with example calls.
+  and, when its clips carry `seconds`, their lengths for the flow measure, and
+  `scenario_titles.json` (`--titles`) for the scenario titles shown with example calls.
 * `--public-s2s` is the public S2S benchmark's `s2s-benchmark.json`, or a website checkout
   to read it from at `origin/main`; it supplies model metadata and published prices.
 * `--name KIND=FILE` renames an output (defaults in the config's `outputs`), `--date` pins

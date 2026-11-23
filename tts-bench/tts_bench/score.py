@@ -244,11 +244,12 @@ def rescore_run(run_dir: Path) -> int:
 
     The transcript is the expensive, external part; the comparison is ours. A
     change to the normaliser or the digit rule must be applicable to every run
-    ever scored without paying for the audio to be transcribed again.
+    ever scored without paying for the audio to be transcribed again, or
+    even having the audio at hand.
     """
     path = run_dir / "scores-all.jsonl"
     rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
-    texts = {t["cell_id"]: t for t in _targets(run_dir)}
+    texts = {cell["cell_id"]: cell for _, cell in _scorable_cells(run_dir)}
     for row in rows:
         target = texts.get(row["cell_id"])
         if target is None:
@@ -288,8 +289,8 @@ def _with_current_readings(item_id: str, spans: list[dict[str, Any]]) -> list[di
             for span in spans]
 
 
-def _targets(run_dir: Path) -> list[dict[str, Any]]:
-    """Every (cell, audio file) pair that has text to score against."""
+def _scorable_cells(run_dir: Path) -> list[tuple[Path, dict[str, Any]]]:
+    """Every cell with text to score against, from the run's records alone; no audio is read."""
     out = []
     corpus_path = run_dir / "corpus.json"
     spans = {} if not corpus_path.exists() else {
@@ -300,11 +301,19 @@ def _targets(run_dir: Path) -> list[dict[str, Any]]:
             continue                         # a cancelled utterance is partial by design; its transcript scores nothing
         directory = cell_dir(run_dir, cell)
         record = json.loads((directory / "cell.json").read_text())
+        out.append((directory, {"cell_id": cell["artifacts"]["slug"], "text": record["text"]["sent"],
+                                "spoken_reference": record["text"]["spoken_reference"], "cohort": cell["cohort"],
+                                "probe": cell["probe"], "spans": spans.get(cell["item"], [])}))
+    return out
+
+
+def _targets(run_dir: Path) -> list[dict[str, Any]]:
+    """Every (cell, audio file) pair that has text to score against."""
+    out = []
+    for directory, cell in _scorable_cells(run_dir):
         # Audio is WAV as recorded, or FLAC once the run is archived; the samples are the same.
         for wav in sorted([*directory.glob("audio-*.wav"), *directory.glob("audio-*.flac")]):
-            out.append({"cell_id": cell["artifacts"]["slug"], "context": wav.stem.split("-", 1)[1], "wav": wav,
-                        "text": record["text"]["sent"], "spoken_reference": record["text"]["spoken_reference"],
-                        "cohort": cell["cohort"], "probe": cell["probe"], "spans": spans.get(cell["item"], [])})
+            out.append({**cell, "context": wav.stem.split("-", 1)[1], "wav": wav})
     return out
 
 

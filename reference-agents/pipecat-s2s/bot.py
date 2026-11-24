@@ -735,14 +735,9 @@ def _polyai(credential: str, model: str, voice: str, instructions: str, settings
     ``voice`` is not sent: the service speaks in its default voice, and no
     voice field is known to be inside the schema it enforces.
     """
-    from polyai_realtime import PROMPT_ADDENDUM, PolyAIRealtimeLLMService
+    from polyai_realtime import PolyAIRealtimeLLMService
 
-    return PolyAIRealtimeLLMService(
-        api_key=credential,
-        url=polyai_url(settings),
-        model=model,
-        instructions=f"{instructions.rstrip()}\n\n{PROMPT_ADDENDUM}",
-    )
+    return PolyAIRealtimeLLMService(api_key=credential, url=polyai_url(settings), model=model, instructions=instructions)
 
 
 def polyai_url(settings: Settings) -> str:
@@ -753,8 +748,6 @@ def polyai_url(settings: Settings) -> str:
 
 
 def polyai_disclosures(settings: Settings) -> dict[str, str]:
-    from polyai_realtime import PROMPT_ADDENDUM, SPOKEN_ARGUMENT
-
     return {
         "polyai_endpoint": polyai_url(settings),
         "polyai_turn_detection": "service, create_response true (thresholds fixed by the vendor)",
@@ -763,14 +756,7 @@ def polyai_disclosures(settings: Settings) -> dict[str, str]:
             "that carried it is done and its audio has played"
         ),
         "tts": "the vendor's own, server-side, in its default voice; 24 kHz PCM out",
-        "tool_schema": (
-            f"every tool takes a required spoken argument {SPOKEN_ARGUMENT!r} (poly_spoken), "
-            "removed from the arguments before the tool runs"
-        ),
-        # Named and hashed, as on the GPT-Live row: ``system_prompt_sha256``
-        # covers only the prompt every row shares.
-        "prompt_addendum": "polyai-spoken-tools",
-        "prompt_addendum_sha256": _digest(PROMPT_ADDENDUM),
+        "tool_schema": "as published; poly_speech at the service default (the model may speak while a tool runs)",
         "polyai_playback_reporting": (
             "on: started and stopped, audio_ms and dropped_ms from the audio delivered, "
             "spoken_text from the words played"

@@ -309,21 +309,19 @@ the row is priced at Voice Live's Pro rates.
 ### PolyAI Dialog-RSN-1
 
 Dialog-RSN-1 hears the caller's audio directly, decides when they have finished,
-and answers with a reply or a tool call. The row runs the service's default
-mode, in which the vendor's own text-to-speech speaks server-side and the reply
+and answers with a reply, a tool call, or both. The row runs the service's
+default mode, in which the vendor's own text-to-speech speaks server-side and the reply
 arrives as 24 kHz audio with its transcript; the service's text-only mode, for
 clients that bring their own voice, is not used. `polyai_realtime.py` speaks the
 vendor's realtime protocol, OpenAI's GA shape with a narrower session, and sends
 the caller at the model's native 16 kHz.
 
-A turn is a reply or one tool call, never both, so the prompt's "say this, then call
-that" cannot be followed as written. The vendor's mechanism is a tool argument
-marked `poly_spoken`, which the service speaks while the tool runs: every tool on this row takes a
-required `utterance`, and one sentence added to this row's prompt (named and
-hashed on the record) says to put such lines there. The argument is taken off
-before the tool runs, so the tools and the record see the published contract.
-A tool's result is sent as soon as it exists, so the next reply is written while
-the line is still being said.
+The model can speak while it calls a tool: the line arrives as the same
+response's audio and transcript, never in the call's arguments. Whether a tool
+gets a line is the vendor's per-tool `poly_speech` setting, left at its default,
+under which the model decides; the tools are sent as published and the prompt is
+the one every row gets. A tool's result is sent as soon as it exists, so the
+next reply is written while the line is still being said.
 
 The service judges a barge-in only while it knows a reply is audible, and it
 sends a reply's audio faster than it is played, so the row reports playback to
@@ -337,7 +335,8 @@ mid-call, the row stops sending and hangs up.
 The row connects to `wss://api.studio.poly.ai/v1/realtime`, the self-serve
 cluster that issues keys from `poly apikey --region studio`; the vendor's
 reference names `wss://api.us.poly.ai/v1/realtime`, which refuses those keys.
-`POLYAI_REALTIME_URL` overrides the endpoint, and the record names the one used. The vendor publishes no price.
+`POLYAI_REALTIME_URL` overrides the endpoint, and the record names the one used. The row is priced from the
+vendor's published rates (`pricing/prices.json`).
 
 ### Smallest AI Hydra
 

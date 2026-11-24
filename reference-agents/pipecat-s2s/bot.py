@@ -876,6 +876,31 @@ def rime_prism_disclosures(settings: Settings) -> dict[str, str]:
     }
 
 
+def _zoom_voice_agent(credential: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
+    """Zoom's Voice Agent API, a hosted cascade, through the service in ``zoom_voice_agent``.
+
+    Pipecat has no service for it. The key is the one scoped to the Voice Agent
+    API; Zoom's speech-to-text keys are refused there.
+    """
+    from zoom_voice_agent import ZoomVoiceAgentLLMService
+
+    return ZoomVoiceAgentLLMService(api_key=credential, model=model, voice=voice, instructions=instructions)
+
+
+def zoom_disclosures(settings: Settings) -> dict[str, str]:
+    from zoom_voice_agent import LANGUAGE, THINK_PROVIDER
+
+    return {
+        # Not a speech-to-speech model, and the record has to say so: a reader
+        # comparing it with the native rows must know the model hears text only.
+        "zoom_architecture": "hosted cascade: Zoom speech-to-text, a text model, Zoom text-to-speech",
+        "zoom_think_provider": THINK_PROVIDER,
+        "zoom_transcription_language": LANGUAGE,
+        "zoom_turn_detection": "service default; not configurable",
+        "zoom_response_token_limit": "inf (service default)",
+    }
+
+
 def _gpt_live(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
     """The live model plus the backend it hands reasoning to.
 
@@ -1187,7 +1212,7 @@ class Provider:
 # and it is not a detail: a scored run needs both halves of the conversation, and
 # a transcript holding only the agent reads as a caller who never spoke. Three of
 # these services transcribe the caller only when asked, and each asks
-# differently; nine do it themselves; one cannot, and its vendor's separate
+# differently; ten do it themselves; one cannot, and its vendor's separate
 # speech-to-text is run on each caller turn. Nothing warns about the difference,
 # because a session without transcription is a working session.
 #
@@ -1205,6 +1230,7 @@ class Provider:
 #                                   vendor's speech-to-text runs on each caller turn
 #   rime-prism        automatic  -- the service transcribes each committed caller turn
 #   deepgram-voice-agent automatic -- Flux's transcript of each caller turn
+#   zoom-voice-agent  automatic  -- transcription is the first stage of its cascade
 #
 # The tool calls travel separately, through the context aggregator, which is why
 # a run can show resolved tools and still carry no speech.
@@ -1468,6 +1494,17 @@ PROVIDERS: dict[str, Provider] = {
         "rime_prism",
         discloses=rime_prism_disclosures,
         results="immediate", caller_transcription="automatic", reports_playback=True,
+    ),
+    # Zoom's Voice Agent API: not a speech-to-speech model but a hosted cascade,
+    # on the board beside them and recorded as one -- see ``zoom_voice_agent``.
+    # 16 kHz both ways. The service announces the caller's turns, cancels its
+    # own reply when talked over, and is asked for a reply once a tool's result
+    # is in, as Voice Live is.
+    "zoom-voice-agent": Provider(
+        _zoom_voice_agent, 16000, "gemma-4", "jenna", ("ZOOM_AGENT_API_KEY",),
+        "zoom_voice_agent",
+        discloses=zoom_disclosures,
+        caller_transcription="automatic",
     ),
 }
 

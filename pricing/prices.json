@@ -350,6 +350,25 @@
         "Pay-as-you-go rate; Growth lists $0.059 a minute. Billed on WebSocket connection time.",
         "The text model (GPT-4.1) runs on this deployment's OpenAI account and is billed there by token; the session reports no token usage, so it is not priced here."
       ]
+    },
+    "zoom-voice-agent": {
+      "read_on": "2026-10-26",
+      "verified": true,
+      "source": "https://www.zoom.com/en/products/ai-services/voice-agent-api/",
+      "components": [
+        {
+          "name": "gemma-4",
+          "basis": "per_minute",
+          "measure": "call_seconds",
+          "rates": {
+            "minute": 0.025
+          }
+        }
+      ],
+      "unmetered": [
+        "Zoom lists $1.50 an hour of active session time for the Standard API, which serves its own text model; that is the rate used. Bring-your-own-LLM sessions are $1.08 an hour plus the customer's own model costs.",
+        "The service reports the text model's tokens on every reply, but Zoom bills by session time, not tokens."
+      ]
     }
   },
   "cascade_speech_path": {

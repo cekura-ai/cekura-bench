@@ -1862,14 +1862,13 @@ class TestPolyAIRealtime:
         }}
         assert polyai_realtime.SAMPLE_RATE == bot.PROVIDERS["polyai-dialog"].input_rate
 
-    def test_the_prompt_is_the_shared_one_plus_the_named_addendum(self):
+    def test_the_prompt_is_the_one_every_row_gets(self):
         import polyai_realtime
 
         service, _ = self._service()
-        assert service.session()["instructions"] == f"prompt\n\n{polyai_realtime.PROMPT_ADDENDUM}"
+        assert service.session()["instructions"] == "prompt"
         record = record_for("polyai-dialog")
-        assert record["prompt_addendum"] == "polyai-spoken-tools"
-        assert record["prompt_addendum_sha256"] == bot._digest(polyai_realtime.PROMPT_ADDENDUM)
+        assert "prompt_addendum" not in record and "prompt_addendum_sha256" not in record
         for key in ("polyai_endpoint", "polyai_turn_detection", "tts", "tool_schema", "polyai_playback_reporting"):
             assert record[key], key
         assert record["polyai_endpoint"] == polyai_realtime.DEFAULT_URL
@@ -1889,26 +1888,18 @@ class TestPolyAIRealtime:
         assert "ElevenLabs" not in record["tts"]
         assert {key for key, p in bot.PROVIDERS.items() if p.reports_playback} == {"polyai-dialog", "rime-prism"}
 
-    def test_every_tool_keeps_its_published_schema_and_gains_a_required_spoken_line(self):
-        import polyai_realtime
-
+    def test_every_tool_is_sent_as_published(self):
+        """No spoken argument and no ``poly_speech``: whether to speak while a tool runs is the model's call."""
         server = bot.MockToolServer(suite="medicare")
         service, _ = self._service(_tools=bot.build_tools(server))
         declared = {tool["name"]: tool for tool in service.session()["tools"]}
         specs = {spec.name: spec for spec in server.tool_specs()}
         assert set(specs) | {"end_call", "transfer_call"} == set(declared)
-        spoken = polyai_realtime.SPOKEN_ARGUMENT
         for name, tool in declared.items():
-            properties = dict(tool["parameters"]["properties"])
-            line = properties.pop(spoken)
-            assert line["type"] == "string" and line["poly_spoken"] is True, name
-            assert spoken in tool["parameters"]["required"], name
+            assert set(tool) == {"type", "name", "description", "parameters"}, name
             if name in specs:
-                assert properties == specs[name].parameters["properties"], name
-                assert tool["parameters"]["required"][:-1] == list(specs[name].parameters.get("required", [])), name
-        assert declared["end_call"]["parameters"]["properties"][spoken]["description"].startswith("Your goodbye")
-        # The published schema itself is untouched.
-        assert all(spoken not in spec.parameters.get("properties", {}) for spec in server.tool_specs())
+                assert tool["parameters"]["properties"] == specs[name].parameters["properties"], name
+                assert tool["parameters"].get("required", []) == list(specs[name].parameters.get("required", [])), name
 
     async def test_the_call_opens_configured_with_tools_then_speaks_first(self):
         from pipecat.processors.aggregators.llm_context import LLMContext
@@ -1953,33 +1944,34 @@ class TestPolyAIRealtime:
         await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "cancelled"}})
         assert not self._text(seen)
 
-    async def test_the_spoken_line_is_said_but_never_reaches_the_tool(self):
-        """The tool sees the published contract; the service speaks the line."""
+    async def test_a_line_said_while_a_tool_runs_is_the_responses_own_speech(self):
+        """One response carries the call and the line; the tool sees only its arguments."""
         from pipecat.processors.aggregators.llm_context import LLMContext
 
         service, seen = self._service()
         service._context = LLMContext([])
         await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
-        await service._dispatch(self._audio("r1", 100))
+        await service._dispatch({"type": "response.output_item.added", "response_id": "r1",
+                                 "item": {"type": "function_call", "call_id": "c1", "name": "lookup_patient"}})
         await service._dispatch(self._words("r1", "Let me check that."))
         await service._dispatch({"type": "response.function_call_arguments.done", "response_id": "r1",
-                                 "call_id": "c1", "name": "lookup_patient",
-                                 "arguments": '{"utterance": "Let me check that.", "patient_id": "p_1"}'})
+                                 "call_id": "c1", "name": "lookup_patient", "arguments": '{"patient_id": "p_1"}'})
+        await service._dispatch(self._audio("r1", 100))
         await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})
         [call] = seen["calls"]
         assert (call.function_name, call.arguments) == ("lookup_patient", {"patient_id": "p_1"})
         assert self._text(seen) == ["Let me check that."]
 
-    async def test_a_spoken_line_the_service_did_not_speak_is_not_invented(self):
-        """The voice is the vendor's: a line it left silent stays silent, and the tool still runs."""
+    async def test_a_line_the_service_did_not_voice_is_not_invented(self):
+        """The voice is the vendor's: words it left silent stay silent, and the tool still runs."""
         from pipecat.processors.aggregators.llm_context import LLMContext
 
         service, seen = self._service()
         service._context = LLMContext([])
         await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch(self._words("r1", "Thanks for calling, goodbye."))
         await service._dispatch({"type": "response.function_call_arguments.done", "response_id": "r1",
-                                 "call_id": "c1", "name": "end_call",
-                                 "arguments": '{"utterance": "Thanks for calling, goodbye."}'})
+                                 "call_id": "c1", "name": "end_call", "arguments": "{}"})
         await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})
         assert not self._text(seen)
         assert seen["calls"][0].arguments == {}
@@ -1993,7 +1985,7 @@ class TestPolyAIRealtime:
         await service._dispatch({"type": "response.output_item.added", "response_id": "r1",
                                  "item": {"type": "function_call", "call_id": "c1", "name": "lookup_patient"}})
         await service._dispatch({"type": "response.function_call_arguments.done", "response_id": "r1",
-                                 "call_id": "c1", "name": "lookup_patient", "arguments": '{"utterance": "One sec."}'})
+                                 "call_id": "c1", "name": "lookup_patient", "arguments": "{}"})
         result = LLMContext([{"role": "tool", "tool_call_id": "c1", "content": '{"ok": true}'}])
         await service._handle_context(result)
         await service._handle_context(result)
@@ -2002,14 +1994,14 @@ class TestPolyAIRealtime:
         assert [event["type"] for event in seen["sent"]] == ["conversation.item.create", "response.create"]
 
     async def test_a_closing_tool_asks_for_no_reply_and_closes_on_its_own_response(self):
-        """Its spoken line is the goodbye: a reply to its result would say it again."""
+        """The goodbye is said in the response that calls it: a reply to its result would say it again."""
         from pipecat.processors.aggregators.llm_context import LLMContext
 
         service, seen = self._service()
         service._context = LLMContext([])
         await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
         await service._dispatch({"type": "response.function_call_arguments.done", "response_id": "r1",
-                                 "call_id": "c1", "name": "end_call", "arguments": '{"utterance": "Goodbye."}'})
+                                 "call_id": "c1", "name": "end_call", "arguments": "{}"})
         await service._handle_context(LLMContext([{"role": "tool", "tool_call_id": "c1", "content": "{}"}]))
         assert not service.closing_reply_done.is_set(), "the goodbye is still playing"
         await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})

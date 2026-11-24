@@ -199,6 +199,18 @@ def usable_run(cfg: Config, run: Path) -> bool:
     return silent_calls(run, inputs["agentRolePrefix"]) <= inputs["maxSilentCalls"]
 
 
+def swap_runs(cfg: Config, agent_id: int, codes: tuple[str, ...], root: Path) -> list[Path]:
+    """The run folders a scenario swap reads from another agent, in name order. Each must hold every
+    swapped scenario (it need not hold the rest of the board) and pass the same void-run guard."""
+    inputs = cfg["inputs"]
+    folders = sorted(root.glob(inputs["agentRunPattern"].format(agent_id=agent_id)))
+    return [
+        f for f in folders
+        if all(any(f.glob(f"calls/{code}/*/metrics.json")) for code in codes)
+        and silent_calls(f, inputs["agentRolePrefix"]) <= inputs["maxSilentCalls"]
+    ]
+
+
 def model_runs(cfg: Config, model: Model, root: Path) -> list[Path]:
     """The model's usable run folders, in name order."""
     if model.runs is not None:

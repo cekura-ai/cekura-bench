@@ -18,7 +18,10 @@ def test_cisco_repetition_matches_raw_reevaluation_without_overrides():
     assert not audit['prompt_changed']
     assert {r['run_id'] for r in audit['runs']}==set(calls)
     assert all(r['score']==calls[r['run_id']]['metrics']['repetition']==5 for r in audit['runs'])
-    assert audit['explanation_caveats'][0]['run_id']==4780980
+    assert 'explanation_caveats' not in audit
+    resolved=next(r for r in audit['runs'] if r['run_id']==4780980)
+    assert resolved['explanation'].startswith('Repetition score: 5.00/5 — 0 of 3 agent replies')
+    assert all('SCOPE_DIAGNOSTIC' not in r['explanation'] for r in audit['runs'])
 
 def test_replacements_preserve_full_scenario_parity():
     calls=cisco()['numbers'][0]['calls'];ids={c['run_id'] for c in calls}

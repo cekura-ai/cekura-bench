@@ -24,12 +24,8 @@ frozen metric hashes. Review found no score-affecting false repetition failures
 or missed substantive duplicates in these calls. Requested summaries, relevant
 scope reminders and interrupted continuations remain justified.
 
-One explanation caveat remains: run **4780980** reports one eligible reply
-although the transcript has three. A scoped reevaluation retained the same
-count. Zero replies contain unnecessary repetition, so its correct score is
-still 5/5; the raw result is retained. This validates Cisco's observed scores,
-not general judge accuracy. Experimental prompt variants and peer QC corrections
-are not included; peer scores and selected calls retain the reference panel.
+The raw explanations' reply counts match the reviewed Cisco transcripts.
+Peer scores and selected calls retain the reference panel.
 
 - Composite quality: **93.95/100** (94.0 displayed).
 - Median qualifying turn latency: **3,760 ms**, across **77 events**.

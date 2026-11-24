@@ -10,6 +10,16 @@ def cisco():return next(p for p in data()['providers'] if p['provider']=='Cisco'
 def test_cisco_snapshot_reconciles_with_unchanged_reference():
     validator.validate()
 
+def test_cisco_repetition_matches_raw_reevaluation_without_overrides():
+    audit=json.loads((P/'cisco-repetition-validation.json').read_text())
+    calls={c['run_id']:c for c in cisco()['numbers'][0]['calls']}
+    assert audit['project_id']==16745 and audit['metric_id']==276255
+    assert audit['selected_call_count']==45 and audit['score_overrides']==0
+    assert not audit['prompt_changed']
+    assert {r['run_id'] for r in audit['runs']}==set(calls)
+    assert all(r['score']==calls[r['run_id']]['metrics']['repetition']==5 for r in audit['runs'])
+    assert audit['explanation_caveats'][0]['run_id']==4780980
+
 def test_replacements_preserve_full_scenario_parity():
     calls=cisco()['numbers'][0]['calls'];ids={c['run_id'] for c in calls}
     assert 4782023 in ids and 4782488 in ids

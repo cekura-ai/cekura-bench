@@ -141,7 +141,9 @@ they were received by that time.
 | Estimated cost | Configured rates applied to submitted audio, including failures and retries. Unknown rates remain unavailable. |
 
 WER uses the pinned `jiwer` and `whisper-normalizer` dependencies, followed by
-removal of punctuation-only tokens on both sides. See [offline scoring corrections](OFFLINE_RESCORING.md). Deadline accuracy
+removal of punctuation-only tokens on both sides. Before normalizing, every spelling of a
+backchannel ("uh-huh", "mm-hmm", "mhm", "mm-hm", "hm") is dropped on both sides, so no spelling
+counts as a word; "uh-uh" (no) stays one word. See [offline scoring corrections](OFFLINE_RESCORING.md). Deadline accuracy
 always uses attempt one; a retry cannot improve an earlier observation. The standard
 runner permits one retry per failed or invalid clip and retains every attempt.
 

@@ -14,10 +14,23 @@ from .providers import reduce_events
 from .streaming import pacing_metrics, read_events
 
 NORMALIZER = EnglishTextNormalizer()
-SCORING_VERSION = 'english-wer-v2-punctuation-tokens'
+SCORING_VERSION = 'english-wer-v3-backchannels'
 NORMALIZATION = {'package': 'whisper-normalizer==0.1.12', 'class': 'EnglishTextNormalizer',
                  'scorer': 'jiwer==4.0.0', 'version': SCORING_VERSION,
+                 'preprocess': 'Drop every spelling of a backchannel (uh-huh, mm-hmm, mhm, mm-hm, hm, ...) on both '
+                               'sides; keep uh-uh (no) as one word',
                  'postprocess': 'Remove Unicode punctuation-only whitespace tokens on both sides'}
+
+# The normalizer deletes the tokens hmm, mm, mhm, mmm, uh and um, so "mm-hmm" vanishes but "uh-huh" leaves "huh",
+# "mm-hm" leaves "hm", and "mhmm" or "hm" stay whole: the same backchannel was an error or not depending on how it
+# was spelled. Every spelling is dropped here, before the normalizer, on both sides. "Uh-uh" means no, so it stays
+# one word, unless it is part of a longer stammer ("uh-uh-uh"). A token glued to a letter or an apostrophe
+# ("I'm hmm") is never split.
+_HYPHENS = '\u2010-\u2015-'
+_ALONE_BEFORE, _ALONE_AFTER = "(?<![\\w'\u2019])", "(?![\\w'\u2019])"
+BACKCHANNEL = re.compile(_ALONE_BEFORE + f'(?:uh[\\s{_HYPHENS}]?huh|m+[\\s{_HYPHENS}]?h+m+|h+m+|m{{2,}})'
+                         + _ALONE_AFTER, re.IGNORECASE)
+NO_WORD = re.compile(f"(?<![\\w'\u2019{_HYPHENS}])uh[{_HYPHENS}]uh(?![\\w'\u2019{_HYPHENS}])", re.IGNORECASE)
 ENTITY_TYPES = {"number", "identifier", "date", "phone", "email", "amount", "spelled_sequence"}
 
 
@@ -27,8 +40,12 @@ def strip_punctuation_tokens(text: str) -> str:
                     if not all(unicodedata.category(char).startswith('P') for char in token))
 
 
+def drop_backchannels(text: str) -> str:
+    return BACKCHANNEL.sub(' ', NO_WORD.sub('uhuh', text))
+
+
 def normalize_words(text: str) -> str:
-    return strip_punctuation_tokens(NORMALIZER(text))
+    return strip_punctuation_tokens(NORMALIZER(drop_backchannels(text)))
 
 
 def aligned_word_errors(ref: str, hyp: str) -> dict:

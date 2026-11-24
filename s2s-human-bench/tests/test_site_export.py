@@ -45,6 +45,7 @@ def export(tmp_path, cfg, out, reviewed=None, clips=None, tasks=None, entities=N
         reviewed_clips=clips,
         tasks=tasks,
         entities=entities,
+        agent_logs=None,
     )
     assert run_site_export(args) == 0
     return {p.name: json.loads(p.read_text()) for p in out.iterdir()}

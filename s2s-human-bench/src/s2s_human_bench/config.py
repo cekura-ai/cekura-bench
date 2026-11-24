@@ -62,6 +62,7 @@ class Config:
     models: list[Model] = field(default_factory=list)
     tasks: dict[str, dict[str, Any]] | None = None  # per-scenario main tasks (private --tasks file); None = expected-outcome share
     entities: EntityFile | None = None  # private --entities file: one skill scored from the call itself (entities.py)
+    agent_logs: Path | None = None  # private --agent-logs folder: execution logs for runs recorded before agent_text
 
     def __getitem__(self, key: str) -> Any:
         return self.raw[key]

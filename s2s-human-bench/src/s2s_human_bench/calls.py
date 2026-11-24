@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from s2s_human_bench.config import Config, Model, Skill
-from s2s_human_bench.entities import EntityFileError, agent_text, entity_verdict
+from s2s_human_bench.entities import EntityFileError, agent_text, agent_text_from_log, entity_verdict, read_log
 from s2s_human_bench.tasks import TaskFileError, task_verdict
 
 MET, MISSED = "✅", "❌"
@@ -129,6 +129,9 @@ def load_call(cfg: Config, call_json: Path) -> Call:
         if spec:
             extra = call_json.with_name("call_additional_metadata.json")
             own = agent_text(_read(extra)) if extra.exists() else None
+            log = cfg.agent_logs / f"{call_json.parent.name}.json" if cfg.agent_logs else None
+            if own is None and log is not None and log.exists():  # a run recorded before agent_text
+                own = agent_text_from_log(read_log(log))
             verdicts[skill], explanations[skill] = entity_verdict(spec, transcript, own, inputs["agentRolePrefix"], inputs["callerRolePrefix"])
         elif verdicts[skill] is not None:
             raise EntityFileError(f"entity file has no detail for {meta['code']}, which the platform scored for skill {skill}")

@@ -3477,21 +3477,31 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
     # What each side said, in the log as well as the transcript: the log is
     # where a reader reconstructs a call, and a transcript row without the
     # turn events around it says what was said but not when or why.
+    #
+    # The agent's lines are also kept in full for the record: the log shortens
+    # them and leaves the call with it, while scoring reads them to tell what
+    # the model captured from what a transcript of the call heard. One reply can
+    # end in several parts (a tool call between them, a service that streams it
+    # in pieces), so the parts are joined until the caller speaks again.
+    spoken: list[str] = []
+    reply_open = False
+
     @aggregators.user().event_handler("on_user_turn_message_added")
     async def _caller_said(_aggregator, message):
+        nonlocal reply_open
+        reply_open = False
         logger.info("caller said: {}", _short(message.content, 500))
-
-    # The agent's lines in full, for the record: the log shortens them and
-    # leaves the call with it, while scoring reads them to tell what the model
-    # captured from what a transcript of the call heard.
-    spoken: list[str] = []
 
     @aggregators.assistant().event_handler("on_assistant_turn_stopped")
     async def _agent_said(_aggregator, message):
+        nonlocal reply_open
         text = str(message.content or "").strip()
         logger.info("agent said{}: {}", " (interrupted)" if message.interrupted else "", _short(text, 500))
-        if text and len(spoken) < AGENT_TEXT_TURNS:
+        if text and reply_open and spoken:
+            spoken[-1] = f"{spoken[-1]} {text}"[:AGENT_TEXT_CHARS]
+        elif text and len(spoken) < AGENT_TEXT_TURNS:
             spoken.append(text[:AGENT_TEXT_CHARS])
+            reply_open = True
         backstop.agent_said(str(message.content or ""), message.interrupted)
 
     def publish() -> None:
@@ -3526,7 +3536,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         checks = narrator.integrity()
         logger.info(
             "call summary: {:.0f}s, caller turns {}, agent responses {} ({} heard), barge-ins {}, "
-            "tools {} ({} exact), errors {}, usage reports {}, agent text {} lines ({}), log lines {}{}{}",
+            "tools {} ({} exact), errors {}, usage reports {}, agent text {} replies ({}), log lines {}{}{}",
             usage["call_seconds"], narrator.caller_turns, narrator.agent_turns, narrator.audible_turns,
             narrator.barge_ins,
             tools["tool_call_count"], tools["tool_calls_matched"], narrator.errors, usage["usage_reports"],

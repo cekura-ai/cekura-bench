@@ -15,14 +15,31 @@ No use at all is "not reached", and so is a detail that reached the agent from a
 before the caller gave it.
 
 A line is read from the agent's own text when the run carries it (``agent_text`` in the run
-record, written by the reference agent: ``{"from": "model" | "transcription", "turns": [...]}``)
-and from the call transcript otherwise. The agent's
-own text is what the model meant, so it decides over the transcript, which can mishear a letter
-or turn a stutter into a wrong digit. Some services only give a transcription of their audio
-(``from: "transcription"``); that is a second reading rather than the model's text, so it
-decides nothing alone: when it and the transcript disagree, a later tool value settles it, and
-without one the call is not reached. When only the transcript is there and it differs from the
-detail by letters transcribers often swap (M/N, B/P/D), the call is not reached either.
+record, written by the reference agent: ``{"from": "model" | "transcription", "turns": [...]}``,
+one entry per reply), or from the call's execution log for runs recorded before that (the
+reference agent's "agent said" lines, see ``agent_text_from_log``), and from the call transcript
+otherwise. The agent's own text is what the model meant, so it decides over the transcript, which
+can mishear a letter or turn a stutter into a wrong digit. The first sentence of the reply that
+uses the detail is the one read. A value blanked out of a log ("[redacted ...]", "[X]") that
+could be the detail leaves the line to the transcript.
+
+Some services only give a transcription of their audio (``from: "transcription"``); that is a
+second hearing rather than the model's text. When it and the transcript disagree, a later tool
+value settles it, and without one the call is not reached. When both hear the same wrong letters
+from a pair transcribers often swap (M/N, B/P/D), that is not taken as proof either.
+
+When only the transcript says the first use was wrong, the model's next use of the detail, a
+tool value, can settle it:
+
+* a reading that differs only by letters transcribers often swap is a fail when the tool carries
+  the same wrong letters, and otherwise not reached;
+* any other wrong reading is a pass when the tool carries the right value and nothing came in
+  between (no caller turn giving the detail again, no agent asking for it again): the model held
+  the right value, so the transcript misheard. If the detail was given or asked for again, the
+  tool shows nothing about the first use and the reading stands.
+
+Two parsing rules: a word the speaker cut off and started again ("BPD6- ... 6271") is read once,
+and a date counts only within eight words of the words that introduce it.
 
 Entity file::
 
@@ -99,9 +116,28 @@ _CLARIFY = re.compile(
     r"say (it|that) again|no (escuché|entendí|alcancé)|repet|only caught|i only (got|heard)|could you confirm the",
     re.I,
 )
+# The agent asking for the detail again.
+_REASK = re.compile(_CLARIFY.pattern + r"|\brepeat\b|one more time|spell (it|that)", re.I)
 # Letters a transcriber often swaps.
 _CONFUSABLE = (set("mn"), set("bpdvtge"), set("fs"), set("cz"))
 _NOT_A_SURNAME = {"and", "can", "could", "thanks", "please", "what", "your", "is"}
+# A word cut off and started again: "BPD6- ... 6271", "pla- plate" (a hyphen inside a spelled
+# word, "M-A-N-N", has no space after it).
+_CUT_OFF = re.compile(r"\b([A-Za-z0-9]+)-[\s.…,]+(?=([A-Za-z0-9]+))")
+# Values an exported execution log blanks out, and which of them can stand for a detail of each kind.
+_BLANK = re.compile(r"\[redacted[^\]]*\]|\[X\]", re.I)
+_BLANKED_AS = {
+    "name": r"person|identif|spelled|spoken|\[X\]",
+    "code": r"identif|number|spelled|spoken|restricted|\[X\]",
+    "digits": r"identif|number|restricted|\[X\]",
+    "amount": r"number|value|restricted|\[X\]",
+    "date": r"date|\[X\]",
+    "address": r"address|restricted|\[X\]",
+}
+# The reference agent's log lines for each side of the call, and the service whose text is a transcription.
+_AGENT_SAID = re.compile(r"\bagent said(?: \(interrupted\))?: (.*)", re.S)
+_CALLER_SAID = re.compile(r"\bcaller said(?: \(interrupted\))?: ")
+_TRANSCRIBING_SERVICE = "pipecat.services.google.gemini_live"
 
 
 def load_entities(path: Path, skill_ids: set[str]) -> EntityFile:
@@ -295,9 +331,14 @@ def _date_attempt(spec: dict[str, Any], low: str) -> tuple[bool, str] | None:
         if spec.get("wrong") and (m := re.search(spec["wrong"], low)):
             return False, m.group(0)
         return None
-    true = list(spec["true"])
-    if not re.search(spec["cue"], low):
-        return None
+    for m in re.finditer(spec["cue"], low):  # a date counts only near the words that introduce it
+        near = " ".join(low[: m.start()].split()[-8:] + [m.group(0)] + low[m.end() :].split()[:8])
+        if (read := _date_read(list(spec["true"]), near)) is not None:
+            return read
+    return None
+
+
+def _date_read(true: list[int], low: str) -> tuple[bool, str] | None:
     low = _ORDINAL.sub(lambda m: str(_ORD[m.group(1)]), low)
     if m := re.search(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b", low):
         return list(map(int, m.groups()))[: len(true)] == true, m.group(0)
@@ -326,9 +367,22 @@ _ATTEMPTS = {
 }
 
 
+def _repair_cut_offs(text: str) -> str:
+    """Read a word the speaker cut off and started again once: 'BPD6- ... 6271' -> 'BPD 6271'."""
+
+    def once(m: re.Match[str]) -> str:
+        cut, again = m.group(1), m.group(2)
+        for k in range(min(len(cut), len(again)), 0, -1):
+            if cut[-k:].lower() == again[:k].lower():
+                return cut[:-k] + " "
+        return m.group(0)
+
+    return _CUT_OFF.sub(once, text)
+
+
 def spoken_attempt(spec: dict[str, Any], text: str) -> tuple[bool, str] | None:
     """None when the line does not use the detail; else whether it is right, and what was said."""
-    return _ATTEMPTS[spec["kind"]](spec, text.lower())
+    return _ATTEMPTS[spec["kind"]](spec, _repair_cut_offs(text).lower())
 
 
 def _swapped_letters(spec: dict[str, Any], got: str) -> bool:
@@ -356,16 +410,75 @@ def _words(text: str) -> set[str]:
     return set(re.findall(r"[a-z]+", text.lower()))
 
 
+def _sentences(text: str) -> list[str]:
+    """A reply's sentences, keeping a spelled run ('B. P. D. 6 2 7 1.') in one."""
+    out: list[str] = []
+    for part in re.split(r"(?<=[.?!])\s+", text):
+        if out and re.search(r"(?:^|\s)\w[.?!]$", out[-1]) and re.match(r"\w(?:[.,\s]|$)", part):
+            out[-1] += " " + part
+        else:
+            out.append(part)
+    return out
+
+
 def _own_text_attempt(spec: dict[str, Any], line: str, turns: list[str], turn_words: list[set[str]]) -> tuple[bool, str] | None:
-    """The detail as the agent's own text has it, for the turn that best matches a transcript line."""
+    """The detail as the agent's own text has it, for the reply that best matches a transcript line: its first
+    sentence that uses the detail. None when no reply matches, or a blanked value that could be the detail comes
+    first (the transcript reads that line instead)."""
     if not turns:
         return None
     words = _words(line)
     i = max(range(len(turns)), key=lambda k: len(words & turn_words[k]))  # the first best match
     if len(words & turn_words[i]) < max(3, 0.4 * len(words)):
         return None
-    # A service may log one reply in pieces: read the neighbours too.
-    return spoken_attempt(spec, turns[i]) or spoken_attempt(spec, " ".join(turns[max(0, i - 1) : i + 2]))
+    for sentence in _sentences(turns[i]):
+        if any(re.search(_BLANKED_AS[spec["kind"]], blank, re.I) for blank in _BLANK.findall(sentence)):
+            return None
+        if (read := spoken_attempt(spec, _BLANK.sub(" ", sentence))) is not None:
+            return read
+    return None
+
+
+def _mentions(spec: dict[str, Any], text: str) -> bool:
+    """Whether a caller turn gives the detail, right or wrong, with or without the words that introduce it."""
+    if spoken_attempt(spec, text) is not None:
+        return True
+    low, kind = text.lower(), spec["kind"]
+    if kind == "name":
+        return _alnum(spec["true"]) in _alnum(low) or len(re.findall(r"\b[a-z]\b", _NATO.sub(r"\1", low))) >= 4
+    if kind == "date":
+        return bool(re.search(rf"\b({_MONTH_NAMES})\b", low) or _ORDINAL.search(low) or re.search(r"\d", words_to_digits(low)))
+    tail = str(spec["true"]).split(" ")[0] if kind == "address" else _alnum(spec["true"])[-4:]
+    return tail in re.sub(r"\s", "", words_to_digits(low)) or tail in _code_flat(low)
+
+
+def _given_again(spec: dict[str, Any], events: list[tuple[float, str, dict[str, Any]]]) -> bool:
+    """Whether, in these turns, the caller gave the detail again or the agent asked for it again."""
+    return any(
+        (role == "caller" and _mentions(spec, e.get("content") or "")) or (role == "agent" and _REASK.search(e.get("content") or "")) for _, role, e in events
+    )
+
+
+def _next_tool_use(spec: dict[str, Any], events: list[tuple[float, str, dict[str, Any]]], i: int) -> tuple[int, tuple[bool, str]] | None:
+    """The first tool call after ``events[i]`` that carries the detail: its index, and whether it is right."""
+    return next(((j, u) for j, (_, r, x) in enumerate(events[i + 1 :], i + 1) if r == "tool" and (u := _tool_use(spec, x))), None)
+
+
+def _transcript_wrong(
+    spec: dict[str, Any], heard: tuple[bool, str], doubtful: bool, events: list[tuple[float, str, dict[str, Any]]], i: int
+) -> tuple[bool | None, str]:
+    """Only the transcript says the first use (``events[i]``) was wrong; the model's next use, a tool value, can settle it."""
+    if later := _next_tool_use(spec, events, i):
+        j, (ok, used) = later
+        if not ok and doubtful:
+            value, got = _alnum(used.split("=", 1)[-1]), _alnum(heard[1])
+            if value and (value in got or got in value):
+                return False, f"transcript letters confirmed by tool: {used}"
+        if ok and not _given_again(spec, events[i + 1 : j]):
+            return True, f"tool right with nothing between: {used} (transcript {heard[1]})"
+    if doubtful:
+        return None, f"not reached: transcript has {heard[1]}, letters often misheard"
+    return False, f"transcript: {heard[1]}"
 
 
 def _role(entry: dict[str, Any], agent_prefix: str, caller_prefix: str) -> str | None:
@@ -413,15 +526,45 @@ def entity_verdict(
         said = _own_text_attempt(spec, text, turns, turn_words)
         if said is not None and from_model:
             return said[0], f"agent text: {said[1]}"
-        if said is not None and said[0] != heard[0]:  # two readings of the audio that disagree
-            later = next((u for _, r, x in events[i + 1 :] if r == "tool" and (u := _tool_use(spec, x))), None)
-            if later:
-                return later[0], f"readings disagree; later tool: {later[1]}"
+        if said is not None and said[0] != heard[0]:  # two hearings of the audio that disagree
+            if later := _next_tool_use(spec, events, i):
+                return later[1][0], f"readings disagree; later tool: {later[1][1]}"
             return None, f"not reached: readings disagree ({heard[1]} / {said[1]})"
-        if doubtful and said is None:
-            return None, f"not reached: transcript has {heard[1]}, letters often misheard"
-        return heard[0], f"transcript: {heard[1]}"
+        if heard[0]:
+            return True, f"transcript: {heard[1]}"
+        if said is not None and not doubtful:  # a second hearing agrees, on a mistake transcribers seldom share
+            return False, f"transcript and transcription: {heard[1]}"
+        return _transcript_wrong(spec, heard, doubtful, events, i)
     return None, "not reached: no use of the detail"
+
+
+def read_log(path: Path) -> dict[str, Any]:
+    """An execution log as exported from the platform (JSON, sometimes followed by a note)."""
+    return json.JSONDecoder().raw_decode(path.read_text(encoding="utf-8").lstrip())[0]
+
+
+def agent_text_from_log(log: dict[str, Any]) -> dict[str, Any] | None:
+    """The agent's own text from a call's execution log, for runs recorded before ``agent_text``: the reference
+    agent's "agent said" lines, joined into one reply until the caller speaks again (a reply can be logged in parts).
+    Gemini Live's logged text is Google's transcription of the audio; every other service's is the model's text."""
+    entries = log.get("entries") or (log.get("data") or {}).get("entries") or []
+    replies: list[str] = []
+    reply_open = False
+    for entry in entries:
+        message = str(entry.get("message") or "")
+        if m := _AGENT_SAID.search(message):
+            text = m.group(1).strip().strip('"')
+            if reply_open and replies:
+                replies[-1] += " " + text
+            else:
+                replies.append(text)
+            reply_open = True
+        elif _CALLER_SAID.search(message):
+            reply_open = False
+    if not replies:
+        return None
+    transcribed = any(str(entry.get("logger") or "").startswith(_TRANSCRIBING_SERVICE) for entry in entries)
+    return {"from": "transcription" if transcribed else "model", "turns": replies}
 
 
 def agent_text(metadata: dict[str, Any] | None) -> dict[str, Any] | None:

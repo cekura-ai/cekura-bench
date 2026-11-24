@@ -141,6 +141,10 @@ def run_site_export(args: Any) -> int:
         cfg.tasks = load_tasks(args.tasks)
     if args.entities:
         cfg.entities = load_entities(args.entities, {s.id for s in cfg.skills})
+    if args.agent_logs:
+        if not args.entities or not args.agent_logs.is_dir():
+            raise ExportError(f"--agent-logs needs --entities and a folder of execution logs, got {args.agent_logs}")
+        cfg.agent_logs = args.agent_logs
     names = dict(cfg["outputs"])
     for pair in args.name or []:
         kind, sep, file = pair.partition("=")

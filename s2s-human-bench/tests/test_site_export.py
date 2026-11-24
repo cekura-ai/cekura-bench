@@ -5,7 +5,8 @@ from argparse import Namespace
 
 import pytest
 
-from conftest import BAD, write_run
+from conftest import BAD, config_dict, write_run
+from s2s_human_bench.config import load_config
 from s2s_human_bench.site_export import run_site_export
 
 PUBLIC_S2S = {
@@ -81,6 +82,15 @@ def test_site_export(cfg, tmp_path):
     ex = docs["examples.json"]
     assert ex["examples"] == {}  # nothing is published until a person has reviewed it
 
+
+def test_a_model_can_take_its_price_from_a_differently_named_board_row(tmp_path):
+    raw = config_dict()
+    raw["models"][1]["priceSiteId"] = "alpha-site"
+    (tmp_path / "config.json").write_text(json.dumps(raw))
+    make_inputs(tmp_path)
+    docs = export(tmp_path, load_config(tmp_path / "config.json"), tmp_path / "out")
+    beta = next(r for r in docs["benchmark.json"]["results"] if r["model"] == "beta-site" and r["suite"] == "all")
+    assert beta["costPublished"] and beta["costPerMinuteUsd"] == 0.1 and beta["costNote"] == "list price"
 
 def test_reviewed_examples(cfg, tmp_path):
     make_inputs(tmp_path)

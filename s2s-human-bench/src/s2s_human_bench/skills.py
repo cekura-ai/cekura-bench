@@ -49,7 +49,7 @@ def skills_doc(cfg: Config, entries: list[Entry], live: dict[str, Any], human_cl
     models, results, passive, elos = [], [], [], []
     for e in entries:
         m, calls = e.model, e.calls
-        price = published_price(live, m.site_id)
+        price = published_price(live, m.price_site_id or m.site_id)
         cost = price.get("costPerMinuteUsd") if price.get("costPublished") else None
         models.append(
             {

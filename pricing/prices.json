@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "note": "Rates marked verified were read from the vendor's own pricing page on read_on. A row whose rate is not verified may be computed but must not be published. See README.md.",
+  "note": "Rates marked verified were read from the vendor's own pricing page, or given to us by the vendor for the model tested, on read_on. A row whose rate is not verified may be computed but must not be published. See README.md.",
   "units": {
     "per_million_tokens": "USD per 1,000,000 tokens, by lane",
     "per_minute": "USD per minute of the named measure",
@@ -207,22 +207,20 @@
       "components": []
     },
     "phonic": {
-      "read_on": "2026-11-23",
+      "read_on": "2026-10-22",
       "verified": true,
-      "source": "https://phonic.ai/pricing",
+      "source": "Phonic's rate for phonic-1, given to Cekura on 2026-10-22; https://phonic.ai/pricing lists $0.07 a minute on Starter",
       "components": [
         {
           "name": "phonic_v1",
           "basis": "per_minute",
           "measure": "call_seconds",
           "rates": {
-            "minute": 0.07
+            "minute": 0.06
           }
         }
       ],
-      "unmetered": [
-        "The Starter plan's rate; the Pro plan lists $0.065 a minute with a $200 monthly minimum."
-      ]
+      "unmetered": []
     },
     "deepslate": {
       "read_on": "2026-11-23",

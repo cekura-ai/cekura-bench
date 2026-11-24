@@ -380,6 +380,7 @@
       "name": "Phonic-1",
       "vendor": "Phonic",
       "siteId": "phonic-1",
+      "priceSiteId": "phonic",
       "agentId": 26898
     },
     {

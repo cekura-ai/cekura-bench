@@ -9,7 +9,10 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from s2s_human_bench.entities import EntityFile
 
 OUTPUT_KINDS = ("benchmark", "insights", "reports", "languages", "skills", "examples")
 
@@ -58,8 +61,7 @@ class Config:
     skills: list[Skill] = field(default_factory=list)  # family order
     models: list[Model] = field(default_factory=list)
     tasks: dict[str, dict[str, Any]] | None = None  # per-scenario main tasks (private --tasks file); None = expected-outcome share
-    entity_skill: str | None = None  # the skill the private --entities file scores instead of its platform metric
-    entities: dict[str, dict[str, Any]] | None = None  # per-scenario detail the caller gives (entities.py)
+    entities: EntityFile | None = None  # private --entities file: one skill scored from the call itself (entities.py)
 
     def __getitem__(self, key: str) -> Any:
         return self.raw[key]

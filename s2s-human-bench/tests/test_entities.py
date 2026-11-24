@@ -6,7 +6,7 @@ import pytest
 
 from conftest import write_call
 from s2s_human_bench.calls import load_call
-from s2s_human_bench.entities import EntityFileError, agent_text, entity_verdict, load_entities, spoken_attempt
+from s2s_human_bench.entities import EntityFile, EntityFileError, agent_text, entity_verdict, load_entities, spoken_attempt
 
 PLATE = {"kind": "code", "true": "bk5132", "keys": "plate", "cue": "plate"}
 NAME = {"kind": "name", "true": "okafor", "first": "ada", "keys": "^name$"}
@@ -99,32 +99,30 @@ def test_letters_transcribers_swap_are_not_a_fail_on_the_transcript_alone():
 def test_agent_text_decides_over_the_transcript():
     stutter = [GAVE_PLATE, agent("Plate BK5- five, one, five- three two, sending help.", 3)]
     assert entity_verdict(PLATE, stutter)[0] is False
-    own = {"from": "model", "turns": [{"text": "Plate BK5132, sending help."}]}
+    own = {"from": "model", "turns": ["Plate BK5132, sending help."]}
     assert entity_verdict(PLATE, stutter, own) == (True, "agent text: bk5132")
     swapped = [GAVE_PLATE, agent("Plate PK5132, sending help.", 3)]
     assert entity_verdict(PLATE, swapped, own)[0] is True
-    wrong = {"from": "model", "turns": [{"text": "Plate BK5133, sending help."}]}
+    wrong = {"from": "model", "turns": ["Plate BK5133, sending help."]}
     assert entity_verdict(PLATE, [GAVE_PLATE, agent("Plate BK5132, sending help.", 3)], wrong)[0] is False
 
 
 def test_a_transcription_is_a_second_reading_not_the_models_text():
     heard_wrong = [GAVE_PLATE, agent("Plate BK5133, sending help.", 3)]
-    second = {"from": "transcription", "turns": [{"text": "Plate BK5132, sending help."}]}
+    second = {"from": "transcription", "turns": ["Plate BK5132, sending help."]}
     verdict, how = entity_verdict(PLATE, heard_wrong, second)
     assert verdict is None and "readings disagree" in how
     settled = heard_wrong + [tool("send_help", 5, plate="BK5132")]
     assert entity_verdict(PLATE, settled, second)[0] is True
     # Both readings hear the same swapped letters: that is what was said.
-    both = {"from": "transcription", "turns": [{"text": "Plate PK5132, sending help."}]}
+    both = {"from": "transcription", "turns": ["Plate PK5132, sending help."]}
     assert entity_verdict(PLATE, [GAVE_PLATE, agent("Plate PK5132, sending help.", 3)], both)[0] is False
 
 
-def test_agent_text_from_the_exported_run_record(tmp_path):
-    call_json = tmp_path / "call.json"
-    assert agent_text(call_json) is None
-    record = {"agent_text": {"from": "model", "turns": [{"at": "00:03", "text": "Plate BK5132."}]}}
-    (tmp_path / "call_additional_metadata.json").write_text(json.dumps({"provider_call_details": {"custom_metadata": record}}))
-    assert agent_text(call_json) == record["agent_text"]
+def test_agent_text_from_the_exported_call_metadata():
+    assert agent_text(None) is None and agent_text({"metadata": {}}) is None
+    record = {"agent_text": {"from": "model", "turns": ["Plate BK5132."]}}
+    assert agent_text({"provider_call_details": {"custom_metadata": record}}) == record["agent_text"]
 
 
 # ---- the file and the score --------------------------------------------------------------
@@ -134,9 +132,11 @@ def test_load_entities_rejects_incomplete_details(tmp_path):
     path = tmp_path / "entities.json"
     path.write_text(json.dumps({"skill": "1.2", "entities": {"B01": {"kind": "code", "true": "bk5132", "keys": "plate"}}}))
     with pytest.raises(EntityFileError):
-        load_entities(path)  # a code needs a cue
+        load_entities(path, {"1.2"})  # a code needs a cue
     path.write_text(json.dumps({"skill": "1.2", "entities": {"B01": PLATE}}))
-    assert load_entities(path) == ("1.2", {"B01": PLATE})
+    with pytest.raises(EntityFileError):
+        load_entities(path, {"1.1"})  # the skill must be in the config
+    assert load_entities(path, {"1.2"}) == EntityFile("1.2", {"B01": PLATE})
 
 
 def test_entity_file_scores_its_skill(cfg, tmp_path):
@@ -146,9 +146,15 @@ def test_entity_file_scores_its_skill(cfg, tmp_path):
     b01 = run / "calls" / "B01" / "1" / "call.json"
     b01.with_name("transcript.json").write_text(json.dumps([GAVE_PLATE, agent("Plate BK5132, sending help.", 3)]))
     assert load_call(cfg, b01).verdicts["1.2"] is False  # the platform metric's verdict
-    cfg.entity_skill, cfg.entities = "1.2", {"B01": PLATE}
+    cfg.entities = EntityFile("1.2", {"B01": PLATE})
     call = load_call(cfg, b01)
     assert call.verdicts["1.2"] is True and call.explanations["1.2"] == "transcript: bk5132"
     assert "1.2" in call.tested and "1.2" not in call.misses
-    # A scenario the file does not list tests no detail.
-    assert load_call(cfg, run / "calls" / "B02" / "1" / "call.json").verdicts["1.2"] is None
+    # The agent's own words, from the exported metadata, decide over the transcript.
+    b01.with_name("call_additional_metadata.json").write_text(
+        json.dumps({"metadata": {"agent_text": {"from": "model", "turns": ["Plate BK5133, sending help."]}}})
+    )
+    assert load_call(cfg, b01).verdicts["1.2"] is False
+    # A scenario the platform scored for the skill must be in the file.
+    with pytest.raises(EntityFileError):
+        load_call(cfg, run / "calls" / "B02" / "1" / "call.json")

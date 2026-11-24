@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from s2s_human_bench.config import Config, Model, Skill
-from s2s_human_bench.entities import agent_text, entity_verdict
+from s2s_human_bench.entities import EntityFileError, agent_text, entity_verdict
 from s2s_human_bench.tasks import TaskFileError, task_verdict
 
 MET, MISSED = "✅", "❌"
@@ -124,11 +124,16 @@ def load_call(cfg: Config, call_json: Path) -> Call:
 
     verdicts = {s.id: verdict(s, results[s.metric]) if s.metric in results else None for s in cfg.skills}
     explanations = {s.id: results[s.metric].get("explanation") or "" for s in cfg.skills if s.metric in results}
-    if cfg.entities is not None:  # the entity file decides this skill, scenarios it does not list included
-        spec = cfg.entities.get(meta["code"])
-        verdicts[cfg.entity_skill], explanations[cfg.entity_skill] = (
-            entity_verdict(spec, transcript, agent_text(call_json)) if spec else (None, "")
-        )
+    if cfg.entities is not None:  # the entity file decides its skill in every call
+        skill, spec = cfg.entities.skill, cfg.entities.details.get(meta["code"])
+        if spec:
+            extra = call_json.with_name("call_additional_metadata.json")
+            own = agent_text(_read(extra)) if extra.exists() else None
+            verdicts[skill], explanations[skill] = entity_verdict(spec, transcript, own, inputs["agentRolePrefix"], inputs["callerRolePrefix"])
+        elif verdicts[skill] is not None:
+            raise EntityFileError(f"entity file has no detail for {meta['code']}, which the platform scored for skill {skill}")
+        else:
+            explanations.pop(skill, None)
     platform_task = results.get(metric_ids["task"], {}).get("score") if "task" in metric_ids else None
     if cfg.tasks is not None:
         if meta["code"] not in cfg.tasks:

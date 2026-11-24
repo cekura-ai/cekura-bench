@@ -11,13 +11,14 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from collections import Counter
 from datetime import date as Date
 from pathlib import Path
 from typing import Any
 
 from s2s_human_bench.bench import Entry, load_bench
 from s2s_human_bench.config import Config, load_config
-from s2s_human_bench.entities import EntityFileError, load_entities
+from s2s_human_bench.entities import load_entities
 from s2s_human_bench.examples import examples_doc
 from s2s_human_bench.languages import languages_doc
 from s2s_human_bench.s2s import s2s_docs
@@ -83,6 +84,8 @@ def build(
         raise ExportError(f"{runs}: no model has {cfg['inputs']['minRuns']} usable runs")
     if gap := task_metric_gap(cfg, entries):
         print(gap, file=sys.stderr)
+    if summary := entity_summary(cfg, entries):
+        print(summary, file=sys.stderr)
     bench, insights, reports = s2s_docs(cfg, entries, public_s2s, day)
     examples, picks = examples_doc(cfg, entries, call_titles, reviewed or {}, clips_reviewed)
     docs = dict(
@@ -112,6 +115,21 @@ def task_metric_gap(cfg: Config, entries: list[Entry]) -> str | None:
     )
 
 
+def entity_summary(cfg: Config, entries: list[Entry]) -> str | None:
+    """How the entity file decided its skill across the export's calls, and how many carried the agent's own text:
+    the line to read first when a run's entity verdicts look wrong."""
+    if cfg.entities is None:
+        return None
+    skill = cfg.entities.skill
+    hows = [c.explanations.get(skill, "") for e in entries for c in e.calls if cfg.entities.details.get(c.code)]
+    ways = Counter(h.split(":", 1)[0].split(";", 1)[0] for h in hows)
+    return (
+        f"skill {skill} from the entity file: {len(hows)} calls, "
+        + ", ".join(f"{n} {way}" for way, n in ways.most_common())
+        + f"; agent's own text in {sum(h.startswith('agent text') for h in hows)}"
+    )
+
+
 def write_json(path: Path, doc: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(doc, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -122,9 +140,7 @@ def run_site_export(args: Any) -> int:
     if args.tasks:
         cfg.tasks = load_tasks(args.tasks)
     if args.entities:
-        cfg.entity_skill, cfg.entities = load_entities(args.entities)
-        if cfg.entity_skill not in {s.id for s in cfg.skills}:
-            raise EntityFileError(f"{args.entities}: skill {cfg.entity_skill!r} is not in the config")
+        cfg.entities = load_entities(args.entities, {s.id for s in cfg.skills})
     names = dict(cfg["outputs"])
     for pair in args.name or []:
         kind, sep, file = pair.partition("=")
@@ -153,8 +169,6 @@ def run_site_export(args: Any) -> int:
     if cfg.tasks is not None:
         overall = [r for r in docs["benchmark"]["results"] if r["suite"] == "all"]
         print(f"  main task done on {sum(r['taskPass'] for r in overall)} of {sum(r['runs'] for r in overall)} calls (task file {args.tasks})")
-    if cfg.entities is not None:
-        print(f"  skill {cfg.entity_skill} scored from the entity file ({len(cfg.entities)} scenarios, {args.entities})")
     for row in docs["skills"]["elo"]:
         print(f"  {row['model']:<24} elo {row['elo']}  score {row['score']}")
     return 0

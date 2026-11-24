@@ -189,9 +189,9 @@ class TestProviderTable:
         record has to say which, or a transcriber's slip would score as the
         model's.
         """
+        gemini_live = {"gemini-live", "gemini-live-standard", "gemini-flash-live"}
         for name, provider in bot.PROVIDERS.items():
-            only_audio = provider.module == "pipecat.services.google.gemini_live.llm"
-            assert provider.agent_text == ("transcription" if only_audio else "model"), name
+            assert provider.agent_text == ("transcription" if name in gemini_live else "model"), name
 
     def test_every_provider_declares_a_rate_a_model_and_a_credential(self):
         for name, provider in bot.PROVIDERS.items():

@@ -174,8 +174,6 @@ def test_export_warns_when_calls_lack_the_task_metric(cfg, tmp_path, capsys):
 
 def test_entity_file_must_name_a_config_skill(tmp_path, cfg):
     make_inputs(tmp_path)
-    (tmp_path / "entities.json").write_text(
-        json.dumps({"skill": "9.9", "entities": {"B01": {"kind": "digits", "true": "7731", "keys": "last4"}}})
-    )
+    (tmp_path / "entities.json").write_text(json.dumps({"skill": "9.9", "entities": {"B01": {"kind": "digits", "true": "7731", "keys": "last4"}}}))
     with pytest.raises(EntityFileError):
         export(tmp_path, cfg, tmp_path / "out", entities=tmp_path / "entities.json")

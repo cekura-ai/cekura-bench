@@ -343,6 +343,8 @@ class Settings:
         "agent_dir",
         "s2s_backend_model",
         "s2s_backend_reasoning",
+        "s2s_backend_service_tier",
+        "s2s_backend_prompt_cache_key",
         "aws_region",
         "qwen_region",
         "qwen_workspace_id",
@@ -942,7 +944,13 @@ def _gpt_live(api_key: str, model: str, voice: str, instructions: str, settings:
                 model=backend_model(settings),
                 system_instruction=instructions,
                 reasoning=OpenAIResponsesReasoningConfig(effort=backend_reasoning(settings)),
+                extra=(
+                    {"prompt_cache_key": key}
+                    if (key := backend_prompt_cache_key(settings))
+                    else {}
+                ),
             ),
+            service_tier=backend_service_tier(settings),
         ),
     )
 
@@ -1092,6 +1100,24 @@ def backend_reasoning(settings: Settings) -> str:
     after a tool result, then a dropped connection.
     """
     return settings.get("s2s_backend_reasoning", "low")
+
+
+def backend_service_tier(settings: Settings) -> str | None:
+    """The processing tier the backend's requests ask for, or None for the account's default.
+
+    A tier changes the backend's speed and price, not the model, so it is sent
+    only when a session names one, and the record says which.
+    """
+    return settings.get("s2s_backend_service_tier")
+
+
+def backend_prompt_cache_key(settings: Settings) -> str | None:
+    """The prompt-cache key the backend's requests carry, or None to send none.
+
+    A key groups requests that share a prompt prefix so they are more likely to
+    be served from cache. It changes the price, not the reply.
+    """
+    return settings.get("s2s_backend_prompt_cache_key")
 
 
 def aws_region(settings: Settings) -> str:
@@ -1363,6 +1389,8 @@ PROVIDERS: dict[str, Provider] = {
         discloses=lambda settings: {
             "s2s_backend_model": backend_model(settings),
             "s2s_backend_reasoning": backend_reasoning(settings),
+            "s2s_backend_service_tier": backend_service_tier(settings) or "not sent",
+            "s2s_backend_prompt_cache_key": backend_prompt_cache_key(settings) or "not sent",
             # Named *and* hashed. The name alone would let the section be
             # rewritten without any digest on the record changing, and
             # ``system_prompt_sha256`` covers the agent prompt the row shares

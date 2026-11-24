@@ -39,6 +39,8 @@ laptop work unchanged and lets a deployment carry a default:
 | `s2s_voice` | provider default | |
 | `s2s_backend_model` | `gpt-6-sol` | `gpt-live` only, see below |
 | `s2s_backend_reasoning` | `low` | `gpt-live` only; the backend's reasoning effort, also `medium`, `high` |
+| `s2s_backend_service_tier` | not sent | `gpt-live` only; the backend's OpenAI processing tier, e.g. `fast` or `ultrafast`; unset uses the account default |
+| `s2s_backend_prompt_cache_key` | not sent | `gpt-live` only; the backend's OpenAI `prompt_cache_key`, which groups requests for prompt caching; changes price, not replies |
 | `aws_region` | `us-west-2` | `nova-sonic` only; must be a region serving the model and granted to the credentials |
 | `qwen_region` | `singapore` | `qwen-realtime` only; also `beijing` |
 | `qwen_workspace_id` | **required for `qwen-realtime`** | names the Alibaba workspace whose endpoint answers |

@@ -44,7 +44,9 @@ are identical to the reference snapshot. Expected Outcome is diagnostic and
 excluded from the composite. It still falsely passes the wrong-point
 clarification; Response Relevance correctly penalizes that behavior.
 
-Latency uses the median of individual qualifying events. Navigation,
+Latency pools all qualifying turn events across the provider's selected phone
+numbers and takes their median. It does not average call/scenario means or
+take the median of per-call medians. Navigation,
 responses to caller interruptions, idle check-ins and responses after the
 terminal caller goodbye are excluded, matching the reference export. This
 corrects the earlier standalone Cisco PDF's latency figure, which included

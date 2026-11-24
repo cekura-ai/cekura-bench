@@ -1,4 +1,4 @@
-import importlib.util,json,pathlib
+import importlib.util,json,pathlib,sys
 
 P=pathlib.Path(__file__).resolve().parents[1]/'results/production-voice-quality/2026-11-24'
 spec=importlib.util.spec_from_file_location('cisco_quality_validator',P/'validate.py')
@@ -35,3 +35,17 @@ def test_latency_uses_published_scope_and_focus_is_present():
     assert 'id="cisco-calls"' in page and 'Cisco: Mia / Webex assistant' in page
     assert 'METRIC_FIX' not in page and 'X-Amz' not in page
     assert all('/share/result/' in c['share_url'] for c in cisco()['numbers'][0]['calls'])
+
+def test_latency_pools_turns_instead_of_averaging_call_medians():
+    sys.path.insert(0,str(P))
+    spec=importlib.util.spec_from_file_location('cisco_quality_builder',P/'build_results.py')
+    builder=importlib.util.module_from_spec(spec);spec.loader.exec_module(builder)
+    calls=[
+        {'scenario':'A','metrics':{'latency':100},'events_ms':{'latency':[100]}},
+        {'scenario':'B','metrics':{'latency':1000},'events_ms':{'latency':[900,1000,1100]}},
+    ]
+    result=builder.aggregate(calls,[{'key':'latency','kind':'ms'}])['latency']
+    # Four turn events have median 950; the two call medians would yield 550.
+    assert result['value']==950
+    assert result['events']==4
+    assert result['normalized'] is None

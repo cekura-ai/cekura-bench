@@ -1,0 +1,1395 @@
+[
+  {
+    "run_id": 4780820,
+    "result_id": 1173642,
+    "scenario": "Q01",
+    "evaluator_id": 460360,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173642?call_id=4780820",
+    "metrics": {
+      "audio": 4.266901969909668,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 1610.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        1610.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173642/FBv_CDhD1PVBIYC_RWKcJGQ7z1BwjYLc6rLpTTWpAnE?runPage=1&pageSize=100&call_id=4780820"
+  },
+  {
+    "run_id": 4780821,
+    "result_id": 1173642,
+    "scenario": "Q03",
+    "evaluator_id": 460362,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173642?call_id=4780821",
+    "metrics": {
+      "audio": 4.318326473236084,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 2840.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        4210.0,
+        1470.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173642/FBv_CDhD1PVBIYC_RWKcJGQ7z1BwjYLc6rLpTTWpAnE?runPage=1&pageSize=100&call_id=4780821"
+  },
+  {
+    "run_id": 4780822,
+    "result_id": 1173642,
+    "scenario": "Q05",
+    "evaluator_id": 460364,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173642?call_id=4780822",
+    "metrics": {
+      "audio": 3.9942691326141357,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 2965.0,
+      "stop": 550.0,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": 100.0,
+      "recovery": 5
+    },
+    "events_ms": {
+      "latency": [
+        1820.0,
+        4110.0
+      ],
+      "stop": [
+        550.0
+      ]
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173642/FBv_CDhD1PVBIYC_RWKcJGQ7z1BwjYLc6rLpTTWpAnE?runPage=1&pageSize=100&call_id=4780822"
+  },
+  {
+    "run_id": 4780953,
+    "result_id": 1173661,
+    "scenario": "Cough",
+    "evaluator_id": 460356,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780953",
+    "metrics": {
+      "audio": 4.34915828704834,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 3085.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        1660.0,
+        4510.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780953"
+  },
+  {
+    "run_id": 4780954,
+    "result_id": 1173661,
+    "scenario": "Difficult day",
+    "evaluator_id": 460357,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780954",
+    "metrics": {
+      "audio": 4.256242275238037,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 4150.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": 100.0,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        5320.0,
+        2980.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780954"
+  },
+  {
+    "run_id": 4780956,
+    "result_id": 1173661,
+    "scenario": "Office noise",
+    "evaluator_id": 460359,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780956",
+    "metrics": {
+      "audio": 4.383236408233643,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 1930.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        1950.0,
+        1910.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780956"
+  },
+  {
+    "run_id": 4780957,
+    "result_id": 1173661,
+    "scenario": "Q02",
+    "evaluator_id": 460361,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780957",
+    "metrics": {
+      "audio": 4.392821311950684,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 2815.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        1670.0,
+        3960.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780957"
+  },
+  {
+    "run_id": 4780958,
+    "result_id": 1173661,
+    "scenario": "Q04",
+    "evaluator_id": 460363,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780958",
+    "metrics": {
+      "audio": 4.382214546203613,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 4320.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        4640.0,
+        4000.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780958"
+  },
+  {
+    "run_id": 4780960,
+    "result_id": 1173661,
+    "scenario": "Q07",
+    "evaluator_id": 460366,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780960",
+    "metrics": {
+      "audio": 4.285992622375488,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 4730.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        4730.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780960"
+  },
+  {
+    "run_id": 4780961,
+    "result_id": 1173661,
+    "scenario": "Q08",
+    "evaluator_id": 460367,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780961",
+    "metrics": {
+      "audio": 4.271801948547363,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 3175.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        4850.0,
+        1500.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780961"
+  },
+  {
+    "run_id": 4780962,
+    "result_id": 1173661,
+    "scenario": "Q09",
+    "evaluator_id": 460368,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780962",
+    "metrics": {
+      "audio": 4.261519432067871,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 3740.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        4330.0,
+        3150.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780962"
+  },
+  {
+    "run_id": 4780963,
+    "result_id": 1173661,
+    "scenario": "Q10",
+    "evaluator_id": 460369,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780963",
+    "metrics": {
+      "audio": 4.39363956451416,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 1620.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        1620.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780963"
+  },
+  {
+    "run_id": 4780964,
+    "result_id": 1173661,
+    "scenario": "Sick family member",
+    "evaluator_id": 460370,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780964",
+    "metrics": {
+      "audio": 4.387912750244141,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 4710.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": 100.0,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        4610.0,
+        4810.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780964"
+  },
+  {
+    "run_id": 4780965,
+    "result_id": 1173661,
+    "scenario": "Cough",
+    "evaluator_id": 460356,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780965",
+    "metrics": {
+      "audio": 4.289651393890381,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 4320.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        4340.0,
+        4300.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780965"
+  },
+  {
+    "run_id": 4780966,
+    "result_id": 1173661,
+    "scenario": "Difficult day",
+    "evaluator_id": 460357,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780966",
+    "metrics": {
+      "audio": 4.407166957855225,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 4050.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": 0.0,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        4570.0,
+        3530.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780966"
+  },
+  {
+    "run_id": 4780967,
+    "result_id": 1173661,
+    "scenario": "Listening acknowledgment",
+    "evaluator_id": 460358,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780967",
+    "metrics": {
+      "audio": 4.254484176635742,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 3470.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": 0.0,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        1450.0,
+        5490.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780967"
+  },
+  {
+    "run_id": 4780968,
+    "result_id": 1173661,
+    "scenario": "Office noise",
+    "evaluator_id": 460359,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780968",
+    "metrics": {
+      "audio": 4.33902645111084,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 3045.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        2000.0,
+        4090.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780968"
+  },
+  {
+    "run_id": 4780969,
+    "result_id": 1173661,
+    "scenario": "Q02",
+    "evaluator_id": 460361,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780969",
+    "metrics": {
+      "audio": 4.410170555114746,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 3555.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        1890.0,
+        5220.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780969"
+  },
+  {
+    "run_id": 4780970,
+    "result_id": 1173661,
+    "scenario": "Q04",
+    "evaluator_id": 460363,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780970",
+    "metrics": {
+      "audio": 4.306922912597656,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 4030.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        4740.0,
+        3320.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780970"
+  },
+  {
+    "run_id": 4780971,
+    "result_id": 1173661,
+    "scenario": "Q06",
+    "evaluator_id": 460365,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780971",
+    "metrics": {
+      "audio": 3.466675281524658,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 3880.0,
+      "stop": 470.0,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": 5
+    },
+    "events_ms": {
+      "latency": [
+        3880.0
+      ],
+      "stop": [
+        470.0
+      ]
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780971"
+  },
+  {
+    "run_id": 4780972,
+    "result_id": 1173661,
+    "scenario": "Q07",
+    "evaluator_id": 460366,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780972",
+    "metrics": {
+      "audio": 4.390010833740234,
+      "interruption": 2.5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": null,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780972"
+  },
+  {
+    "run_id": 4780973,
+    "result_id": 1173661,
+    "scenario": "Q08",
+    "evaluator_id": 460367,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780973",
+    "metrics": {
+      "audio": 4.233194828033447,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 4355.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        4370.0,
+        4340.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780973"
+  },
+  {
+    "run_id": 4780974,
+    "result_id": 1173661,
+    "scenario": "Q09",
+    "evaluator_id": 460368,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780974",
+    "metrics": {
+      "audio": 4.260988712310791,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 4350.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        4360.0,
+        4340.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780974"
+  },
+  {
+    "run_id": 4780975,
+    "result_id": 1173661,
+    "scenario": "Q10",
+    "evaluator_id": 460369,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780975",
+    "metrics": {
+      "audio": 4.454131126403809,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 4360.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        4360.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780975"
+  },
+  {
+    "run_id": 4780976,
+    "result_id": 1173661,
+    "scenario": "Sick family member",
+    "evaluator_id": 460370,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780976",
+    "metrics": {
+      "audio": 4.384162902832031,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 3190.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": 100.0,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        1880.0,
+        4500.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780976"
+  },
+  {
+    "run_id": 4780977,
+    "result_id": 1173661,
+    "scenario": "Cough",
+    "evaluator_id": 460356,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780977",
+    "metrics": {
+      "audio": 4.316296100616455,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 1555.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        1660.0,
+        1450.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780977"
+  },
+  {
+    "run_id": 4780978,
+    "result_id": 1173661,
+    "scenario": "Difficult day",
+    "evaluator_id": 460357,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780978",
+    "metrics": {
+      "audio": 4.237789154052734,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 3530.0,
+      "stop": null,
+      "organization": 5,
+      "style": 4,
+      "emotion": 100.0,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        5280.0,
+        1780.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780978"
+  },
+  {
+    "run_id": 4780979,
+    "result_id": 1173661,
+    "scenario": "Listening acknowledgment",
+    "evaluator_id": 460358,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780979",
+    "metrics": {
+      "audio": 4.367978572845459,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 3.3,
+      "gibberish": 100.0,
+      "infrastructure": 0.0,
+      "latency": 4650.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": 0.0,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        4810.0,
+        4490.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780979"
+  },
+  {
+    "run_id": 4780980,
+    "result_id": 1173661,
+    "scenario": "Office noise",
+    "evaluator_id": 460359,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780980",
+    "metrics": {
+      "audio": 4.355501174926758,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 1855.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        2000.0,
+        1710.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780980"
+  },
+  {
+    "run_id": 4780981,
+    "result_id": 1173661,
+    "scenario": "Q02",
+    "evaluator_id": 460361,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780981",
+    "metrics": {
+      "audio": 4.301591873168945,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 3785.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        4370.0,
+        3200.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780981"
+  },
+  {
+    "run_id": 4780982,
+    "result_id": 1173661,
+    "scenario": "Q04",
+    "evaluator_id": 460363,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780982",
+    "metrics": {
+      "audio": 4.3552632331848145,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 3700.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        4080.0,
+        3320.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780982"
+  },
+  {
+    "run_id": 4780983,
+    "result_id": 1173661,
+    "scenario": "Q06",
+    "evaluator_id": 460365,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780983",
+    "metrics": {
+      "audio": 3.9476404190063477,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 1580.0,
+      "stop": 480.0,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": 5
+    },
+    "events_ms": {
+      "latency": [
+        1580.0
+      ],
+      "stop": [
+        480.0
+      ]
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780983"
+  },
+  {
+    "run_id": 4780984,
+    "result_id": 1173661,
+    "scenario": "Q07",
+    "evaluator_id": 460366,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780984",
+    "metrics": {
+      "audio": 4.438268661499023,
+      "interruption": 2.5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 1250.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        1250.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780984"
+  },
+  {
+    "run_id": 4780985,
+    "result_id": 1173661,
+    "scenario": "Q08",
+    "evaluator_id": 460367,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780985",
+    "metrics": {
+      "audio": 4.383645534515381,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 3075.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        4640.0,
+        1510.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780985"
+  },
+  {
+    "run_id": 4780986,
+    "result_id": 1173661,
+    "scenario": "Q09",
+    "evaluator_id": 460368,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780986",
+    "metrics": {
+      "audio": 4.325026035308838,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 3855.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        3110.0,
+        4600.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780986"
+  },
+  {
+    "run_id": 4780987,
+    "result_id": 1173661,
+    "scenario": "Q10",
+    "evaluator_id": 460369,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780987",
+    "metrics": {
+      "audio": 4.203947067260742,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 1620.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        1620.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780987"
+  },
+  {
+    "run_id": 4780988,
+    "result_id": 1173661,
+    "scenario": "Sick family member",
+    "evaluator_id": 460370,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173661?call_id=4780988",
+    "metrics": {
+      "audio": 4.239021301269531,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 3490.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": 100.0,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        1820.0,
+        5160.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173661/uBe7vWTo2saLhdjbXYPZkIGvjGxo7k8_WNBf-uMHPw4?runPage=1&pageSize=100&call_id=4780988"
+  },
+  {
+    "run_id": 4780989,
+    "result_id": 1173662,
+    "scenario": "Q01",
+    "evaluator_id": 460360,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173662?call_id=4780989",
+    "metrics": {
+      "audio": 4.271483421325684,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 4860.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        4860.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173662/VMnR-clWf8BC2xx7UnnKEDeN25SpSDeNT0gnbiTESxs?runPage=1&pageSize=100&call_id=4780989"
+  },
+  {
+    "run_id": 4780990,
+    "result_id": 1173662,
+    "scenario": "Q03",
+    "evaluator_id": 460362,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173662?call_id=4780990",
+    "metrics": {
+      "audio": 4.367407321929932,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 3760.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        3760.0,
+        3760.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173662/VMnR-clWf8BC2xx7UnnKEDeN25SpSDeNT0gnbiTESxs?runPage=1&pageSize=100&call_id=4780990"
+  },
+  {
+    "run_id": 4780991,
+    "result_id": 1173662,
+    "scenario": "Q05",
+    "evaluator_id": 460364,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173662?call_id=4780991",
+    "metrics": {
+      "audio": 4.346343994140625,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 3215.0,
+      "stop": 490.0,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": 100.0,
+      "recovery": 5
+    },
+    "events_ms": {
+      "latency": [
+        1570.0,
+        4860.0
+      ],
+      "stop": [
+        490.0
+      ]
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173662/VMnR-clWf8BC2xx7UnnKEDeN25SpSDeNT0gnbiTESxs?runPage=1&pageSize=100&call_id=4780991"
+  },
+  {
+    "run_id": 4780992,
+    "result_id": 1173662,
+    "scenario": "Q01",
+    "evaluator_id": 460360,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173662?call_id=4780992",
+    "metrics": {
+      "audio": 4.293676376342773,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 1450.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        1450.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173662/VMnR-clWf8BC2xx7UnnKEDeN25SpSDeNT0gnbiTESxs?runPage=1&pageSize=100&call_id=4780992"
+  },
+  {
+    "run_id": 4780993,
+    "result_id": 1173662,
+    "scenario": "Q03",
+    "evaluator_id": 460362,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173662?call_id=4780993",
+    "metrics": {
+      "audio": 4.426474094390869,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 2425.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        3400.0,
+        1450.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173662/VMnR-clWf8BC2xx7UnnKEDeN25SpSDeNT0gnbiTESxs?runPage=1&pageSize=100&call_id=4780993"
+  },
+  {
+    "run_id": 4780994,
+    "result_id": 1173662,
+    "scenario": "Q05",
+    "evaluator_id": 460364,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1173662?call_id=4780994",
+    "metrics": {
+      "audio": 4.182247161865234,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 4,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 4250.0,
+      "stop": 490.0,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": 100.0,
+      "recovery": 5
+    },
+    "events_ms": {
+      "latency": [
+        4920.0,
+        3580.0
+      ],
+      "stop": [
+        490.0
+      ]
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1173662/VMnR-clWf8BC2xx7UnnKEDeN25SpSDeNT0gnbiTESxs?runPage=1&pageSize=100&call_id=4780994"
+  },
+  {
+    "run_id": 4782023,
+    "result_id": 1174005,
+    "scenario": "Listening acknowledgment",
+    "evaluator_id": 460358,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1174005?call_id=4782023",
+    "metrics": {
+      "audio": 4.280638217926025,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 1675.0,
+      "stop": null,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": 100.0,
+      "recovery": null
+    },
+    "events_ms": {
+      "latency": [
+        1600.0,
+        1750.0
+      ],
+      "stop": []
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1174005/JbTMZ0GD6X_X-WPZuqooRDH8Fmp3SC8VvBhy0nhJ-Q8?runPage=1&pageSize=100&call_id=4782023"
+  },
+  {
+    "run_id": 4782488,
+    "result_id": 1174185,
+    "scenario": "Q06",
+    "evaluator_id": 460365,
+    "status": "completed",
+    "url": "https://dashboard.cekura.ai/16745/results/1174185?call_id=4782488",
+    "metrics": {
+      "audio": 3.2910702228546143,
+      "interruption": 5,
+      "repetition": 5,
+      "relevance": 5,
+      "gibberish": 100.0,
+      "infrastructure": 100.0,
+      "latency": 1470.0,
+      "stop": 560.0,
+      "organization": 5,
+      "style": 5,
+      "emotion": null,
+      "cues": null,
+      "recovery": 5
+    },
+    "events_ms": {
+      "latency": [
+        1470.0
+      ],
+      "stop": [
+        560.0
+      ]
+    },
+    "share_url": "https://dashboard.cekura.ai/share/result/1174185/2nwBI-bPafbkZVcXW4LbB0KTZIYrzVaHlZpXpWsBaEc?runPage=1&pageSize=100&call_id=4782488"
+  }
+]

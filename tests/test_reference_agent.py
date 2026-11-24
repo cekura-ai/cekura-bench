@@ -181,6 +181,18 @@ class TestProviderTable:
         """
         assert bot.PROVIDERS["openai-realtime"].input_rate == 24000
 
+    def test_a_service_that_only_speaks_marks_its_agent_text_a_transcription(self):
+        """Scoring reads the agent's own words as what the model captured.
+
+        A service that produces only audio logs a transcription of it instead,
+        which is one more reading of the call, not the model's words; the
+        record has to say which, or a transcriber's slip would score as the
+        model's.
+        """
+        for name, provider in bot.PROVIDERS.items():
+            only_audio = provider.module == "pipecat.services.google.gemini_live.llm"
+            assert provider.agent_text == ("transcription" if only_audio else "model"), name
+
     def test_every_provider_declares_a_rate_a_model_and_a_credential(self):
         for name, provider in bot.PROVIDERS.items():
             assert provider.input_rate in (8000, 16000, 24000), name

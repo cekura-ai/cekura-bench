@@ -17,6 +17,7 @@ from typing import Any
 
 from s2s_human_bench.bench import Entry, load_bench
 from s2s_human_bench.config import Config, load_config
+from s2s_human_bench.entities import EntityFileError, load_entities
 from s2s_human_bench.examples import examples_doc
 from s2s_human_bench.languages import languages_doc
 from s2s_human_bench.s2s import s2s_docs
@@ -120,6 +121,10 @@ def run_site_export(args: Any) -> int:
     cfg = load_config(args.config)
     if args.tasks:
         cfg.tasks = load_tasks(args.tasks)
+    if args.entities:
+        cfg.entity_skill, cfg.entities = load_entities(args.entities)
+        if cfg.entity_skill not in {s.id for s in cfg.skills}:
+            raise EntityFileError(f"{args.entities}: skill {cfg.entity_skill!r} is not in the config")
     names = dict(cfg["outputs"])
     for pair in args.name or []:
         kind, sep, file = pair.partition("=")
@@ -148,6 +153,8 @@ def run_site_export(args: Any) -> int:
     if cfg.tasks is not None:
         overall = [r for r in docs["benchmark"]["results"] if r["suite"] == "all"]
         print(f"  main task done on {sum(r['taskPass'] for r in overall)} of {sum(r['runs'] for r in overall)} calls (task file {args.tasks})")
+    if cfg.entities is not None:
+        print(f"  skill {cfg.entity_skill} scored from the entity file ({len(cfg.entities)} scenarios, {args.entities})")
     for row in docs["skills"]["elo"]:
         print(f"  {row['model']:<24} elo {row['elo']}  score {row['score']}")
     return 0

@@ -1218,6 +1218,11 @@ class Provider:
     # another decides from it what it keeps of a reply cut short and when the
     # caller's next words open a new turn.
     reports_playback: bool = False
+    # What the agent's lines in the record are: the model's own words, or, for a
+    # service that only produces audio, its transcription of that audio. They
+    # are read differently: the model's words are what it captured from the
+    # caller; a transcription is one more reading of what the caller heard.
+    agent_text: str = "model"
 
 
 # Whether the caller's own words reach the record is a per-provider decision,
@@ -1315,6 +1320,12 @@ AZURE_TURN_DETECTION = {
 # every scenario is spoken in.
 AZURE_TRANSCRIPTION = {"model": "azure-speech", "language": "en-US"}
 
+# The agent's lines the run record keeps. The record is rewritten after every
+# tool call, so it is bounded: a call that runs past this many replies keeps the
+# first ones, which are where a caller's details are taken.
+AGENT_TEXT_TURNS = 200
+AGENT_TEXT_CHARS = 1000
+
 
 # ``input_rate`` is load-bearing, not a tuning knob. These services do not
 # resample: each base64-encodes the audio frame it is handed and declares a rate
@@ -1346,7 +1357,7 @@ PROVIDERS: dict[str, Provider] = {
         ("GEMINI_API_KEY", "GEMINI_AUTHORIZATION"), "pipecat.services.google.gemini_live.llm",
         discloses=lambda settings: {"gemini_thinking_level": GEMINI_THINKING},
         turns="local", results="immediate",
-        caller_transcription="automatic",
+        caller_transcription="automatic", agent_text="transcription",
     ),
     # The same model without extended thinking: the plain id, no thinking
     # level sent. The framework reads the id, so this row's tools block until
@@ -1358,7 +1369,7 @@ PROVIDERS: dict[str, Provider] = {
         ("GEMINI_API_KEY", "GEMINI_AUTHORIZATION"), "pipecat.services.google.gemini_live.llm",
         discloses=lambda settings: {"gemini_thinking_level": "not sent"},
         turns="local", results="immediate",
-        caller_transcription="automatic",
+        caller_transcription="automatic", agent_text="transcription",
     ),
     # The vendor's fast Live tier. Unlike the plain 3.8 model it takes a
     # thinking level, so it runs at the same named level as ``gemini-live``, on the
@@ -1368,7 +1379,7 @@ PROVIDERS: dict[str, Provider] = {
         ("GEMINI_API_KEY", "GEMINI_AUTHORIZATION"), "pipecat.services.google.gemini_live.llm",
         discloses=lambda settings: {"gemini_thinking_level": GEMINI_THINKING},
         turns="local", results="immediate",
-        caller_transcription="automatic",
+        caller_transcription="automatic", agent_text="transcription",
     ),
     # Pinned to the versioned name the vendor's ``latest`` alias resolves to:
     # an alias is not a configuration. 24 kHz is the vendor's recommended rate.
@@ -3392,6 +3403,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         rate = CASCADE_RATE
         realtime = False
         service_answers = False
+        agent_text_from = "model"  # the text model's reply, as the voice was given it
     else:
         if name not in PROVIDERS:
             known = sorted([*PROVIDERS, *TEXT_MODELS])
@@ -3401,6 +3413,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         model = settings.get("s2s_model", provider.default_model)
         voice = settings.get("s2s_voice", provider.default_voice)
         record = build_record(name, provider, model, voice, server, settings)
+        agent_text_from = provider.agent_text
         # See the note in the cascade branch above.
         logger.info("building {} on {}", name, model)
 
@@ -3468,11 +3481,19 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
     async def _caller_said(_aggregator, message):
         logger.info("caller said: {}", _short(message.content, 500))
 
+    # The agent's lines in full, for the record: the log shortens them and
+    # leaves the call with it, while scoring reads them to tell what the model
+    # captured from what a transcript of the call heard.
+    spoken: list[dict[str, Any]] = []
+
     @aggregators.assistant().event_handler("on_assistant_turn_stopped")
     async def _agent_said(_aggregator, message):
         logger.info(
             "agent said{}: {}", " (interrupted)" if message.interrupted else "", _short(message.content, 500)
         )
+        if len(spoken) < AGENT_TEXT_TURNS and (text := str(message.content or "").strip()):
+            spoken.append({"at": call_stamp().strip("[]"), "text": text[:AGENT_TEXT_CHARS],
+                           "interrupted": bool(message.interrupted)})
         backstop.agent_said(str(message.content or ""), message.interrupted)
 
     def publish() -> None:
@@ -3492,6 +3513,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
                 **record, **trace.as_metadata(), **meter.as_metadata(),
                 **({"timing": timing} if timing else {}),
                 "integrity": narrator.integrity(),
+                "agent_text": {"from": agent_text_from, "turns": spoken},
             })
         except Exception as exc:  # noqa: BLE001 -- never fail a call over a record
             logger.warning("could not update the run record: {!r}", exc)

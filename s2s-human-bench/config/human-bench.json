@@ -381,7 +381,52 @@
       "vendor": "Phonic",
       "siteId": "phonic-1",
       "priceSiteId": "phonic",
-      "agentId": 26898
+      "agentId": 26898,
+      "scenarioSwap": [
+        {"agentId": 27258, "scenarios": ["F23", "F26", "F33", "H08", "H10", "H14", "H25"]},
+        {"agentId": 27259, "scenarios": ["F12", "F25", "F34", "H04", "H05", "H12", "H32", "H34"]}
+      ],
+      "details": {
+        "modelId": "phonic-1",
+        "setting": "Languages: English + Spanish or Hindi"
+      }
+    },
+    {
+      "key": "phonic-1.1",
+      "name": "Phonic-1.1",
+      "vendor": "Phonic",
+      "siteId": "phonic-1-1",
+      "agentId": 27945,
+      "scenarioSwap": [
+        {"agentId": 27946, "scenarios": ["F23", "F26", "F33", "H08", "H10", "H14", "H25"]},
+        {"agentId": 27947, "scenarios": ["F12", "F25", "F34", "H04", "H05", "H12", "H32", "H34"]}
+      ],
+      "details": {
+        "modelId": "phonic-1.1",
+        "setting": "Languages: English + Spanish or Hindi"
+      }
+    },
+    {
+      "key": "phonic-1-default",
+      "name": "Phonic-1 (default settings)",
+      "vendor": "Phonic",
+      "siteId": "phonic-1-default",
+      "agentId": 26898,
+      "reference": true,
+      "details": {
+        "modelId": "phonic-1"
+      }
+    },
+    {
+      "key": "phonic-1.1-default",
+      "name": "Phonic-1.1 (default settings)",
+      "vendor": "Phonic",
+      "siteId": "phonic-1-1-default",
+      "agentId": 27945,
+      "reference": true,
+      "details": {
+        "modelId": "phonic-1.1"
+      }
     },
     {
       "key": "eleven-realtime-v1-max",

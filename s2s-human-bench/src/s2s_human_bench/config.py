@@ -45,8 +45,9 @@ class Model:
     agent_id: int | None = None
     details: dict[str, Any] = field(default_factory=dict, hash=False, compare=False)  # card fields for models not on the public S2S page
     price_site_id: str | None = None  # the S2S board row to take the price from, when its id differs from site_id
-    # (agent id, scenario codes): those scenarios come from that agent's runs instead, run by run (a combined cascade)
-    swap: tuple[int, tuple[str, ...]] | None = None
+    # (agent id, scenario codes) pairs: those scenarios come from that agent's runs instead, run by run
+    # (a combined cascade; or one agent per language)
+    swaps: tuple[tuple[int, tuple[str, ...]], ...] = ()
 
 
 @dataclass
@@ -72,6 +73,18 @@ class Config:
 
     def skill(self, skill_id: str) -> Skill:
         return next(s for s in self.skills if s.id == skill_id)
+
+
+def _swaps(m: dict[str, Any]) -> tuple[tuple[int, tuple[str, ...]], ...]:
+    """A model's ``scenarioSwap``: one ``{agentId, scenarios}``, or a list of them when the swapped
+    scenarios ran on more than one agent. A scenario can come from one agent only."""
+    raw = m.get("scenarioSwap")
+    items = [] if raw is None else raw if isinstance(raw, list) else [raw]
+    swaps = tuple((s["agentId"], tuple(s["scenarios"])) for s in items)
+    codes = [c for _, cs in swaps for c in cs]
+    if len(set(codes)) != len(codes):
+        raise ConfigError(f"model {m['key']}: a scenario is swapped in from more than one agent")
+    return swaps
 
 
 def load_config(path: Path) -> Config:
@@ -109,7 +122,7 @@ def load_config(path: Path) -> Config:
                 agent_id=m.get("agentId"),
                 details=m.get("details", {}),
                 price_site_id=m.get("priceSiteId"),
-                swap=(m["scenarioSwap"]["agentId"], tuple(m["scenarioSwap"]["scenarios"])) if "scenarioSwap" in m else None,
+                swaps=_swaps(m),
             )
         )
     ids = [s.id for s in cfg.skills]

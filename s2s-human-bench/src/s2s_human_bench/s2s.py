@@ -145,7 +145,7 @@ def s2s_docs(cfg: Config, entries: list[Entry], live: dict[str, Any], date: str)
             base.setdefault(k, v)
         base["baseline"] = m.reference
         models.append(base)
-        price = published_price(live, m.site_id)
+        price = published_price(live, m.price_site_id or m.site_id)
         rows, by_suite = [], {}
         for sid, prefix in suites:
             sel = suite_runs(e.runs, prefix)

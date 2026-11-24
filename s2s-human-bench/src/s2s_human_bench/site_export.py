@@ -16,10 +16,14 @@ from pathlib import Path
 from typing import Any
 
 from s2s_human_bench.bench import Entry, load_bench
+from s2s_human_bench.board import board_doc
+from s2s_human_bench.comparisons import comparisons_doc
 from s2s_human_bench.config import Config, load_config
 from s2s_human_bench.examples import examples_doc
+from s2s_human_bench.flow import clip_key
 from s2s_human_bench.languages import languages_doc
 from s2s_human_bench.s2s import s2s_docs
+from s2s_human_bench.scenarios import scenarios_doc
 from s2s_human_bench.skills import skills_doc
 from s2s_human_bench.tasks import load_tasks
 
@@ -48,6 +52,18 @@ def read_public_s2s(path: Path, ref: str = "origin/main") -> dict[str, Any]:
 def human_clips(path: Path | None) -> int:
     """Recorded caller clips, from ``{scenario: [clip, ...]}``; 0 when no file is given."""
     return sum(len(v) for v in read_json(path).values()) if path else 0
+
+
+def clip_seconds(path: Path | None) -> dict[str, dict[str, float]] | None:
+    """Recorded caller clip lengths by scenario and clip text, from ``{scenario: [{text, seconds}, ...]}``; None when no
+    file is given or it carries no lengths (the flow measure then ends each caller line at its last word)."""
+    if not path:
+        return None
+    out = {
+        code: {clip_key(c["text"]): c["seconds"] for c in clips if isinstance(c, dict) and c.get("text") and c.get("seconds")}
+        for code, clips in read_json(path).items()
+    }
+    return out if any(out.values()) else None
 
 
 def titles(path: Path | None) -> dict[str, str | None]:
@@ -84,13 +100,17 @@ def build(
         print(gap, file=sys.stderr)
     bench, insights, reports = s2s_docs(cfg, entries, public_s2s, day)
     examples, picks = examples_doc(cfg, entries, call_titles, reviewed or {}, clips_reviewed)
+    skills = skills_doc(cfg, entries, public_s2s, clips, day)
     docs = dict(
         benchmark=bench,
         insights=insights,
         reports=reports,
         languages=languages_doc(cfg, entries),
-        skills=skills_doc(cfg, entries, public_s2s, clips, day),
+        skills=skills,
         examples=examples,
+        comparisons=comparisons_doc(cfg, entries),
+        board=board_doc(cfg, entries, skills["elo"], day),
+        scenarios=scenarios_doc(cfg, entries, call_titles),
     )
     return docs, picks
 
@@ -127,6 +147,7 @@ def run_site_export(args: Any) -> int:
             raise ExportError(f"--name expects KIND=FILE with KIND in {sorted(names)}, got {pair!r}")
         names[kind] = file
     clips = args.clips if args.clips else (args.runs / "scenario_clips.json")
+    cfg.clip_seconds = clip_seconds(clips if clips.exists() else None)
     call_titles = args.titles if args.titles else (args.runs / "scenario_titles.json")
     docs, picks = build(
         cfg,
@@ -145,6 +166,10 @@ def run_site_export(args: Any) -> int:
         write_json(args.clip_picks, picks)
     models = docs["skills"]["models"]
     print(f"{len(models)} models, {docs['skills']['callSummary']['total']} scenarios -> {args.out}")
+    if cfg.clip_seconds:
+        print(f"  call flow: clip lengths for {sum(len(v) for v in cfg.clip_seconds.values())} clips in {len(cfg.clip_seconds)} scenarios")
+    elif "flow" in cfg.scoring:
+        print("  call flow: no clip lengths in the clips file, so each caller line ends at its last transcribed word", file=sys.stderr)
     if cfg.tasks is not None:
         overall = [r for r in docs["benchmark"]["results"] if r["suite"] == "all"]
         print(f"  main task done on {sum(r['taskPass'] for r in overall)} of {sum(r['runs'] for r in overall)} calls (task file {args.tasks})")

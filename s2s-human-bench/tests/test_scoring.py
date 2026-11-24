@@ -37,30 +37,28 @@ def test_unreached_family_drops_out_of_the_score(cfg):
     assert call_score(cfg.weights, {"hearing": None, "task": None}) is None
 
 
-def test_model_family_is_the_mean_of_its_skill_rates(cfg):
-    def call(tested, misses, outcome):
+def test_model_family_is_its_per_call_value_averaged_by_scenario(cfg):
+    def call(code, hearing, task):
         return Call(
-            code="B01",
+            code=code,
             call_id=None,
             url="",
             seconds=60,
             verdicts={},
             explanations={},
-            families={},
-            outcome=outcome,
+            families={"hearing": hearing, "task": task},
+            outcome=None,
             outcome_lines=[],
             score=None,
             latency_ms=None,
             turn_words=None,
-            tested=tested,
-            misses=misses,
         )
 
-    # Skill 1.1 passes on three calls, skill 1.2 fails on its one call: each skill counts once, not each call.
-    calls = [call(["1.1"], [], 100.0)] * 3 + [call(["1.2", "2.1"], ["1.2"], 0.0)]
+    # B01's three runs average 100 on Hearing, B02's one run 40: each scenario counts once, not each call.
+    calls = [call("B01", 100.0, 50.0)] * 3 + [call("B02", 40.0, None)]
     fam = family_means(cfg, calls)
-    assert fam["Hearing"] == 50.0
-    assert fam["Task"] == 0.5 * 100 + 0.5 * 75
+    assert fam["Hearing"] == 70.0
+    assert fam["Task"] == 50.0  # B02 never reached Task: it drops out
 
 
 def test_load_call(cfg, tmp_path):

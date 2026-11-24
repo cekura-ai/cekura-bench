@@ -51,8 +51,29 @@ def export(tmp_path, cfg, out, reviewed=None, clips=None, tasks=None):
 def test_site_export(cfg, tmp_path):
     make_inputs(tmp_path)
     docs = export(tmp_path, cfg, tmp_path / "out1")
-    assert sorted(docs) == ["benchmark.json", "examples.json", "insights.json", "lang.json", "reports.json", "skills.json"]
+    assert sorted(docs) == [
+        "benchmark.json",
+        "board.json",
+        "comparisons.json",
+        "examples.json",
+        "insights.json",
+        "lang.json",
+        "reports.json",
+        "scenarios.json",
+        "skills.json",
+    ]
     assert export(tmp_path, cfg, tmp_path / "out2") == docs  # deterministic
+
+    board = docs["board.json"]
+    rows = {m["id"]: m for m in board["models"]}
+    assert rows["alpha-site"]["place"] == 1 and rows["alpha-site"]["placeRange"][0] == 1 and rows["ref-site"]["place"] is None
+    assert set(rows["alpha-site"]["parts"]) == {"Hearing", "Task"} and rows["alpha-site"]["done"]["value"] == 100.0
+    assert [m["key"] for m in board["moments"]] == ["hear", "switch"]
+    hear = board["moments"][0]["models"]
+    assert hear["alpha-site"]["handled"]["value"] == 100.0 and hear["beta-site"]["handled"]["value"] < 100.0
+    scen = docs["scenarios.json"]["scenarios"]
+    assert [s["code"] for s in scen] == ["B01", "B02", "C01", "C02"] and scen[0]["title"] == "Synthetic title"
+    assert [r["done"] for r in scen[0]["models"]["beta-site"]] == [False, False] and scen[0]["models"]["beta-site"][0]["missed"] == ["1.1", "1.2", "2.2"]
 
     bench = docs["benchmark.json"]
     assert [s["id"] for s in bench["suites"]] == ["bank", "clinic"] and bench["repeats"] == 2 and bench["calls"] == 24
@@ -72,7 +93,8 @@ def test_site_export(cfg, tmp_path):
     lang = docs["lang.json"]["groups"]
     assert [g["id"] for g in lang] == ["all", "en", "xx"] and [g["calls"] for g in lang] == [4, 3, 1]
     assert lang[0]["models"]["alpha-site"]["elo"] == elo["alpha-site"]["elo"]
-    assert lang[2]["models"]["beta-site"]["passAll"] == 0.0
+    assert lang[2]["models"]["beta-site"]["passAll"] == 0.0 and lang[2]["models"]["beta-site"]["done"] == 0.0
+    assert lang[0]["models"]["alpha-site"]["done"] == 100.0
 
     assert docs["reports.json"]["reports"]["alpha-site"] == {k: "https://example.test/run_a1_r1" for k in ("all", "bank", "clinic")}
     ins = docs["insights.json"]

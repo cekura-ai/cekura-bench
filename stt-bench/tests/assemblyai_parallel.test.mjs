@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {claim,newModel,accept,reconcileCredits,amendUndispatched,reserveStart,acknowledgeStart,freshDispatchSandbox} from '../scripts/run_vercel_assemblyai_parallel.mjs';
+import {claim,newModel,accept,reconcileCredits,amendUndispatched,reserveStart,acknowledgeStart,freshDispatchSandbox,confirmedLimit} from '../scripts/run_vercel_assemblyai_parallel.mjs';
 test('dispatch uses a refreshed client after a token expires during a rate-limit wait',async()=>{
   let calls=0;
   const old={currentSession:()=>({sessionId:'session-1'}),runCommand:()=>{throw new Error('403 expired token');}};
@@ -117,4 +117,20 @@ test('five global permits persist across restart and expire only after acknowled
  assert(!reserveStart(gate,'sixth','w6',1061999));
  assert(reserveStart(gate,'sixth','w6',1062000));
  assert(!reserveStart(gate,'seventh','w7',1062000));
+});
+
+test('a raised confirmed limit admits exactly that many starts per window',()=>{
+ let gate={limit:60,windowMs:62000,entries:{}};
+ for(let i=0;i<60;i++)assert(reserveStart(gate,'b'+i,'w'+i,0));
+ assert(!reserveStart(gate,'61st','w',1000));
+ for(let i=0;i<60;i++)acknowledgeStart(gate,'b'+i,1000);
+ assert(!reserveStart(gate,'61st','w',62999));
+ assert(reserveStart(gate,'61st','w',63000));
+});
+
+test('only a whole-number limit from 1 to 100 per minute is accepted',()=>{
+ for(const ok of [1,5,60,100])assert(confirmedLimit(ok));
+ for(const bad of [0,-5,5.5,101,'60',null,undefined])assert(!confirmedLimit(bad));
+ assert.throws(()=>reserveStart({limit:101,windowMs:62000,entries:{}},'b','w',0),/confirmed/);
+ assert.throws(()=>reserveStart({limit:60,windowMs:60000,entries:{}},'b','w',0),/confirmed/);
 });

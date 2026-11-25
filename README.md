@@ -431,7 +431,7 @@ mixes builds. It also records who closed the call, and integrity checks: a
 reply the caller waited ten seconds or more for, an error from the model's
 service, caller audio the service stopped processing. Those calls stay in the
 row and are listed, so the row can be read with and without them. Cost is total
-priced dollars over total priced minutes, from verified public list prices, and
+priced dollars over total priced minutes, from verified list prices (published, or given by the vendor), and
 is shown only when every call in the row could be priced. Anything a vendor does not
 meter per call is named next to the figure.
 

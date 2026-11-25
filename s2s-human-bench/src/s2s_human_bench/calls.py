@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from s2s_human_bench.config import Config, Model, Skill
+from s2s_human_bench.entities import EntityFileError, agent_text, agent_text_from_log, entity_verdict, read_log
 from s2s_human_bench.tasks import TaskFileError, task_verdict
 
 MET, MISSED = "✅", "❌"
@@ -123,6 +124,19 @@ def load_call(cfg: Config, call_json: Path) -> Call:
 
     verdicts = {s.id: verdict(s, results[s.metric]) if s.metric in results else None for s in cfg.skills}
     explanations = {s.id: results[s.metric].get("explanation") or "" for s in cfg.skills if s.metric in results}
+    if cfg.entities is not None:  # the entity file decides its skill in every call
+        skill, spec = cfg.entities.skill, cfg.entities.details.get(meta["code"])
+        if spec:
+            extra = call_json.with_name("call_additional_metadata.json")
+            own = agent_text(_read(extra)) if extra.exists() else None
+            log = cfg.agent_logs / f"{call_json.parent.name}.json" if cfg.agent_logs else None
+            if own is None and log is not None and log.exists():  # a run recorded before agent_text
+                own = agent_text_from_log(read_log(log))
+            verdicts[skill], explanations[skill] = entity_verdict(spec, transcript, own, inputs["agentRolePrefix"], inputs["callerRolePrefix"])
+        elif verdicts[skill] is not None:
+            raise EntityFileError(f"entity file has no detail for {meta['code']}, which the platform scored for skill {skill}")
+        else:
+            explanations.pop(skill, None)
     platform_task = results.get(metric_ids["task"], {}).get("score") if "task" in metric_ids else None
     if cfg.tasks is not None:
         if meta["code"] not in cfg.tasks:
@@ -197,6 +211,18 @@ def usable_run(cfg: Config, run: Path) -> bool:
     if len(list(run.glob("calls/*/*/metrics.json"))) < inputs["callsPerRun"]:
         return False
     return silent_calls(run, inputs["agentRolePrefix"]) <= inputs["maxSilentCalls"]
+
+
+def swap_runs(cfg: Config, agent_id: int, codes: tuple[str, ...], root: Path) -> list[Path]:
+    """The run folders a scenario swap reads from another agent, in name order. Each must hold every
+    swapped scenario (it need not hold the rest of the board) and pass the same void-run guard."""
+    inputs = cfg["inputs"]
+    folders = sorted(root.glob(inputs["agentRunPattern"].format(agent_id=agent_id)))
+    return [
+        f for f in folders
+        if all(any(f.glob(f"calls/{code}/*/metrics.json")) for code in codes)
+        and silent_calls(f, inputs["agentRolePrefix"]) <= inputs["maxSilentCalls"]
+    ]
 
 
 def model_runs(cfg: Config, model: Model, root: Path) -> list[Path]:

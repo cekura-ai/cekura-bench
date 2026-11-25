@@ -14,6 +14,9 @@ match when the agent passes it. The task passes when:
 * each tool in ``then_undo`` was called after the action (the caller asked to undo it);
 * when no undo is expected, the action was not undone afterwards by a tool in ``undo_tools``.
 
+A task may also list ``alternatives``, each a complete task of the same shape; the call passes
+when the task or any alternative passes.
+
 Values are compared tolerantly: case, accents, punctuation, common street abbreviations, number
 words ("level three"), spelled-out digits in ids and phone numbers ("five five five oh one"),
 phone and account number formatting, date and time formats and number formatting do not matter.
@@ -216,7 +219,19 @@ def _separate(options: list[list[int]], used: frozenset[int] = frozenset()) -> b
 
 
 def task_verdict(spec: dict[str, Any], transcript: list[dict[str, Any]]) -> tuple[bool, str]:
-    """(passed, short reason) for one call against its scenario's task."""
+    """(passed, short reason) for one call against its scenario's task.
+
+    A task may list ``alternatives``: other complete outcomes that also follow the caller's final wish
+    (a take-back that came before the action, so the action correctly never ran). The call passes when
+    the task or any alternative passes; a failing call keeps the main task's reason.
+    """
+    passed, reason = _verdict(spec, transcript)
+    if not passed and any(_verdict(alt, transcript)[0] for alt in spec.get("alternatives", [])):
+        return True, "done (alternative outcome)"
+    return passed, reason
+
+
+def _verdict(spec: dict[str, Any], transcript: list[dict[str, Any]]) -> tuple[bool, str]:
     calls = tool_calls(transcript)
     names = {name for _, name, _ in calls}
     for tool in spec.get("must_not_run", []):

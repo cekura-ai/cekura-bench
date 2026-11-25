@@ -6,6 +6,7 @@ from dotenv import dotenv_values
 NAMES = {
     'assemblyai': ('ASSEMBLYAI_API_KEY', 'ASSEMBLY_API_KEY'),
     'reson8': ('RESON_API_KEY',),
+    'rime': ('RIME_API_KEY',),
     'zoom': ('ZOOM_API_KEY',),
     'gradium': ('GRADIUM_API_KEY',),
     'soniox': ('SONIOX_API_KEY',),
@@ -20,6 +21,7 @@ NAMES = {
     'speechmatics': ('SPEECHMATICS_API_KEY', 'Speechmatics'),
     'cartesia': ('CARTESIA_API_KEY', 'Cartesia'),
     'murf': ('MURF_API_KEY',),
+    'mistral': ('MISTRAL_API_KEY', 'MISTRAL'),
 }
 
 

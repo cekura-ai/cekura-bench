@@ -9,7 +9,10 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from s2s_human_bench.entities import EntityFile
 
 OUTPUT_KINDS = ("benchmark", "insights", "reports", "languages", "skills", "examples")
 
@@ -44,8 +47,10 @@ class Model:
     runs: tuple[str, ...] | None = None  # explicit run folders; otherwise discovered from agent_id
     agent_id: int | None = None
     details: dict[str, Any] = field(default_factory=dict, hash=False, compare=False)  # card fields for models not on the public S2S page
-    # (agent id, scenario codes): those scenarios come from that agent's runs instead, run by run (a combined cascade)
-    swap: tuple[int, tuple[str, ...]] | None = None
+    price_site_id: str | None = None  # the S2S board row to take the price from, when its id differs from site_id
+    # (agent id, scenario codes) pairs: those scenarios come from that agent's runs instead, run by run
+    # (a combined cascade; or one agent per language)
+    swaps: tuple[tuple[int, tuple[str, ...]], ...] = ()
 
 
 @dataclass
@@ -56,6 +61,8 @@ class Config:
     skills: list[Skill] = field(default_factory=list)  # family order
     models: list[Model] = field(default_factory=list)
     tasks: dict[str, dict[str, Any]] | None = None  # per-scenario main tasks (private --tasks file); None = expected-outcome share
+    entities: EntityFile | None = None  # private --entities file: one skill scored from the call itself (entities.py)
+    agent_logs: Path | None = None  # private --agent-logs folder: execution logs for runs recorded before agent_text
 
     def __getitem__(self, key: str) -> Any:
         return self.raw[key]
@@ -71,6 +78,18 @@ class Config:
 
     def skill(self, skill_id: str) -> Skill:
         return next(s for s in self.skills if s.id == skill_id)
+
+
+def _swaps(m: dict[str, Any]) -> tuple[tuple[int, tuple[str, ...]], ...]:
+    """A model's ``scenarioSwap``: one ``{agentId, scenarios}``, or a list of them when the swapped
+    scenarios ran on more than one agent. A scenario can come from one agent only."""
+    raw = m.get("scenarioSwap")
+    items = [] if raw is None else raw if isinstance(raw, list) else [raw]
+    swaps = tuple((s["agentId"], tuple(s["scenarios"])) for s in items)
+    codes = [c for _, cs in swaps for c in cs]
+    if len(set(codes)) != len(codes):
+        raise ConfigError(f"model {m['key']}: a scenario is swapped in from more than one agent")
+    return swaps
 
 
 def load_config(path: Path) -> Config:
@@ -107,7 +126,8 @@ def load_config(path: Path) -> Config:
                 runs=tuple(m["runs"]) if "runs" in m else None,
                 agent_id=m.get("agentId"),
                 details=m.get("details", {}),
-                swap=(m["scenarioSwap"]["agentId"], tuple(m["scenarioSwap"]["scenarios"])) if "scenarioSwap" in m else None,
+                price_site_id=m.get("priceSiteId"),
+                swaps=_swaps(m),
             )
         )
     ids = [s.id for s in cfg.skills]

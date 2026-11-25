@@ -6,6 +6,8 @@ conversations websocket, matching the published "Phonic v1" row
 ``phonic_v1``, voice ``sabrina``, 16 kHz PCM both ways, ``intelligence_level``
 ``high`` and Phonic's documented turn defaults (800 ms of silence ends a turn,
 one word interrupts), all sent explicitly rather than left to the server.
+Phonic-1.1 runs on the same adapter with ``--config model=phonic-1.1``: same
+voice and settings, only the model differs.
 
 Protocol: https://docs.phonic.co/api-reference/conversations/conversations
 

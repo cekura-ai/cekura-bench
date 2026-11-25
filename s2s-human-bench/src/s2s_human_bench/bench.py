@@ -5,11 +5,11 @@ from __future__ import annotations
 import statistics
 from collections import Counter
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from pathlib import Path
 
 from s2s_human_bench import rating
-from s2s_human_bench.calls import Call, load_run, model_runs
+from s2s_human_bench.calls import Call, load_run, model_runs, swap_runs
 from s2s_human_bench.config import Config, Model
 
 Run = dict[str, Call]
@@ -32,9 +32,8 @@ def load_bench(cfg: Config, root: Path, exclude_unhealthy: bool = False) -> list
         runs = model_runs(cfg, model, root)
         if len(runs) >= cfg["inputs"]["minRuns"]:
             loaded = [load_run(cfg, r, exclude_unhealthy) for r in runs]
-            if model.swap:
-                agent, codes = model.swap
-                other = model_runs(cfg, replace(model, agent_id=agent, runs=None, swap=None), root)
+            for agent, codes in model.swaps:
+                other = swap_runs(cfg, agent, codes, root)
                 # Run i takes the swapped scenarios from the other agent's run i; runs without a partner are dropped.
                 loaded = [
                     {**{k: c for k, c in mine.items() if k not in codes}, **{k: c for k, c in load_run(cfg, theirs, exclude_unhealthy).items() if k in codes}}

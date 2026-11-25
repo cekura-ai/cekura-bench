@@ -5,7 +5,9 @@ from argparse import Namespace
 
 import pytest
 
-from conftest import BAD, write_run
+from conftest import BAD, config_dict, write_run
+from s2s_human_bench.config import load_config
+from s2s_human_bench.entities import EntityFileError
 from s2s_human_bench.site_export import run_site_export
 
 PUBLIC_S2S = {
@@ -27,7 +29,7 @@ def make_inputs(tmp_path):
     return runs
 
 
-def export(tmp_path, cfg, out, reviewed=None, clips=None, tasks=None):
+def export(tmp_path, cfg, out, reviewed=None, clips=None, tasks=None, entities=None):
     args = Namespace(
         config=tmp_path / "config.json",
         runs=tmp_path / "runs",
@@ -42,6 +44,8 @@ def export(tmp_path, cfg, out, reviewed=None, clips=None, tasks=None):
         reviewed_examples=reviewed,
         reviewed_clips=clips,
         tasks=tasks,
+        entities=entities,
+        agent_logs=None,
     )
     assert run_site_export(args) == 0
     return {p.name: json.loads(p.read_text()) for p in out.iterdir()}
@@ -81,6 +85,15 @@ def test_site_export(cfg, tmp_path):
     ex = docs["examples.json"]
     assert ex["examples"] == {}  # nothing is published until a person has reviewed it
 
+
+def test_a_model_can_take_its_price_from_a_differently_named_board_row(tmp_path):
+    raw = config_dict()
+    raw["models"][1]["priceSiteId"] = "alpha-site"
+    (tmp_path / "config.json").write_text(json.dumps(raw))
+    make_inputs(tmp_path)
+    docs = export(tmp_path, load_config(tmp_path / "config.json"), tmp_path / "out")
+    beta = next(r for r in docs["benchmark.json"]["results"] if r["model"] == "beta-site" and r["suite"] == "all")
+    assert beta["costPublished"] and beta["costPerMinuteUsd"] == 0.1 and beta["costNote"] == "list price"
 
 def test_reviewed_examples(cfg, tmp_path):
     make_inputs(tmp_path)
@@ -158,3 +171,10 @@ def test_export_warns_when_calls_lack_the_task_metric(cfg, tmp_path, capsys):
         path.write_text(json.dumps(doc))
     export(tmp_path, cfg, tmp_path / "all")
     assert "warning" not in capsys.readouterr().err
+
+
+def test_entity_file_must_name_a_config_skill(tmp_path, cfg):
+    make_inputs(tmp_path)
+    (tmp_path / "entities.json").write_text(json.dumps({"skill": "9.9", "entities": {"B01": {"kind": "digits", "true": "7731", "keys": "last4"}}}))
+    with pytest.raises(EntityFileError):
+        export(tmp_path, cfg, tmp_path / "out", entities=tmp_path / "entities.json")

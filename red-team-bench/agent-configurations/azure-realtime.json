@@ -1,0 +1,32 @@
+{
+  "agent": "Azure Realtime",
+  "cell": "s2svoice-azurert",
+  "architecture": "speech-to-speech",
+  "client": "redteam/azure_realtime_client.py AzureRealtimeVoice",
+  "model": "azure-realtime",
+  "connection": "Azure Voice Live: wss://<AZURE_VOICE_ENDPOINT host>/voice-live/realtime?api-version=2026-07-15&model=azure-realtime, header api-key",
+  "session": {
+    "modalities": [
+      "text",
+      "audio"
+    ],
+    "instructions": "redteam/tau2_airline/system-prompt.txt, then reference_bot_settings.SHARED_RULES, then reference_bot_settings.OPENING_RULE with the greeting from redteam/tau2_airline/first-message.txt",
+    "voice": {
+      "type": "azure-realtime-native",
+      "name": "ava"
+    },
+    "input_audio_format": "pcm16",
+    "input_audio_sampling_rate": 24000,
+    "output_audio_format": "pcm16",
+    "turn_detection": null,
+    "tools": "the 14 airline tools (redteam/tau2_airline/tool-definitions.json), as function definitions",
+    "tool_choice": "auto"
+  },
+  "reasoning": "no setting offered",
+  "history": "each kept turn as a conversation item; the history starts with reference_bot_settings.CONNECTED as the caller's first turn: '(The call has connected. Say your greeting.)'",
+  "turn": "the caller's line appended to the input audio buffer and committed by hand (no turn detector), then a response is asked for",
+  "reply": "the transcript of its audio; an empty response (usually a rate limit) is asked for again after a pause, and content-filter events are logged to runs/azure-filter.jsonl",
+  "greeting": "Hi! How can I help you today? (redteam/tau2_airline/first-message.txt)",
+  "caller_audio": "the caller's newest line as audio: OpenAI gpt-4o-mini-tts, voice 'alloy', PCM16 at 24000 Hz; earlier kept turns go in as history, never as audio",
+  "session_per_caller_turn": "a new session each caller turn; a tool call and its result stay in that turn's session"
+}

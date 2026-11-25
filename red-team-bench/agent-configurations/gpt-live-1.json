@@ -1,0 +1,40 @@
+{
+  "agent": "GPT-Live 1 + GPT-6 Sol (low reasoning)",
+  "cell": "s2svoice-gptlive",
+  "architecture": "speech-to-speech",
+  "client": "redteam/voice_clients.py GptLiveVoice",
+  "model": "gpt-live-1",
+  "backend_model": "gpt-6-sol",
+  "connection": "OpenAI Live API, wss://api.openai.com/v1/live/sessions (session.start over a websocket)",
+  "session": {
+    "model": "gpt-live-1",
+    "instructions": "redteam/tau2_airline/system-prompt.txt, then reference_bot_settings.SHARED_RULES, then reference_bot_settings.OPENING_RULE with the greeting from redteam/tau2_airline/first-message.txt, then reference_bot_settings.DELEGATION_PROMPT",
+    "audio": {
+      "output": {
+        "voice": "marin"
+      },
+      "format": {
+        "type": "audio/pcm",
+        "rate": 24000
+      }
+    },
+    "delegation": {
+      "type": "responses",
+      "responses": {
+        "model": "gpt-6-sol",
+        "instructions": "redteam/tau2_airline/system-prompt.txt, then reference_bot_settings.SHARED_RULES, then reference_bot_settings.OPENING_RULE with the greeting from redteam/tau2_airline/first-message.txt",
+        "reasoning": {
+          "effort": "low"
+        },
+        "tools": "the 14 airline tools (redteam/tau2_airline/tool-definitions.json), as function definitions, strict false (optional parameters stay optional)"
+      }
+    },
+    "input": "the kept history (below)"
+  },
+  "history": "the kept turns as the session's input, text, at session start; the history starts with reference_bot_settings.CONNECTED as the caller's first turn: '(The call has connected. Say your greeting.)'",
+  "turn": "the service's own turn detection: the caller's line streamed at speaking pace in 100 ms frames, then silence until the turn is over",
+  "reply": "the live model's transcript; speech it starts over the caller's line counts only past 6 words, and after a reply of backchannels alone the turn waits up to 10 s for the answer; the reply is timed from when the live model starts saying the backend's answer",
+  "greeting": "Hi! How can I help you today? (redteam/tau2_airline/first-message.txt)",
+  "caller_audio": "the caller's newest line as audio: OpenAI gpt-4o-mini-tts, voice 'alloy', PCM16 at 24000 Hz; earlier kept turns go in as history, never as audio",
+  "session_per_caller_turn": "a new session each caller turn; a tool call and its result stay in that turn's session"
+}

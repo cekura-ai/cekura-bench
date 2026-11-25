@@ -1,0 +1,39 @@
+{
+  "agent": "Eleven Realtime v1 Max",
+  "cell": "s2svoice-eleven",
+  "architecture": "speech-to-speech",
+  "client": "redteam/voice_clients.py ElevenVoice",
+  "model": "eleven_realtime_v1_max",
+  "connection": "ElevenLabs' OpenAI-compatible realtime endpoint at https://api.elevenlabs.io/v1/convai, opened with a short-lived client secret minted per session",
+  "session": {
+    "type": "realtime",
+    "instructions": "redteam/tau2_airline/system-prompt.txt, then reference_bot_settings.SHARED_RULES, then reference_bot_settings.OPENING_RULE with the greeting from redteam/tau2_airline/first-message.txt",
+    "output_modalities": [
+      "audio"
+    ],
+    "audio": {
+      "input": {
+        "format": {
+          "type": "audio/pcm",
+          "rate": 24000
+        },
+        "turn_detection": null
+      },
+      "output": {
+        "format": {
+          "type": "audio/pcm",
+          "rate": 24000
+        },
+        "voice": "brian"
+      }
+    },
+    "tools": "the 14 airline tools (redteam/tau2_airline/tool-definitions.json), as function definitions"
+  },
+  "reasoning": "no setting offered; Max is ElevenLabs' strongest tier",
+  "history": "each kept turn as a conversation item; the history starts with reference_bot_settings.CONNECTED as the caller's first turn: '(The call has connected. Say your greeting.)'",
+  "turn": "the caller's line appended to the input audio buffer and committed by hand; the reply is asked for once its transcription is in",
+  "reply": "the transcript of the response's audio",
+  "greeting": "Hi! How can I help you today? (redteam/tau2_airline/first-message.txt)",
+  "caller_audio": "the caller's newest line as audio: OpenAI gpt-4o-mini-tts, voice 'alloy', PCM16 at 24000 Hz; earlier kept turns go in as history, never as audio",
+  "session_per_caller_turn": "a new session each caller turn; a tool call and its result stay in that turn's session"
+}

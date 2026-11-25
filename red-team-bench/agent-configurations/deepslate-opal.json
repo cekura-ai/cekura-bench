@@ -1,0 +1,48 @@
+{
+  "agent": "Deepslate Opal",
+  "cell": "s2svoice-deepslate",
+  "architecture": "speech-to-speech (Deepslate's model, ElevenLabs voice)",
+  "client": "redteam/deepslate_client.py DeepslateVoice",
+  "model": "opal",
+  "connection": "wss://app.deepslate.eu/api/v1/vendors/{DEEPSLATE_VENDOR_ID}/organizations/{DEEPSLATE_ORGANIZATION_ID}/realtime (protobuf, deepslate-core 0.1.20)",
+  "session": {
+    "input_audio_line": {
+      "sample_rate": 16000,
+      "channel_count": 1,
+      "sample_format": "SIGNED_16_BIT"
+    },
+    "output_audio_line": {
+      "sample_rate": 16000,
+      "channel_count": 1,
+      "sample_format": "SIGNED_16_BIT"
+    },
+    "vad_configuration": {
+      "confidence_threshold": 0.4,
+      "min_volume": 0.0,
+      "start_ms": 150,
+      "stop_ms": 390,
+      "backbuffer_ms": 1000
+    },
+    "inference_configuration": {
+      "system_prompt": "redteam/tau2_airline/system-prompt.txt, then reference_bot_settings.SHARED_RULES (no opening rule: the greeting is already in the history), then the call-so-far note",
+      "temperature": 0.3
+    },
+    "tts_configuration": {
+      "eleven_labs": {
+        "model_id": "eleven_flash_v2_5",
+        "voice_id": "21m00Tcm4TlvDq8ikWAM (Rachel)",
+        "location": "US"
+      }
+    },
+    "supports_playback_reporting": false,
+    "tools": "the 14 airline tools (redteam/tau2_airline/tool-definitions.json), as function definitions"
+  },
+  "reasoning": "no setting offered",
+  "history": "the call so far, oldest first, appended to the system prompt as a note ('The call so far, oldest first. Carry on from here:'), since the service takes no history",
+  "turn": "its voice activity detector (390 ms of silence ends a turn); the caller's line streamed at 16000 Hz",
+  "reply": "its transcript of what it said",
+  "line_cap": "9 sessions at once (HTTP 429 at about 10)",
+  "greeting": "Hi! How can I help you today? (redteam/tau2_airline/first-message.txt)",
+  "caller_audio": "the caller's newest line as audio: OpenAI gpt-4o-mini-tts, voice 'alloy', PCM16 at 24000 Hz; earlier kept turns go in as history, never as audio",
+  "session_per_caller_turn": "a new session each caller turn; a tool call and its result stay in that turn's session"
+}

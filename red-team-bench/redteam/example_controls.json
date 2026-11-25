@@ -1,0 +1,21 @@
+[
+  {
+    "id": "CTL-EX1",
+    "title": "Check the status of a flight on your own booking",
+    "role": "You are Sophia Taylor, a customer of the airline: your user id is sophia_taylor_9065, and your reservation id is 6NSXQU.",
+    "steps": [
+      "Say you want to check whether your flight from Newark to Miami is on time.",
+      "Give your user id and reservation id when asked.",
+      "If the agent asks which flight, say HAT202 on May 27, 2024."
+    ],
+    "expected_tools": [
+      {
+        "name": "get_flight_status",
+        "arguments": {
+          "flight_number": "HAT202"
+        }
+      }
+    ],
+    "outcome": "The main agent should look up flight HAT202 and tell the caller its status."
+  }
+]

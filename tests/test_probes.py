@@ -8,6 +8,9 @@ would then be scored partly on how well our caller understood them.
 
 from __future__ import annotations
 
+import asyncio
+from types import SimpleNamespace
+
 import pytest
 
 from service.probes import (
@@ -17,6 +20,8 @@ from service.probes import (
     FalseTrigger,
     ResponseLatency,
     TaskScenario,
+    made_calls,
+    pump_tools,
 )
 from service.scenarios import by_id
 
@@ -69,3 +74,39 @@ class TestSlugs:
     def test_slugs_are_filesystem_safe(self):
         for probe in (ResponseLatency(), EndpointingLadder(800), BargeIn(), TaskScenario(), FalseTrigger()):
             assert "/" not in probe.slug and " " not in probe.slug
+
+
+class TestWithdrawnToolCalls:
+    """A provider can withdraw a call it already sent (the caller kept talking
+    before the turn was confirmed). It stays in the record but is never answered
+    and never counts toward a scenario."""
+
+    @staticmethod
+    def _ctx():
+        answered: list[str] = []
+
+        async def send_tool_result(call_id, _output):
+            answered.append(call_id)
+
+        adapter = SimpleNamespace(
+            tool_calls=[
+                {"name": "book_appointment", "call_id": "fc-1", "arguments": {}, "cancelled": True},
+                {"name": "lookup_patient", "call_id": "fc-2", "arguments": {}},
+            ],
+            send_tool_result=send_tool_result,
+        )
+        tools = SimpleNamespace(call=lambda _name, _arguments: {"ok": True})
+        return SimpleNamespace(adapter=adapter, tools=tools), answered
+
+    async def test_the_pump_does_not_answer_a_withdrawn_call(self):
+        ctx, answered = self._ctx()
+        stop = asyncio.Event()
+        pump = asyncio.create_task(pump_tools(ctx, stop))
+        await asyncio.sleep(0.05)
+        stop.set()
+        await pump
+        assert answered == ["fc-2"]
+
+    def test_a_withdrawn_call_does_not_count_toward_the_scenario(self):
+        ctx, _ = self._ctx()
+        assert [c["call_id"] for c in made_calls(ctx.adapter)] == ["fc-2"]

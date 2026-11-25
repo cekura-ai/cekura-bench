@@ -15,6 +15,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Type
 
+from tts_bench.adapters.assemblyai import AssemblyAITTSAdapter
+from tts_bench.adapters.assemblyai_ws import AssemblyAIStreamingAdapter
 from tts_bench.adapters.azure_speech import AzureSpeechAdapter
 from tts_bench.adapters.base import TTSAdapter
 from tts_bench.adapters.cartesia import CartesiaAdapter
@@ -30,6 +32,8 @@ from tts_bench.adapters.gemini_tts import GeminiTTSAdapter
 from tts_bench.adapters.gradium import GradiumAdapter
 from tts_bench.adapters.hume import HumeAdapter
 from tts_bench.adapters.inworld import InworldAdapter
+from tts_bench.adapters.mistral_realtime import MistralRealtimeAdapter
+from tts_bench.adapters.murf import MurfAdapter
 from tts_bench.adapters.openai_tts import OpenAITTSAdapter
 from tts_bench.adapters.rime import RimeAdapter
 from tts_bench.adapters.smallest import SmallestAdapter
@@ -45,6 +49,8 @@ class Model:
     model: str
     voice: str
     rate: int = DEFAULT_RATE    # a model that emits only one PCM rate names it here
+    # Adapter options this row is run with (key, value); recorded in every cell.
+    options: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -63,6 +69,10 @@ class ProviderEntry:
         """The lineup's sample rate for ``model``; the harness default for a model outside the lineup."""
         return next((m.rate for m in self.models if m.model == model), DEFAULT_RATE)
 
+    def options_for(self, model: str) -> tuple[tuple[str, str], ...]:
+        """The lineup's adapter options for ``model``; none for a model outside the lineup."""
+        return next((m.options for m in self.models if m.model == model), ())
+
     def voice_for(self, model: str) -> str:
         """The lineup's voice for ``model``; the default model's voice for a model outside the lineup."""
         return next((m.voice for m in self.models if m.model == model), self.models[0].voice)
@@ -72,11 +82,16 @@ class ProviderEntry:
 # model string, so there the voice is the model.
 SKYLAR = "db6b0ed5-d5d3-463d-ae85-518a07d3c2b4"       # Cartesia
 RACHEL = "21m00Tcm4TlvDq8ikWAM"                       # ElevenLabs
+# ElevenLabs' text normalizer (numbers, abbreviations) for v4, on at ElevenLabs' recommendation.
+V4_NORMALIZATION = ("apply_text_normalization", "on")
 EVERLY = "vjFyp2BcCyTlUmYb"     # Gradium, its first choice of its recommended voices
 ASTRA = "astra"                                      # Rime, female US English on Coda and Mist v3
 SARAH = "933563129e564b19a115bedd57b7406a"              # Fish Official, female US English
 DELIA = "c70cfb98867a4bfb9ae20d2401257b92"              # Fish Audio, female US English, from its Drama 3 voice cast
 AVA = "5bb7de05-c8fe-426a-8fcc-ba4fc4ce9f9c"           # Hume "Ava Song", female US English, from its Voice Library
+AUDREY = "49c443a4-8a1d-5f7e-b70b-98bdbd9823c3"        # AssemblyAI "Audrey", female US English, the voice AssemblyAI chose
+JUDITH = "en-US-judith"                              # Murf Falcon 2.1, female US English, first on Murf's Falcon voice recommendations
+MARGARET = "voice_447"                                  # Mistral "Margaret", female US English, the realtime session's default voice
 
 PROVIDERS: dict[str, ProviderEntry] = {
     "fake": ProviderEntry("fake", FakeTTSAdapter, "FAKE_KEY_UNUSED", (Model("scripted", "tone"),)),
@@ -97,9 +112,10 @@ PROVIDERS: dict[str, ProviderEntry] = {
     ),
     "elevenlabs-dialogue-multi": ProviderEntry(
         "elevenlabs-dialogue-multi", ElevenLabsDialogueMultiAdapter, "ELEVENLABS_API_KEY",
-        (Model("eleven_v4_turbo", RACHEL), Model("eleven_v4", RACHEL)),
+        (Model("eleven_v4_turbo", RACHEL, options=(V4_NORMALIZATION,)), Model("eleven_v4", RACHEL, options=(V4_NORMALIZATION,))),
         notes="multi-context text-to-dialogue websocket (v4 is served only there); text in pieces per context; "
-              "close_context flushes, so the cancel is measured, not assumed",
+              "close_context flushes, so the cancel is measured, not assumed; text normalization on, as ElevenLabs "
+              "recommends for v4",
     ),
     "deepgram": ProviderEntry(
         "deepgram", DeepgramSpeakAdapter, "DEEPGRAM_API_KEY",
@@ -143,6 +159,14 @@ PROVIDERS: dict[str, ProviderEntry] = {
               "done ends the batch; sequential contexts; no cancel (clear only drops unsubmitted text); "
               "Coda replaces the retired Arcana family",
     ),
+    "murf": ProviderEntry(
+        "murf", MurfAdapter, "MURF_API_KEY",
+        (Model("falcon-2.1", JUDITH),),
+        notes="Falcon 2.1 websocket, named contexts and 24 kHz PCM; voice_config, with the style name the voice's "
+              "catalog entry lists (option style), is sent before t0; "
+              "clear drops queued audio but cannot retract audio already received by the player; "
+              "the documented predictive_chunking default is strict (record --option to change it)",
+    ),
     "fish-audio": ProviderEntry(
         "fish-audio", FishAudioAdapter, "FISH_AUDIO_API_KEY",
         (Model("s2.1-pro", SARAH), Model("drama-3-preview", DELIA)),
@@ -182,11 +206,32 @@ PROVIDERS: dict[str, ProviderEntry] = {
         notes="HTTP SSML, raw PCM streamed back; the model is the voice name's suffix; whole text per request; "
               "region is the host (option region, default eastus)",
     ),
+    "assemblyai": ProviderEntry(
+        "assemblyai", AssemblyAITTSAdapter, "ASSEMBLY_API_KEY",
+        (Model("assemblyai-tts-1", AUDREY),),
+        notes="OpenAI-compatible HTTP streaming, raw 24 kHz PCM; voice by voice_id, OpenAI's voice left out; "
+              "whole text per request; US data zone",
+    ),
+    "assemblyai-streaming": ProviderEntry(
+        "assemblyai-streaming", AssemblyAIStreamingAdapter, "ASSEMBLY_API_KEY",
+        (Model("assemblyai-tts-1", AUDREY),),
+        notes="Streaming TTS websocket, session configured in the URL, Begin before t0; Generate appends text, "
+              "Flush ends the utterance (FlushDone), Cancel is the barge-in (Cancelled); one utterance at a time per "
+              "socket; word timings off; US data zone; new sessions per minute are limited per account",
+    ),
+    "mistral-realtime": ProviderEntry(
+        "mistral-realtime", MistralRealtimeAdapter, "MISTRAL_API_KEY",
+        (Model("voxtral-mini-tts-3-0", MARGARET),),
+        notes="realtime TTS websocket; session.update before t0 and its echo checked; input_text.append appends text, "
+              "input_text.flush ends a generation (speech.audio.done); one generation at a time per socket; "
+              "float32 PCM converted to int16; streaming_mode=responsive (option); no cancel; "
+              "US inference host api.us.mistral.ai (option region, default us; global for api.mistral.ai)",
+    ),
 }
 
 # Protocols not yet spoken. Listed so the gap is a fact, not an oversight.
 PENDING = ("qwen-audio", "speechify", "minimax",
-           "murf", "hume", "lmnt", "google-cloud-tts", "polly")
+           "hume", "lmnt", "google-cloud-tts", "polly")
 
 
 def lineup() -> list[tuple[str, Model]]:

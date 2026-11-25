@@ -56,7 +56,7 @@ export async function main(argv=process.argv.slice(2)) {
       const audio = await readFile(args.audio);
       if (audio.length > 100000) throw new Error('Smoke WAV exceeds size cap');
       sb = await Sandbox.get({...account,name,resume:false});
-      await sb.update({networkPolicy:{allow:['api.reson8.dev']}});
+      await sb.update({networkPolicy:{allow:[new URL(JSON.parse(await readFile('config/models/reson8-realtime.json','utf8')).endpoint).hostname]}});
       await sb.resume();
       await sb.writeFiles([{path:REMOTE+'/reson8-smoke.wav',content:audio}]);
       const receipt = await dispatchOnce(sb,state,save,'tiny_smoke',{

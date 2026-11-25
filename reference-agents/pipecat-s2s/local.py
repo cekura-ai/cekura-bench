@@ -220,6 +220,20 @@ def receive(args: argparse.Namespace) -> int:
 
 # ── inspect: read a payload the way the score reads it ───────────────────────
 
+def _priced_by_the_minute(row: str | None, usage: dict) -> str:
+    """``call_seconds`` when the price table bills this row by the minute of call, else empty.
+
+    A row billed by the minute needs no split of its tokens to be priced
+    beside the others; its tokens are not what it is billed for.
+    """
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+    from pricing.cost import price_call
+
+    price = price_call(row or "", usage)
+    return "call_seconds" if price.usd is not None and price.basis == "per_minute" else ""
+
+
 def checks_for(payload: dict) -> tuple[list[tuple[str, bool, str]], dict, list, dict]:
     """Every check a run has to pass, with what each one saw."""
     transcript = payload.get("transcript") or []
@@ -245,7 +259,7 @@ def checks_for(payload: dict) -> tuple[list[tuple[str, bool, str]], dict, list, 
     # the tokens split out by audio, or the seconds a per-second model billed.
     priceable = ", ".join(
         key for key in ("input_audio_tokens", "output_audio_tokens", "live_audio_seconds") if key in usage
-    )
+    ) or _priced_by_the_minute(meta.get("s2s_provider"), usage)
     debug = sum(1 for line in logs if line.get("level") == "DEBUG")
     reply = (meta.get("timing") or {}).get("reply") or {}
 

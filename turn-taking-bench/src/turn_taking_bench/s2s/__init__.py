@@ -45,7 +45,8 @@ from typing import Any
 # interface, registered in model.EXTRA_PROVIDERS). Model variants of a provider
 # (e.g. gpt-realtime-2.1-mini) are run with --config model=<id>.
 S2S_PROVIDERS: tuple[str, ...] = (
-    "openai-realtime", "gemini-live", "grok-realtime", "higgs-realtime", "smallest-hydra", "rime-prism", "fake",
+    "openai-realtime", "gemini-live", "grok-realtime", "higgs-realtime", "smallest-hydra", "rime-prism",
+    "deepgram-voice-agent", "fake",
     "azure-realtime", "gpt-live", "nova-sonic", "phonic", "deepslate", "gemini-live-thinking",
 )
 
@@ -88,6 +89,7 @@ PINNED_MODELS: dict[str, str] = {
     "higgs-realtime": "higgs-realtime",  # Boson AI Higgs Realtime
     "smallest-hydra": "hydra-v1.1",  # Smallest AI Hydra
     "rime-prism": "prism",  # Rime Prism (one model per endpoint; the release is session.version)
+    "deepgram-voice-agent": "open_ai/gpt-4.1",  # Deepgram Voice Agent: Flux, GPT-4.1, Aura-2
 }
 
 

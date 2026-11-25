@@ -128,3 +128,17 @@ def test_run_benchmark_scores_fake_provider_with_turnbench_scorer(tmp_path):
     lines = [json.loads(line) for line in (out / "events.jsonl").read_text().splitlines()]
     assert {line["speaker"]: ("skipped" in (line.get("diagnostics") or {})) for line in lines if line["conversation_id"] == "1"} == {1: False, 2: True}
     assert (out / "artifacts" / "1" / "speaker_1" / "agent.wav").is_file()
+
+
+def test_a_provider_that_reads_a_second_key_finds_it_in_the_environment(tmp_path, monkeypatch):
+    """Deepgram's row runs its text model on our own OpenAI account; the adapter reads that key itself."""
+    import os
+
+    from turn_taking_bench.s2s.model import api_key
+
+    env = tmp_path / ".env"
+    env.write_text("DEEPGRAM_API_KEY=dg-test\nOPENAI_API_KEY=sk-test\n")
+    monkeypatch.delenv("DEEPGRAM_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    assert api_key({**default_config("deepgram-voice-agent"), "env_file": str(env)}) == "dg-test"
+    assert os.environ["OPENAI_API_KEY"] == "sk-test"

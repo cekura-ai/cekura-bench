@@ -1,12 +1,12 @@
 """Provider registry used by capture, replay and readiness checks."""
-from . import deepgram, provider_protocol, chirp, trial_providers, gradium, reson8, zoom, assemblyai, assemblyai_min_latency, speechmatics_agent, rime
+from . import deepgram, provider_protocol, chirp, trial_providers, gradium, reson8, zoom, assemblyai, assemblyai_min_latency, speechmatics_agent, murf, mistral, rime
 from .credentials import credential
 from .streaming import transmitted_silence_frames
 from . import gemini_live
 
 MODELS = {
     'assemblyai': {'universal-3-5-pro', 'universal-3-6-pro'},
-    'reson8': {'realtime'},
+    'reson8': {'realtime', 'rumble-2'},
     'rime': {'default'},
     'zoom': {'zoom-asr-en-v1', 'zoom-scribe-en', 'zoom-scribe-en-pro', 'zoom-scribe-en-pro-v2.1'},
     'gradium': {'default'},
@@ -14,14 +14,16 @@ MODELS = {
     'deepgram': {'nova-2', 'nova-3', 'flux-general-en', 'flux-general-multi'},
     'openai': {'gpt-realtime-whisper', 'gpt-4o-transcribe', 'gpt-4o-mini-transcribe'},
     'gemini': {'gemini-3.5-transcribe-live', *gemini_live.MODELS},
-    'elevenlabs': {'scribe_v2_realtime'},
+    'elevenlabs': {'scribe_v2_realtime', 'scribe_v3_live'},
     'speechmatics': {'standard', 'enhanced', 'linden-1'},
     'cartesia': {'ink-2'},
+    'murf': {'finch_global_1.0'},
+    'mistral': {'voxtral-mini-transcribe-realtime-3-0'},
     'google': {'chirp_2', 'chirp_3'},
 }
 ENDPOINTS = {
     'assemblyai': {'wss://streaming.assemblyai.com/v3/ws'},
-    'reson8': {'wss://api.reson8.dev/v1/speech-to-text/realtime'},
+    'reson8': {'wss://api.reson8.dev/v1/speech-to-text/realtime', reson8.GLOBAL_ENDPOINT},
     'rime': {'wss://stt.api.rime.ai/ws'},
     'zoom': {zoom.ENDPOINT},
     'gradium': {'wss://api.gradium.ai/api/speech/asr'},
@@ -32,6 +34,8 @@ ENDPOINTS = {
     'elevenlabs': {'wss://api.elevenlabs.io/v1/speech-to-text/realtime'},
     'speechmatics': {'wss://us.rt.speechmatics.com/v2', 'wss://global.rt.speechmatics.com/v2/agent'},
     'cartesia': {'wss://api.cartesia.ai/stt/websocket'},
+    'murf': {'wss://us-east.api.murf.ai/v1/transcription/stream-input'},
+    'mistral': set(mistral.ENDPOINTS.values()),
     'google': {'https://us-speech.googleapis.com', 'https://us-central1-speech.googleapis.com'},
 }
 
@@ -64,6 +68,10 @@ def validate(config):
         rime.validate(config)
     if p == 'zoom':
         zoom.validate(config)
+    if p == 'murf':
+        murf.validate(config)
+    if p == 'mistral':
+        mistral.validate(config)
     if p in trial_providers.MODELS:
         trial_providers.validate(config)
     if is_nova(config):
@@ -95,6 +103,8 @@ async def transcribe(pcm, speech_frames, config, key, log):
                else reson8 if config['provider'] == 'reson8'
                else rime if config['provider'] == 'rime'
                else zoom if config['provider'] == 'zoom'
+               else murf if config['provider'] == 'murf'
+               else mistral if config['provider'] == 'mistral'
                else trial_providers if config['provider'] in trial_providers.MODELS else provider_protocol)
     await adapter.transcribe(pcm, speech_frames, config, key, log)
 
@@ -116,6 +126,10 @@ def reduce_events(events, config):
         return rime.replay(events, config)[1]
     if config['provider'] == 'zoom':
         return zoom.replay(events, config)[1]
+    if config['provider'] == 'murf':
+        return murf.replay(events, config)[1]
+    if config['provider'] == 'mistral':
+        return mistral.replay(events, config)[1]
     if config['provider'] == 'gradium':
         return gradium.replay(events, config)[1]
     if config['provider'] in trial_providers.MODELS:
@@ -141,6 +155,10 @@ def transcript_at(events, cutoff, config=None):
         return rime.replay(events, config, cutoff)[0]
     if config['provider'] == 'zoom':
         return zoom.replay(events, config, cutoff)[0]
+    if config['provider'] == 'murf':
+        return murf.replay(events, config, cutoff)[0]
+    if config['provider'] == 'mistral':
+        return mistral.replay(events, config, cutoff)[0]
     if config['provider'] == 'gradium':
         return gradium.replay(events, config, cutoff)[0]
     if config['provider'] in trial_providers.MODELS:

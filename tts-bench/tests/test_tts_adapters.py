@@ -113,6 +113,16 @@ class TestElevenLabsDialogueMulti:
         assert not ElevenLabsDialogueMultiAdapter.ends_on_quiet
         assert ElevenLabsDialogueMultiAdapter.unsupported_reason(TTSConfig("eleven_v4", "v"), ("streamed_input", "cancel", "continuation")) is None
 
+    def test_the_lineup_runs_v4_with_text_normalization_on(self):
+        entry = PROVIDERS["elevenlabs-dialogue-multi"]
+        for model in ("eleven_v4_turbo", "eleven_v4"):
+            options = entry.options_for(model)
+            assert dict(options) == {"apply_text_normalization": "on"}
+            config = TTSConfig(model=model, voice="v", options=options)
+            multi = ElevenLabsDialogueMultiAdapter(config, "unused", EventLog(Clock()), Clock())
+            assert multi.url.endswith("&apply_text_normalization=on")
+            assert config.label.endswith(",apply_text_normalization=on")
+
 
 class TestLineup:
     def test_each_model_runs_with_its_own_voice_and_names_its_run(self, tmp_path):
@@ -416,6 +426,122 @@ class TestRime:
         assert "secret-key" not in raw and "secret-key" not in str(log.events) and "<640 b64 chars>" in raw
 
 
+class TestMurf:
+    async def test_context_configuration_precedes_incremental_text_and_final_ends_the_turn(self):
+        import base64
+
+        from tts_bench.adapters.murf import MurfAdapter
+
+        murf, sent = adapter(MurfAdapter, "falcon-2.1", "en-US-judith")
+        synthesis = await murf.open_context("main")
+        assert synthesis.t0 is None and sent == [{
+            "voice_config": {"voiceId": "en-US-judith", "locale": "en-US", "style": "Conversational", "rate": 0, "pitch": 0},
+            "context_id": "main",
+        }]
+        await murf.send("main", "Hello ")
+        await murf.send("main", "there.")
+        await murf.finish("main")
+        assert sent[1:] == [
+            {"text": "Hello ", "context_id": "main", "end": False},
+            {"text": "there.", "context_id": "main", "end": False},
+            {"text": "", "context_id": "main", "end": True},
+        ]
+        murf._on_message({"context_id": "main", "audio": base64.b64encode(b"\x01\x00" * 2).decode(), "trace_id": "t1"})
+        murf._on_message({"context_id": "main", "timestamps": {"words": [{"word": "Hello", "start_s": 0, "end_s": 0.2}]}})
+        murf._on_message({"context_id": "main", "final": True, "trace_id": "t1", "concurrency": {"region": "us-east", "used": 1}})
+        assert bytes(synthesis.pcm) == b"\x01\x00" * 2 and synthesis.done.is_set()
+        assert synthesis.meta["trace_ids"] == ["t1", "t1"]
+        assert synthesis.meta["word_timestamps"][0]["word"] == "Hello"
+        assert synthesis.meta["concurrency"]["region"] == "us-east"
+
+    async def test_style_is_the_name_the_voice_lists_and_an_option_overrides_it(self):
+        from tts_bench.adapters.murf import MurfAdapter
+
+        murf, sent = adapter(MurfAdapter, "falcon-2.1", "en-US-natalie")
+        await murf.open_context("main")
+        assert sent[0]["voice_config"]["style"] == "Conversation"
+
+        clock = Clock()
+        murf = MurfAdapter(TTSConfig("falcon-2.1", "en-US-judith", options=(("style", "Narration"),)), "unused", EventLog(clock), clock)
+        overridden: list[dict] = []
+
+        async def capture(payload):
+            overridden.append(payload)
+
+        murf._send_json = capture
+        synthesis = await murf.open_context("main")
+        assert overridden[0]["voice_config"]["style"] == "Narration" and synthesis.meta["request"]["style"] == "Narration"
+
+    async def test_clear_is_the_cancel_and_final_acknowledges_it(self):
+        from tts_bench.adapters.murf import MurfAdapter
+
+        murf, sent = adapter(MurfAdapter, "falcon-2.1", "en-US-judith")
+        synthesis = await murf.open_context("main")
+        await murf.send("main", "A long answer.")
+        await murf.cancel("main")
+        assert sent[-1] == {"clear": True, "context_id": "main"}
+        murf._on_message({"context_id": "main", "final": True})
+        assert synthesis.t_cancel_ack is not None and synthesis.done.is_set()
+
+    async def test_protocol_capabilities_and_rejected_key_are_honest(self):
+        from tts_bench.adapters.murf import MurfAdapter
+        from tts_bench.probes import ProbeResult
+        from tts_bench.registry import PENDING
+        from tts_bench.runner import _refused
+
+        murf, _ = adapter(MurfAdapter, "falcon-2.1", "en-US-judith")
+        synthesis = await murf.open_context("main")
+        murf._on_closed("received 1008 (policy violation) Invalid api key used")
+        result = _refused(ProbeResult("one_shot", verdict="fail", syntheses=[synthesis]))
+        assert result.void and "Invalid api key" in result.void
+        assert murf.url.startswith("wss://global.api.murf.ai/v1/speech/stream-input?")
+        assert "api-key" not in murf.url and murf._headers() == {"api-key": "unused"}
+        assert MurfAdapter.native_rates == (24000,) and not MurfAdapter.native_mulaw_8k
+        assert MurfAdapter.unsupported_reason(TTSConfig("other", "en-US-judith")) == "murf WebSocket serves Falcon 2.1 only"
+        assert MurfAdapter.unsupported_reason(TTSConfig("falcon-2.1", "en-US-judith"), ("streamed_input", "cancel", "continuation")) is None
+        assert "murf" not in PENDING
+
+    async def test_reusable_socket_routes_contexts_and_keeps_the_key_out_of_logs(self, tmp_path):
+        import base64
+        import json
+
+        import websockets
+
+        from tts_bench.adapters.murf import MurfAdapter
+
+        seen: list[dict] = []
+        headers: dict = {}
+        pcm = b"\x01\x00" * 240
+
+        async def serve(ws):
+            headers.update(ws.request.headers)
+            async for raw in ws:
+                frame = json.loads(raw)
+                seen.append(frame)
+                if frame.get("end"):
+                    context_id = frame["context_id"]
+                    await ws.send(json.dumps({"context_id": context_id, "audio": base64.b64encode(pcm).decode()}))
+                    await ws.send(json.dumps({"context_id": context_id, "final": True}))
+
+        clock = Clock()
+        log = EventLog(clock, raw_path=tmp_path / "raw.jsonl")
+        murf = MurfAdapter(TTSConfig("falcon-2.1", "en-US-judith"), "secret-key", log, clock)
+        async with websockets.serve(serve, "127.0.0.1", 0) as server:
+            murf.base = f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}"
+            async with murf:
+                for context_id in ("first", "repeat"):
+                    synthesis = await murf.open_context(context_id)
+                    await murf.send(context_id, "Hello ")
+                    await murf.send(context_id, "there.")
+                    await murf.finish(context_id)
+                    done = await murf.wait(context_id, 5.0)
+                    assert bytes(done.pcm) == pcm and done.meta["ended_by"] == "provider"
+        assert [frame.get("context_id") for frame in seen if "voice_config" in frame] == ["first", "repeat"]
+        assert headers["api-key"] == "secret-key"
+        raw = (tmp_path / "raw.jsonl").read_text()
+        assert "secret-key" not in raw and "secret-key" not in str(log.events) and "<640 b64 chars>" in raw
+
+
 class TestFishAudio:
     async def test_start_is_before_t0_and_only_finish_ends_the_utterance(self):
         import msgpack
@@ -566,6 +692,55 @@ class TestDeepInfra:
         assert deepinfra._prewarm_url() == "https://api.deepinfra.com/models/Qwen/Qwen3-TTS"
 
 
+class TestAssemblyAI:
+    def test_the_voice_is_sent_as_voice_id_and_never_as_voice(self):
+        from tts_bench.adapters.assemblyai import AssemblyAITTSAdapter
+
+        aai, _ = adapter(AssemblyAITTSAdapter, "assemblyai-tts-1", "110c952f-38ba-54b6-b3b4-b49e96c30eaa")
+        assert f"{aai.base}{aai.speech_path}" == "https://tts.us.assemblyai.com/v1/openai/audio/speech"
+        assert aai._prewarm_url() == "https://tts.us.assemblyai.com/v1/openai/models"
+        assert aai._request_args("Text to synthesize.")["json"] == {
+            "model": "assemblyai-tts-1", "voice_id": "110c952f-38ba-54b6-b3b4-b49e96c30eaa",
+            "input": "Text to synthesize.", "response_format": "pcm"}
+        assert not (aai.supports_streamed_input or aai.supports_cancel or aai.supports_continuation)
+
+
+class TestAssemblyAIStreaming:
+    async def test_generate_flush_and_cancel_on_one_socket(self):
+        from tts_bench.adapters.assemblyai_ws import AssemblyAIStreamingAdapter
+
+        aai, sent = adapter(AssemblyAIStreamingAdapter, "assemblyai-tts-1", "110c952f-38ba-54b6-b3b4-b49e96c30eaa")
+        assert aai.url.startswith("wss://tts.us.assemblyai.com/v1/ws?model_id=assemblyai-tts-1&voice_id=110c952f")
+        assert "sample_rate=24000" in aai.url and "encoding=pcm_s16le" in aai.url and "word_boundaries=false" in aai.url
+        assert aai._headers() == {"Authorization": "unused"}
+        synthesis = await aai.open_context("main")
+        await aai.send("main", "Hello ")
+        await aai.send("main", "there.")
+        await aai.finish("main")
+        assert sent == [{"type": "Generate", "text": "Hello "}, {"type": "Generate", "text": "there."}, {"type": "Flush"}]
+        aai._on_message({"type": "Audio", "audio": "AAAA", "flush_id": 0})
+        aai._on_message({"type": "FlushDone", "flush_id": 0, "audio_duration_ms": 0})
+        assert synthesis.done.is_set() and synthesis.pcm == bytearray(3) and synthesis.t_cancel_ack is None
+
+        second = await aai.open_context("next")
+        await aai.send("next", "A long reply. ")
+        await aai.cancel("next")
+        assert sent[-1] == {"type": "Cancel"}
+        aai._on_message({"type": "Cancelled", "audio_duration_seconds": 0.4})
+        assert second.t_cancel_ack is not None and second.done.is_set()
+
+    async def test_a_refused_session_is_an_adapter_error_that_reads_as_a_refusal(self):
+        import asyncio
+
+        from tts_bench.adapters.assemblyai_ws import AssemblyAIStreamingAdapter
+        from tts_bench.adapters.base import is_refusal
+
+        aai, _ = adapter(AssemblyAIStreamingAdapter, "assemblyai-tts-1", "v")
+        aai._begin = asyncio.get_running_loop().create_future()
+        aai._on_message({"type": "Error", "error_code": 3009, "error_type": "rate_limited", "error": "New sessions per minute exceeded"})
+        assert "error" in aai._begin.result() and is_refusal(aai._begin.result()["error"])
+
+
 class TestEndOfUtterance:
     async def test_a_pause_does_not_end_a_protocol_that_says_when_it_is_done(self):
         import asyncio
@@ -696,3 +871,244 @@ class TestLineupRates:
         assert PROVIDERS["hume"].rate_for("octave-2") == 48000
         assert PROVIDERS["cartesia"].rate_for("sonic-3.6") == 24000
         assert PROVIDERS["cartesia"].rate_for("a-model-outside-the-lineup") == 24000
+
+
+class TestMistralRealtime:
+    @staticmethod
+    def floats(*values: float) -> bytes:
+        import numpy as np
+
+        return np.array(values, dtype="<f4").tobytes()
+
+    @staticmethod
+    def delta(audio: bytes) -> dict:
+        import base64
+
+        return {"type": "speech.audio.delta", "audio_data": base64.b64encode(audio).decode()}
+
+    SESSION = {"request_id": "ws-1", "model": "voxtral-mini-tts-3-0-13", "voice": "voice_447", "is_ref_audio": False,
+               "streaming_mode": "responsive", "response_format": "wav", "expressiveness": 2.0}
+
+    def test_float32_is_converted_to_int16_and_clipped_not_wrapped(self):
+        import numpy as np
+
+        from tts_bench.adapters.mistral_realtime import to_int16
+
+        out = np.frombuffer(to_int16(self.floats(0.0, 0.5, -0.5, 1.0, -1.0, 1.5, -2.0)), dtype="<i2")
+        assert out.tolist() == [0, 16384, -16384, 32767, -32767, 32767, -32767]
+
+    async def test_text_is_appended_the_flush_ends_it_and_a_float_split_across_deltas_is_carried(self):
+        import numpy as np
+
+        from tts_bench.adapters.mistral_realtime import MistralRealtimeAdapter
+        from tts_bench.probes import Continuation
+
+        mistral, sent = adapter(MistralRealtimeAdapter, "voxtral-mini-tts-3-0", "voice_447")
+        synthesis = await mistral.open_context("main")
+        assert synthesis.t0 is None and sent == []
+        for frame in Continuation.frames("Hello there. How can I help?"):
+            await mistral.send("main", frame)
+        await mistral.finish("main")
+        assert sent == [{"type": "input_text.append", "text": "Hello there. "},
+                        {"type": "input_text.append", "text": "How can I help?"}, {"type": "input_text.flush"}]
+        audio = self.floats(0.25, -0.25, 0.5)
+        for part in (audio[:6], audio[6:]):                          # the second float straddles the two deltas
+            mistral._on_message(self.delta(part))
+        assert np.frombuffer(bytes(synthesis.pcm), dtype="<i2").tolist() == [8192, -8192, 16384]
+        assert not synthesis.done.is_set()
+        mistral._on_message({"type": "speech.audio.done", "usage": {"prompt_tokens": 9}})
+        assert synthesis.done.is_set() and synthesis.meta["usage"] == {"prompt_tokens": 9}
+        assert "trailing_bytes_dropped" not in synthesis.meta and synthesis.error is None
+
+    async def test_a_partial_float_left_at_done_is_recorded_and_not_carried_into_the_next_generation(self):
+        import numpy as np
+
+        from tts_bench.adapters.mistral_realtime import MistralRealtimeAdapter
+
+        mistral, _ = adapter(MistralRealtimeAdapter, "voxtral-mini-tts-3-0", "voice_447")
+        first = await mistral.open_context("first")
+        mistral._on_message(self.delta(self.floats(0.5) + b"\x00\x00"))
+        mistral._on_message({"type": "speech.audio.done", "usage": {}})
+        assert first.meta["trailing_bytes_dropped"] == 2 and len(first.pcm) == 2
+        second = await mistral.open_context("second")
+        mistral._on_message(self.delta(self.floats(-0.5)))
+        assert np.frombuffer(bytes(second.pcm), dtype="<i2").tolist() == [-16384]
+        failed = await mistral.open_context("failed")                # a generation that errors with half a float pending
+        mistral._on_message(self.delta(b"\x00\x00"))
+        mistral._on_message({"type": "error", "error": {"message": "Generation failed", "code": 3800}})
+        assert failed.error and not failed.pcm
+        third = await mistral.open_context("third")
+        mistral._on_message(self.delta(self.floats(0.25)))
+        assert np.frombuffer(bytes(third.pcm), dtype="<i2").tolist() == [8192]
+
+    async def test_a_close_before_done_and_an_error_event_are_failures_not_the_end_of_the_utterance(self):
+        from tts_bench.adapters.base import is_refusal
+        from tts_bench.adapters.mistral_realtime import MistralRealtimeAdapter
+
+        mistral, _ = adapter(MistralRealtimeAdapter, "voxtral-mini-tts-3-0", "voice_447")
+        cut = await mistral.open_context("cut")
+        mistral._on_message(self.delta(self.floats(0.5, 0.5)))
+        mistral._on_closed("received 1011 (internal error) Upstream connection error")
+        assert cut.done.is_set() and cut.error.startswith("closed before speech.audio.done") and cut.pcm
+        assert not is_refusal(cut.error)
+        failed = await mistral.open_context("failed")
+        mistral._on_message({"type": "error", "error": {"message": "Generation failed", "code": 3800}})
+        assert failed.done.is_set() and failed.error == "3800: Generation failed" and failed.t_done is None
+        finished = await mistral.open_context("finished")
+        mistral._on_message({"type": "speech.audio.done", "usage": {}})
+        mistral._on_closed("received 1000 (OK)")
+        assert finished.error is None                                # a close after done ends nothing
+
+    def test_the_protocol_limits_are_declared_and_the_lineup_names_a_mistral_voice(self):
+        import pytest
+        from tts_bench.adapters.mistral_realtime import MistralRealtimeAdapter
+        from tts_bench.registry import MARGARET, PENDING
+
+        mistral, _ = adapter(MistralRealtimeAdapter, "voxtral-mini-tts-3-0", MARGARET)
+        assert mistral.url == "wss://api.us.mistral.ai/v1/audio/speech/realtime?model=voxtral-mini-tts-3-0"
+        assert mistral.region == "us"
+        assert mistral._headers() == {"Authorization": "Bearer unused"}
+        assert mistral._settings() == {"voice": "voice_447", "response_format": "pcm", "streaming_mode": "responsive"}
+        config = TTSConfig("voxtral-mini-tts-3-0", MARGARET)
+        assert MistralRealtimeAdapter.unsupported_reason(config, ("cancel",)) == "mistral-realtime has no cancel"
+        assert MistralRealtimeAdapter.unsupported_reason(config, ("streamed_input", "continuation")) is None
+        assert MistralRealtimeAdapter.unsupported_reason(TTSConfig("voxtral-mini-tts-3-0", MARGARET, sample_rate=8000))
+        assert not MistralRealtimeAdapter.native_mulaw_8k and not MistralRealtimeAdapter.ends_on_quiet
+        entry = PROVIDERS["mistral-realtime"]
+        assert entry.credential_env == "MISTRAL_API_KEY" and entry.voice_for("voxtral-mini-tts-3-0") == MARGARET
+        assert entry.rate_for("voxtral-mini-tts-3-0") == 24000 and "mistral-realtime" not in PENDING
+        assert MistralRealtimeAdapter._without_audio(self.delta(b"\x00" * 300))["audio_data"] == "<400 b64 chars>"
+        long_form = TTSConfig("voxtral-mini-tts-3-0", MARGARET, options=(("streaming_mode", "long_form"),))
+        clock = Clock()
+        assert MistralRealtimeAdapter(long_form, "k", EventLog(clock), clock)._settings()["streaming_mode"] == "long_form"
+        global_host = TTSConfig("voxtral-mini-tts-3-0", MARGARET, options=(("region", "global"),))
+        assert MistralRealtimeAdapter(global_host, "k", EventLog(clock), clock).url.startswith("wss://api.mistral.ai/")
+        eu = TTSConfig("voxtral-mini-tts-3-0", MARGARET, options=(("region", "eu"),))
+        assert MistralRealtimeAdapter(eu, "k", EventLog(clock), clock).url.startswith("wss://api.eu.mistral.ai/")
+        with pytest.raises(ValueError):
+            MistralRealtimeAdapter(TTSConfig("voxtral-mini-tts-3-0", MARGARET, options=(("region", "evil.example/x"),)),
+                                   "k", EventLog(clock), clock)
+
+    async def _serve(self, tmp_path, *, updated=None, on_update=None, on_text=None, reject=None):
+        """A local stand-in for the realtime endpoint. Returns the frames it saw, its request headers and the log."""
+        import json
+
+        import websockets
+
+        from tts_bench.adapters.mistral_realtime import MistralRealtimeAdapter
+
+        seen: list[dict] = []
+        headers: dict = {}
+        test = self
+
+        async def serve(ws):
+            headers.update(ws.request.headers)
+            headers["path"] = ws.request.path
+            await ws.send(json.dumps({"type": "session.created", "session": test.SESSION}))
+            async for raw in ws:
+                frame = json.loads(raw)
+                seen.append(frame)
+                if frame["type"] == "session.update":
+                    if on_update:
+                        await on_update(ws)
+                        continue
+                    session = {**test.SESSION, **frame["session"], **(updated or {})}
+                    await ws.send(json.dumps({"type": "session.updated", "session": session}))
+                elif frame["type"] == "input_text.flush":
+                    await (on_text or test._speak)(ws)
+
+        def process_request(connection, request):
+            return connection.respond(reject, "Unauthorized\n") if reject else None
+
+        clock = Clock()
+        log = EventLog(clock, raw_path=tmp_path / "raw.jsonl")
+        mistral = MistralRealtimeAdapter(TTSConfig("voxtral-mini-tts-3-0", "voice_447"), "secret-key", log, clock)
+        server = await websockets.serve(serve, "127.0.0.1", 0, process_request=process_request)
+        mistral.base = f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}/v1/audio/speech/realtime"
+        return server, mistral, seen, headers, log
+
+    async def _speak(self, ws):
+        import json
+
+        audio = self.floats(0.25, -0.25, 0.5)
+        await ws.send(json.dumps(self.delta(audio[:6])))
+        await ws.send(json.dumps(self.delta(audio[6:])))
+        await ws.send(json.dumps({"type": "speech.audio.done", "usage": {"prompt_tokens": 3}}))
+
+    async def test_a_reusable_socket_sets_up_before_t0_and_speaks_two_generations_without_logging_the_key(self, tmp_path):
+        import numpy as np
+
+        server, mistral, seen, headers, log = await self._serve(tmp_path)
+        async with server:
+            async with mistral:
+                for context_id in ("first", "repeat"):
+                    synthesis = await mistral.open_context(context_id)
+                    assert synthesis.t0 is None
+                    await mistral.send(context_id, "Your total is ")
+                    await mistral.send(context_id, "$42.")
+                    await mistral.finish(context_id)
+                    done = await mistral.wait(context_id, 5.0)
+                    assert np.frombuffer(bytes(done.pcm), dtype="<i2").tolist() == [8192, -8192, 16384]
+                    assert done.meta["ended_by"] == "provider" and done.error is None
+                    assert done.meta["session"]["model"] == "voxtral-mini-tts-3-0-13"
+                    assert done.meta["session"]["voice"] == "voice_447" and done.meta["usage"] == {"prompt_tokens": 3}
+        assert seen[0] == {"type": "session.update",
+                           "session": {"voice": "voice_447", "response_format": "pcm", "streaming_mode": "responsive"}}
+        assert [f["type"] for f in seen[1:]] == ["input_text.append", "input_text.append", "input_text.flush"] * 2
+        assert headers["authorization"] == "Bearer secret-key" and headers["path"].endswith("?model=voxtral-mini-tts-3-0")
+        raw = (tmp_path / "raw.jsonl").read_text()
+        assert "secret-key" not in raw and "secret-key" not in str(log.events)
+
+    async def test_settings_the_server_did_not_apply_refuse_the_session_before_t0(self, tmp_path):
+        import pytest
+
+        from tts_bench.adapters.base import AdapterError
+
+        for updated, named in (({"voice": "voice_478"}, "voice"), ({"response_format": "wav"}, "response_format"),
+                               ({"model": "voxtral-mini-tts-2603"}, "model")):
+            server, mistral, _, _, _ = await self._serve(tmp_path, updated=updated)
+            async with server:
+                with pytest.raises(AdapterError, match=f"did not apply the requested settings: {{'{named}'"):
+                    await mistral.connect()
+
+    async def test_a_rejected_setting_a_closed_socket_and_a_rejected_key_are_refused_sessions(self, tmp_path):
+        import json
+
+        import pytest
+
+        from tts_bench.adapters.base import AdapterError, is_refusal
+
+        async def invalid(ws):
+            await ws.send(json.dumps({"type": "error", "error": {"message": "Input should be 'responsive' or 'long_form'", "code": 422}}))
+
+        async def unknown_voice(ws):
+            await ws.close(1008, "Voice 'voice_x' not found.")
+
+        for kwargs, match in (({"on_update": invalid}, "422: Input should be"),
+                              ({"on_update": unknown_voice}, "Voice 'voice_x' not found"),
+                              ({"reject": 401}, "HTTP 401")):
+            server, mistral, _, _, _ = await self._serve(tmp_path, **kwargs)
+            async with server:
+                with pytest.raises(AdapterError, match=match) as refused:
+                    await mistral.connect()
+            assert is_refusal(str(refused.value)) == ("reject" in kwargs)
+
+    async def test_a_generation_the_server_drops_ends_as_an_error_with_its_audio_kept(self, tmp_path):
+        import json
+
+        async def drop(ws):
+            await ws.send(json.dumps(self.delta(self.floats(0.5, 0.5))))
+            await ws.close(1011, "Upstream connection error")
+
+        server, mistral, _, _, _ = await self._serve(tmp_path, on_text=drop)
+        async with server:
+            async with mistral:
+                await mistral.open_context("main")
+                await mistral.send("main", "Hello.")
+                await mistral.finish("main")
+                done = await mistral.wait("main", 5.0)
+        assert len(done.pcm) == 4 and done.t_done is None                       # the audio is kept, the utterance never finished
+        assert done.error.startswith("closed before speech.audio.done") and "1011" in done.error
+        from tts_bench.probes import _verdict
+
+        assert _verdict(done) == "fail"

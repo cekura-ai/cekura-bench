@@ -1,11 +1,12 @@
 """PolyAI's audio-native dialog model (Dialog-RSN-1), on its realtime API.
 
 Dialog-RSN-1 hears the caller's audio directly, decides when they have
-finished, and answers with a reply or a tool call. It is run in the service's
-default mode, which speaks: the vendor's own text-to-speech runs server-side
-and the reply arrives as 24 kHz audio with its transcript, the way OpenAI's
-does. (The service also has a text-only mode for clients that bring their own
-voice; that mode would make this row a measure of someone else's voice.)
+finished, and answers with a reply, a tool call, or both. It is run in the
+service's default mode, which speaks: the vendor's own text-to-speech runs
+server-side and the reply arrives as 24 kHz audio with its transcript, the way
+OpenAI's does. (The service also has a text-only mode for clients that bring
+their own voice; that mode would make this row a measure of someone else's
+voice.)
 
 The wire format is OpenAI's realtime protocol (GA shape) with a narrower
 session: the service refuses a whole ``session.update`` if any field is outside
@@ -14,14 +15,12 @@ for it, and the framework's OpenAI service sends fields this one rejects.
 
 Three things about this service decide how it is written.
 
-*A turn is a reply or one tool call, never both -- and speech rides on the
-call.* The model calls tools in a loop and finishes with its spoken reply, so
-an instruction to "say X, then call Y" cannot be followed as written. The
-vendor's answer is a tool argument marked ``poly_spoken``: the model writes a
-line to say while the tool runs, and the service speaks it. Every tool here
-gets one such argument, required, and it is taken off the arguments before the
-tool runs, so the tools see exactly the published contract. See
-``spoken_tools``.
+*A response can call a tool and speak while it runs.* The line arrives as the
+same response's message -- audio and transcript, like any reply -- and never in
+the call's arguments. Whether a tool gets a line is set per tool
+(``poly_speech``); it is left at the service's default, under which the model
+decides, so the tools are sent exactly as published and the prompt is the one
+every row gets.
 
 *The service judges barge-in only while it knows a reply is audible.* It sends
 a reply's audio faster than it is played, so by its own clock a reply is over
@@ -40,15 +39,13 @@ One is asked for once every call the model made has its result and the response
 that made them has closed -- unless the caller is mid-turn, in which case the
 response the service opens for that turn carries the result.
 
-Protocol: https://dialog-rsn-1-eap-docs.pages.dev/dialog-rsn-1/reference/
-(which still describes the text-only mode).
+Protocol: https://docs.poly.ai/api-reference/dialog-rsn-1/reference
 """
 
 from __future__ import annotations
 
 import asyncio
 import base64
-import copy
 import json
 import time
 import uuid
@@ -107,63 +104,15 @@ OUTPUT_SAMPLE_RATE = 24000
 #: How long to wait for the service to accept the configuration.
 READY_TIMEOUT_S = 10.0
 
-#: The argument every tool is given for the line said while it runs.
-SPOKEN_ARGUMENT = "utterance"
-
-#: What that argument asks for. The call-control tools end or hand over the
-#: call, so their line is the last thing the caller hears from this agent.
-SPOKEN_DESCRIPTIONS = {
-    "end_call": "Your goodbye to the caller, said as the call ends.",
-    "transfer_call": "What you tell the caller as you connect them.",
-}
-DEFAULT_SPOKEN_DESCRIPTION = "A short sentence to say to the caller while this runs, such as a progress update."
-
-#: The tools that end or hand over the call. Their spoken line is the goodbye,
-#: so once one is called no further reply is asked for, and the call closes when
-#: the response that carried it is done -- the service sends ``response.done``
-#: only after the line has finished playing.
+#: The tools that end or hand over the call. The goodbye is said in the
+#: response that calls one, so no further reply is asked for, and the call
+#: closes when that response is done -- the service sends ``response.done`` only
+#: after its line has finished playing.
 CLOSING_TOOLS = frozenset({"end_call", "transfer_call"})
-
-#: Added to the agent's prompt on this row only, in the vendor's words, so a
-#: "say X, then call Y" instruction lands in the call's spoken argument.
-PROMPT_ADDENDUM = """\
-# Speaking while a tool runs
-
-Whenever the instructions say to say something and then call a tool, put that \
-sentence in the tool's utterance. Say goodbye only through end_call's \
-utterance, and don't speak again after end_call.
-"""
 
 
 def _event_id() -> str:
     return f"event_{uuid.uuid4().hex[:24]}"
-
-
-def spoken_tools(tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Each tool with a required spoken argument the service voices while it runs.
-
-    Required on every tool, not only the call-control ones: in a chain of calls
-    the model skips an optional line, and the caller then waits in silence while
-    the tools run. The ``poly_spoken`` marker is removed by the service before
-    the model sees the schema.
-    """
-    marked = []
-    for tool in tools:
-        tool = copy.deepcopy(tool)
-        parameters = tool.setdefault("parameters", {"type": "object", "properties": {}})
-        parameters.setdefault("type", "object")
-        properties = parameters.setdefault("properties", {})
-        properties[SPOKEN_ARGUMENT] = {
-            "type": "string",
-            "description": SPOKEN_DESCRIPTIONS.get(tool["name"], DEFAULT_SPOKEN_DESCRIPTION),
-            "poly_spoken": True,
-        }
-        required = list(parameters.get("required") or [])
-        if SPOKEN_ARGUMENT not in required:
-            required.append(SPOKEN_ARGUMENT)
-        parameters["required"] = required
-        marked.append(tool)
-    return marked
 
 
 def heard_by_reply(texts: list[str], heard: str, finished: bool) -> list[str]:
@@ -240,9 +189,6 @@ class PolyAIRealtimeLLMService(LLMService):
         # each result must be sent exactly once.
         self._outstanding: dict[str, str] = {}
         self._delivered: set[str] = set()
-        # Responses whose tool call carried a spoken line, kept until the
-        # response closes, to notice one the service did not speak.
-        self._spoken: set[str] = set()
         # The response that carried a closing tool, and the signal the hang-up
         # waits for: set when that response is done, with its status.
         self._closing_response: str | None = None
@@ -313,7 +259,7 @@ class PolyAIRealtimeLLMService(LLMService):
         await self._websocket.send(json.dumps(event))
 
     def encoded_tools(self) -> list[dict]:
-        """Function tools in the realtime protocol's flat shape, each with its spoken argument."""
+        """Function tools in the realtime protocol's flat shape, exactly as published."""
         if not self._tools:
             return []
         standard = self._tools.standard_tools if isinstance(self._tools, ToolsSchema) else self._tools
@@ -329,7 +275,7 @@ class PolyAIRealtimeLLMService(LLMService):
                     "parameters": function.get("parameters") or {"type": "object", "properties": {}},
                 }
             )
-        return spoken_tools(encoded)
+        return encoded
 
     def session(self) -> dict[str, Any]:
         """The session configuration: only fields the service's schema accepts."""
@@ -673,14 +619,13 @@ class PolyAIRealtimeLLMService(LLMService):
             self._cut.add(response_id)
             await self._handle_interruption()
             await self.broadcast_interruption()
-        if response_id in self._spoken and response_id not in self._voiced and response_id not in self._cut:
-            # The service speaks a tool call's line itself; a response that
-            # carried one and made no sound left the caller in silence.
-            logger.warning(f"{self} response {response_id} carried a spoken line but no audio")
+        if self._held.get(response_id) and response_id not in self._cut:
+            # Words with no sound: the service wrote a line (a reply, or one said
+            # while a tool runs) and never voiced it, so the caller heard silence.
+            logger.warning(f"{self} response {response_id} wrote words but sent no audio")
         if response_id and response_id == self._closing_response:
             self.closing_reply_status = response.get("status")
             self.closing_reply_done.set()
-        self._spoken.discard(response_id)
         self._voiced.discard(response_id)
         self._held.pop(response_id, None)
         self._response_id = None
@@ -710,11 +655,6 @@ class PolyAIRealtimeLLMService(LLMService):
             arguments = {"_unparsed": event.get("arguments")}
         if name in CLOSING_TOOLS and self._closing_response is None:
             self._closing_response = event.get("response_id", "") or self._response_id
-        if isinstance(arguments, dict):
-            # Speech, not an input: the tool sees exactly the published contract.
-            line = arguments.pop(SPOKEN_ARGUMENT, None)
-            if isinstance(line, str) and line.strip():
-                self._spoken.add(event.get("response_id", "") or self._response_id or "")
         await self.run_function_calls(
             [FunctionCallFromLLM(context=self._context, tool_call_id=call_id, function_name=name, arguments=arguments)]
         )
@@ -755,9 +695,21 @@ def describe_error(error: dict[str, Any]) -> str:
 
 
 def token_usage(usage: dict[str, Any]) -> LLMTokenUsage:
-    """A ``response.done`` usage block in the framework's names."""
+    """A ``response.done`` usage block in the framework's names.
+
+    The cached and audio counts sit inside the input and output totals, as in
+    OpenAI's shape; they are kept because the cached prompt is billed at a tenth
+    of the fresh rate, so the totals alone cannot be priced.
+    """
+    input_details = usage.get("input_token_details") or {}
+    output_details = usage.get("output_token_details") or {}
+    cached_details = input_details.get("cached_tokens_details") or {}
     return LLMTokenUsage(
         prompt_tokens=usage.get("input_tokens") or 0,
         completion_tokens=usage.get("output_tokens") or 0,
         total_tokens=usage.get("total_tokens") or 0,
+        cache_read_input_tokens=input_details.get("cached_tokens"),
+        input_audio_tokens=input_details.get("audio_tokens"),
+        output_audio_tokens=output_details.get("audio_tokens"),
+        cache_read_input_audio_tokens=cached_details.get("audio_tokens"),
     )

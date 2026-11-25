@@ -38,7 +38,7 @@ from service.probes import (  # noqa: E402
     ResponseLatency,
     task_probes,
 )
-from service.registry import PROVIDERS  # noqa: E402
+from service.registry import PROVIDERS, load_extra_credentials  # noqa: E402
 from service.report import load_run, render_markdown, summarize_run  # noqa: E402
 from service.runner import DEFAULT_INSTRUCTIONS, RunSpec, Runner  # noqa: E402
 from service.scenarios import SCENARIOS  # noqa: E402
@@ -119,6 +119,10 @@ def main() -> int:
         key = dotenv_values(args.env).get(entry.credential_env)
     if not key:
         print(f"{entry.credential_env} is not set", file=sys.stderr)
+        return 2
+    missing = load_extra_credentials(entry, args.env)
+    if missing:
+        print(f"{', '.join(missing)} is not set", file=sys.stderr)
         return 2
 
     if args.holdout:

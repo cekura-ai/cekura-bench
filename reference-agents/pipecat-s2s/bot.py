@@ -343,6 +343,8 @@ class Settings:
         "agent_dir",
         "s2s_backend_model",
         "s2s_backend_reasoning",
+        "s2s_backend_service_tier",
+        "s2s_backend_prompt_cache_key",
         "aws_region",
         "qwen_region",
         "qwen_workspace_id",
@@ -658,8 +660,10 @@ def deepslate_tts(voice: str, settings: Settings) -> dict[str, Any]:
 
     ``elevenlabs`` (the default) has Deepslate call ElevenLabs with the voice and
     model every cascade row speaks with, on this deployment's ElevenLabs key.
-    ``hosted`` uses a voice Deepslate hosts; it has no stock voice, only voices
-    cloned into an account, so that mode needs ``s2s_voice`` set to one.
+    ``hosted`` uses a voice Deepslate hosts: one from its catalog, which every
+    organization can use, or one cloned into the account. The row's default
+    voice is an ElevenLabs id rather than one of these, so that mode needs
+    ``s2s_voice`` set.
     """
     mode = settings.get("deepslate_tts", "elevenlabs")
     if mode == "elevenlabs":
@@ -672,7 +676,7 @@ def deepslate_tts(voice: str, settings: Settings) -> dict[str, Any]:
         }
     if mode == "hosted":
         if not settings.get("s2s_voice"):
-            raise ValueError("deepslate_tts=hosted needs s2s_voice: Deepslate hosts no stock voice to default to")
+            raise ValueError("deepslate_tts=hosted needs s2s_voice: the default voice is an ElevenLabs id")
         return {"provider": "hosted", "voice_id": voice, "mode": DEEPSLATE_HOSTED_MODE}
     raise ValueError(f"unknown deepslate_tts {mode!r}; expected elevenlabs or hosted")
 
@@ -689,6 +693,7 @@ def deepslate_disclosures(settings: Settings) -> dict[str, str]:
         "deepslate_vad": ", ".join(f"{k} {v}" for k, v in DEEPSLATE_VAD.items()),
         "deepslate_temperature": str(DEEPSLATE_TEMPERATURE),
         "deepslate_playback_reporting": "off; the service estimates what a caller heard before a barge-in",
+        "deepslate_barge_in": "a caller who starts speaking cuts a reply while it is generated or still playing",
     }
 
 
@@ -732,14 +737,9 @@ def _polyai(credential: str, model: str, voice: str, instructions: str, settings
     ``voice`` is not sent: the service speaks in its default voice, and no
     voice field is known to be inside the schema it enforces.
     """
-    from polyai_realtime import PROMPT_ADDENDUM, PolyAIRealtimeLLMService
+    from polyai_realtime import PolyAIRealtimeLLMService
 
-    return PolyAIRealtimeLLMService(
-        api_key=credential,
-        url=polyai_url(settings),
-        model=model,
-        instructions=f"{instructions.rstrip()}\n\n{PROMPT_ADDENDUM}",
-    )
+    return PolyAIRealtimeLLMService(api_key=credential, url=polyai_url(settings), model=model, instructions=instructions)
 
 
 def polyai_url(settings: Settings) -> str:
@@ -750,8 +750,6 @@ def polyai_url(settings: Settings) -> str:
 
 
 def polyai_disclosures(settings: Settings) -> dict[str, str]:
-    from polyai_realtime import PROMPT_ADDENDUM, SPOKEN_ARGUMENT
-
     return {
         "polyai_endpoint": polyai_url(settings),
         "polyai_turn_detection": "service, create_response true (thresholds fixed by the vendor)",
@@ -760,17 +758,41 @@ def polyai_disclosures(settings: Settings) -> dict[str, str]:
             "that carried it is done and its audio has played"
         ),
         "tts": "the vendor's own, server-side, in its default voice; 24 kHz PCM out",
-        "tool_schema": (
-            f"every tool takes a required spoken argument {SPOKEN_ARGUMENT!r} (poly_spoken), "
-            "removed from the arguments before the tool runs"
-        ),
-        # Named and hashed, as on the GPT-Live row: ``system_prompt_sha256``
-        # covers only the prompt every row shares.
-        "prompt_addendum": "polyai-spoken-tools",
-        "prompt_addendum_sha256": _digest(PROMPT_ADDENDUM),
+        "tool_schema": "as published; poly_speech at the service default (the model may speak while a tool runs)",
         "polyai_playback_reporting": (
             "on: started and stopped, audio_ms and dropped_ms from the audio delivered, "
             "spoken_text from the words played"
+        ),
+    }
+
+
+def _deepgram_voice_agent(credential: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
+    """Deepgram's Voice Agent API; the text model's own OpenAI key is read here, never from a session."""
+    from deepgram_voice_agent import DeepgramVoiceAgentLLMService
+
+    return DeepgramVoiceAgentLLMService(
+        api_key=credential,
+        think_api_key=_credential(("OPENAI_API_KEY",), "deepgram-voice-agent's text model on our own OpenAI account"),
+        model=model,
+        voice=voice,
+        instructions=instructions,
+    )
+
+
+def deepgram_disclosures(settings: Settings) -> dict[str, str]:
+    from deepgram_voice_agent import LISTEN, THINK_ENDPOINTS
+
+    return {
+        "deepgram_listen": f"{LISTEN['model']} ({LISTEN['version']}) at Flux's own end-of-turn defaults",
+        "deepgram_think": (
+            "on our own OpenAI account through Deepgram's bring-your-own endpoint "
+            f"({', '.join(THINK_ENDPOINTS.values())}); Deepgram's hosted models cut prompts "
+            "past 25,000 characters and the medicare contract's is longer"
+        ),
+        "tts": "Deepgram Aura, the named voice, server-side; 24 kHz PCM out",
+        "deepgram_barge_in": (
+            "the service ends its reply when Flux hears the caller start; the pipeline cuts "
+            "playback on the same announcement"
         ),
     }
 
@@ -842,6 +864,31 @@ def rime_prism_disclosures(settings: Settings) -> dict[str, str]:
     }
 
 
+def _zoom_voice_agent(credential: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
+    """Zoom's Voice Agent API, a hosted cascade, through the service in ``zoom_voice_agent``.
+
+    Pipecat has no service for it. The key is the one scoped to the Voice Agent
+    API; Zoom's speech-to-text keys are refused there.
+    """
+    from zoom_voice_agent import ZoomVoiceAgentLLMService
+
+    return ZoomVoiceAgentLLMService(api_key=credential, model=model, voice=voice, instructions=instructions)
+
+
+def zoom_disclosures(settings: Settings) -> dict[str, str]:
+    from zoom_voice_agent import LANGUAGE, THINK_PROVIDER
+
+    return {
+        # Not a speech-to-speech model, and the record has to say so: a reader
+        # comparing it with the native rows must know the model hears text only.
+        "zoom_architecture": "hosted cascade: Zoom speech-to-text, a text model, Zoom text-to-speech",
+        "zoom_think_provider": THINK_PROVIDER,
+        "zoom_transcription_language": LANGUAGE,
+        "zoom_turn_detection": "service default; not configurable",
+        "zoom_response_token_limit": "inf (service default)",
+    }
+
+
 def _gpt_live(api_key: str, model: str, voice: str, instructions: str, settings: Settings) -> LLMService:
     """The live model plus the backend it hands reasoning to.
 
@@ -897,7 +944,13 @@ def _gpt_live(api_key: str, model: str, voice: str, instructions: str, settings:
                 model=backend_model(settings),
                 system_instruction=instructions,
                 reasoning=OpenAIResponsesReasoningConfig(effort=backend_reasoning(settings)),
+                extra=(
+                    {"prompt_cache_key": key}
+                    if (key := backend_prompt_cache_key(settings))
+                    else {}
+                ),
             ),
+            service_tier=backend_service_tier(settings),
         ),
     )
 
@@ -1049,6 +1102,24 @@ def backend_reasoning(settings: Settings) -> str:
     return settings.get("s2s_backend_reasoning", "low")
 
 
+def backend_service_tier(settings: Settings) -> str | None:
+    """The processing tier the backend's requests ask for, or None for the account's default.
+
+    A tier changes the backend's speed and price, not the model, so it is sent
+    only when a session names one, and the record says which.
+    """
+    return settings.get("s2s_backend_service_tier")
+
+
+def backend_prompt_cache_key(settings: Settings) -> str | None:
+    """The prompt-cache key the backend's requests carry, or None to send none.
+
+    A key groups requests that share a prompt prefix so they are more likely to
+    be served from cache. It changes the price, not the reply.
+    """
+    return settings.get("s2s_backend_prompt_cache_key")
+
+
 def aws_region(settings: Settings) -> str:
     """The region Bedrock is called in, and the region the record names.
 
@@ -1148,12 +1219,18 @@ class Provider:
     # caller's next words open a new turn.
     reports_playback: bool = False
 
+    @property
+    def agent_text(self) -> str:
+        """Whether the agent's lines are the model's own words or, for Gemini Live,
+        which sends only audio, a transcription of it; scoring reads the two differently."""
+        return "transcription" if self.module == "pipecat.services.google.gemini_live.llm" else "model"
+
 
 # Whether the caller's own words reach the record is a per-provider decision,
 # and it is not a detail: a scored run needs both halves of the conversation, and
 # a transcript holding only the agent reads as a caller who never spoke. Three of
 # these services transcribe the caller only when asked, and each asks
-# differently; eight do it themselves; one cannot, and its vendor's separate
+# differently; ten do it themselves; one cannot, and its vendor's separate
 # speech-to-text is run on each caller turn. Nothing warns about the difference,
 # because a session without transcription is a working session.
 #
@@ -1170,6 +1247,8 @@ class Provider:
 #   smallest-hydra    pulse-pro  -- the service transcribes neither side; the
 #                                   vendor's speech-to-text runs on each caller turn
 #   rime-prism        automatic  -- the service transcribes each committed caller turn
+#   deepgram-voice-agent automatic -- Flux's transcript of each caller turn
+#   zoom-voice-agent  automatic  -- transcription is the first stage of its cascade
 #
 # The tool calls travel separately, through the context aggregator, which is why
 # a run can show resolved tools and still carry no speech.
@@ -1241,6 +1320,11 @@ AZURE_TURN_DETECTION = {
 # words in the record. Azure's own speech-to-text, pinned to the language
 # every scenario is spoken in.
 AZURE_TRANSCRIPTION = {"model": "azure-speech", "language": "en-US"}
+
+# Bounds the agent's lines in the run record, which is uploaded with the call;
+# a longer call keeps its first replies, where callers give their details.
+AGENT_TEXT_TURNS = 200
+AGENT_TEXT_CHARS = 1000
 
 
 # ``input_rate`` is load-bearing, not a tuning knob. These services do not
@@ -1316,6 +1400,8 @@ PROVIDERS: dict[str, Provider] = {
         discloses=lambda settings: {
             "s2s_backend_model": backend_model(settings),
             "s2s_backend_reasoning": backend_reasoning(settings),
+            "s2s_backend_service_tier": backend_service_tier(settings) or "not sent",
+            "s2s_backend_prompt_cache_key": backend_prompt_cache_key(settings) or "not sent",
             # Named *and* hashed. The name alone would let the section be
             # rewritten without any digest on the record changing, and
             # ``system_prompt_sha256`` covers the agent prompt the row shares
@@ -1395,6 +1481,18 @@ PROVIDERS: dict[str, Provider] = {
         results="immediate", interruptions=False, caller_transcription="automatic",
         reports_playback=True,
     ),
+    # Deepgram's Voice Agent: Flux hears the caller at 16 kHz, GPT-4.1 on our own
+    # OpenAI account replies, and Aura speaks at 24 kHz, which the output
+    # transport resamples -- see ``deepgram_voice_agent``. The service announces
+    # the caller's turns and stops its own reply when the caller starts, which is
+    # when the pipeline interrupts too. A result is sent as soon as it exists;
+    # the service answers once it has it.
+    "deepgram-voice-agent": Provider(
+        _deepgram_voice_agent, 16000, "open_ai/gpt-4.1", "aura-2-thalia-en", ("DEEPGRAM_API_KEY",),
+        "deepgram_voice_agent",
+        discloses=deepgram_disclosures,
+        results="immediate", caller_transcription="automatic",
+    ),
     # Smallest AI's Hydra hears the caller at 16 kHz and speaks at 24 kHz, which
     # the output transport resamples -- see ``smallest_hydra``. The service
     # announces the caller's turns and stops its own reply when talked over; it
@@ -1421,6 +1519,17 @@ PROVIDERS: dict[str, Provider] = {
         "rime_prism",
         discloses=rime_prism_disclosures,
         results="immediate", caller_transcription="automatic", reports_playback=True,
+    ),
+    # Zoom's Voice Agent API: not a speech-to-speech model but a hosted cascade,
+    # on the board beside them and recorded as one -- see ``zoom_voice_agent``.
+    # 16 kHz both ways. The service announces the caller's turns, cancels its
+    # own reply when talked over, and is asked for a reply once a tool's result
+    # is in, as Voice Live is.
+    "zoom-voice-agent": Provider(
+        _zoom_voice_agent, 16000, "gemma-4", "jenna", ("ZOOM_AGENT_API_KEY",),
+        "zoom_voice_agent",
+        discloses=zoom_disclosures,
+        caller_transcription="automatic",
     ),
 }
 
@@ -1764,19 +1873,27 @@ _FAREWELL = re.compile(
     r"have an? (?:great|good|nice|wonderful|lovely|safe) (?:day|one|afternoon|evening|morning|weekend|night)|"
     r"thanks?(?: you)? (?:so much )?for calling|enjoy (?:the rest of )?your (?:day|afternoon|evening|weekend))\b"
 )
-# What a caller says back to a goodbye: not a question, and made of closing
-# words -- short when it is only an acknowledgement ("great, thanks"), longer
-# when it says outright that the caller is done ("thank you, that's all I
-# needed"). Anything carrying one of the ``_MORE`` words is the caller starting
-# something new, and the agent owes it an answer.
-_DONE = re.compile(r"\b(bye|goodbye|that's all|that's it|that is all|nothing else|all set)\b")
+# What a caller says back to a goodbye, judged sentence by sentence so that a
+# closing word in one sentence cannot cover a request in the next ("Okay. I'd
+# like to discuss my options."). It asks for nothing: no question mark, and none
+# of the ``_MORE`` words outside a done phrase ("that answers my question" is
+# done; "question" on its own starts something new). Then either it ends on a
+# sign-off ("Thanks. I understand. Goodbye."), or every sentence says outright
+# that the caller is done ("I have nothing further to add") or is a short
+# acknowledgement ("great, thanks").
+_DONE = re.compile(
+    r"\b(bye|goodbye|that's all|that's it|that is all|that's everything|that is everything|nothing else|"
+    r"nothing further|all set|answers my (?:questions?|requests?)|answers everything)\b"
+)
 _CLOSING_WORDS = re.compile(
-    r"\b(thanks|thank you|okay|ok|alright|all right|got it|you too|great|perfect|"
+    r"\b(thanks|thank you|okay|ok|alright|all right|got it|you too|great|perfect|that works|"
     r"sounds good|nope|no|cheers|take care|have a (?:good|great|nice) (?:day|one))\b"
 )
 _MORE = re.compile(r"\b(wait|actually|one more|also|question|but|another|what|when|where|how|why|can you|could you)\b")
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 _WORD = re.compile(r"[a-z']+")
+# Word limits: a done sentence, an acknowledgement, and a whole reply ending on a sign-off.
+_DONE_MAX_WORDS, _ACKNOWLEDGEMENT_MAX_WORDS, _SIGN_OFF_MAX_WORDS = 16, 8, 30
 
 
 def is_farewell(text: str) -> bool:
@@ -1786,12 +1903,22 @@ def is_farewell(text: str) -> bool:
 
 
 def is_closing_reply(text: str) -> bool:
-    """The caller answered a goodbye with one, or with an acknowledgement."""
+    """The caller answered a goodbye with one, or with an acknowledgement, and asked for nothing more."""
     said = text.strip().lower().replace("\u2019", "'")
-    if not said or "?" in said or _MORE.search(said):
+    if not said or "?" in said or _MORE.search(_DONE.sub(" ", said)):
         return False
-    words = len(_WORD.findall(said))
-    return (words <= 8 and bool(_CLOSING_WORDS.search(said))) or (words <= 16 and bool(_DONE.search(said)))
+    sentences = [s for s in _SENTENCE_END.split(said) if _WORD.findall(s)]
+    if not sentences:
+        return False
+    if _FAREWELL.search(sentences[-1]) and len(_WORD.findall(said)) <= _SIGN_OFF_MAX_WORDS:
+        return True
+
+    def closes(sentence: str) -> bool:
+        words = len(_WORD.findall(sentence))
+        return bool((words <= _DONE_MAX_WORDS and _DONE.search(sentence))
+                    or (words <= _ACKNOWLEDGEMENT_MAX_WORDS and _CLOSING_WORDS.search(sentence)))
+
+    return all(closes(sentence) for sentence in sentences)
 
 
 class ClosesAfterAnUnfinishedGoodbye(BaseObserver):
@@ -3276,6 +3403,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         rate = CASCADE_RATE
         realtime = False
         service_answers = False
+        agent_text_from = "model"  # the text model's reply, as the voice was given it
     else:
         if name not in PROVIDERS:
             known = sorted([*PROVIDERS, *TEXT_MODELS])
@@ -3285,6 +3413,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         model = settings.get("s2s_model", provider.default_model)
         voice = settings.get("s2s_voice", provider.default_voice)
         record = build_record(name, provider, model, voice, server, settings)
+        agent_text_from = provider.agent_text
         # See the note in the cascade branch above.
         logger.info("building {} on {}", name, model)
 
@@ -3348,15 +3477,31 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
     # What each side said, in the log as well as the transcript: the log is
     # where a reader reconstructs a call, and a transcript row without the
     # turn events around it says what was said but not when or why.
+    #
+    # The agent's lines are also kept in full for the record: the log shortens
+    # them and leaves the call with it, while scoring reads them to tell what
+    # the model captured from what a transcript of the call heard. One reply can
+    # end in several parts (a tool call between them, a service that streams it
+    # in pieces), so the parts are joined until the caller speaks again.
+    spoken: list[str] = []
+    reply_open = False
+
     @aggregators.user().event_handler("on_user_turn_message_added")
     async def _caller_said(_aggregator, message):
+        nonlocal reply_open
+        reply_open = False
         logger.info("caller said: {}", _short(message.content, 500))
 
     @aggregators.assistant().event_handler("on_assistant_turn_stopped")
     async def _agent_said(_aggregator, message):
-        logger.info(
-            "agent said{}: {}", " (interrupted)" if message.interrupted else "", _short(message.content, 500)
-        )
+        nonlocal reply_open
+        text = str(message.content or "").strip()
+        logger.info("agent said{}: {}", " (interrupted)" if message.interrupted else "", _short(text, 500))
+        if text and reply_open and spoken:
+            spoken[-1] = f"{spoken[-1]} {text}"[:AGENT_TEXT_CHARS]
+        elif text and len(spoken) < AGENT_TEXT_TURNS:
+            spoken.append(text[:AGENT_TEXT_CHARS])
+            reply_open = True
         backstop.agent_said(str(message.content or ""), message.interrupted)
 
     def publish() -> None:
@@ -3376,6 +3521,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
                 **record, **trace.as_metadata(), **meter.as_metadata(),
                 **({"timing": timing} if timing else {}),
                 "integrity": narrator.integrity(),
+                "agent_text": {"from": agent_text_from, "turns": spoken},
             })
         except Exception as exc:  # noqa: BLE001 -- never fail a call over a record
             logger.warning("could not update the run record: {!r}", exc)
@@ -3390,11 +3536,11 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         checks = narrator.integrity()
         logger.info(
             "call summary: {:.0f}s, caller turns {}, agent responses {} ({} heard), barge-ins {}, "
-            "tools {} ({} exact), errors {}, usage reports {}, log lines {}{}{}",
+            "tools {} ({} exact), errors {}, usage reports {}, agent text {} replies ({}), log lines {}{}{}",
             usage["call_seconds"], narrator.caller_turns, narrator.agent_turns, narrator.audible_turns,
             narrator.barge_ins,
             tools["tool_call_count"], tools["tool_calls_matched"], narrator.errors, usage["usage_reports"],
-            len(call_log.lines), f" (+{call_log.dropped} dropped)" if call_log.dropped else "",
+            len(spoken), agent_text_from, len(call_log.lines), f" (+{call_log.dropped} dropped)" if call_log.dropped else "",
             f", reply p50 {reply['p50_ms']} ms / p90 {reply['p90_ms']} ms over {reply['count']}" if reply else "",
         )
         # On its own line and at WARNING when something broke, because this is
@@ -3642,15 +3788,24 @@ def create_task(pipeline, context, params, runner_args, transport, record, obser
     it is simply not observed -- a missing key must not be the reason a benchmark
     call fails.
     """
+    # Pipecat adds RTVI to every task unless told not to, and RTVI broadcasts each spoken word
+    # to the other participant. No caller of this agent is an RTVI client, and a row that
+    # generates faster than real time sends a whole reply's words at once as the reply starts,
+    # which lands on the caller just as the reply's audio does.
+    task_kwargs = {"params": params, "observers": observers, "enable_rtvi": False}
     definition = record.get("agent_definition")
     api_key, agent_id = os.getenv("CEKURA_API_KEY"), cekura_agent_id(definition)
     if not (api_key and agent_id):
         missing = "CEKURA_API_KEY" if not api_key else f"the agent id for {definition}"
         logger.info("Cekura tracing off: {} unset", missing)
-        return PipelineTask(pipeline, params=params, observers=observers), None
+        return PipelineTask(pipeline, **task_kwargs), None
 
     try:
         agent_id = int(agent_id)
+        # The tool answers are part of what is measured: they come from this agent's own
+        # mock tool table (and a benchmark's private layer), never from the platform. From
+        # 1.6.8 the SDK swaps in the platform agent's mock tools on a simulation run.
+        os.environ["CEKURA_MOCK_TOOLS_ENABLED"] = "false"
         from cekura.pipecat import PipecatTracer
 
         tracer = PipecatTracer(
@@ -3673,15 +3828,15 @@ def create_task(pipeline, context, params, runner_args, transport, record, obser
         if record.get("cekura_mode") == "observe":
             return tracer.observe_and_create_task(
                 pipeline, context, runner_args=runner_args, transport=transport,
-                custom_metadata=metadata, params=params, observers=observers,
+                custom_metadata=metadata, **task_kwargs,
             ), tracer
         return tracer.track_and_create_task(
             pipeline, context, runner_args=runner_args, transport=transport,
-            custom_metadata=metadata, params=params, observers=observers,
+            custom_metadata=metadata, **task_kwargs,
         ), tracer
     except Exception as exc:  # noqa: BLE001 -- observability must never fail a call
         logger.warning("Cekura tracing disabled: {}", exc)
-        return PipelineTask(pipeline, params=params, observers=observers), None
+        return PipelineTask(pipeline, **task_kwargs), None
 
 
 def warm() -> None:

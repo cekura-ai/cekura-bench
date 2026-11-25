@@ -196,6 +196,10 @@ def classify(events):
         return 'credits'
     if statuses.intersection({401,403}) or any(x in value for x in ('unauthorized', 'invalid api', 'authentication', 'required scopes', 'permission denied', 'access denied')):
         return 'authentication'
+    # Rime ends a stream with resource_exhausted when its own transcript outgrows the model's context or
+    # token cap. That is the model failing on the clip, not a rate limit: it must not stop or throttle a run.
+    if 'transcript was cut by the model context' in value:
+        return 'transient'
     if 429 in statuses or any(x in value for x in ('concurrent', 'concurrency', 'too many', 'rate limit', 'resource_exhausted', 'quota exceeded')):
         return 'concurrency'
     if any(x in value for x in ('different model', 'model mismatch', 'different audio or delay')):

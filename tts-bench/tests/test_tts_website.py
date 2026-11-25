@@ -114,7 +114,7 @@ def test_one_row_from_two_endpoints_takes_streamed_input_only_from_the_endpoint_
         website.with_streamed_input(ws, http)
 
     models = {"campaign": "t", "models": {"speechify-http/simba-3.5": {
-        "id": "speechify-simba-3-5", "name": "Simba 3.5", "vendor": "Speechify", "modelId": "simba-3.5", "voice": "Harper",
+        "id": "speechify-simba-3-5", "name": "Simba 3.5", "vendor": "SpeechifyAI", "modelId": "simba-3.5", "voice": "Harper",
         "streamedFrom": "speechify/simba-3.5", "price": None}}}
     site = website.combine([ws, http], models)
     assert site["results"] == [{"id": "speechify-simba-3-5", **{k: v for k, v in row.items() if k != "schema"}}]

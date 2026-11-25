@@ -8,7 +8,8 @@ Two steps, so a run never has to move to be published:
   newer reading of a cell wins, the rest keep theirs.
 * ``combine(summaries, models)`` joins the per-run summaries into the one file
   the site reads, with each model's display name and, where a sourced list
-  price exists, its cost.
+  price exists, its cost. A model listed with ``streamedFrom`` is one row from
+  two endpoints of its provider: see ``with_streamed_input``.
 
 Every number says which cells it came from. Latency is P50/P90 (P95 from 30
 cells) with a bootstrap interval on the median; word error is pooled (errors
@@ -18,6 +19,7 @@ protocol cannot serve is ``null`` with the reason, never a zero.
 
 from __future__ import annotations
 
+import copy
 import json
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -279,12 +281,54 @@ def _naturalness(roots: Sequence[Path]) -> dict[str, Any] | None:
     }
 
 
+def with_streamed_input(base: dict[str, Any], streamed: dict[str, Any]) -> dict[str, Any]:
+    """One site row from two endpoints of the same model and voice.
+
+    ``base`` was measured on an endpoint that takes the whole text, so it gives
+    every one-shot figure (latency, playout, accuracy, naturalness, repeat);
+    ``streamed`` on one that takes text in pieces, and gives only what the base
+    cannot measure: streamed input and continuation. Both runs stay named, the
+    base in ``run`` and the other in ``streamedFrom``. The other run's
+    syntheses join the count only when every one of them ended cleanly, so no
+    timeout or failure is ever attributed to the wrong endpoint.
+    """
+    if (base["model"], base["voice"]) != (streamed["model"], streamed["voice"]):
+        raise ValueError(f"{streamed['provider']}/{streamed['model']} ({streamed['voice']}) is not the model and voice "
+                         f"of {base['provider']}/{base['model']} ({base['voice']})")
+    if base["streamedInput"] is not None or streamed["streamedInput"] is None:
+        raise ValueError("the base must exclude streamed input and the other endpoint must measure it")
+    rel, cells = streamed["reliability"], streamed["cells"]
+    if rel["timeouts"] or rel["runaways"] or set(rel["endedBy"]) != {"provider"} or cells["failed"] or cells["providerRefused"]:
+        raise ValueError(f"{streamed['run']} has failures that cannot be attributed to its streamed-input cells")
+    added = streamed["streamedInput"]["ttfaFromFirstWord"]["n"]
+    added_cells = added + (streamed["continuation"]["durationDeltaMs"]["n"] if streamed["continuation"] else 0)
+    added_syntheses = added + 2 * (streamed["continuation"]["durationDeltaMs"]["n"] if streamed["continuation"] else 0)
+    row = copy.deepcopy(base)
+    row["streamedInput"] = streamed["streamedInput"]
+    row["continuation"] = streamed["continuation"]
+    row["capabilities"] = {**base["capabilities"], **{k: streamed["capabilities"][k]
+                                                     for k in ("transport", "streamed_input", "continuation")}}
+    for name, entry in row["accuracy"].items():
+        entry["streamedInput"] = (streamed["accuracy"].get(name) or {}).get("streamedInput")
+    row["cells"]["excludedByProbe"] = {probe: reason for probe, reason in base["cells"]["excludedByProbe"].items()
+                                       if probe in streamed["cells"]["excludedByProbe"]}
+    row["cells"]["graded"] += added_cells
+    row["reliability"]["syntheses"] += added_syntheses
+    row["reliability"]["endedBy"]["provider"] = row["reliability"]["endedBy"].get("provider", 0) + added_syntheses
+    row["streamedFrom"] = {"run": streamed["run"], "provider": streamed["provider"], "adapter": streamed["adapter"],
+                           "harnessCommit": streamed["harnessCommit"], "startedUtc": streamed["startedUtc"],
+                           "gives": ["streamedInput", "continuation", "accuracy.*.streamedInput"]}
+    return row
+
+
 def combine(summaries: Sequence[dict[str, Any]], models: dict[str, Any]) -> dict[str, Any]:
     """The site file: one entry per model, in the order the model list gives."""
     by_key = {f"{s['provider']}/{s['model']}": s for s in summaries}
     entries, results = [], []
     for key, meta in models["models"].items():
         s = by_key.get(key)
+        if s is not None and meta.get("streamedFrom"):
+            s = with_streamed_input(s, by_key[meta["streamedFrom"]])
         entries.append({**{k: v for k, v in meta.items() if k != "price"}, "key": key, "measured": s is not None,
                         "price": meta.get("price")})
         if s is not None:

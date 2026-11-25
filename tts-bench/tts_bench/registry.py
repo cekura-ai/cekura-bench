@@ -28,6 +28,7 @@ from tts_bench.adapters.elevenlabs_dialogue import ElevenLabsDialogueAdapter
 from tts_bench.adapters.elevenlabs_dialogue_multi import ElevenLabsDialogueMultiAdapter
 from tts_bench.adapters.fake import FakeTTSAdapter
 from tts_bench.adapters.fish_audio import FishAudioAdapter
+from tts_bench.adapters.fish_audio_http import FishAudioHTTPAdapter
 from tts_bench.adapters.gemini_tts import GeminiTTSAdapter
 from tts_bench.adapters.gradium import GradiumAdapter
 from tts_bench.adapters.hume import HumeAdapter
@@ -63,7 +64,7 @@ class ProviderEntry:
 
     @property
     def default_model(self) -> str:
-        return self.models[0].model
+        return self._first().model
 
     def rate_for(self, model: str) -> int:
         """The lineup's sample rate for ``model``; the harness default for a model outside the lineup."""
@@ -75,7 +76,12 @@ class ProviderEntry:
 
     def voice_for(self, model: str) -> str:
         """The lineup's voice for ``model``; the default model's voice for a model outside the lineup."""
-        return next((m.voice for m in self.models if m.model == model), self.models[0].voice)
+        return next((m.voice for m in self.models if m.model == model), None) or self._first().voice
+
+    def _first(self) -> Model:
+        if not self.models:
+            raise ValueError(f"{self.key} has no lineup model: name the model and the voice")
+        return self.models[0]
 
 
 # One female US English stock voice per model. Deepgram addresses a voice by
@@ -174,6 +180,12 @@ PROVIDERS: dict[str, ProviderEntry] = {
               "latency=balanced by default; stop drains input, finish ends output and closes the socket; "
               "new socket per utterance, including repeat; no cancel/clear; paid production model "
               "(s2.1-pro-free has no TTFA or DPA guarantees)",
+    ),
+    "fish-audio-http": ProviderEntry(
+        "fish-audio-http", FishAudioHTTPAdapter, "FISH_AUDIO_API_KEY", (),
+        notes="POST /v1/tts, raw PCM streamed back; model header, voice as reference_id; whole text per request; "
+              "latency=balanced by default, language and normalize only when the run names them; no lineup "
+              "model, so a run names its model and voice",
     ),
     "hume": ProviderEntry(
         "hume", HumeAdapter, "HUME_API_KEY",

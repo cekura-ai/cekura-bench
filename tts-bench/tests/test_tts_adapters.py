@@ -629,6 +629,48 @@ class TestFishAudio:
         assert "secret-key" not in raw and "secret-key" not in str(log.events) and "<480 bytes>" in raw
 
 
+class TestFishAudioHTTP:
+    def test_the_request_is_fish_audios_tts_endpoint_with_only_the_options_the_run_names(self):
+        from tts_bench.adapters.fish_audio_http import FishAudioHTTPAdapter
+        from tts_bench.registry import SARAH
+
+        fish, _ = adapter(FishAudioHTTPAdapter, "a-model", SARAH)
+        assert f"{fish.base}{fish.speech_path}" == "https://api.fish.audio/v1/tts"
+        assert fish._prewarm_url() == f"https://api.fish.audio/model/{SARAH}"
+        assert fish._headers() == {"Authorization": "Bearer unused", "model": "a-model"}
+        assert fish._request_args("Hello there.")["json"] == {
+            "text": "Hello there.", "reference_id": SARAH, "format": "pcm", "sample_rate": 24000, "latency": "balanced"}
+        fish.config = TTSConfig("a-model", SARAH, sample_rate=44100,
+                                options=(("latency", "low"), ("language", "en"), ("normalize", "true")))
+        assert fish._request_args("Hello there.")["json"] == {
+            "text": "Hello there.", "reference_id": SARAH, "format": "pcm", "sample_rate": 44100, "latency": "low",
+            "language": "en", "normalize": True}
+        assert not (fish.supports_streamed_input or fish.supports_cancel or fish.supports_continuation)
+        assert FishAudioHTTPAdapter.unsupported_reason(TTSConfig("a-model", SARAH, sample_rate=48000)) == \
+            "fish-audio-http does not emit 48000 Hz PCM"
+
+    def test_a_normalize_that_is_not_a_boolean_is_refused_not_guessed(self):
+        import pytest
+
+        from tts_bench.adapters.base import AdapterError
+        from tts_bench.adapters.fish_audio_http import FishAudioHTTPAdapter
+
+        fish, _ = adapter(FishAudioHTTPAdapter, "a-model", "v")
+        fish.config = TTSConfig("a-model", "v", options=(("normalize", "yes"),))
+        with pytest.raises(AdapterError, match="normalize must be true or false"):
+            fish._request_args("Hello.")
+
+    def test_it_runs_only_a_model_and_voice_the_run_names(self, tmp_path):
+        import pytest
+
+        assert all(key != "fish-audio-http" for key, _ in lineup())
+        assert PROVIDERS["fish-audio-http"].credential_env == PROVIDERS["fish-audio"].credential_env
+        with pytest.raises(ValueError, match="fish-audio-http has no lineup model"):
+            PROVIDERS["fish-audio-http"].voice_for("a-model")
+        spec = RunSpec(provider="fish-audio-http", probes=[OneShot()], model="a-model", voice="v", store=str(tmp_path))
+        assert Runner(spec, "unused").config.voice == "v"
+
+
 class TestSmallest:
     async def test_frames_continue_one_context_and_complete_does_not_end_it(self):
         from tts_bench.adapters.smallest import SmallestAdapter

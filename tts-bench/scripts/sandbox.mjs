@@ -4,6 +4,7 @@
 //   node scripts/sandbox.mjs prepare --live                                  # snapshot this commit, tests passing
 //   node scripts/sandbox.mjs launch  --live --label campaign-a --env <.env>  # run, score, pack, download, verify
 //                            [--providers p] [--voice id]               # one provider's voice other than its lineup's
+//                            [--providers p --model m] [--option k=v]   # a model outside the lineup; adapter options
 //   node scripts/sandbox.mjs status  --label campaign-a [--remote]
 //   node scripts/sandbox.mjs stop    --live --label campaign-a
 //
@@ -48,22 +49,35 @@ export function cleanPushedCommit() {
   return commit;
 }
 
-export function lineup() {
-  // Provider, model, credential name and every host its adapter talks to, from the registry itself.
+export function lineup(extra) {
+  // Provider, model, credential name and every host its adapter talks to, from the registry itself. ``extra``
+  // ({provider, model}) is a model outside the lineup, given at launch so its name need not be committed.
   const code = `
-import json
+import json, sys
 from urllib.parse import urlsplit
 from tts_bench.adapters.base import TTSConfig
 from tts_bench.common.events import Clock, EventLog
 from tts_bench.registry import PROVIDERS, lineup
+extra = json.loads(sys.argv[1])
+pairs = [(extra["provider"], extra["model"], "unused")] if extra else [(key, m.model, m.voice) for key, m in lineup()]
 out = []
-for key, m in lineup():
+for key, model, voice in pairs:
     entry = PROVIDERS[key]
-    adapter = entry.adapter(TTSConfig(model=m.model, voice=m.voice), "unused", EventLog(Clock()), Clock())
+    adapter = entry.adapter(TTSConfig(model=model, voice=voice), "unused", EventLog(Clock()), Clock())
     endpoint = getattr(adapter, "url", None) or getattr(adapter, "base", None)
-    out.append({"provider": key, "model": m.model, "credential": entry.credential_env, "host": urlsplit(endpoint).hostname})
+    out.append({"provider": key, "model": model, "credential": entry.credential_env, "host": urlsplit(endpoint).hostname})
 print(json.dumps(out))`;
-  return JSON.parse(execFileSync(PY, ['-c', code], { cwd: HERE, encoding: 'utf8' }));
+  return JSON.parse(execFileSync(PY, ['-c', code, JSON.stringify(extra ?? null)], { cwd: HERE, encoding: 'utf8' }));
+}
+
+// The campaign command one model runs in its sandbox.
+export function campaignArgs({ provider, model, label, suite, repeats, out, voice, options = [], items = [] }) {
+  for (const option of options) if (!/^[A-Za-z0-9_]+=./.test(option)) throw new Error(`--option ${option}: key=value`);
+  return ['-u', 'bin/campaign-model.py', '--provider', provider, '--model', model, '--label', label,
+    '--suite', suite, '--repeats', String(repeats), '--out', out,
+    ...(voice ? ['--voice', voice] : []),
+    ...options.flatMap(option => ['--option', option]),
+    ...items.flatMap(item => ['--item', item])];
 }
 
 // One sandbox per account, not per protocol: two protocols on one key (a
@@ -205,7 +219,7 @@ async function prepare(config, stateDir) {
 }
 
 async function launchGroup(ctx, group) {
-  const { config, Sandbox, account, prepared, label, voice, keys, localStore, stateDir } = ctx;
+  const { config, Sandbox, account, prepared, label, voice, options, keys, localStore, stateDir } = ctx;
   const path = join(stateDir, label, `${group.name}.json`);
   const state = await loadJson(path, { group: group.name, commit: prepared.commit, models: {} });
   if (state.commit !== prepared.commit) throw new Error(`${group.name}: this label was started on ${state.commit}; one campaign, one commit`);
@@ -234,11 +248,9 @@ async function launchGroup(ctx, group) {
     if (m.commandId && m.sessionId === session && m.status === 'dispatched') {
       finished = await waitFor(sb, m.commandId);                   // re-attach to the command already running
     } else {
-      const command = await sb.runCommand({ cmd: '.venv/bin/python', cwd: REMOTE, env, detached: true, args: [
-        '-u', 'bin/campaign-model.py', '--provider', provider, '--model', model, '--label', label,
-        '--suite', config.suite, '--repeats', String(config.repeats), '--out', REMOTE_OUT,
-        ...(voice ? ['--voice', voice] : []),
-        ...(config.items ?? []).flatMap(item => ['--item', item])] });
+      const command = await sb.runCommand({ cmd: '.venv/bin/python', cwd: REMOTE, env, detached: true, args: campaignArgs({
+        provider, model, label, suite: config.suite, repeats: config.repeats, out: REMOTE_OUT, voice, options,
+        items: config.items ?? [] }) });
       Object.assign(m, { status: 'dispatched', commandId: command.cmdId, sessionId: session, attempts: m.attempts + 1 });
       await saveJson(path, state);
       finished = await waitFor(sb, command.cmdId);
@@ -294,7 +306,8 @@ async function mapBounded(items, count, worker) {
 async function main() {
   const { values: a, positionals } = parseArgs({ allowPositionals: true, options: {
     config: { type: 'string', default: join(HERE, 'config/sandbox.json') }, label: { type: 'string' }, voice: { type: 'string' },
-    providers: { type: 'string' }, env: { type: 'string' }, store: { type: 'string' },
+    providers: { type: 'string' }, model: { type: 'string' }, option: { type: 'string', multiple: true, default: [] },
+    env: { type: 'string' }, store: { type: 'string' },
     live: { type: 'boolean', default: false }, remote: { type: 'boolean', default: false } } });
   const command = positionals[0];
   const config = JSON.parse(await readFile(a.config, 'utf8'));
@@ -302,12 +315,13 @@ async function main() {
   const localStore = resolve(a.store || process.env.TTS_BENCH_STORE || join(HERE, 'data/runs'));
   const stateDir = join(localStore, '.campaigns');
   const only = a.providers?.split(',');
-  const plan = () => groups(lineup(), only);
+  if (a.model && only?.length !== 1) throw new Error('--model names a model of one provider: pass --providers with one provider');
+  const plan = () => groups(lineup(a.model && { provider: only[0], model: a.model }), only);
 
   if (command === 'plan' || (!a.live && ['prepare', 'launch', 'stop'].includes(command))) {
     const g = plan();
     console.log(JSON.stringify({ region: config.region, site: config.site, suite: config.suite, repeats: config.repeats,
-      label: a.label, store: localStore, groups: g.map(x => ({ group: x.name, sandbox: a.label && sandboxName(a.label, x.name), models: x.models.map(e => `${e.provider}/${e.model}`), allow: [...new Set([...x.hosts, ...config.scoringHosts])] })) }, null, 2));
+      label: a.label, voice: a.voice, options: a.option, store: localStore, groups: g.map(x => ({ group: x.name, sandbox: a.label && sandboxName(a.label, x.name), models: x.models.map(e => `${e.provider}/${e.model}`), allow: [...new Set([...x.hosts, ...config.scoringHosts])] })) }, null, 2));
     if (command !== 'plan') console.log('\n(no remote action without --live)');
     return;
   }
@@ -342,7 +356,7 @@ async function main() {
       todo.push({ group: g, keys });
     }
     const outcomes = await mapBounded(todo, config.parallel, ({ group, keys }) =>
-      launchGroup({ config, Sandbox, account, prepared, label: a.label, voice: a.voice, keys, localStore, stateDir }, group));
+      launchGroup({ config, Sandbox, account, prepared, label: a.label, voice: a.voice, options: a.option, keys, localStore, stateDir }, group));
     await saveJson(join(stateDir, a.label, 'outcomes.json'), { outcomes });
     for (const o of outcomes) console.log(`${o.group}: ${o.status}${o.pending?.length ? ' pending ' + o.pending.join(',') : ''}${o.error ? ' ' + o.error : ''}`);
     if (outcomes.some(o => o.status !== 'complete')) process.exitCode = 1;

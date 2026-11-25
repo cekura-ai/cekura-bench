@@ -4,7 +4,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { dotenv, groups, sandboxName } from '../scripts/sandbox.mjs';
+import { campaignArgs, dotenv, groups, sandboxName } from '../scripts/sandbox.mjs';
 
 const entries = [
   { provider: 'elevenlabs', model: 'flash', credential: 'ELEVENLABS_API_KEY', host: 'api.elevenlabs.io' },
@@ -31,4 +31,13 @@ test('only the named keys are read, quoted or not', () => {
   const dir = mkdtempSync(join(tmpdir(), 'tts-env-'));
   writeFileSync(join(dir, '.env'), 'A_KEY="one"\nexport B_KEY=two\nC_KEY=three\nEMPTY=\n');
   assert.deepEqual(dotenv(join(dir, '.env'), ['A_KEY', 'B_KEY', 'EMPTY']), { A_KEY: 'one', B_KEY: 'two' });
+});
+
+test('the voice and adapter options reach the campaign command', () => {
+  const args = campaignArgs({ provider: 'fish-audio-http', model: 'm', label: 'l', suite: 'full', repeats: 3, out: '/o',
+    voice: 'v', options: ['latency=low', 'normalize=true'], items: [] });
+  assert.deepEqual(args.slice(args.indexOf('--voice')), ['--voice', 'v', '--option', 'latency=low', '--option', 'normalize=true']);
+  assert.ok(!campaignArgs({ provider: 'p', model: 'm', label: 'l', suite: 'full', repeats: 3, out: '/o' }).includes('--option'));
+  assert.throws(() => campaignArgs({ provider: 'p', model: 'm', label: 'l', suite: 'full', repeats: 3, out: '/o', options: ['low'] }),
+    /key=value/);
 });

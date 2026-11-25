@@ -432,6 +432,20 @@ def test_transport_routing():
     assert 'rime-stt' in full.FULL_MODELS
 
 
+def test_transcript_cap_is_a_model_failure_not_a_rate_limit():
+    # The events Rime sent on 25 Nov 2026 when its transcript of background talk outgrew its cap.
+    capped = [{'kind': 'provider_message', 'message': {'error': {
+                  'kind': 'resource_exhausted', 'requestId': 'req-1',
+                  'message': 'ASR revision transcript was cut by the model context or the generation token cap'}}},
+              {'kind': 'error', 'error_type': 'ProviderError', 'http_status': None,
+               'error_message': 'Provider rejected the request; see redacted raw evidence'}]
+    assert full.classify(capped) == 'transient'
+    # A real quota or rate limit is still one, including another provider's resource_exhausted.
+    quota = {'code': 8, 'status': 'RESOURCE_EXHAUSTED', 'message': 'Quota exceeded for requests per minute'}
+    assert full.classify([{'kind': 'provider_message', 'message': {'error': quota}}]) == 'concurrency'
+    assert full.classify([{'kind': 'error', 'error_message': 'Too many concurrent streams'}]) == 'concurrency'
+
+
 def test_final_snapshots_follow_done_only():
     snapshots = full.final_snapshots(session_events(), config())
     # Partials never change the final text; only done does.

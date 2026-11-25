@@ -33,6 +33,18 @@ def main() -> None:
         " instead of the share of expected-outcome lines met",
     )
     p.add_argument(
+        "--agent-logs",
+        type=Path,
+        help="with --entities: folder of execution logs exported from the platform (<call id>.json) for runs recorded before"
+        " agent_text; the agent's own text is read from their 'agent said' lines",
+    )
+    p.add_argument(
+        "--entities",
+        type=Path,
+        help="private per-scenario detail file (entities.py); with it, the skill it names is the agent's first use of the detail"
+        " the caller gave, decided from the call itself, instead of its platform metric",
+    )
+    p.add_argument(
         "--reviewed-examples", type=Path, help="example calls a person has listened to, {site id: [call id, ...]}; without it no example calls are published"
     )
     p.add_argument("--reviewed-clips", type=Path, help="approved clip pairs per skill, {skill id: {setup, should, pass, fail}}; replaces the candidate moments")

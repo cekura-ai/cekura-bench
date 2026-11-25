@@ -2,7 +2,9 @@
 
 The dashboard uses `english-wer-v2-punctuation-tokens`. It removes whole
 punctuation-only tokens after the pinned English normalizer, on both reference
-and hypothesis. The original provider text, audio, event logs and source reports
+and hypothesis. The scorer has since moved to `english-wer-v3-backchannels`, which also drops every
+spelling of a backchannel before normalizing (see the README). The dashboard is frozen at v2:
+rebuilding it with current code stops at the frozen-normalization check until it is re-frozen. The original provider text, audio, event logs and source reports
 are preserved. Decimal numbers, currencies and punctuation inside words are not
 stripped by this additional step. Entity scoring is unchanged.
 

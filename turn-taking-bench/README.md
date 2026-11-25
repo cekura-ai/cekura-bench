@@ -47,7 +47,7 @@ Provider keys are read from a dotenv file (`--env`); values never enter reports.
 
 Reference systems (`adapters/`): a classic cascade's end-of-turn decision (Deepgram Flux), Smart Turn v3 and an energy VAD.
 Streaming speech-to-text turn detectors (`adapters/`): Reson8 (`reson8_turns`, rumble-2 on its turns endpoint, key `RESON_API_KEY`), end of turn only; like Flux it needs `--realtime`.
-Speech-to-speech adapters (`s2s/`): OpenAI Realtime, GPT-Live, Azure Realtime, Gemini Live (incl. extended thinking), Grok, Amazon Nova Sonic, Phonic, Deepslate, Higgs Realtime, Smallest Hydra, Rime Prism and Deepgram Voice Agent, each run at its provider's default turn settings unless a flag says otherwise. Models other than a provider's pinned default are selected with `--config model=<id>`, e.g. `--model s2s:grok-realtime --config model=grok-voice-3.0`.
+Speech-to-speech adapters (`s2s/`): OpenAI Realtime, GPT-Live, Azure Realtime, Gemini Live (incl. extended thinking), Grok, Amazon Nova Sonic, Phonic, Deepslate, Higgs Realtime, Smallest Hydra, Rime Prism and Deepgram Voice Agent, each run at its provider's default turn settings unless a flag says otherwise. Models other than a provider's pinned default are selected with `--config model=<id>`, e.g. `--model s2s:grok-realtime --config model=grok-voice-3.0` or `--model s2s:phonic --config model=phonic-1.1`.
 
 ## Running the public set
 

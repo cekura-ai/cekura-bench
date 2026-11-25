@@ -5,7 +5,9 @@ from argparse import Namespace
 
 import pytest
 
-from conftest import BAD, write_run
+from conftest import BAD, config_dict, write_run
+from s2s_human_bench.config import load_config
+from s2s_human_bench.entities import EntityFileError
 from s2s_human_bench.site_export import run_site_export
 
 PUBLIC_S2S = {
@@ -27,7 +29,7 @@ def make_inputs(tmp_path):
     return runs
 
 
-def export(tmp_path, cfg, out, reviewed=None, clips=None):
+def export(tmp_path, cfg, out, reviewed=None, clips=None, tasks=None, entities=None):
     args = Namespace(
         config=tmp_path / "config.json",
         runs=tmp_path / "runs",
@@ -41,6 +43,9 @@ def export(tmp_path, cfg, out, reviewed=None, clips=None):
         clip_picks=None,
         reviewed_examples=reviewed,
         reviewed_clips=clips,
+        tasks=tasks,
+        entities=entities,
+        agent_logs=None,
     )
     assert run_site_export(args) == 0
     return {p.name: json.loads(p.read_text()) for p in out.iterdir()}
@@ -81,6 +86,15 @@ def test_site_export(cfg, tmp_path):
     assert ex["examples"] == {}  # nothing is published until a person has reviewed it
 
 
+def test_a_model_can_take_its_price_from_a_differently_named_board_row(tmp_path):
+    raw = config_dict()
+    raw["models"][1]["priceSiteId"] = "alpha-site"
+    (tmp_path / "config.json").write_text(json.dumps(raw))
+    make_inputs(tmp_path)
+    docs = export(tmp_path, load_config(tmp_path / "config.json"), tmp_path / "out")
+    beta = next(r for r in docs["benchmark.json"]["results"] if r["model"] == "beta-site" and r["suite"] == "all")
+    assert beta["costPublished"] and beta["costPerMinuteUsd"] == 0.1 and beta["costNote"] == "list price"
+
 def test_reviewed_examples(cfg, tmp_path):
     make_inputs(tmp_path)
     reviewed = tmp_path / "reviewed.json"
@@ -119,3 +133,48 @@ def test_reviewed_clips(cfg, tmp_path):
     clips.write_text(json.dumps({sid: {"pass": dict(side, model="nobody"), "fail": side}}))
     with pytest.raises(ValueError, match="unknown model"):
         export(tmp_path, cfg, tmp_path / "out2", clips=clips)
+
+
+def test_task_file_decides_the_task_outcome(cfg, tmp_path):
+    runs = make_inputs(tmp_path)
+    for path in runs.glob("run_a1_*/calls/*/*/transcript.json"):  # Alpha makes the call; the others never do
+        turns = json.loads(path.read_text())
+        turns.append({"role": "Function Call", "start_time": 3.5, "data": {"name": "send_payment", "arguments": json.dumps({"account": "A-1001"})}})
+        path.write_text(json.dumps(turns))
+    task = {"requirements": [{"any_of": [{"tool": "send_payment", "accepted": [{"account": "A-1001"}]}]}]}
+    (tmp_path / "tasks.json").write_text(json.dumps({"tasks": dict.fromkeys(("B01", "B02", "C01", "C02"), task)}))
+
+    with_tasks = export(tmp_path, cfg, tmp_path / "with", tasks=tmp_path / "tasks.json")["benchmark.json"]["results"]
+    overall = {r["model"]: r for r in with_tasks if r["suite"] == "all"}
+    assert overall["alpha-site"]["taskPass"] == 8 and overall["beta-site"]["taskPass"] == 0 and overall["ref-site"]["taskPass"] == 0
+    without = {r["model"]: r for r in export(tmp_path, cfg, tmp_path / "without")["benchmark.json"]["results"] if r["suite"] == "all"}
+    assert without["beta-site"]["taskPass"] > 0  # by expected-outcome lines, Beta completes some calls
+
+
+def test_export_warns_when_calls_lack_the_task_metric(cfg, tmp_path, capsys):
+    runs = make_inputs(tmp_path)
+    config = json.loads((tmp_path / "config.json").read_text())
+    config["metrics"]["task"] = 950
+    (tmp_path / "config.json").write_text(json.dumps(config))
+    for path in runs.glob("run_a1_*/calls/*/*/metrics.json"):  # only Alpha's runs were rescored with the task metric
+        doc = json.loads(path.read_text())
+        doc["results"].append({"id": 950, "name": "Task", "score": True, "explanation": "Main task done."})
+        path.write_text(json.dumps(doc))
+
+    export(tmp_path, cfg, tmp_path / "out")
+    err = capsys.readouterr().err
+    assert "warning: 16 of 24 calls have no verdict from the task metric (950)" in err and "Models: Beta, Reference." in err
+
+    for path in runs.glob("run_a[23]_*/calls/*/*/metrics.json"):  # once every run carries it, the warning goes
+        doc = json.loads(path.read_text())
+        doc["results"].append({"id": 950, "name": "Task", "score": False, "explanation": "Main task not done."})
+        path.write_text(json.dumps(doc))
+    export(tmp_path, cfg, tmp_path / "all")
+    assert "warning" not in capsys.readouterr().err
+
+
+def test_entity_file_must_name_a_config_skill(tmp_path, cfg):
+    make_inputs(tmp_path)
+    (tmp_path / "entities.json").write_text(json.dumps({"skill": "9.9", "entities": {"B01": {"kind": "digits", "true": "7731", "keys": "last4"}}}))
+    with pytest.raises(EntityFileError):
+        export(tmp_path, cfg, tmp_path / "out", entities=tmp_path / "entities.json")

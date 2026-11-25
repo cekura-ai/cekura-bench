@@ -79,6 +79,8 @@ A provider may require additional account access for a particular model.
 | Gradium | Default | `GRADIUM_API_KEY` |
 | Reson8 | rumble-2 (US/global endpoint) | `RESON_API_KEY` |
 | Zoom | Scribe (live mode) | `ZOOM_API_KEY` |
+| Murf | Finch Global (beta) | `MURF_API_KEY` |
+| Mistral | Voxtral Mini Transcribe Realtime 3 | `MISTRAL_API_KEY` |
 
 Environment variables take precedence over `.env`. Accepted aliases are defined in
 [credentials.py](src/stt_bench/credentials.py). Keep credentials in the environment
@@ -139,7 +141,9 @@ they were received by that time.
 | Estimated cost | Configured rates applied to submitted audio, including failures and retries. Unknown rates remain unavailable. |
 
 WER uses the pinned `jiwer` and `whisper-normalizer` dependencies, followed by
-removal of punctuation-only tokens on both sides. See [offline scoring corrections](OFFLINE_RESCORING.md). Deadline accuracy
+removal of punctuation-only tokens on both sides. Before normalizing, every spelling of a
+backchannel ("uh-huh", "mm-hmm", "mhm", "mm-hm", "hm") is dropped on both sides, so no spelling
+counts as a word; "uh-uh" (no) stays one word. See [offline scoring corrections](OFFLINE_RESCORING.md). Deadline accuracy
 always uses attempt one; a retry cannot improve an earlier observation. The standard
 runner permits one retry per failed or invalid clip and retains every attempt.
 

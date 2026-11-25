@@ -1,14 +1,15 @@
 """Call score, ratings, tie margin, void-run guard, pass³ and the suite / language splits."""
 
+import json
 from dataclasses import replace
 
 import pytest
 
-from conftest import BAD, write_call, write_run
+from conftest import BAD, config_dict, write_call, write_run
 from s2s_human_bench import rating
 from s2s_human_bench.bench import family_means, load_bench, pass_all, scenario_scores
-from s2s_human_bench.calls import Call, call_score, family_scores, load_call, model_runs, usable_run, verdict
-from s2s_human_bench.config import ConfigError, site_order
+from s2s_human_bench.calls import Call, call_score, family_scores, load_call, model_runs, swap_runs, usable_run, verdict
+from s2s_human_bench.config import ConfigError, load_config, site_order
 from s2s_human_bench.languages import group_scenarios
 from s2s_human_bench.s2s import suite_runs
 
@@ -142,10 +143,40 @@ def test_scenario_swap_takes_those_scenarios_from_the_other_agent(cfg, tmp_path)
         write_run(tmp_path / name, {"C02": BAD})
     for name in ("run_a2_r1", "run_a2_r2"):
         write_run(tmp_path / name, {"B01": BAD})
-    cfg.models[3] = replace(cfg.models[3], swap=(2, ("C02",)))
+    cfg.models[3] = replace(cfg.models[3], swaps=((2, ("C02",)),))
     ref = next(e for e in load_bench(cfg, tmp_path) if e.model.key == "ref")
     assert all(pass_all(cfg, ref.runs, code) for code in ("B01", "C02"))  # B01 stays its own, C02 comes from agent 2
     assert sorted(ref.runs[0]) == ["B01", "B02", "C01", "C02"]
+
+
+def test_scenario_swap_from_two_agents_whose_runs_hold_only_those_scenarios(cfg, tmp_path):
+    for name in ("run_a3_r1", "run_a3_r2"):
+        write_run(tmp_path / name, {"B02": BAD, "C02": BAD})
+    for r in ("r1", "r2"):  # partial runs: one scenario each, fewer calls than a full run
+        write_call(tmp_path / f"run_a5_{r}", "B02", {101: True, 102: True, 201: None, 202: 0}, ["✅ done", "✅ also"])
+        write_call(tmp_path / f"run_a6_{r}", "C02", {101: True, 102: True, 201: True, 202: 0}, ["✅ done", "✅ also"])
+    cfg.models[3] = replace(cfg.models[3], swaps=((5, ("B02",)), (6, ("C02",))))
+    ref = next(e for e in load_bench(cfg, tmp_path) if e.model.key == "ref")
+    assert len(ref.runs) == 2 and all(sorted(run) == ["B01", "B02", "C01", "C02"] for run in ref.runs)
+    assert all(pass_all(cfg, ref.runs, code) for code in ("B02", "C02"))  # both came from the partners
+    write_call(tmp_path / "run_a6_r3", "B01", {101: True, 102: True, 201: None, 202: 0}, ["✅ done", "✅ also"])
+    assert [p.name for p in swap_runs(cfg, 6, ("C02",), tmp_path)] == ["run_a6_r1", "run_a6_r2"]  # r3 lacks C02
+
+
+def test_scenario_swap_config_takes_one_or_several_agents(tmp_path):
+    raw = config_dict()
+    raw["models"][3]["scenarioSwap"] = {"agentId": 2, "scenarios": ["C02"]}
+    raw["models"][2]["scenarioSwap"] = [{"agentId": 5, "scenarios": ["B02"]}, {"agentId": 6, "scenarios": ["C02"]}]
+    path = tmp_path / "c.json"
+    path.write_text(json.dumps(raw))
+    cfg = load_config(path)
+    assert cfg.models[3].swaps == ((2, ("C02",)),)
+    assert cfg.models[2].swaps == ((5, ("B02",)), (6, ("C02",)))
+    assert cfg.models[0].swaps == ()
+    raw["models"][2]["scenarioSwap"] = [{"agentId": 5, "scenarios": ["C02"]}, {"agentId": 6, "scenarios": ["C02"]}]
+    path.write_text(json.dumps(raw))
+    with pytest.raises(ConfigError):
+        load_config(path)
 
 
 # ---- splits ----------------------------------------------------------------------

@@ -27,16 +27,45 @@ def main() -> None:
     p.add_argument("--date", help="generatedAt date, YYYY-MM-DD (default: today)")
     p.add_argument("--exclude-unhealthy", action="store_true", help="leave out calls whose simulation-health check failed")
     p.add_argument(
+        "--tasks",
+        type=Path,
+        help="private per-scenario task file; with it, Task Outcome is pass or fail on each scenario's main task, decided from the call's tool calls,"
+        " instead of the share of expected-outcome lines met",
+    )
+    p.add_argument(
+        "--agent-logs",
+        type=Path,
+        help="with --entities: folder of execution logs exported from the platform (<call id>.json) for runs recorded before"
+        " agent_text; the agent's own text is read from their 'agent said' lines",
+    )
+    p.add_argument(
+        "--entities",
+        type=Path,
+        help="private per-scenario detail file (entities.py); with it, the skill it names is the agent's first use of the detail"
+        " the caller gave, decided from the call itself, instead of its platform metric",
+    )
+    p.add_argument(
         "--reviewed-examples", type=Path, help="example calls a person has listened to, {site id: [call id, ...]}; without it no example calls are published"
     )
     p.add_argument("--reviewed-clips", type=Path, help="approved clip pairs per skill, {skill id: {setup, should, pass, fail}}; replaces the candidate moments")
     p.add_argument("--clip-picks", type=Path, help="also write the example moments' clip windows (with call ids) here; keep it out of the repo")
+
+    m = sub.add_parser("task-metric", help="Write the Cekura custom-code metric that scores the main task on the platform, built from tasks.py")
+    m.add_argument("--out", type=Path, help="file to write (default: standard output)")
 
     args = parser.parse_args()
     if args.command == "site-export":
         from s2s_human_bench.site_export import run_site_export
 
         sys.exit(run_site_export(args))
+    if args.command == "task-metric":
+        from s2s_human_bench.task_metric import metric_source
+
+        source = metric_source()
+        if args.out:
+            args.out.write_text(source, encoding="utf-8")
+        else:
+            sys.stdout.write(source)
 
 
 if __name__ == "__main__":

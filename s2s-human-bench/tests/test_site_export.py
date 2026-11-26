@@ -124,11 +124,12 @@ def test_reviewed_example_hides_skills(cfg, tmp_path):
 def test_reviewed_clips(cfg, tmp_path):
     make_inputs(tmp_path)
     sid = cfg.skills[0].id
-    side = dict(model="alpha-site", scenario="B01", finding="f", tag="t", audio="/a.mp3", start_s=1.0, end_s=9.0, turns=[])
+    side = dict(model="alpha-site", scenario="B01", finding="f", tag="t", audio="/a.mp3", start_s=1.0, end_s=9.0, turns=[], url="https://share.test/r?call_id=1")
     clips = tmp_path / "clips.json"
     clips.write_text(json.dumps({sid: {"setup": "s", "should": "w", "pass": side, "fail": side}}))
     moments = export(tmp_path, cfg, tmp_path / "out", clips=clips)["examples.json"]["moments"]
     assert list(moments) == [sid] and moments[sid]["pass"]["audio"] == "/a.mp3"
+    assert "url" not in moments[sid]["pass"] and "url" not in moments[sid]["fail"]
     assert moments[sid]["pass"]["domain"] == next(s["domain"] for s in cfg["suites"] if "B01".startswith(s["prefix"]))
     clips.write_text(json.dumps({sid: {"pass": dict(side, model="nobody"), "fail": side}}))
     with pytest.raises(ValueError, match="unknown model"):

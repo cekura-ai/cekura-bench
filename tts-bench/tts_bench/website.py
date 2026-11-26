@@ -124,8 +124,8 @@ def _hard_parts(rows: Sequence[dict[str, Any]]) -> dict[str, Any] | None:
     }
 
 
-WORD_ERROR_RULE = ("a word counts as wrong when most transcribers hear it wrong, with Zoom Scribe as the third "
-                   "where Deepgram and Whisper differ")
+WORD_ERROR_RULE = ("a word counts as wrong when most transcribers hear it wrong, and a name only when every "
+                   "transcriber does, with Zoom Scribe as the third where Deepgram and Whisper differ or both miss a name")
 
 
 def _agreed_words(rows: Sequence[dict[str, Any]]) -> dict[str, Any] | None:

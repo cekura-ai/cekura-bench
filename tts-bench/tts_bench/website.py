@@ -30,6 +30,7 @@ import numpy as np
 
 from tts_bench.common.stats import latency_summary, rate_summary
 from tts_bench.naturalness import rows as naturalness_rows
+from tts_bench.score import ARBITERS
 from tts_bench.store import latest_cells, read_jsonl
 
 SCHEMA = "tts-bench/site-summary/1"
@@ -92,6 +93,34 @@ def _spans(rows: Sequence[dict[str, Any]], instrument: str) -> dict[str, Any]:
         "all": None if not total[1] else {"passed": total[0], "n": total[1], "rate": round(total[0] / total[1], 4)},
         "byCategory": {k: {"passed": v[0], "n": v[1], "rate": round(v[0] / v[1], 4)} for k, v in sorted(by.items())},
         "forListener": listener,
+    }
+
+
+HARD_PARTS_RULE = ("one verdict per hard part: a term counts only if every transcriber heard it right; any other kind "
+                   "by the transcribers' majority, with Zoom Scribe as the third where Deepgram and Whisper split")
+
+
+def _hard_parts(rows: Sequence[dict[str, Any]]) -> dict[str, Any] | None:
+    """Hard parts read right, one verdict per part per recording; ``None`` for runs scored before verdicts existed."""
+    by: dict[str, list[int]] = defaultdict(lambda: [0, 0])
+    unresolved = 0
+    seen = False
+    for row in rows:
+        if "hardParts" not in row:
+            continue
+        seen = True
+        for verdict in row["hardParts"]:
+            by[verdict["category"]][1] += 1
+            by[verdict["category"]][0] += 1 if verdict["pass"] else 0
+            unresolved += verdict["pass"] is None
+    if not seen:
+        return None
+    total = [sum(v[0] for v in by.values()), sum(v[1] for v in by.values())]
+    return {
+        "all": None if not total[1] else {"passed": total[0], "n": total[1], "rate": round(total[0] / total[1], 4)},
+        "byCategory": {k: {"passed": v[0], "n": v[1], "rate": round(v[0] / v[1], 4)} for k, v in sorted(by.items())},
+        "unresolved": unresolved,
+        "rule": HARD_PARTS_RULE,
     }
 
 
@@ -168,7 +197,7 @@ def summarize(run_dir: str | Path, amendments: Iterable[str | Path] = ()) -> dic
         ended_by[str(s.get("ended_by"))] += 1
     timeouts = ended_by.get("timeout", 0)
 
-    instruments = sorted({name for row in scores for name in row["instruments"]})
+    instruments = sorted({name for row in scores for name in row["instruments"]} - set(ARBITERS))
     def rows(probe: str, cohort: str | None = None) -> list[dict[str, Any]]:
         return [r for r in scores if r["probe"] == probe and (cohort is None or r["cohort"] == cohort)]
     accuracy = {}
@@ -260,6 +289,7 @@ def summarize(run_dir: str | Path, amendments: Iterable[str | Path] = ()) -> dic
             "runawayRule": f"a recording over {RUNAWAY_FACTOR:g}x and {RUNAWAY_EXCESS_MS} ms longer than the model's median for the same text",
         },
         "accuracy": accuracy,
+        "hardParts": _hard_parts(rows("one_shot")),
         "instrumentDisagreements": disagreements,
         "naturalness": _naturalness(roots),
     }

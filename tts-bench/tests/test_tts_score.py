@@ -5,7 +5,7 @@ from dataclasses import asdict
 import pytest
 
 from tts_bench import corpus
-from tts_bench.score import _with_current_readings, hard_part_verdicts, score_spans, score_transcript
+from tts_bench.score import _with_current_readings, hard_part_verdicts, score_spans, score_transcript, word_verdict
 
 
 def test_written_and_spoken_renderings_both_score_clean():
@@ -161,3 +161,22 @@ def test_other_hard_parts_go_to_the_majority_and_wait_for_the_third_when_two_spl
     assert [v["pass"] for v in hard_part_verdicts(two)] == [None, True]
     three = {**two, "zoom": _heard([("sequence", True), ("shorthand", False)])}
     assert [v["pass"] for v in hard_part_verdicts(three)] == [True, True]
+
+
+def _transcribed(item_id, *hypotheses):
+    item = corpus.by_id()[item_id]
+    return {f"t{n}": score_transcript(item.text, item.spoken_reference, h, readings=item.readings) for n, h in enumerate(hypotheses)}
+
+
+def test_a_word_only_one_transcriber_missed_does_not_count_once_a_third_has_heard_it():
+    clipped = "for calling cedar valley family practice this is riley how can i help you today"
+    right = "Thanks for calling Cedar Valley Family Practice, this is Riley. How can I help you today?"
+    assert word_verdict(_transcribed("prose.greet", clipped, right))["errors"] is None
+    assert word_verdict(_transcribed("prose.greet", clipped, right, right))["errors"] == 0
+
+
+def test_a_word_most_transcribers_missed_still_counts():
+    short = "thanks for calling cedar valley family practice this is riley how can i help you"
+    right = "Thanks for calling Cedar Valley Family Practice, this is Riley. How can I help you today?"
+    assert word_verdict(_transcribed("prose.greet", short, short, right))["errors"] == 1
+    assert word_verdict(_transcribed("prose.greet", short, short))["errors"] == 1

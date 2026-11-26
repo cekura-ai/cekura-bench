@@ -86,5 +86,10 @@ On 2026-11-26 every summary except AssemblyAI TTS 1's was rescored again, with
   recordings across 44 runs went to Zoom; none is left unresolved. The new
   `hardParts` field of a summary holds the verdicts; `accuracy` keeps each
   transcriber's own figures.
+- Word error counts a word as wrong only where most transcribers hear it
+  wrong, so one transcriber's mishearing (a dropped first word, a garbled name)
+  is not the model's error. Every one-shot recording where Deepgram and Whisper
+  differ on a word went to Zoom Scribe too; none is left unresolved. The new
+  `wordError` field holds the agreed figure.
 
-Only `accuracy`, `hardParts` and `instrumentDisagreements` changed.
+Only `accuracy`, `hardParts`, `wordError` and `instrumentDisagreements` changed.

@@ -3,24 +3,28 @@
 from __future__ import annotations
 
 import asyncio
+import base64
+import json
 import time
 from collections import deque
 from urllib.parse import urlsplit
 
 import pytest
+import websockets
 from aiohttp import web
 
 from tts_bench import corpus
 from tts_bench.adapters import heygen
 from tts_bench.adapters.base import AdapterError, TTSConfig, is_refusal
+from tts_bench.adapters.boson_live import ACCOUNT_REFUSALS, BosonLiveAdapter
 from tts_bench.adapters.deepgram_flux import DeepgramFluxAdapter
 from tts_bench.adapters.elevenlabs_dialogue import ElevenLabsDialogueAdapter
 from tts_bench.adapters.elevenlabs_dialogue_multi import ElevenLabsDialogueMultiAdapter
 from tts_bench.adapters.heygen import HeyGenTTSAdapter, wait_for_room
 from tts_bench.common.events import Clock, EventLog
-from tts_bench.registry import NADINE, PROVIDERS, lineup
+from tts_bench.registry import BOSON_DEFAULT, NADINE, PROVIDERS, lineup
 from tts_bench.runner import RunSpec, Runner
-from tts_bench.probes import OneShot, Repeat, StreamedInput
+from tts_bench.probes import OneShot, Repeat, StreamedInput, _verdict
 
 
 def adapter(cls, model: str, voice: str):
@@ -2139,3 +2143,159 @@ class TestMistralRealtime:
         from tts_bench.probes import _verdict
 
         assert _verdict(done) == "fail"
+
+
+# -- Boson AI ------------------------------------------------------------------
+
+def boson_audio(pcm: bytes) -> dict:
+    return {"type": "audio", "data": base64.b64encode(pcm).decode()}
+
+
+def boson() -> tuple[BosonLiveAdapter, list[dict]]:
+    return adapter(BosonLiveAdapter, "higgs-tts-3", BOSON_DEFAULT)
+
+
+class TestBosonLive:
+    async def test_text_and_flush_make_a_turn_flushed_ends_it_and_a_sample_split_across_events_is_carried(self):
+        live, sent = boson()
+        first = await live.open_context("first")
+        assert first.t0 is None and sent == []
+        await live.send("first", "Sure thing. ")
+        await live.send("first", "I can move it.")
+        await live.finish("first")
+        assert sent == [{"type": "text", "text": "Sure thing. "}, {"type": "text", "text": "I can move it."}, {"type": "flush"}]
+        live._on_message(boson_audio(b"\x01\x00\x02"))                 # ends inside the second sample
+        live._on_message(boson_audio(b"\x00\x03\x00"))
+        assert bytes(first.pcm) == b"\x01\x00\x02\x00\x03\x00" and not first.done.is_set()
+        live._on_message({"type": "flushed"})
+        assert first.done.is_set() and first.error is None and "trailing_bytes_dropped" not in first.meta
+        assert first.meta["request"] == {"model": "higgs-tts-3", "voice": "default", "normalize": True, "language": "eng"}
+        live._on_message(boson_audio(b"\x09\x00"))                        # after flushed, before the next turn: no turn's
+        assert bytes(first.pcm) == b"\x01\x00\x02\x00\x03\x00"
+
+        second = await live.open_context("second")                         # the repeat probe's next turn, same socket
+        live._on_message(boson_audio(b"\x04\x00\x05"))
+        live._on_message({"type": "flushed"})
+        assert bytes(second.pcm) == b"\x04\x00" and second.meta["trailing_bytes_dropped"] == 1
+        third = await live.open_context("third")
+        live._on_message(boson_audio(b"\x06\x00"))
+        assert bytes(third.pcm) == b"\x06\x00"                             # the dropped byte is not carried over
+
+    async def test_cancel_keeps_the_audio_that_still_arrives_and_cancelled_acknowledges_and_ends_the_turn(self):
+        live, sent = boson()
+        turn = await live.open_context("main")
+        await live.send("main", "A long answer about your order.")
+        await live.finish("main")
+        live._on_message(boson_audio(b"\x01\x00" * 4))
+        await live.cancel("main")
+        assert sent[-1] == {"type": "cancel"}
+        live._on_message(boson_audio(b"\x02\x00" * 2 + b"\x03"))           # already on its way when the cancel was sent
+        assert not turn.done.is_set()
+        live._on_message({"type": "cancelled"})
+        assert turn.done.is_set() and turn.t_cancel_ack is not None and turn.meta["cancelled"] is True
+        assert len(turn.pcm) == 12 and turn.error is None
+        after = await live.open_context("after")
+        live._on_message(boson_audio(b"\x04\x00"))
+        assert bytes(after.pcm) == b"\x04\x00"                             # the half sample went with the cancelled turn
+        cut = await live.open_context("cut")
+        await live.cancel("cut")
+        live._on_closed("received 1000 (OK)")
+        assert cut.done.is_set() and cut.error is None                     # nothing more was owed after a cancel
+        config = TTSConfig("higgs-tts-3", BOSON_DEFAULT)
+        assert BosonLiveAdapter.unsupported_reason(config, ("streamed_input", "cancel", "continuation")) is None
+
+    async def test_account_codes_are_refusals_and_other_errors_or_a_close_before_flushed_fail_the_turn(self):
+        for code in ACCOUNT_REFUSALS:
+            live, _ = boson()
+            turn = await live.open_context("main")
+            live._on_message({"type": "error", "code": code, "message": "refused"})
+            assert turn.done.is_set() and is_refusal(turn.error), code
+        live, _ = boson()
+        voice = await live.open_context("voice")
+        live._on_message({"type": "error", "code": "internal_error", "message": "Unknown voice 'x'. Upload a voice first "
+                          "via POST /v1/audio/voices, or use ref_audio + ref_text."})
+        assert voice.error.startswith("internal_error: Unknown voice") and not is_refusal(voice.error)
+        live, _ = boson()
+        cut = await live.open_context("cut")
+        live._on_message(boson_audio(b"\x01\x00"))
+        live._on_closed("received 1011 (internal error); then sent 1011 (internal error)")
+        assert cut.error.startswith("closed before flushed") and "1011" in cut.error and bytes(cut.pcm) == b"\x01\x00"
+        assert not is_refusal(cut.error) and _verdict(cut) == "fail"
+        live, _ = boson()
+        finished = await live.open_context("finished")
+        live._on_message({"type": "flushed"})
+        live._on_message({"type": "error", "code": "session_idle_timeout", "message": "idle"})
+        live._on_closed("received 1000 (OK)")
+        assert finished.error is None                                      # nothing after flushed reaches a finished turn
+        with pytest.raises(AdapterError, match="session_idle_timeout"):
+            await live.open_context("late")
+
+    def test_options_are_checked_and_the_lineup_runs_higgs_tts_3_with_the_settings_boson_asked_for(self):
+        clock = Clock()
+        off = BosonLiveAdapter(TTSConfig("higgs-tts-3", BOSON_DEFAULT, options=(("normalize", "false"), ("language", "cmn"))),
+                               "k", EventLog(clock), clock)
+        assert off.request == {"model": "higgs-tts-3", "voice": "default", "normalize": False, "language": "cmn"}
+        for bad in (("normalize", "yes"), ("language", "en"), ("language", "eng\n")):
+            with pytest.raises(ValueError):
+                BosonLiveAdapter(TTSConfig("higgs-tts-3", BOSON_DEFAULT, options=(bad,)), "k", EventLog(clock), clock)
+        live, _ = boson()
+        assert live.url == "wss://api.boson.ai/v1/audio/speech/live" and live._headers() == {"Authorization": "Bearer unused"}
+        entry = PROVIDERS["boson-live"]
+        assert entry.credential_env == "BOSON_API_KEY" and entry.voice_for("higgs-tts-3") == "default"
+        assert entry.rate_for("higgs-tts-3") == 24000 and entry.options_for("higgs-tts-3") == ()
+        assert BosonLiveAdapter.unsupported_reason(TTSConfig("higgs-tts-3", BOSON_DEFAULT, sample_rate=8000))
+        assert BosonLiveAdapter._without_audio(boson_audio(b"\x00" * 300))["data"] == "<400 b64 chars>"
+
+    @staticmethod
+    async def _serve(tmp_path, on_connect=None):
+        """A local stand-in for the speech socket. Returns the server, the adapter, the frames it saw and its headers."""
+        seen: list[dict] = []
+        headers: dict = {}
+
+        async def serve(ws):
+            headers.update(ws.request.headers)
+            if on_connect:
+                await on_connect(ws)
+                return
+            async for raw in ws:
+                frame = json.loads(raw)
+                seen.append(frame)
+                if frame["type"] == "flush":
+                    await ws.send(json.dumps(boson_audio(b"\x01\x00\x02")))
+                    await ws.send(json.dumps(boson_audio(b"\x00")))
+                    await ws.send(json.dumps({"type": "flushed"}))
+
+        clock = Clock()
+        log = EventLog(clock, raw_path=tmp_path / "raw.jsonl")
+        live = BosonLiveAdapter(TTSConfig("higgs-tts-3", BOSON_DEFAULT), "secret-key", log, clock)
+        server = await websockets.serve(serve, "127.0.0.1", 0)
+        live.base = f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}/v1/audio/speech/live"
+        return server, live, seen, headers
+
+    async def test_start_goes_first_with_the_key_in_the_header_and_one_socket_speaks_two_turns(self, tmp_path):
+        server, live, seen, headers = await self._serve(tmp_path)
+        async with server:
+            async with live:
+                for context_id in ("first", "second"):
+                    await live.open_context(context_id)
+                    await live.send(context_id, "Your total is $42.")
+                    await live.finish(context_id)
+                    done = await live.wait(context_id, 5.0)
+                    assert bytes(done.pcm) == b"\x01\x00\x02\x00" and done.meta["ended_by"] == "provider" and done.error is None
+        assert seen[0] == {"type": "start", "request": {"model": "higgs-tts-3", "voice": "default", "normalize": True, "language": "eng"}}
+        assert [frame["type"] for frame in seen[1:]] == ["text", "flush"] * 2
+        assert headers["authorization"] == "Bearer secret-key"
+        assert "secret-key" not in (tmp_path / "raw.jsonl").read_text()
+
+    async def test_a_rejected_key_is_a_refused_session_not_a_failed_turn(self, tmp_path):
+        async def reject(ws):
+            await ws.send(json.dumps({"type": "error", "code": "invalid_api_key", "message": "You didn't provide a valid API key."}))
+            await ws.close(1008)
+
+        server, live, _, _ = await self._serve(tmp_path, on_connect=reject)
+        async with server:
+            with pytest.raises(AdapterError, match="invalid_api_key") as refused:
+                async with live:
+                    await asyncio.sleep(0.2)
+                    await live.open_context("main")
+        assert is_refusal(str(refused.value))

@@ -605,7 +605,7 @@
      "referenceWords": 309
     },
     "paragraph": {
-     "wer": 0.0025,
+     "wer": 0.0,
      "recordings": 12,
      "referenceWords": 1185
     },
@@ -625,7 +625,7 @@
      "referenceWords": 123
     },
     "repair": {
-     "wer": 0.0087,
+     "wer": 0.0174,
      "recordings": 18,
      "referenceWords": 345
     },
@@ -726,7 +726,7 @@
  },
  "wordError": {
   "oneShot": {
-   "wer": 0.0229,
+   "wer": 0.0235,
    "recordings": 315,
    "referenceWords": 5496,
    "unresolved": 0
@@ -817,7 +817,7 @@
     "unresolved": 0
    },
    "repair": {
-    "wer": 0.0087,
+    "wer": 0.0174,
     "recordings": 18,
     "referenceWords": 345,
     "unresolved": 0

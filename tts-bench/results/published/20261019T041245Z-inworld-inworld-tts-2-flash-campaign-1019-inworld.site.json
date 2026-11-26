@@ -600,12 +600,12 @@
     "version": "0.1.15"
    },
    "oneShot": {
-    "wer": 0.0104,
+    "wer": 0.0102,
     "recordings": 315,
     "referenceWords": 5496
    },
    "streamedInput": {
-    "wer": 0.0086,
+    "wer": 0.0083,
     "recordings": 312,
     "referenceWords": 5448
    },
@@ -662,7 +662,7 @@
      "referenceWords": 309
     },
     "paragraph": {
-     "wer": 0.0034,
+     "wer": 0.0025,
      "recordings": 12,
      "referenceWords": 1185
     },

@@ -542,7 +542,7 @@
     "version": "0.1.15"
    },
    "oneShot": {
-    "wer": 0.0215,
+    "wer": 0.0217,
     "recordings": 315,
     "referenceWords": 5496
    },
@@ -600,7 +600,7 @@
      "referenceWords": 309
     },
     "paragraph": {
-     "wer": 0.0101,
+     "wer": 0.0084,
      "recordings": 12,
      "referenceWords": 1185
     },
@@ -620,7 +620,7 @@
      "referenceWords": 123
     },
     "repair": {
-     "wer": 0.0087,
+     "wer": 0.0174,
      "recordings": 18,
      "referenceWords": 345
     },
@@ -721,7 +721,7 @@
  },
  "wordError": {
   "oneShot": {
-   "wer": 0.0153,
+   "wer": 0.0156,
    "recordings": 315,
    "referenceWords": 5496,
    "unresolved": 0
@@ -812,7 +812,7 @@
     "unresolved": 0
    },
    "repair": {
-    "wer": 0.0058,
+    "wer": 0.0116,
     "recordings": 18,
     "referenceWords": 345,
     "unresolved": 0

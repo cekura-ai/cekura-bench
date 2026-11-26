@@ -17,6 +17,8 @@ available, and a row on which they disagree by more than the declared margin
 is flagged, not averaged. Each hard part gets one verdict: a term must be heard
 right by every transcriber, any other kind by their majority, and where the two
 split, a third transcriber (the arbiter) hears that recording and decides.
+Word errors are counted the same way: a word is wrong when most transcribers
+hear it wrong, so one transcriber's mishearing does not count against the model.
 """
 
 from __future__ import annotations
@@ -114,50 +116,99 @@ def _reading_graph(references: Sequence[list[str]]) -> tuple[list[str], dict[int
     return base, detours
 
 
+def _graph_align(base: list[str], detours: dict[int, list[tuple[list[str], int]]], hyp: list[str]) -> tuple[int, list[int], dict[int, int]]:
+    """Least word edits turning the transcript into a path through the reading graph, and where they fell.
+
+    Returns the edit count, the base words a transcript got wrong (by index) and
+    the extra transcript words before each base word. An edit inside a detour is
+    put on the base words that detour replaces, in order, so transcribers that
+    took different readings of the same stretch can still be compared word by word.
+    """
+    inf = 1 << 30
+    width = len(hyp) + 1
+    order: list[tuple] = []
+    edges: dict[tuple, list[tuple[tuple, str, tuple]]] = defaultdict(list)    # node -> (next node, word, where)
+    for i in range(len(base) + 1):
+        order.append(("b", i))
+        if i < len(base):
+            edges[("b", i)].append((("b", i + 1), base[i], ("w", i)))
+        for n, (words, j) in enumerate(detours.get(i, ())):
+            where = ("d", i, j)
+            prev = ("b", i)
+            for t, word in enumerate(words):
+                node = ("b", j) if t == len(words) - 1 else ("d", i, n, t)
+                if node[0] == "d":
+                    order.append(node)
+                edges[prev].append((node, word, where))
+                prev = node
+            if not words:
+                edges[prev].append((("b", j), "", where))
+    cost = {node: [inf] * width for node in order}
+    back: dict[tuple, list] = {node: [None] * width for node in order}
+    cost[("b", 0)][0] = 0
+    for node in order:
+        row, bp = cost[node], back[node]
+        for k in range(1, width):              # an extra transcript word
+            if row[k - 1] + 1 < row[k]:
+                row[k], bp[k] = row[k - 1] + 1, (node, k - 1, "ins", node)
+        for nxt, word, where in edges[node]:
+            nrow, nbp = cost[nxt], back[nxt]
+            for k in range(width):
+                if word == "":                   # an empty detour: nothing to read
+                    if row[k] < nrow[k]:
+                        nrow[k], nbp[k] = row[k], (node, k, "skip", where)
+                    continue
+                if row[k] + 1 < nrow[k]:         # a reference word the transcript lacks
+                    nrow[k], nbp[k] = row[k] + 1, (node, k, "del", where)
+                if k and row[k - 1] + (word != hyp[k - 1]) < nrow[k]:
+                    nrow[k], nbp[k] = row[k - 1] + (word != hyp[k - 1]), (node, k - 1, "ok" if word == hyp[k - 1] else "sub", where)
+    end = ("b", len(base))
+    distance = cost[end][len(hyp)]
+    wrong: set[int] = set()
+    inserted: dict[int, int] = defaultdict(int)
+    in_detour: dict[tuple[int, int], int] = defaultdict(int)
+    node, k = end, len(hyp)
+    while back[node][k] is not None:
+        prev, pk, op, where = back[node][k]
+        if op in ("del", "sub"):
+            if where[0] == "w":
+                wrong.add(where[1])
+            else:
+                in_detour[where[1:]] += 1
+        elif op == "ins":
+            if node[0] == "b":
+                inserted[node[1]] += 1
+            else:
+                in_detour[node[1:3] if len(node) == 4 else node[1:]] += 1
+        node, k = prev, pk
+    for (i, j), errors in in_detour.items():
+        span = list(range(i, j))
+        wrong.update(span[:errors])
+        if errors > len(span):
+            inserted[j] += errors - len(span)
+    return distance, sorted(wrong), dict(inserted)
+
+
 def _graph_distance(base: list[str], detours: dict[int, list[tuple[list[str], int]]], hyp: list[str]) -> int:
     """Least word edits turning the transcript into any path through the reading graph."""
-    width = len(hyp) + 1
-    inf = 1 << 30
-    at: dict[int, list[int]] = {i: [inf] * width for i in range(len(base) + 1)}
-    at[0][0] = 0
-
-    def close(row: list[int]) -> list[int]:
-        for k in range(1, width):        # extra transcript words
-            row[k] = min(row[k], row[k - 1] + 1)
-        return row
-
-    def step(row: list[int], word: str) -> list[int]:
-        out = [inf] * width
-        for k in range(width):
-            out[k] = row[k] + 1           # reference word missing from the transcript
-            if k:
-                out[k] = min(out[k], row[k - 1] + (word != hyp[k - 1]))
-        return out
-
-    for i in range(len(base) + 1):
-        row = close(at[i])
-        for words, j in detours.get(i, ()):
-            cur = row
-            for word in words:
-                cur = close(step(cur, word))
-            at[j] = [min(a, b) for a, b in zip(at[j], cur)]
-        if i < len(base):
-            at[i + 1] = [min(a, b) for a, b in zip(at[i + 1], step(row, base[i]))]
-    return close(at[len(base)])[len(hyp)]
+    return _graph_align(base, detours, hyp)[0]
 
 
 def score_readings(references: Sequence[str], hypothesis: str) -> dict[str, Any]:
     """Word errors against the closest reading, choosing among the references word by word.
 
     The first reference is the spoken one and sets the word count; the text as
-    sent and any accepted alternative readings join it as detours.
+    sent and any accepted alternative readings join it as detours. ``wrong``
+    lists the spoken reference's words the transcript got wrong and
+    ``inserted`` its extra words by position, so transcribers can be compared word by word.
     """
     refs = [_words(r) for r in references]
     hyp = _words(hypothesis)
     base, detours = _reading_graph(refs)
-    errors = _graph_distance(base, detours, hyp)
+    errors, wrong, inserted = _graph_align(base, detours, hyp)
     return {"errors": errors, "reference_words": len(base), "wer": round(errors / max(len(base), 1), 4),
-            "normalized_reference": " ".join(base), "normalized_hypothesis": " ".join(hyp)}
+            "normalized_reference": " ".join(base), "normalized_hypothesis": " ".join(hyp),
+            "wrong": wrong, "inserted": {str(k): v for k, v in sorted(inserted.items())}}
 
 
 def _canonical_amounts(text: str) -> str:
@@ -451,8 +502,31 @@ def hard_part_verdicts(instruments: dict[str, dict[str, Any]]) -> list[dict[str,
     return out
 
 
+def word_verdict(instruments: dict[str, dict[str, Any]]) -> dict[str, Any] | None:
+    """Word errors the transcribers agree on: a reference word is wrong, or an extra word was said, when most of them hear it so.
+
+    One transcriber mishearing a word the others heard right is the
+    transcriber's error, not the model's. With two transcribers that disagree
+    the count is unresolved (``errors: None``) until the arbiter has heard the
+    recording; ``mean`` keeps the two transcribers' average meanwhile.
+    """
+    heard = [r["best"] for r in instruments.values() if "wrong" in (r.get("best") or {})]
+    if not heard:
+        return None
+    words = heard[0]["reference_words"]
+    mean = sum(h["errors"] for h in heard) / len(heard)
+    marks = [(set(h["wrong"]), {int(k): v for k, v in h["inserted"].items()}) for h in heard]
+    if len(heard) == 2 and marks[0] != marks[1]:
+        return {"errors": None, "reference_words": words, "transcribers": 2, "mean": mean}
+    need = len(heard) // 2 + 1                   # most of them: 1 of 1, 2 of 2, 2 of 3
+    wrong = sum(1 for i in range(words) if sum(i in w for w, _ in marks) >= need)
+    gaps = {g for _, ins in marks for g in ins}
+    extra = sum(sorted((ins.get(g, 0) for _, ins in marks), reverse=True)[need - 1] for g in gaps)
+    return {"errors": wrong + extra, "reference_words": words, "transcribers": len(heard), "mean": mean}
+
+
 async def arbitrate_run(run_dir: Path, arbiter: Instrument, concurrency: int = 10) -> dict[str, int]:
-    """Transcribe, with the arbiter, every recording holding a hard part its transcribers split on; then rescore.
+    """Transcribe, with the arbiter, every recording whose transcribers split on a hard part or a word; then rescore.
 
     Only one-shot recordings, the ones hard parts are reported from, and only
     those are sent, so the arbiter's cost follows the disagreements, not the
@@ -463,7 +537,7 @@ async def arbitrate_run(run_dir: Path, arbiter: Instrument, concurrency: int = 1
     path = run_dir / "scores-all.jsonl"
     rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
     pending = [r for r in rows if r["probe"] == "one_shot" and arbiter.name not in r["instruments"]
-               and any(v["pass"] is None for v in r.get("hardParts", ()))]
+               and (any(v["pass"] is None for v in r.get("hardParts", ())) or (r.get("words") or {}).get("errors", 0) is None)]
     semaphore = asyncio.Semaphore(concurrency)
     counts = {"split": len(pending), "transcribed": 0, "failed": 0, "no_audio": 0}
     journal = open(run_dir / JOURNAL, "a", encoding="utf-8")
@@ -525,6 +599,7 @@ def rescore_run(run_dir: Path) -> int:
         row["normalizer"] = {"name": NORMALIZER_NAME, "version": NORMALIZER_VERSION}
         row["instruments_disagree"] = len(wers) >= 2 and (max(wers) - min(wers)) > DISAGREE_WER
         row["hardParts"] = hard_part_verdicts(row["instruments"])
+        row["words"] = word_verdict(row["instruments"])
     _write_scores(run_dir, rows)
     return len(rows)
 
@@ -651,6 +726,7 @@ async def score_run(run_dir: Path, instruments: Sequence[Instrument], concurrenc
             "instruments": results,
             "instruments_disagree": len(wers) >= 2 and (max(wers) - min(wers)) > DISAGREE_WER,
             "hardParts": hard_part_verdicts(results),
+            "words": word_verdict(results),
         })
     _write_scores(run_dir, rows)   # scores.jsonl holds one row per cell (the main context); scores-all.jsonl everything
     return len(rows)
@@ -704,7 +780,7 @@ def main(argv: Sequence[str]) -> int:
     parser.add_argument("--env", help="dotenv file holding instrument credentials")
     parser.add_argument("--concurrency", type=int, default=4)
     parser.add_argument("--arbitrate", action="store_true",
-                        help="then send each recording whose hard parts the transcribers split on to Zoom Scribe (ZOOM_API_KEY)")
+                        help="then send each recording whose transcribers split on a hard part or a word to Zoom Scribe (ZOOM_API_KEY)")
     args = parser.parse_args(argv)
 
     values: dict[str, str] = {}
@@ -724,7 +800,7 @@ def main(argv: Sequence[str]) -> int:
     def settle(run: str) -> None:
         if arbiter:
             counts = asyncio.run(arbitrate_run(Path(run), arbiter, max(args.concurrency, 10)))
-            print(f"{run}: {counts['split']} recordings split on a hard part; {counts['transcribed']} sent to "
+            print(f"{run}: {counts['split']} recordings split on a hard part or a word; {counts['transcribed']} sent to "
                   f"{arbiter.name}:{arbiter.model}, {counts['failed']} failed, {counts['no_audio']} without audio")
 
     if args.rescore:

@@ -758,6 +758,143 @@
   "unresolved": 0,
   "rule": "one verdict per hard part: a term counts only if every transcriber heard it right; any other kind by the transcribers' majority, with Zoom Scribe as the third where Deepgram and Whisper split"
  },
+ "wordError": {
+  "oneShot": {
+   "wer": 0.0455,
+   "recordings": 308,
+   "referenceWords": 5425,
+   "unresolved": 0
+  },
+  "byCohort": {
+   "abbrev": {
+    "wer": 0.0773,
+    "recordings": 14,
+    "referenceWords": 181,
+    "unresolved": 0
+   },
+   "alnum": {
+    "wer": 0.0143,
+    "recordings": 18,
+    "referenceWords": 210,
+    "unresolved": 0
+   },
+   "contact": {
+    "wer": 0.0062,
+    "recordings": 15,
+    "referenceWords": 162,
+    "unresolved": 0
+   },
+   "currency": {
+    "wer": 0.0802,
+    "recordings": 17,
+    "referenceWords": 212,
+    "unresolved": 0
+   },
+   "datetime": {
+    "wer": 0.0,
+    "recordings": 18,
+    "referenceWords": 237,
+    "unresolved": 0
+   },
+   "dense": {
+    "wer": 0.0482,
+    "recordings": 9,
+    "referenceWords": 228,
+    "unresolved": 0
+   },
+   "heteronym": {
+    "wer": 0.0563,
+    "recordings": 15,
+    "referenceWords": 213,
+    "unresolved": 0
+   },
+   "long": {
+    "wer": 0.0018,
+    "recordings": 12,
+    "referenceWords": 558,
+    "unresolved": 0
+   },
+   "names": {
+    "wer": 0.049,
+    "recordings": 15,
+    "referenceWords": 102,
+    "unresolved": 0
+   },
+   "numbers": {
+    "wer": 0.0939,
+    "recordings": 21,
+    "referenceWords": 309,
+    "unresolved": 0
+   },
+   "paragraph": {
+    "wer": 0.0878,
+    "recordings": 12,
+    "referenceWords": 1185,
+    "unresolved": 0
+   },
+   "phone": {
+    "wer": 0.0753,
+    "recordings": 14,
+    "referenceWords": 93,
+    "unresolved": 0
+   },
+   "prose": {
+    "wer": 0.0,
+    "recordings": 26,
+    "referenceWords": 404,
+    "unresolved": 0
+   },
+   "questions": {
+    "wer": 0.0,
+    "recordings": 12,
+    "referenceWords": 123,
+    "unresolved": 0
+   },
+   "repair": {
+    "wer": 0.0116,
+    "recordings": 18,
+    "referenceWords": 345,
+    "unresolved": 0
+   },
+   "spelled": {
+    "wer": 0.0,
+    "recordings": 11,
+    "referenceWords": 67,
+    "unresolved": 0
+   },
+   "symbols": {
+    "wer": 0.1645,
+    "recordings": 11,
+    "referenceWords": 152,
+    "unresolved": 0
+   },
+   "tech": {
+    "wer": 0.0152,
+    "recordings": 12,
+    "referenceWords": 198,
+    "unresolved": 0
+   },
+   "terms": {
+    "wer": 0.0549,
+    "recordings": 17,
+    "referenceWords": 182,
+    "unresolved": 0
+   },
+   "units": {
+    "wer": 0.0067,
+    "recordings": 12,
+    "referenceWords": 150,
+    "unresolved": 0
+   },
+   "worded": {
+    "wer": 0.0,
+    "recordings": 9,
+    "referenceWords": 114,
+    "unresolved": 0
+   }
+  },
+  "rule": "a word counts as wrong when most transcribers hear it wrong, with Zoom Scribe as the third where Deepgram and Whisper differ"
+ },
  "instrumentDisagreements": 80,
  "naturalness": {
   "model": "utmos22-strong",

@@ -124,6 +124,28 @@ def _hard_parts(rows: Sequence[dict[str, Any]]) -> dict[str, Any] | None:
     }
 
 
+WORD_ERROR_RULE = ("a word counts as wrong when most transcribers hear it wrong, with Zoom Scribe as the third "
+                   "where Deepgram and Whisper differ")
+
+
+def _agreed_words(rows: Sequence[dict[str, Any]]) -> dict[str, Any] | None:
+    """Word error over the errors the transcribers agree on; an unresolved recording counts at their mean."""
+    errors = words = n = unresolved = 0.0
+    for row in rows:
+        verdict = row.get("words")
+        if not verdict:
+            continue
+        n += 1
+        words += verdict["reference_words"]
+        if verdict["errors"] is None:
+            unresolved += 1
+            errors += verdict["mean"]
+        else:
+            errors += verdict["errors"]
+    return None if not words else {"wer": round(errors / words, 4), "recordings": int(n), "referenceWords": int(words),
+                                   "unresolved": int(unresolved)}
+
+
 def _provenance(root: Path) -> dict[str, Any]:
     return json.loads((root / "provenance.json").read_text())
 
@@ -290,6 +312,11 @@ def summarize(run_dir: str | Path, amendments: Iterable[str | Path] = ()) -> dic
         },
         "accuracy": accuracy,
         "hardParts": _hard_parts(rows("one_shot")),
+        "wordError": None if not _agreed_words(rows("one_shot")) else {
+            "oneShot": _agreed_words(rows("one_shot")),
+            "byCohort": {cohort: _agreed_words(rows("one_shot", cohort)) for cohort in sorted(by_cohort)},
+            "rule": WORD_ERROR_RULE,
+        },
         "instrumentDisagreements": disagreements,
         "naturalness": _naturalness(roots),
     }

@@ -62,3 +62,29 @@ whole-text request cannot measure, from the websocket runs
 summaries are published; the site row names the HTTP run in `run` and the
 websocket run in `streamedFrom`.
 Each summary names its runs in `run` and `amendments`.
+
+On 2026-11-23 every summary except AssemblyAI TTS 1's was rescored from its
+runs' stored transcripts with `rescore_run`, after hard parts began accepting
+more written forms of a correct reading ("6.05 a.m.", "36°F", "the 2-4 window",
+"control plus shift plus T"). Only hard parts changed. AssemblyAI TTS 1 keeps
+its earlier hard parts until its run's records are rescored.
+
+On 2026-11-26 every summary except AssemblyAI TTS 1's was rescored again, with
+`bin/score-tts.py --rescore --arbitrate`:
+
+- Word error puts written shorthand into words the same way on both sides
+  (times written "2.15am", emails and web addresses, "+", "(555)", "5'11''",
+  "co-pay", "o'clock") and chooses between the text as sent, its spoken
+  reference and any accepted reading word by word, so "Chapter four covers
+  Henry VIII" costs nothing. Three readings were accepted: "Eastern Time" for
+  "ET", "Rylee" for "Riley", and "I verified" for "I've verified", which sound
+  alike.
+- Hard parts get one verdict each instead of each transcriber's check counting
+  apart: a term must be heard right by both transcribers; any other kind is
+  decided by the majority, and where Deepgram and Whisper split, Zoom Scribe
+  (`zoom-scribe-en-pro-v2.1`) transcribed that one-shot recording. 227
+  recordings across 44 runs went to Zoom; none is left unresolved. The new
+  `hardParts` field of a summary holds the verdicts; `accuracy` keeps each
+  transcriber's own figures.
+
+Only `accuracy`, `hardParts` and `instrumentDisagreements` changed.

@@ -463,14 +463,14 @@
     "version": "0.1.15"
    },
    "oneShot": {
-    "wer": 0.0217,
+    "wer": 0.016,
     "recordings": 315,
-    "referenceWords": 5491
+    "referenceWords": 5496
    },
    "streamedInput": {
-    "wer": 0.0255,
+    "wer": 0.0211,
     "recordings": 312,
-    "referenceWords": 5442
+    "referenceWords": 5448
    },
    "underLoad": null,
    "byCohort": {
@@ -480,12 +480,12 @@
      "referenceWords": 192
     },
     "alnum": {
-     "wer": 0.0094,
+     "wer": 0.0095,
      "recordings": 18,
-     "referenceWords": 212
+     "referenceWords": 210
     },
     "contact": {
-     "wer": 0.037,
+     "wer": 0.0185,
      "recordings": 15,
      "referenceWords": 162
     },
@@ -495,9 +495,9 @@
      "referenceWords": 225
     },
     "datetime": {
-     "wer": 0.0513,
+     "wer": 0.0,
      "recordings": 18,
-     "referenceWords": 234
+     "referenceWords": 237
     },
     "dense": {
      "wer": 0.0,
@@ -510,7 +510,7 @@
      "referenceWords": 213
     },
     "long": {
-     "wer": 0.0233,
+     "wer": 0.0161,
      "recordings": 12,
      "referenceWords": 558
     },
@@ -520,12 +520,12 @@
      "referenceWords": 102
     },
     "numbers": {
-     "wer": 0.0331,
+     "wer": 0.0259,
      "recordings": 21,
-     "referenceWords": 302
+     "referenceWords": 309
     },
     "paragraph": {
-     "wer": 0.0059,
+     "wer": 0.0025,
      "recordings": 12,
      "referenceWords": 1185
     },
@@ -550,9 +550,9 @@
      "referenceWords": 345
     },
     "spelled": {
-     "wer": 0.087,
+     "wer": 0.0833,
      "recordings": 12,
-     "referenceWords": 69
+     "referenceWords": 72
     },
     "symbols": {
      "wer": 0.1091,
@@ -560,9 +560,9 @@
      "referenceWords": 165
     },
     "tech": {
-     "wer": 0.0299,
+     "wer": 0.0152,
      "recordings": 12,
-     "referenceWords": 201
+     "referenceWords": 198
     },
     "terms": {
      "wer": 0.0208,
@@ -570,9 +570,9 @@
      "referenceWords": 192
     },
     "units": {
-     "wer": 0.0196,
+     "wer": 0.0,
      "recordings": 12,
-     "referenceWords": 153
+     "referenceWords": 150
     },
     "worded": {
      "wer": 0.0,
@@ -582,9 +582,9 @@
    },
    "spans": {
     "all": {
-     "passed": 199,
+     "passed": 202,
      "n": 219,
-     "rate": 0.9087
+     "rate": 0.9224
     },
     "byCategory": {
      "context": {
@@ -593,9 +593,9 @@
       "rate": 0.75
      },
      "sequence": {
-      "passed": 33,
+      "passed": 36,
       "n": 42,
-      "rate": 0.7857
+      "rate": 0.8571
      },
      "shorthand": {
       "passed": 112,
@@ -619,14 +619,14 @@
     "version": "0.1.15"
    },
    "oneShot": {
-    "wer": 0.0261,
+    "wer": 0.0087,
     "recordings": 315,
-    "referenceWords": 5516
+    "referenceWords": 5496
    },
    "streamedInput": {
-    "wer": 0.0287,
+    "wer": 0.0132,
     "recordings": 312,
-    "referenceWords": 5470
+    "referenceWords": 5448
    },
    "underLoad": null,
    "byCohort": {
@@ -638,27 +638,27 @@
     "alnum": {
      "wer": 0.0,
      "recordings": 18,
-     "referenceWords": 213
+     "referenceWords": 210
     },
     "contact": {
-     "wer": 0.0833,
+     "wer": 0.0,
      "recordings": 15,
-     "referenceWords": 144
+     "referenceWords": 162
     },
     "currency": {
-     "wer": 0.0089,
+     "wer": 0.0,
      "recordings": 18,
      "referenceWords": 225
     },
     "datetime": {
-     "wer": 0.0816,
+     "wer": 0.0042,
      "recordings": 18,
-     "referenceWords": 245
+     "referenceWords": 237
     },
     "dense": {
-     "wer": 0.0247,
+     "wer": 0.0,
      "recordings": 9,
-     "referenceWords": 243
+     "referenceWords": 228
     },
     "heteronym": {
      "wer": 0.0141,
@@ -666,7 +666,7 @@
      "referenceWords": 213
     },
     "long": {
-     "wer": 0.0197,
+     "wer": 0.0,
      "recordings": 12,
      "referenceWords": 558
     },
@@ -676,22 +676,22 @@
      "referenceWords": 102
     },
     "numbers": {
-     "wer": 0.0729,
+     "wer": 0.0194,
      "recordings": 21,
-     "referenceWords": 288
+     "referenceWords": 309
     },
     "paragraph": {
-     "wer": 0.0059,
+     "wer": 0.0042,
      "recordings": 12,
      "referenceWords": 1185
     },
     "phone": {
-     "wer": 0.031,
+     "wer": 0.0101,
      "recordings": 15,
-     "referenceWords": 129
+     "referenceWords": 99
     },
     "prose": {
-     "wer": 0.0072,
+     "wer": 0.0024,
      "recordings": 27,
      "referenceWords": 417
     },
@@ -701,24 +701,24 @@
      "referenceWords": 123
     },
     "repair": {
-     "wer": 0.0319,
+     "wer": 0.0232,
      "recordings": 18,
      "referenceWords": 345
     },
     "spelled": {
-     "wer": 0.087,
+     "wer": 0.0833,
      "recordings": 12,
-     "referenceWords": 69
+     "referenceWords": 72
     },
     "symbols": {
-     "wer": 0.0545,
+     "wer": 0.0182,
      "recordings": 12,
      "referenceWords": 165
     },
     "tech": {
-     "wer": 0.0448,
+     "wer": 0.0,
      "recordings": 12,
-     "referenceWords": 201
+     "referenceWords": 198
     },
     "terms": {
      "wer": 0.0,
@@ -726,21 +726,21 @@
      "referenceWords": 192
     },
     "units": {
-     "wer": 0.0261,
+     "wer": 0.0067,
      "recordings": 12,
-     "referenceWords": 153
+     "referenceWords": 150
     },
     "worded": {
-     "wer": 0.0263,
+     "wer": 0.0,
      "recordings": 9,
      "referenceWords": 114
     }
    },
    "spans": {
     "all": {
-     "passed": 192,
+     "passed": 210,
      "n": 219,
-     "rate": 0.8767
+     "rate": 0.9589
     },
     "byCategory": {
      "context": {
@@ -749,14 +749,14 @@
       "rate": 0.75
      },
      "sequence": {
-      "passed": 39,
+      "passed": 42,
       "n": 42,
-      "rate": 0.9286
+      "rate": 1.0
      },
      "shorthand": {
-      "passed": 99,
+      "passed": 114,
       "n": 117,
-      "rate": 0.8462
+      "rate": 0.9744
      },
      "term": {
       "passed": 36,
@@ -769,7 +769,38 @@
    "instrumentErrors": 0
   }
  },
- "instrumentDisagreements": 85,
+ "hardParts": {
+  "all": {
+   "passed": 210,
+   "n": 219,
+   "rate": 0.9589
+  },
+  "byCategory": {
+   "context": {
+    "passed": 18,
+    "n": 24,
+    "rate": 0.75
+   },
+   "sequence": {
+    "passed": 42,
+    "n": 42,
+    "rate": 1.0
+   },
+   "shorthand": {
+    "passed": 114,
+    "n": 117,
+    "rate": 0.9744
+   },
+   "term": {
+    "passed": 36,
+    "n": 36,
+    "rate": 1.0
+   }
+  },
+  "unresolved": 0,
+  "rule": "one verdict per hard part: a term counts only if every transcriber heard it right; any other kind by the transcribers' majority, with Zoom Scribe as the third where Deepgram and Whisper split"
+ },
+ "instrumentDisagreements": 63,
  "naturalness": {
   "model": "utmos22-strong",
   "scale": "1-5, a listener model's estimate of a mean opinion score",

@@ -5,7 +5,7 @@ from dataclasses import asdict
 import pytest
 
 from tts_bench import corpus
-from tts_bench.score import _with_current_readings, score_spans, score_transcript
+from tts_bench.score import _with_current_readings, hard_part_verdicts, score_spans, score_transcript
 
 
 def test_written_and_spoken_renderings_both_score_clean():
@@ -32,7 +32,10 @@ def test_a_real_word_is_never_glued_to_a_spelled_letter():
 def test_email_spoken_form_matches_a_spoken_hypothesis():
     result = score_transcript("Send it to billing.support@example.com.", "send it to billing dot support at example dot com",
                               "Send it to billing dot support at example dot com.")
-    assert result["best"]["wer"] == 0.0 and result["best_reference"] == "spoken_reference"
+    assert result["best"]["wer"] == 0.0
+    written = score_transcript("Send it to billing.support@example.com.", "send it to billing dot support at example dot com",
+                               "Send it to billing.support at example.com.")
+    assert written["best"]["wer"] == 0.0
 
 
 def test_digits_come_from_the_written_text_only():
@@ -96,3 +99,65 @@ def test_a_rescore_adds_readings_accepted_since_the_run_and_keeps_changed_spans_
     keys, renamed = _with_current_readings("tech.keys", recorded)
     assert keys["accept"][0] == "control shift t" and "control plus shift plus t" in keys["accept"]
     assert renamed["accept"] == ["control alt t"]
+
+
+TRANSCRIBER_WRITINGS = [
+    ("tech.alert", "CPU usage peaked at 94% at 2.15am and was back under 60% by 3 o'clock."),
+    ("datetime.options", "I can offer 8.50 a.m. on Monday or 3.20 p.m. on Friday."),
+    ("contact.email_digits", "I have m.rivera88 at example.org. Is that still current?"),
+    ("contact.url", "You can manage it online at example.com slash account slash settings."),
+    ("symbols.url", "Go to example.com slash support slash billing and choose contact us."),
+    ("symbols.email", "You can write to help at north-clinic.org or call 1-800-555-0199."),
+    ("tech.keys", "press ctrl plus shift plus t to reopen the tab you just closed then sign in again"),
+    ("phone.readback", "I have your number as 555-020-8816, is that right?"),
+    ("worded.time", "The driver scanned it at 347, so that's inside the 2-4 window."),
+    ("numbers.temperature", "Store the vaccine between 36°F and 46°F, never below minus 4°F."),
+    ("numbers.height", "The patient is 5'11'' and weighs 182 pounds, so the dose is one teaspoon twice daily."),
+    ("datetime.range", "the technician will arrive between eight o'clock and twelve o'clock on july ninth"),
+    ("numbers.roman", "Chapter four covers Henry VIII and the Act of 1534."),
+    ("numbers.apostrophe", "The class of 09 meets on September 9th this year in the third floor lounge."),
+    ("currency.copay", "The co-pay for that visit is $35, and the remaining $212.50 goes toward your deductible."),
+]
+
+
+@pytest.mark.parametrize("item_id, hypothesis", TRANSCRIBER_WRITINGS)
+def test_a_correct_reading_costs_no_words_however_the_transcriber_wrote_it(item_id, hypothesis):
+    item = corpus.by_id()[item_id]
+    result = score_transcript(item.text, item.spoken_reference, hypothesis, readings=item.readings)
+    assert result["best"]["errors"] == 0, result["best"]
+
+
+@pytest.mark.parametrize("item_id, hypothesis", [
+    ("units.eta", "The ETA is 3 p.m. Eastern time, and the driver will text when they're 10 minutes away."),
+    ("prose.greet", "Thanks for calling Cedar Valley Family Practice. This is Rylee. How can I help you today?"),
+])
+def test_an_accepted_reading_costs_no_words(item_id, hypothesis):
+    item = corpus.by_id()[item_id]
+    assert score_transcript(item.text, item.spoken_reference, hypothesis, readings=item.readings)["best"]["errors"] == 0
+    assert score_transcript(item.text, item.spoken_reference, hypothesis)["best"]["errors"] > 0
+
+
+@pytest.mark.parametrize("item_id, hypothesis", [
+    ("tech.alert", "CPU usage peaked at 94% at 2.50am and was back under 60% by 3 o'clock."),
+    ("contact.url", "You can manage it online at example.com slash account slash setting."),
+    ("units.eta", "The ETA is 3 p.m. Central, and the driver will text when they're 10 minutes away."),
+])
+def test_a_wrong_reading_still_costs_words(item_id, hypothesis):
+    item = corpus.by_id()[item_id]
+    assert score_transcript(item.text, item.spoken_reference, hypothesis, readings=item.readings)["best"]["errors"] > 0
+
+
+def _heard(passes):
+    return {"model": "m", "best": {"wer": 0.0}, "spans": [{"text": "x", "category": c, "check": "transcript", "pass": p} for c, p in passes]}
+
+
+def test_a_term_counts_only_if_every_transcriber_heard_it_right():
+    verdicts = hard_part_verdicts({"deepgram": _heard([("term", True)]), "openai-whisper": _heard([("term", False)])})
+    assert verdicts[0]["pass"] is False
+
+
+def test_other_hard_parts_go_to_the_majority_and_wait_for_the_third_when_two_split():
+    two = {"deepgram": _heard([("sequence", False), ("shorthand", True)]), "openai-whisper": _heard([("sequence", True), ("shorthand", True)])}
+    assert [v["pass"] for v in hard_part_verdicts(two)] == [None, True]
+    three = {**two, "zoom": _heard([("sequence", True), ("shorthand", False)])}
+    assert [v["pass"] for v in hard_part_verdicts(three)] == [True, True]

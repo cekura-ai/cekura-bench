@@ -154,6 +154,21 @@ class TestRecords:
         assert rescore_run(moved) == 3
         assert store.verify(moved) == []
 
+    async def test_a_rescore_needs_the_transcripts_not_the_audio(self, tmp_path):
+        first = Runner(spec(tmp_path), "unused")
+        await first.run()
+        await score_run(first.root, [_Echo({i.id: i.text for i in ITEMS})])
+        scored = (first.root / "scores.jsonl").read_text()
+        for audio in first.root.rglob("audio-*.wav"):
+            audio.unlink()
+        stale = store.read_jsonl(first.root / "scores-all.jsonl")
+        for row in stale:
+            row["instruments"]["echo"]["best"]["wer"] = 1.0
+        (first.root / "scores-all.jsonl").write_text("".join(json.dumps(row) + "\n" for row in stale))
+        assert _targets(first.root) == []
+        assert rescore_run(first.root) == 3
+        assert (first.root / "scores.jsonl").read_text() == scored
+
     async def test_the_manifest_catches_a_changed_a_missing_and_an_extra_file(self, tmp_path):
         first = Runner(spec(tmp_path), "unused")
         await first.run()

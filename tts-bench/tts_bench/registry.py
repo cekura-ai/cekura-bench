@@ -19,6 +19,7 @@ from tts_bench.adapters.assemblyai import AssemblyAITTSAdapter
 from tts_bench.adapters.assemblyai_ws import AssemblyAIStreamingAdapter
 from tts_bench.adapters.azure_speech import AzureSpeechAdapter
 from tts_bench.adapters.base import TTSAdapter
+from tts_bench.adapters.boson_live import BosonLiveAdapter
 from tts_bench.adapters.cartesia import CartesiaAdapter
 from tts_bench.adapters.deepgram import DeepgramSpeakAdapter
 from tts_bench.adapters.deepgram_flux import DeepgramFluxAdapter
@@ -98,6 +99,7 @@ HARPER = "harper_32"                                  # Speechify, its first sta
 JUDITH = "en-US-judith"                              # Murf Falcon 2.1, female US English, first on Murf's Falcon voice recommendations
 NADINE = "83548de556df48ba8c09c42a57c51d85"            # HeyGen "Nadine - Calm & Gentle", female English, the public voice HeyGen's docs start with
 MARGARET = "voice_447"                                  # Mistral "Margaret", female US English, the realtime session's default voice
+BOSON_DEFAULT = "default"                               # Boson Higgs TTS's default preset voice, the one Boson asked the bench to run
 
 PROVIDERS: dict[str, ProviderEntry] = {
     "fake": ProviderEntry("fake", FakeTTSAdapter, "FAKE_KEY_UNUSED", (Model("scripted", "tone"),)),
@@ -262,6 +264,14 @@ PROVIDERS: dict[str, ProviderEntry] = {
               "input_text.flush ends a generation (speech.audio.done); one generation at a time per socket; "
               "float32 PCM converted to int16; streaming_mode=responsive (option); no cancel; "
               "US inference host api.us.mistral.ai (option region, default us; global for api.mistral.ai)",
+    ),
+    "boson-live": ProviderEntry(
+        "boson-live", BosonLiveAdapter, "BOSON_API_KEY",
+        (Model("higgs-tts-3", BOSON_DEFAULT),),
+        notes="speech websocket /v1/audio/speech/live; start (model, voice, normalize, language) before t0, not "
+              "acknowledged; text appends, flush ends a turn (flushed), cancel is answered by cancelled; one turn at a "
+              "time per socket; normalize on and language eng, as Boson asked; the server paces audio at playback "
+              "speed once the client holds 1 s of it",
     ),
 }
 

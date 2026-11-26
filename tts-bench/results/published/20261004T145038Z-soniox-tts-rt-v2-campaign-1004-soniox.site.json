@@ -813,7 +813,7 @@
  },
  "wordError": {
   "oneShot": {
-   "wer": 0.0164,
+   "wer": 0.016,
    "recordings": 315,
    "referenceWords": 5496,
    "unresolved": 0
@@ -868,7 +868,7 @@
     "unresolved": 0
    },
    "names": {
-    "wer": 0.0196,
+    "wer": 0.0,
     "recordings": 15,
     "referenceWords": 102,
     "unresolved": 0
@@ -946,7 +946,7 @@
     "unresolved": 0
    }
   },
-  "rule": "a word counts as wrong when most transcribers hear it wrong, with Zoom Scribe as the third where Deepgram and Whisper differ"
+  "rule": "a word counts as wrong when most transcribers hear it wrong, and a name only when every transcriber does, with Zoom Scribe as the third where Deepgram and Whisper differ or both miss a name"
  },
  "instrumentDisagreements": 79,
  "naturalness": {

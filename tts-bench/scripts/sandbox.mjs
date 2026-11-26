@@ -238,7 +238,9 @@ async function launchGroup(ctx, group) {
         '-u', 'bin/campaign-model.py', '--provider', provider, '--model', model, '--label', label,
         '--suite', config.suite, '--repeats', String(config.repeats), '--out', REMOTE_OUT,
         ...(voice ? ['--voice', voice] : []),
-        ...(config.items ?? []).flatMap(item => ['--item', item])] });
+        ...(config.items ?? []).flatMap(item => ['--item', item]),
+        ...(config.probes ?? []).flatMap(probe => ['--probe', probe]),
+        ...(config.sentinel === false ? ['--no-sentinel'] : [])] });
       Object.assign(m, { status: 'dispatched', commandId: command.cmdId, sessionId: session, attempts: m.attempts + 1 });
       await saveJson(path, state);
       finished = await waitFor(sb, command.cmdId);

@@ -30,6 +30,8 @@ from tts_bench.adapters.fake import FakeTTSAdapter
 from tts_bench.adapters.fish_audio import FishAudioAdapter
 from tts_bench.adapters.gemini_tts import GeminiTTSAdapter
 from tts_bench.adapters.gradium import GradiumAdapter
+from tts_bench.adapters.heygen import HeyGenTTSAdapter
+from tts_bench.adapters.heygen_ws import HeyGenStreamingAdapter
 from tts_bench.adapters.hume import HumeAdapter
 from tts_bench.adapters.inworld import InworldAdapter
 from tts_bench.adapters.mistral_realtime import MistralRealtimeAdapter
@@ -94,6 +96,7 @@ AVA = "5bb7de05-c8fe-426a-8fcc-ba4fc4ce9f9c"           # Hume "Ava Song", female
 AUDREY = "49c443a4-8a1d-5f7e-b70b-98bdbd9823c3"        # AssemblyAI "Audrey", female US English, the voice AssemblyAI chose
 HARPER = "harper_32"                                  # Speechify, its first staff pick of female US English voices
 JUDITH = "en-US-judith"                              # Murf Falcon 2.1, female US English, first on Murf's Falcon voice recommendations
+NADINE = "83548de556df48ba8c09c42a57c51d85"            # HeyGen "Nadine - Calm & Gentle", female English, the public voice HeyGen's docs start with
 MARGARET = "voice_447"                                  # Mistral "Margaret", female US English, the realtime session's default voice
 
 PROVIDERS: dict[str, ProviderEntry] = {
@@ -235,6 +238,22 @@ PROVIDERS: dict[str, ProviderEntry] = {
         notes="Streaming TTS websocket, session configured in the URL, Begin before t0; Generate appends text, "
               "Flush ends the utterance (FlushDone), Cancel is the barge-in (Cancelled); one utterance at a time per "
               "socket; word timings off; US data zone; new sessions per minute are limited per account",
+    ),
+    "heygen": ProviderEntry(
+        "heygen", HeyGenTTSAdapter, "HEYGEN_API_KEY",
+        (Model("heygen-voice-1-turbo", NADINE), Model("heygen-voice-1", NADINE)),
+        notes="HeyGen Voice over HTTP /v3/models/audio/tts/stream, raw PCM streamed back; whole text per request; "
+              "language sent (en); voice read and checked ACTIVE before t0; cells paced under the documented "
+              "30 requests a minute (option requests_per_minute); Turbo Free left out (shared capacity, "
+              "no latency guarantee)",
+    ),
+    "heygen-streaming": ProviderEntry(
+        "heygen-streaming", HeyGenStreamingAdapter, "HEYGEN_API_KEY",
+        (Model("heygen-voice-1-turbo", NADINE), Model("heygen-voice-1", NADINE)),
+        notes="HeyGen Voice over the multi-context input-streaming websocket (/v3/models/audio/tts/multi-stream-input); "
+              "frames as ElevenLabs' multi-context socket; flush per context; close_context is the only stop and lets "
+              "flushed audio finish, so the cancel probe measures what still arrives; language sent (en); handshakes "
+              "and contexts paced under the 30 requests a minute shared with the HTTP endpoint; Turbo Free left out",
     ),
     "mistral-realtime": ProviderEntry(
         "mistral-realtime", MistralRealtimeAdapter, "MISTRAL_API_KEY",

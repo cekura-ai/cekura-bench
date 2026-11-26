@@ -656,17 +656,17 @@
     "version": "0.1.15"
    },
    "oneShot": {
-    "wer": 0.0191,
+    "wer": 0.0187,
     "recordings": 315,
     "referenceWords": 5496
    },
    "streamedInput": {
-    "wer": 0.0206,
+    "wer": 0.02,
     "recordings": 312,
     "referenceWords": 5448
    },
    "underLoad": {
-    "wer": 0.0134,
+    "wer": 0.0127,
     "recordings": 264,
     "referenceWords": 4482
    },
@@ -722,7 +722,7 @@
      "referenceWords": 309
     },
     "paragraph": {
-     "wer": 0.0034,
+     "wer": 0.0017,
      "recordings": 12,
      "referenceWords": 1185
     },
@@ -843,7 +843,7 @@
  },
  "wordError": {
   "oneShot": {
-   "wer": 0.0146,
+   "wer": 0.0142,
    "recordings": 315,
    "referenceWords": 5496,
    "unresolved": 0
@@ -880,7 +880,7 @@
     "unresolved": 0
    },
    "dense": {
-    "wer": 0.0789,
+    "wer": 0.0658,
     "recordings": 9,
     "referenceWords": 228,
     "unresolved": 0
@@ -934,7 +934,7 @@
     "unresolved": 0
    },
    "repair": {
-    "wer": 0.0145,
+    "wer": 0.0174,
     "recordings": 18,
     "referenceWords": 345,
     "unresolved": 0

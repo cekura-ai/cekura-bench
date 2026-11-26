@@ -103,6 +103,9 @@ def test_a_rescore_adds_readings_accepted_since_the_run_and_keeps_changed_spans_
 
 TRANSCRIBER_WRITINGS = [
     ("tech.alert", "CPU usage peaked at 94% at 2.15am and was back under 60% by 3 o'clock."),
+    ("paragraph.delivery", None),
+    ("numbers.decimal", None),
+    ("currency.small", "There's a 75 cent processing fee on each transaction."),
     ("datetime.options", "I can offer 8.50 a.m. on Monday or 3.20 p.m. on Friday."),
     ("contact.email_digits", "I have m.rivera88 at example.org. Is that still current?"),
     ("contact.url", "You can manage it online at example.com slash account slash settings."),
@@ -123,6 +126,8 @@ TRANSCRIBER_WRITINGS = [
 @pytest.mark.parametrize("item_id, hypothesis", TRANSCRIBER_WRITINGS)
 def test_a_correct_reading_costs_no_words_however_the_transcriber_wrote_it(item_id, hypothesis):
     item = corpus.by_id()[item_id]
+    if hypothesis is None:     # the text as written, with a transcriber's dotted time in place of the colon
+        hypothesis = item.text.replace(":", ".") if item_id == "paragraph.delivery" else item.text.replace("%", " percent")
     result = score_transcript(item.text, item.spoken_reference, hypothesis, readings=item.readings)
     assert result["best"]["errors"] == 0, result["best"]
 

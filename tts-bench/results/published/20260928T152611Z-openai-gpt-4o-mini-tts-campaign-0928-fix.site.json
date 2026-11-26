@@ -583,7 +583,7 @@
    },
    "streamedInput": null,
    "underLoad": {
-    "wer": 0.0192,
+    "wer": 0.0183,
     "recordings": 264,
     "referenceWords": 4482
    },
@@ -639,7 +639,7 @@
      "referenceWords": 309
     },
     "paragraph": {
-     "wer": 0.0852,
+     "wer": 0.0835,
      "recordings": 12,
      "referenceWords": 1185
     },
@@ -659,7 +659,7 @@
      "referenceWords": 123
     },
     "repair": {
-     "wer": 0.0145,
+     "wer": 0.0203,
      "recordings": 18,
      "referenceWords": 345
     },
@@ -760,7 +760,7 @@
  },
  "wordError": {
   "oneShot": {
-   "wer": 0.0455,
+   "wer": 0.0453,
    "recordings": 308,
    "referenceWords": 5425,
    "unresolved": 0
@@ -797,7 +797,7 @@
     "unresolved": 0
    },
    "dense": {
-    "wer": 0.0482,
+    "wer": 0.0351,
     "recordings": 9,
     "referenceWords": 228,
     "unresolved": 0
@@ -851,7 +851,7 @@
     "unresolved": 0
    },
    "repair": {
-    "wer": 0.0116,
+    "wer": 0.0174,
     "recordings": 18,
     "referenceWords": 345,
     "unresolved": 0

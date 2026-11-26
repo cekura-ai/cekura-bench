@@ -264,7 +264,8 @@ _WRITTEN_FORMS = (
     (re.compile(r"\(\s*(\d+)\s*\)"), r"\1"),                       # (555) 020-8816: the normaliser drops a bracketed group
     (re.compile(r"\bo'?clock\b", re.IGNORECASE), ""),              # eight o'clock is eight; the normaliser glues it into 80
     (re.compile(r"\b(\d{1,2}):00\b"), r"\1"),
-    (re.compile(r"\b(\d{1,2})\.(\d{2})(?=\s*[ap]\.?\s?m\b)", re.IGNORECASE), r"\1:\2"),  # 2.15am, a transcriber's time
+    # 2.15am or "6.40 this morning": a transcriber's way of writing a time; an amount or a rate ($12.50, 3.75%) is left alone
+    (re.compile(r"(?<![$\d.,])\b([1-9]|1\d|2[0-3])\.([0-5]\d)(?!\s*(?:%|per\s?cent|dollars?|cents?|[.,]?\d))", re.IGNORECASE), r"\1:\2"),
     (re.compile(r"(\d+)\s*'\s*(\d+)\s*(?:''|\"|″|”)"), r"\1 foot \2"),
     (re.compile(r"(?<![\w-])[-−](?=\d)"), "minus "),
     (re.compile(r"(?<=\w)\+(?=\w)"), " plus "),

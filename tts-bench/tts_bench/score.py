@@ -503,13 +503,17 @@ def hard_part_verdicts(instruments: dict[str, dict[str, Any]]) -> list[dict[str,
     return out
 
 
-def word_verdict(instruments: dict[str, dict[str, Any]]) -> dict[str, Any] | None:
+def word_verdict(instruments: dict[str, dict[str, Any]], names: frozenset[int] = frozenset()) -> dict[str, Any] | None:
     """Word errors the transcribers agree on: a reference word is wrong, or an extra word was said, when most of them hear it so.
 
     One transcriber mishearing a word the others heard right is the
-    transcriber's error, not the model's. With two transcribers that disagree
-    the count is unresolved (``errors: None``) until the arbiter has heard the
-    recording; ``mean`` keeps the two transcribers' average meanwhile.
+    transcriber's error, not the model's. A name (``names``, positions in the
+    spoken reference) is wrong only when every transcriber missed it:
+    transcribers garble unusual names that were said right, while writing one
+    exactly is hard to do by chance. With two transcribers that disagree, or
+    that both missed a name, the count is unresolved (``errors: None``) until
+    the arbiter has heard the recording; ``mean`` keeps the two transcribers'
+    average meanwhile.
     """
     heard = [r["best"] for r in instruments.values() if "wrong" in (r.get("best") or {})]
     if not heard:
@@ -517,10 +521,10 @@ def word_verdict(instruments: dict[str, dict[str, Any]]) -> dict[str, Any] | Non
     words = heard[0]["reference_words"]
     mean = sum(h["errors"] for h in heard) / len(heard)
     marks = [(set(h["wrong"]), {int(k): v for k, v in h["inserted"].items()}) for h in heard]
-    if len(heard) == 2 and marks[0] != marks[1]:
+    if len(heard) == 2 and (marks[0] != marks[1] or names & marks[0][0]):
         return {"errors": None, "reference_words": words, "transcribers": 2, "mean": mean}
     need = len(heard) // 2 + 1                   # most of them: 1 of 1, 2 of 2, 2 of 3
-    wrong = sum(1 for i in range(words) if sum(i in w for w, _ in marks) >= need)
+    wrong = sum(1 for i in range(words) if sum(i in w for w, _ in marks) >= (len(heard) if i in names else need))
     gaps = {g for _, ins in marks for g in ins}
     extra = sum(sorted((ins.get(g, 0) for _, ins in marks), reverse=True)[need - 1] for g in gaps)
     return {"errors": wrong + extra, "reference_words": words, "transcribers": len(heard), "mean": mean}
@@ -600,7 +604,7 @@ def rescore_run(run_dir: Path) -> int:
         row["normalizer"] = {"name": NORMALIZER_NAME, "version": NORMALIZER_VERSION}
         row["instruments_disagree"] = len(wers) >= 2 and (max(wers) - min(wers)) > DISAGREE_WER
         row["hardParts"] = hard_part_verdicts(row["instruments"])
-        row["words"] = word_verdict(row["instruments"])
+        row["words"] = word_verdict(row["instruments"], name_positions(target["spoken_reference"], target["names"]))
     _write_scores(run_dir, rows)
     return len(rows)
 
@@ -616,6 +620,12 @@ def _write_scores(run_dir: Path, rows: list[dict[str, Any]]) -> None:
         for row in rows:
             handle.write(json.dumps(row) + "\n")
     write_manifest(run_dir)              # the run changed on purpose; the manifest follows it
+
+
+def name_positions(spoken_reference: str, names: Sequence[str]) -> frozenset[int]:
+    """The spoken reference's word positions that belong to a name, after the same normaliser as WER."""
+    tokens = {token for name in names for token in _words(name)}
+    return frozenset(i for i, word in enumerate(_words(spoken_reference)) if word in tokens)
 
 
 def _with_current_readings(item_id: str, spans: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -647,7 +657,8 @@ def _scorable_cells(run_dir: Path) -> list[tuple[Path, dict[str, Any]]]:
                                 "spoken_reference": record["text"]["spoken_reference"], "cohort": cell["cohort"],
                                 "probe": cell["probe"], "spans": spans.get(cell["item"], []),
                                 # accepted readings are a scoring rule, so the current list applies to every run
-                                "readings": list(item.readings) if item and item.text == record["text"]["sent"] else []}))
+                                "readings": list(item.readings) if item and item.text == record["text"]["sent"] else [],
+                                "names": list(item.names) if item and item.text == record["text"]["sent"] else []}))
     return out
 
 
@@ -727,7 +738,7 @@ async def score_run(run_dir: Path, instruments: Sequence[Instrument], concurrenc
             "instruments": results,
             "instruments_disagree": len(wers) >= 2 and (max(wers) - min(wers)) > DISAGREE_WER,
             "hardParts": hard_part_verdicts(results),
-            "words": word_verdict(results),
+            "words": word_verdict(results, name_positions(target["spoken_reference"], target["names"])),
         })
     _write_scores(run_dir, rows)   # scores.jsonl holds one row per cell (the main context); scores-all.jsonl everything
     return len(rows)

@@ -5,7 +5,7 @@ from dataclasses import asdict
 import pytest
 
 from tts_bench import corpus
-from tts_bench.score import _with_current_readings, hard_part_verdicts, score_spans, score_transcript, word_verdict
+from tts_bench.score import _with_current_readings, hard_part_verdicts, name_positions, score_spans, score_transcript, word_verdict
 
 
 def test_written_and_spoken_renderings_both_score_clean():
@@ -185,3 +185,27 @@ def test_a_word_most_transcribers_missed_still_counts():
     right = "Thanks for calling Cedar Valley Family Practice, this is Riley. How can I help you today?"
     assert word_verdict(_transcribed("prose.greet", short, short, right))["errors"] == 1
     assert word_verdict(_transcribed("prose.greet", short, short))["errors"] == 1
+
+
+def _names(item_id):
+    item = corpus.by_id()[item_id]
+    return name_positions(item.spoken_reference, item.names)
+
+
+def test_a_name_counts_wrong_only_when_every_transcriber_missed_it():
+    right, garbled = "Please hold for Ngozi Okonkwo.", "please hold for nagosio okonkwo"
+    assert word_verdict(_transcribed("names.ngozi", garbled, garbled, right), _names("names.ngozi"))["errors"] == 0
+    assert word_verdict(_transcribed("names.ngozi", garbled, garbled, garbled), _names("names.ngozi"))["errors"] == 1
+    # two transcribers that both missed a name wait for the third
+    assert word_verdict(_transcribed("names.ngozi", garbled, garbled), _names("names.ngozi"))["errors"] is None
+
+
+def test_an_ordinary_word_in_a_name_sentence_still_goes_to_the_majority():
+    dropped, right = "hold for ngozi okonkwo", "Please hold for Ngozi Okonkwo."
+    assert word_verdict(_transcribed("names.ngozi", dropped, dropped, right), _names("names.ngozi"))["errors"] == 1
+    assert word_verdict(_transcribed("names.ngozi", dropped, dropped), _names("names.ngozi"))["errors"] == 1
+
+
+def test_name_positions_follow_the_normaliser():
+    assert sorted(_names("names.siobhan")) == [0, 1, 2]      # siobhan o'brien -> siobhan 0 brien
+    assert sorted(_names("names.place")) == [4, 7]

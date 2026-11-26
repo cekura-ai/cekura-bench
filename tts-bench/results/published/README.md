@@ -91,5 +91,9 @@ On 2026-11-26 every summary except AssemblyAI TTS 1's was rescored again, with
   is not the model's error. Every one-shot recording where Deepgram and Whisper
   differ on a word went to Zoom Scribe too; none is left unresolved. The new
   `wordError` field holds the agreed figure.
+- A name ("Ngozi Okonkwo", "Leicester") counts as wrong only where every
+  transcriber hears it wrong: transcribers garble unusual names that were said
+  right, while writing one exactly is hard to do by chance. Every one-shot
+  recording where Deepgram and Whisper both missed a name went to Zoom Scribe.
 
 Only `accuracy`, `hardParts`, `wordError` and `instrumentDisagreements` changed.

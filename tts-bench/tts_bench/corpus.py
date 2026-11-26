@@ -80,6 +80,7 @@ class Item:
     note: str = ""
     spans: tuple[Span, ...] = ()
     readings: tuple[str, ...] = ()     # other whole readings that are right, as words; scored like the spoken reference
+    names: tuple[str, ...] = ()        # its words that are a name, as words; misread only when no transcriber heard one
 
     @property
     def words(self) -> int:
@@ -87,12 +88,13 @@ class Item:
 
 
 def _i(id: str, cohort: str, text: str, spoken: str, note: str = "", spans: tuple[Span, ...] = (),
-       readings: tuple[str, ...] = ()) -> Item:
+       readings: tuple[str, ...] = (), names: tuple[str, ...] = ()) -> Item:
     assert cohort in COHORTS, cohort
     for span in spans:
         assert span.category in CATEGORIES and span.text in text, (id, span.text)
         assert span.check == "audio" or span.accept, (id, span.text)
-    return Item(id, cohort, text, spoken, note, spans, readings)
+    assert all(name in spoken.split() for name in names), (id, names)
+    return Item(id, cohort, text, spoken, note, spans, readings, names)
 
 
 def _s(text: str, category: str, *accept: str, check: str = "transcript", note: str = "") -> Span:
@@ -190,11 +192,15 @@ ITEMS: tuple[Item, ...] = (
     _i("contact.email_digits", "contact", "I have m.rivera88@example.org, is that still current?",
        "i have m dot rivera eighty eight at example dot org is that still current"),
     # ── names ─────────────────────────────────────────────────────────────
-    _i("names.nguyen", "names", "I have Dr. Nguyen available on Monday.", "i have doctor nguyen available on monday"),
-    _i("names.siobhan", "names", "Siobhan Ó Briain called about the invoice.", "siobhan o'brien called about the invoice"),
-    _i("names.joaquin", "names", "The appointment is with Joaquín Ibarra.", "the appointment is with joaquin ibarra"),
-    _i("names.ngozi", "names", "Please hold for Ngozi Okonkwo.", "please hold for ngozi okonkwo"),
-    _i("names.place", "names", "The clinic is in Worcester, near the Leicester exit.", "the clinic is in worcester near the leicester exit"),
+    _i("names.nguyen", "names", "I have Dr. Nguyen available on Monday.", "i have doctor nguyen available on monday",
+       names=("nguyen",)),
+    _i("names.siobhan", "names", "Siobhan Ó Briain called about the invoice.", "siobhan o'brien called about the invoice",
+       names=("siobhan", "o'brien")),
+    _i("names.joaquin", "names", "The appointment is with Joaquín Ibarra.", "the appointment is with joaquin ibarra",
+       names=("joaquin", "ibarra")),
+    _i("names.ngozi", "names", "Please hold for Ngozi Okonkwo.", "please hold for ngozi okonkwo", names=("ngozi", "okonkwo")),
+    _i("names.place", "names", "The clinic is in Worcester, near the Leicester exit.", "the clinic is in worcester near the leicester exit",
+       names=("worcester", "leicester")),
     # ── repair ────────────────────────────────────────────────────────────
     _i("repair.actually", "repair", "That's on the 4th... actually, no, the 5th. Sorry about that.",
        "that's on the fourth actually no the fifth sorry about that"),
@@ -508,5 +514,6 @@ def load(path: str | Path) -> tuple[str, list[Item]]:
         fields = {k: v for k, v in raw.items() if k in Item.__dataclass_fields__}
         fields["spans"] = tuple(Span(**{**span, "accept": tuple(span.get("accept", ()))}) for span in raw.get("spans", ()))
         fields["readings"] = tuple(raw.get("readings", ()))
+        fields["names"] = tuple(raw.get("names", ()))
         items.append(Item(**fields))
     return str(payload.get("version", "external")), items

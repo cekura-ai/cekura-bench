@@ -40,7 +40,7 @@
           "id": "1.2",
           "metric": 275303,
           "name": "Entity Extraction Accuracy",
-          "description": "Gets names, numbers and dates right as the caller says them, and reads them back before using them.",
+          "description": "Gets names, numbers and dates right the first time it uses them, whether it says them back or sends them to a tool.",
           "condition": "Spells names and numbers"
         },
         {
@@ -194,7 +194,7 @@
           "id": "3.7",
           "metric": 275643,
           "name": "Hallucinated-Success Avoidance",
-          "description": "Never says an action worked when the system said it failed (share of calls with none).",
+          "description": "Never says an action worked when the system said it failed or never did it (share of calls with none).",
           "verdict": "count"
         }
       ]
@@ -334,6 +334,20 @@
       "agentId": 26893
     },
     {
+      "key": "gpt-live-1.1",
+      "name": "GPT-Live 1.1 + GPT-6 Sol",
+      "vendor": "OpenAI",
+      "siteId": "gpt-live-1-1",
+      "agentId": 28045,
+      "details": {
+        "modelId": "gpt-live-1.1",
+        "voice": "marin",
+        "setting": "Sol on low thinking",
+        "sampleRateHz": 24000,
+        "turns": "Service turn detection"
+      }
+    },
+    {
       "key": "gpt-realtime-2.1-mini",
       "name": "GPT Realtime 2.1 Mini",
       "vendor": "OpenAI",
@@ -366,7 +380,53 @@
       "name": "Phonic-1",
       "vendor": "Phonic",
       "siteId": "phonic-1",
-      "agentId": 26898
+      "priceSiteId": "phonic",
+      "agentId": 26898,
+      "scenarioSwap": [
+        {"agentId": 27258, "scenarios": ["F23", "F26", "F33", "H08", "H10", "H14", "H25"]},
+        {"agentId": 27259, "scenarios": ["F12", "F25", "F34", "H04", "H05", "H12", "H32", "H34"]}
+      ],
+      "details": {
+        "modelId": "phonic-1",
+        "setting": "Languages: English + Spanish or Hindi"
+      }
+    },
+    {
+      "key": "phonic-1.1",
+      "name": "Phonic-1.1",
+      "vendor": "Phonic",
+      "siteId": "phonic-1-1",
+      "agentId": 27945,
+      "scenarioSwap": [
+        {"agentId": 27946, "scenarios": ["F23", "F26", "F33", "H08", "H10", "H14", "H25"]},
+        {"agentId": 27947, "scenarios": ["F12", "F25", "F34", "H04", "H05", "H12", "H32", "H34"]}
+      ],
+      "details": {
+        "modelId": "phonic-1.1",
+        "setting": "Languages: English + Spanish or Hindi"
+      }
+    },
+    {
+      "key": "phonic-1-default",
+      "name": "Phonic-1 (default settings)",
+      "vendor": "Phonic",
+      "siteId": "phonic-1-default",
+      "agentId": 26898,
+      "reference": true,
+      "details": {
+        "modelId": "phonic-1"
+      }
+    },
+    {
+      "key": "phonic-1.1-default",
+      "name": "Phonic-1.1 (default settings)",
+      "vendor": "Phonic",
+      "siteId": "phonic-1-1-default",
+      "agentId": 27945,
+      "reference": true,
+      "details": {
+        "modelId": "phonic-1.1"
+      }
     },
     {
       "key": "eleven-realtime-v1-max",

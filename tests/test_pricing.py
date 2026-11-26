@@ -186,8 +186,9 @@ class TestPricingACall:
         assert price.usd is None and "does not add up" in price.reason
 
     def test_a_flat_rate_row_is_priced_by_the_minute_of_call(self):
+        rate = load_table()["rows"]["phonic"]["components"][0]["rates"]["minute"]
         price = price_call("phonic", {"call_seconds": 90})
-        assert price.usd == pytest.approx(0.14 * 1.5) and price.publishable
+        assert price.usd == pytest.approx(rate * 1.5) and price.publishable
 
     def test_a_minute_row_with_text_tokens_on_top_prices_both(self):
         usage = {"usage_reports": 6, "call_seconds": 90, "prompt_tokens": 40_000,
@@ -216,6 +217,12 @@ class TestPricingACall:
         })
         assert (usage.cache_read_input_tokens, usage.input_audio_tokens, usage.output_audio_tokens) == (6_384, 58, 40)
 
+    def test_a_row_billed_by_session_time_ignores_the_tokens_it_reports(self):
+        # Zoom reports its text model's tokens on every reply and bills the session's minutes.
+        price = price_call("zoom-voice-agent", {"call_seconds": 120, "usage_reports": 6,
+                                                "prompt_tokens": 2_400, "completion_tokens": 300})
+        assert price.usd == pytest.approx(0.05) and price.publishable
+
     def test_a_row_with_no_rate_yields_a_reason_not_a_zero(self):
         price = price_call("qwen-realtime", {"call_seconds": 60})
         assert price.usd is None and price.reason
@@ -236,9 +243,12 @@ class TestTheTableItself:
         # would be asking to be believed rather than checked.
         usage = {"usage_reports": 1, "prompt_tokens": 100, "input_audio_tokens": 80,
                  "completion_tokens": 60, "output_audio_tokens": 50}
-        price = price_call("nova-sonic", usage)
+        table = load_table()
+        table["rows"]["nova-sonic"]["verified"] = False
+        price = price_call("nova-sonic", usage, table)
         assert price.usd is not None
         assert price.publishable is False, "a rate must be verified before a row goes out"
+        assert price_call("nova-sonic", usage).publishable, "Amazon's own price list now carries these rates"
 
     def test_every_row_the_agent_can_run_has_an_entry(self):
         table = load_table()

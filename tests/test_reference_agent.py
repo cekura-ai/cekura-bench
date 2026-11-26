@@ -181,6 +181,18 @@ class TestProviderTable:
         """
         assert bot.PROVIDERS["openai-realtime"].input_rate == 24000
 
+    def test_a_service_that_only_speaks_marks_its_agent_text_a_transcription(self):
+        """Scoring reads the agent's own words as what the model captured.
+
+        A service that produces only audio logs a transcription of it instead,
+        which is one more reading of the call, not the model's words; the
+        record has to say which, or a transcriber's slip would score as the
+        model's.
+        """
+        gemini_live = {"gemini-live", "gemini-live-standard", "gemini-flash-live"}
+        for name, provider in bot.PROVIDERS.items():
+            assert provider.agent_text == ("transcription" if name in gemini_live else "model"), name
+
     def test_every_provider_declares_a_rate_a_model_and_a_credential(self):
         for name, provider in bot.PROVIDERS.items():
             assert provider.input_rate in (8000, 16000, 24000), name
@@ -1862,14 +1874,13 @@ class TestPolyAIRealtime:
         }}
         assert polyai_realtime.SAMPLE_RATE == bot.PROVIDERS["polyai-dialog"].input_rate
 
-    def test_the_prompt_is_the_shared_one_plus_the_named_addendum(self):
+    def test_the_prompt_is_the_one_every_row_gets(self):
         import polyai_realtime
 
         service, _ = self._service()
-        assert service.session()["instructions"] == f"prompt\n\n{polyai_realtime.PROMPT_ADDENDUM}"
+        assert service.session()["instructions"] == "prompt"
         record = record_for("polyai-dialog")
-        assert record["prompt_addendum"] == "polyai-spoken-tools"
-        assert record["prompt_addendum_sha256"] == bot._digest(polyai_realtime.PROMPT_ADDENDUM)
+        assert "prompt_addendum" not in record and "prompt_addendum_sha256" not in record
         for key in ("polyai_endpoint", "polyai_turn_detection", "tts", "tool_schema", "polyai_playback_reporting"):
             assert record[key], key
         assert record["polyai_endpoint"] == polyai_realtime.DEFAULT_URL
@@ -1889,26 +1900,18 @@ class TestPolyAIRealtime:
         assert "ElevenLabs" not in record["tts"]
         assert {key for key, p in bot.PROVIDERS.items() if p.reports_playback} == {"polyai-dialog", "rime-prism"}
 
-    def test_every_tool_keeps_its_published_schema_and_gains_a_required_spoken_line(self):
-        import polyai_realtime
-
+    def test_every_tool_is_sent_as_published(self):
+        """No spoken argument and no ``poly_speech``: whether to speak while a tool runs is the model's call."""
         server = bot.MockToolServer(suite="medicare")
         service, _ = self._service(_tools=bot.build_tools(server))
         declared = {tool["name"]: tool for tool in service.session()["tools"]}
         specs = {spec.name: spec for spec in server.tool_specs()}
         assert set(specs) | {"end_call", "transfer_call"} == set(declared)
-        spoken = polyai_realtime.SPOKEN_ARGUMENT
         for name, tool in declared.items():
-            properties = dict(tool["parameters"]["properties"])
-            line = properties.pop(spoken)
-            assert line["type"] == "string" and line["poly_spoken"] is True, name
-            assert spoken in tool["parameters"]["required"], name
+            assert set(tool) == {"type", "name", "description", "parameters"}, name
             if name in specs:
-                assert properties == specs[name].parameters["properties"], name
-                assert tool["parameters"]["required"][:-1] == list(specs[name].parameters.get("required", [])), name
-        assert declared["end_call"]["parameters"]["properties"][spoken]["description"].startswith("Your goodbye")
-        # The published schema itself is untouched.
-        assert all(spoken not in spec.parameters.get("properties", {}) for spec in server.tool_specs())
+                assert tool["parameters"]["properties"] == specs[name].parameters["properties"], name
+                assert tool["parameters"].get("required", []) == list(specs[name].parameters.get("required", [])), name
 
     async def test_the_call_opens_configured_with_tools_then_speaks_first(self):
         from pipecat.processors.aggregators.llm_context import LLMContext
@@ -1953,33 +1956,34 @@ class TestPolyAIRealtime:
         await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "cancelled"}})
         assert not self._text(seen)
 
-    async def test_the_spoken_line_is_said_but_never_reaches_the_tool(self):
-        """The tool sees the published contract; the service speaks the line."""
+    async def test_a_line_said_while_a_tool_runs_is_the_responses_own_speech(self):
+        """One response carries the call and the line; the tool sees only its arguments."""
         from pipecat.processors.aggregators.llm_context import LLMContext
 
         service, seen = self._service()
         service._context = LLMContext([])
         await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
-        await service._dispatch(self._audio("r1", 100))
+        await service._dispatch({"type": "response.output_item.added", "response_id": "r1",
+                                 "item": {"type": "function_call", "call_id": "c1", "name": "lookup_patient"}})
         await service._dispatch(self._words("r1", "Let me check that."))
         await service._dispatch({"type": "response.function_call_arguments.done", "response_id": "r1",
-                                 "call_id": "c1", "name": "lookup_patient",
-                                 "arguments": '{"utterance": "Let me check that.", "patient_id": "p_1"}'})
+                                 "call_id": "c1", "name": "lookup_patient", "arguments": '{"patient_id": "p_1"}'})
+        await service._dispatch(self._audio("r1", 100))
         await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})
         [call] = seen["calls"]
         assert (call.function_name, call.arguments) == ("lookup_patient", {"patient_id": "p_1"})
         assert self._text(seen) == ["Let me check that."]
 
-    async def test_a_spoken_line_the_service_did_not_speak_is_not_invented(self):
-        """The voice is the vendor's: a line it left silent stays silent, and the tool still runs."""
+    async def test_a_line_the_service_did_not_voice_is_not_invented(self):
+        """The voice is the vendor's: words it left silent stay silent, and the tool still runs."""
         from pipecat.processors.aggregators.llm_context import LLMContext
 
         service, seen = self._service()
         service._context = LLMContext([])
         await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch(self._words("r1", "Thanks for calling, goodbye."))
         await service._dispatch({"type": "response.function_call_arguments.done", "response_id": "r1",
-                                 "call_id": "c1", "name": "end_call",
-                                 "arguments": '{"utterance": "Thanks for calling, goodbye."}'})
+                                 "call_id": "c1", "name": "end_call", "arguments": "{}"})
         await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})
         assert not self._text(seen)
         assert seen["calls"][0].arguments == {}
@@ -1993,7 +1997,7 @@ class TestPolyAIRealtime:
         await service._dispatch({"type": "response.output_item.added", "response_id": "r1",
                                  "item": {"type": "function_call", "call_id": "c1", "name": "lookup_patient"}})
         await service._dispatch({"type": "response.function_call_arguments.done", "response_id": "r1",
-                                 "call_id": "c1", "name": "lookup_patient", "arguments": '{"utterance": "One sec."}'})
+                                 "call_id": "c1", "name": "lookup_patient", "arguments": "{}"})
         result = LLMContext([{"role": "tool", "tool_call_id": "c1", "content": '{"ok": true}'}])
         await service._handle_context(result)
         await service._handle_context(result)
@@ -2002,14 +2006,14 @@ class TestPolyAIRealtime:
         assert [event["type"] for event in seen["sent"]] == ["conversation.item.create", "response.create"]
 
     async def test_a_closing_tool_asks_for_no_reply_and_closes_on_its_own_response(self):
-        """Its spoken line is the goodbye: a reply to its result would say it again."""
+        """The goodbye is said in the response that calls it: a reply to its result would say it again."""
         from pipecat.processors.aggregators.llm_context import LLMContext
 
         service, seen = self._service()
         service._context = LLMContext([])
         await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
         await service._dispatch({"type": "response.function_call_arguments.done", "response_id": "r1",
-                                 "call_id": "c1", "name": "end_call", "arguments": '{"utterance": "Goodbye."}'})
+                                 "call_id": "c1", "name": "end_call", "arguments": "{}"})
         await service._handle_context(LLMContext([{"role": "tool", "tool_call_id": "c1", "content": "{}"}]))
         assert not service.closing_reply_done.is_set(), "the goodbye is still playing"
         await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})
@@ -2976,18 +2980,323 @@ class TestRimePrism:
             "Prism error: [invalid_client_event] not a field (param: session.type) (scope: event)"]
 
 
+class TestZoomVoiceAgent:
+    """A hosted cascade behind a realtime socket: Zoom's session, OpenAI's later event names, enveloped."""
+
+    @staticmethod
+    def _service(**overrides):
+        from zoom_voice_agent import ZoomVoiceAgentLLMService
+
+        provider = bot.PROVIDERS["zoom-voice-agent"]
+        service = provider.build("k", provider.default_model, provider.default_voice, "prompt", asked())
+        for key, value in overrides.items():
+            setattr(service, key, value)
+        seen = {"pushed": [], "broadcast": [], "sent": [], "calls": [], "usage": []}
+
+        async def push(frame, direction=None):
+            seen["pushed"].append((type(frame).__name__, direction, frame))
+
+        async def broadcast(frame_cls, **_kwargs):
+            seen["broadcast"].append(frame_cls.__name__)
+
+        async def send(event):
+            seen["sent"].append(event)
+
+        async def run(function_calls):
+            seen["calls"].extend(function_calls)
+
+        async def usage(tokens):
+            seen["usage"].append(tokens)
+
+        async def noop(*_args, **_kwargs):
+            return None
+
+        service.push_frame = push
+        service.broadcast_frame = broadcast
+        service._send = send
+        service.run_function_calls = run
+        service.start_llm_usage_metrics = usage
+        for name in ("start_ttfb_metrics", "stop_ttfb_metrics", "start_processing_metrics",
+                     "stop_processing_metrics", "stop_all_metrics"):
+            setattr(service, name, noop)
+        assert isinstance(service, ZoomVoiceAgentLLMService)
+        return service, seen
+
+    @staticmethod
+    def _audio(response="r1", item="i1", size=3200):
+        import base64
+
+        return {"type": "response.output_audio.delta", "response_id": response, "item_id": item, "content_index": 0,
+                "delta": base64.b64encode(b"\1\0" * (size // 2)).decode()}
+
+    @staticmethod
+    def _words(seen):
+        return [frame.text for name, _, frame in seen["pushed"] if name == "TTSTextFrame"]
+
+    def test_the_session_names_every_setting_the_row_depends_on(self):
+        import zoom_voice_agent
+
+        service, _ = self._service()
+        session = service.session()
+        rate = bot.PROVIDERS["zoom-voice-agent"].input_rate
+        assert session["type"] == "realtime"
+        assert session["listen"] == {"format": {"type": "pcm16", "rate": rate}, "transcription": {"language": "en"}}
+        assert session["speak"] == {"format": {"type": "pcm16", "rate": rate}, "voice": "jenna"}
+        assert zoom_voice_agent.SAMPLE_RATE == rate == 16000
+        think = session["think"]
+        assert think["provider"] == {"type": "zoom", "model": "gemma-4"}
+        assert think["instructions"] == "prompt"
+        assert (think["tools"], think["tool_choice"]) == ([], "none")
+
+    def test_the_record_says_it_is_a_cascade(self):
+        record = record_for("zoom-voice-agent")
+        assert record["zoom_architecture"].startswith("hosted cascade")
+        for key in ("zoom_think_provider", "zoom_transcription_language", "zoom_turn_detection",
+                    "zoom_response_token_limit"):
+            assert record[key], key
+        assert record["s2s_model"] == "gemma-4"
+
+    async def test_the_socket_carries_the_subprotocol_and_the_key(self, monkeypatch):
+        import zoom_voice_agent
+
+        opened = {}
+
+        async def connect(**kwargs):
+            opened.update(kwargs)
+            return object()
+
+        monkeypatch.setattr(zoom_voice_agent, "websocket_connect", connect)
+        service, _ = self._service()
+        service.create_task = lambda coroutine: coroutine.close()
+        await service._connect()
+        assert opened["uri"] == "wss://api.zoom.us/v2/ws/aiservices/voice-agent/live"
+        assert opened["subprotocols"] == ["voice-agent.zoom.v2"]
+        assert opened["additional_headers"] == {"Authorization": "Bearer k"}
+
+    def test_the_key_is_the_one_scoped_to_the_voice_agent(self):
+        assert bot.PROVIDERS["zoom-voice-agent"].credential_env == ("ZOOM_AGENT_API_KEY",)
+
+    def test_every_tool_is_declared_flat_with_its_published_schema(self):
+        server = bot.MockToolServer(suite="medicare")
+        service, _ = self._service(_tools=bot.build_tools(server))
+        think = service.session()["think"]
+        declared = {tool["name"]: tool for tool in think["tools"]}
+        specs = {spec.name: spec for spec in server.tool_specs()}
+        assert set(specs) | {"end_call", "transfer_call"} == set(declared)
+        for name, spec in specs.items():
+            assert declared[name]["type"] == "function" and "function" not in declared[name]
+            assert declared[name]["description"] == spec.description
+            assert declared[name]["parameters"]["properties"] == spec.parameters["properties"], name
+        assert think["tool_choice"] == "auto"
+
+    async def test_the_call_opens_configured_with_tools_then_speaks_first(self):
+        """The opening reply is asked for only once the session has accepted the tools."""
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        server = bot.MockToolServer(suite="appointments")
+        service, seen = self._service()
+        service.create_task = asyncio.ensure_future
+        opening = bot.opening_messages("Thank you for calling.")
+        await service._handle_context(LLMContext(opening, tools=bot.build_tools(server)))
+        await asyncio.sleep(0)
+        assert [event["type"] for event in seen["sent"]] == ["session.update"]
+        assert seen["sent"][0]["session"]["think"]["tools"]
+        await service._dispatch({"type": "session.updated", "session": {"think": {"provider": {"model": "gemma-4"}}}})
+        await service._open_task
+        assert [event["type"] for event in seen["sent"]] == [
+            "session.update", "conversation.item.create", "response.create"]
+        item = seen["sent"][1]["item"]
+        assert item["role"] == "user" and item["content"][0]["text"] == opening[0]["content"]
+
+    async def test_server_events_are_read_from_their_envelope(self):
+        import json
+
+        messages = [json.dumps({"payload": {"type": "input_audio_buffer.speech_started"}}),
+                    json.dumps({"type": "input_audio_buffer.speech_stopped"})]
+
+        class Socket:
+            def __aiter__(self):
+                return self
+
+            async def __anext__(self):
+                if not messages:
+                    raise StopAsyncIteration
+                return messages.pop(0)
+
+        service, seen = self._service()
+        service._websocket, service._closing = Socket(), False
+
+        async def push_error(**_kwargs):
+            return None
+
+        service.push_error = push_error
+        await service._receive()
+        assert seen["broadcast"] == ["ProposedUserStartedSpeakingFrame", "ProposedUserStoppedSpeakingFrame"]
+
+    async def test_a_tool_call_reaches_the_pipeline_and_its_result_resumes_the_reply_once(self):
+        """Two calls in one response: one reply, asked for after both results and the response's close."""
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service, seen = self._service()
+        service._context = LLMContext([])
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        for call_id, name in (("c1", "lookup_patient"), ("c2", "check_availability")):
+            await service._dispatch({"type": "response.output_item.added", "response_id": "r1",
+                                     "item": {"type": "function_call", "call_id": call_id, "name": name}})
+        for call_id, name in (("c1", "lookup_patient"), ("c2", "check_availability")):
+            await service._dispatch({"type": "response.function_call_arguments.done", "call_id": call_id,
+                                     "name": name, "arguments": '{"patient_id": "p_1"}'})
+        assert [(c.tool_call_id, c.function_name) for c in seen["calls"]] == [
+            ("c1", "lookup_patient"), ("c2", "check_availability")]
+
+        both = LLMContext([{"role": "tool", "tool_call_id": "c1", "content": '{"ok": true}'},
+                           {"role": "tool", "tool_call_id": "c2", "content": '{"slots": []}'}])
+        await service._handle_context(both)
+        await service._handle_context(both)
+        assert [event["type"] for event in seen["sent"]] == ["conversation.item.create"] * 2, "the response is open"
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})
+        assert [event["type"] for event in seen["sent"]].count("response.create") == 1
+
+    @pytest.mark.parametrize("closing", ["end_call", "transfer_call"])
+    async def test_a_closing_tool_is_answered_with_no_further_reply(self, closing):
+        """The goodbye came before the call; a reply after it is the model voicing the hang-up."""
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service, seen = self._service()
+        service._context = LLMContext([])
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        for call_id, name in (("c1", "create_handoff_summary"), ("c2", closing)):
+            await service._dispatch({"type": "response.function_call_arguments.done", "call_id": call_id,
+                                     "name": name, "arguments": "{}"})
+        both = LLMContext([{"role": "tool", "tool_call_id": "c1", "content": '{"ok": true}'},
+                           {"role": "tool", "tool_call_id": "c2", "content": '{"status": "ending_call"}'}])
+        await service._handle_context(both)
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})
+        sent = [event["type"] for event in seen["sent"]]
+        assert sent == ["conversation.item.create"] * 2 and "response.create" not in sent
+
+    @pytest.mark.parametrize(
+        ("order", "asked_again"),
+        [(("response.created", "conversation.item.created"), True),
+         (("conversation.item.created", "response.created"), False)],
+        ids=["reply-began-before-the-result", "reply-began-after-the-result"],
+    )
+    async def test_a_reply_request_crossing_one_the_service_began_is_not_an_error(self, order, asked_again):
+        """The service replies to the caller on its own; a result it added mid-reply needs one more reply."""
+        from pipecat.processors.aggregators.llm_context import LLMContext
+
+        service, seen = self._service()
+        errors = []
+
+        async def push_error(**kwargs):
+            errors.append(kwargs)
+
+        service.push_error = push_error
+        service._context = LLMContext([])
+        await service._dispatch({"type": "response.function_call_arguments.done", "call_id": "c1",
+                                 "name": "route_medicare_call", "arguments": "{}"})
+        await service._handle_context(LLMContext([{"role": "tool", "tool_call_id": "c1", "content": '{"ok": true}'}]))
+        assert [event["type"] for event in seen["sent"]] == ["conversation.item.create", "response.create"]
+
+        for kind in order:
+            await service._dispatch({"type": kind, "response": {"id": "r2"},
+                                     "item": {"type": "function_call_output", "call_id": "c1"}})
+        await service._dispatch({"type": "error", "error": {
+            "message": "Conversation already has an active response in progress: r2. Please wait until the "
+                       "response is finished before creating a new one.", "type": "invalid_request_error"}})
+        await service._dispatch({"type": "response.done", "response": {"id": "r2", "status": "completed"}})
+
+        assert errors == []
+        assert [event["type"] for event in seen["sent"]].count("response.create") == (2 if asked_again else 1)
+
+    async def test_a_cut_reply_is_truncated_at_what_was_delivered(self):
+        """The audio outruns playback, so what was delivered bounds what was heard only when it is the shorter."""
+        from pipecat.frames.frames import InterruptionFrame
+        from pipecat.processors.frame_processor import FrameDirection
+
+        service, seen = self._service()
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch(self._audio(size=3200))  # 100 ms at 16 kHz
+        service._audio_started_ms -= 5000
+        await service._dispatch({"type": "input_audio_buffer.speech_started"})
+        [truncate] = [event for event in seen["sent"] if event["type"] == "conversation.item.truncate"]
+        assert (truncate["item_id"], truncate["content_index"], truncate["audio_end_ms"]) == ("i1", 0, 100)
+        await service.process_frame(InterruptionFrame(), FrameDirection.DOWNSTREAM)
+        before = len(seen["pushed"])
+        await service._dispatch(self._audio())
+        await service._dispatch({"type": "response.output_audio_transcript.delta", "response_id": "r1", "delta": "late"})
+        assert seen["pushed"][before:] == []
+
+    async def test_a_reply_three_seconds_ahead_is_truncated_at_the_clock(self):
+        service, seen = self._service()
+        await service._dispatch(self._audio(size=3 * 32000))
+        await service._dispatch({"type": "input_audio_buffer.speech_started"})
+        [truncate] = [event for event in seen["sent"] if event["type"] == "conversation.item.truncate"]
+        assert truncate["audio_end_ms"] < 1000
+
+    async def test_words_reach_the_record_only_once_their_reply_makes_a_sound(self):
+        service, seen = self._service()
+        await service._dispatch({"type": "response.created", "response": {"id": "r1"}})
+        await service._dispatch({"type": "response.output_audio_transcript.delta", "response_id": "r1", "delta": "Bye."})
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed"}})
+        assert self._words(seen) == []
+        await service._dispatch({"type": "response.created", "response": {"id": "r2"}})
+        await service._dispatch({"type": "response.output_audio_transcript.delta", "response_id": "r2", "delta": "Sure, "})
+        await service._dispatch(self._audio(response="r2"))
+        await service._dispatch({"type": "response.output_audio_transcript.delta", "response_id": "r2", "delta": "one moment."})
+        assert self._words(seen) == ["Sure, ", "one moment."]
+        audio = next(frame for name, _, frame in seen["pushed"] if name == "TTSAudioRawFrame")
+        assert audio.sample_rate == bot.PROVIDERS["zoom-voice-agent"].input_rate
+
+    async def test_the_callers_words_travel_upstream_unasked(self):
+        from pipecat.processors.frame_processor import FrameDirection
+
+        service, seen = self._service()
+        await service._dispatch({"type": "conversation.item.input_audio_transcription.completed",
+                                 "item_id": "u1", "transcript": "I need to reschedule."})
+        [(name, direction, frame)] = seen["pushed"]
+        assert name == "TranscriptionFrame" and direction is FrameDirection.UPSTREAM
+        assert frame.text == "I need to reschedule."
+        assert bot.PROVIDERS["zoom-voice-agent"].caller_transcription == "automatic"
+
+    async def test_each_replys_text_tokens_are_reported(self):
+        service, seen = self._service()
+        await service._dispatch({"type": "response.done", "response": {"id": "r1", "status": "completed", "usage": {
+            "total_tokens": 217, "input_tokens": 194, "output_tokens": 23,
+            "input_token_details": {"audio_tokens": 0, "cached_tokens": 0, "text_tokens": 194},
+            "output_token_details": {"audio_tokens": 0, "text_tokens": 23}}}})
+        [tokens] = seen["usage"]
+        assert (tokens.prompt_tokens, tokens.completion_tokens, tokens.total_tokens) == (194, 23, 217)
+        assert (tokens.input_audio_tokens, tokens.output_audio_tokens) == (0, 0)
+
+    def test_the_rigs_cost_check_accepts_a_row_billed_by_the_minute(self):
+        """Text-token totals alone cannot price a native row, unless the row is not billed by its tokens."""
+        import local
+
+        def priceable(row):
+            meta = {"stack": "native", "s2s_provider": row,
+                    "usage": {"call_seconds": 70.7, "usage_reports": 5, "prompt_tokens": 57426, "completion_tokens": 247}}
+            checks, *_ = local.checks_for({"provider_data": {"custom_metadata": meta}})
+            [(_, passed, seen)] = [c for c in checks if c[0] == "usage can be priced beside the other rows"]
+            return passed, seen
+
+        assert priceable("zoom-voice-agent") == (True, "call_seconds")
+        assert priceable("azure-realtime") == (False, "totals only: the speech half is not separable")
+
+
 class TestCascadeCounterparts:
     """The comparison the board exists to make: native against the pipeline it replaces."""
 
     def test_every_native_provider_has_a_counterpart(self):
         """A native row with nothing to compare against cannot answer the question.
 
-        Nova Sonic, GPT-Live, Phonic, Deepslate and Azure Realtime have no
+        Nova Sonic, GPT-Live, Phonic, Deepslate, Azure Realtime and Zoom have no
         vendor-default counterpart: GPT-Live delegates to a backend, so its fair
         pairing is a cascade on that backend; Phonic, Deepslate, PolyAI and Rime offer no
         text model of their own on an API; the text models Voice Live serves next to Azure
         Realtime are OpenAI's, which the OpenAI cascade already covers; and Deepgram's
-        Voice Agent is itself a cascade (Flux, GPT-4.1, Aura) behind one socket. Smallest's
+        Voice Agent is itself a cascade (Flux, GPT-4.1, Aura) behind one socket, as is Zoom's
+        Voice Agent, whose comparison is with these rows, not a twin. Smallest's
         Hydra has none: no text model of Smallest's is in this harness.
         A vendor's smaller tier shares its vendor's counterpart: the question it
         answers is "the cheaper model or the flagship", not "native or cascade".
@@ -2995,7 +3304,7 @@ class TestCascadeCounterparts:
         paired = {c.counterpart_to for c in bot.TEXT_MODELS.values() if c.counterpart_to}
         tiers = {"openai-realtime-mini", "gemini-live-standard", "gemini-flash-live"}
         unpaired = set(bot.PROVIDERS) - paired - {"nova-sonic", "gpt-live", "phonic", "deepslate", "azure-realtime", "polyai-dialog",
-                                         "smallest-hydra", "rime-prism", "deepgram-voice-agent"} - tiers
+                                         "smallest-hydra", "rime-prism", "deepgram-voice-agent", "zoom-voice-agent"} - tiers
         assert not unpaired, f"native providers with no cascade counterpart: {sorted(unpaired)}"
 
     def test_a_counterpart_names_a_provider_that_exists(self):
@@ -4822,6 +5131,33 @@ class TestVendorDefaultsAreExplicitAndOnTheRecord:
         service = provider.build("k", provider.default_model, provider.default_voice, "p", settings)
         assert service._delegation.settings.reasoning.effort == "high"
         assert record_for("gpt-live", s2s_backend_reasoning="high")["s2s_backend_reasoning"] == "high"
+
+    def test_the_live_backend_sends_no_tier_unless_asked(self):
+        provider = bot.PROVIDERS["gpt-live"]
+        service = provider.build("k", provider.default_model, provider.default_voice, "p", asked())
+        assert service._delegation.service_tier is None
+        assert record_for("gpt-live")["s2s_backend_service_tier"] == "not sent"
+
+    def test_the_session_names_the_backends_tier(self):
+        provider = bot.PROVIDERS["gpt-live"]
+        settings = asked(s2s_backend_service_tier="ultrafast")
+        service = provider.build("k", provider.default_model, provider.default_voice, "p", settings)
+        assert service._delegation.service_tier == "ultrafast"
+        assert record_for("gpt-live", s2s_backend_service_tier="ultrafast")["s2s_backend_service_tier"] == "ultrafast"
+
+    def test_the_live_backend_sends_no_cache_key_unless_asked(self):
+        provider = bot.PROVIDERS["gpt-live"]
+        service = provider.build("k", provider.default_model, provider.default_voice, "p", asked())
+        assert "prompt_cache_key" not in service._delegation.settings.extra
+        assert record_for("gpt-live")["s2s_backend_prompt_cache_key"] == "not sent"
+
+    def test_the_session_names_the_backends_cache_key(self):
+        provider = bot.PROVIDERS["gpt-live"]
+        settings = asked(s2s_backend_prompt_cache_key="s2shb-run-1")
+        service = provider.build("k", provider.default_model, provider.default_voice, "p", settings)
+        assert service._delegation.settings.extra == {"prompt_cache_key": "s2shb-run-1"}
+        record = record_for("gpt-live", s2s_backend_prompt_cache_key="s2shb-run-1")
+        assert record["s2s_backend_prompt_cache_key"] == "s2shb-run-1"
 
     def test_the_live_backend_keeps_optional_arguments_optional(self):
         # A tool without ``strict`` is strict to the Responses API, which makes

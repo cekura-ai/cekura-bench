@@ -6,15 +6,19 @@ changing it must never require re-running the provider. This pass reads the
 audio a run wrote, sends it to one or more ASR instruments, and writes
 ``scores.jsonl`` beside ``cells.jsonl``. The report picks it up if present.
 
-Scoring rule: the hypothesis is compared with both the text as sent and its
-``spoken_reference`` after the same normaliser, and the lower error is kept.
-Either rendering is a correct reading. Digit sequences are compared separately
+Scoring rule: written shorthand (times, addresses, symbols) is put into words
+the same way on both sides, then the hypothesis is compared with the spoken
+reference, the text as sent and any accepted reading, choosing among them word
+by word: each is a correct reading. Digit sequences are compared separately
 because a task depends on them and a word error rate hides one wrong digit.
 
 The instrument is not the subject. Two instruments are run where two are
 available, and a row on which they disagree by more than the declared margin
-is flagged, not averaged: that disagreement is the instrument's error, and the
-honest treatment is to withhold the row rather than pick the friendlier one.
+is flagged, not averaged. Each hard part gets one verdict: a term must be heard
+right by every transcriber, any other kind by their majority, and where the two
+split, a third transcriber (the arbiter) hears that recording and decides.
+Word errors are counted the same way: a word is wrong when most transcribers
+hear it wrong, so one transcriber's mishearing does not count against the model.
 """
 
 from __future__ import annotations
@@ -27,10 +31,12 @@ import re
 import sys
 from importlib.metadata import version as _pkg_version
 from pathlib import Path
+from collections import defaultdict
 from typing import Any, Sequence
 
 import aiohttp
 
+from tts_bench import corpus
 from tts_bench.common.transcript import edit_distance, normalize as _fallback_normalize
 from tts_bench.store import append_line, cell_dir, latest_cells, read_jsonl, write_manifest
 
@@ -74,11 +80,135 @@ def _normalizer():
 NORMALIZER_NAME, NORMALIZER_VERSION, normalize = _normalizer()
 
 
+def _words(text: str) -> list[str]:
+    return normalize(_spoken_form(text))
+
+
 def score_pair(reference: str, hypothesis: str) -> dict[str, Any]:
-    ref, hyp = normalize(reference), normalize(hypothesis)
+    ref, hyp = _words(reference), _words(hypothesis)
     errors = edit_distance(ref, hyp)
     return {"errors": errors, "reference_words": len(ref), "wer": round(errors / max(len(ref), 1), 4),
             "normalized_reference": " ".join(ref), "normalized_hypothesis": " ".join(hyp)}
+
+
+def _reading_graph(references: Sequence[list[str]]) -> tuple[list[str], dict[int, list[tuple[list[str], int]]]]:
+    """The first reference as a chain of words, and every other reference's differing stretches as detours over it.
+
+    A detour from word ``i`` to word ``j`` replaces ``base[i:j]`` with the other
+    reading's words, so a transcript can follow the written form in one place and
+    the spoken form in another ("Chapter four covers Henry VIII").
+    """
+    import difflib
+
+    base = references[0]
+    detours: dict[int, list[tuple[list[str], int]]] = defaultdict(list)
+    for other in references[1:]:
+        for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, base, other, autojunk=False).get_opcodes():
+            if tag == "equal":
+                continue
+            words = other[j1:j2]
+            if i1 == i2:                     # pure insertion: anchor it on a neighbouring base word
+                if i1 > 0:
+                    i1, words = i1 - 1, [base[i1 - 1], *words]
+                else:
+                    i2, words = i2 + 1, [*words, base[0]] if base else words
+            detours[i1].append((words, i2))
+    return base, detours
+
+
+def _graph_align(base: list[str], detours: dict[int, list[tuple[list[str], int]]], hyp: list[str]) -> tuple[int, list[int], dict[int, int]]:
+    """Least word edits turning the transcript into a path through the reading graph, and where they fell.
+
+    Returns the edit count, the base words a transcript got wrong (by index) and
+    the extra transcript words before each base word. An edit inside a detour is
+    put on the base words that detour replaces, in order, so transcribers that
+    took different readings of the same stretch can still be compared word by word.
+    """
+    inf = 1 << 30
+    width = len(hyp) + 1
+    order: list[tuple] = []
+    edges: dict[tuple, list[tuple[tuple, str, tuple]]] = defaultdict(list)    # node -> (next node, word, where)
+    for i in range(len(base) + 1):
+        order.append(("b", i))
+        if i < len(base):
+            edges[("b", i)].append((("b", i + 1), base[i], ("w", i)))
+        for n, (words, j) in enumerate(detours.get(i, ())):
+            where = ("d", i, j)
+            prev = ("b", i)
+            for t, word in enumerate(words):
+                node = ("b", j) if t == len(words) - 1 else ("d", i, n, t)
+                if node[0] == "d":
+                    order.append(node)
+                edges[prev].append((node, word, where))
+                prev = node
+            if not words:
+                edges[prev].append((("b", j), "", where))
+    cost = {node: [inf] * width for node in order}
+    back: dict[tuple, list] = {node: [None] * width for node in order}
+    cost[("b", 0)][0] = 0
+    for node in order:
+        row, bp = cost[node], back[node]
+        for k in range(1, width):              # an extra transcript word
+            if row[k - 1] + 1 < row[k]:
+                row[k], bp[k] = row[k - 1] + 1, (node, k - 1, "ins", node)
+        for nxt, word, where in edges[node]:
+            nrow, nbp = cost[nxt], back[nxt]
+            for k in range(width):
+                if word == "":                   # an empty detour: nothing to read
+                    if row[k] < nrow[k]:
+                        nrow[k], nbp[k] = row[k], (node, k, "skip", where)
+                    continue
+                if row[k] + 1 < nrow[k]:         # a reference word the transcript lacks
+                    nrow[k], nbp[k] = row[k] + 1, (node, k, "del", where)
+                if k and row[k - 1] + (word != hyp[k - 1]) < nrow[k]:
+                    nrow[k], nbp[k] = row[k - 1] + (word != hyp[k - 1]), (node, k - 1, "ok" if word == hyp[k - 1] else "sub", where)
+    end = ("b", len(base))
+    distance = cost[end][len(hyp)]
+    wrong: set[int] = set()
+    inserted: dict[int, int] = defaultdict(int)
+    in_detour: dict[tuple[int, int], int] = defaultdict(int)
+    node, k = end, len(hyp)
+    while back[node][k] is not None:
+        prev, pk, op, where = back[node][k]
+        if op in ("del", "sub"):
+            if where[0] == "w":
+                wrong.add(where[1])
+            else:
+                in_detour[where[1:]] += 1
+        elif op == "ins":
+            if node[0] == "b":
+                inserted[node[1]] += 1
+            else:
+                in_detour[node[1:3] if len(node) == 4 else node[1:]] += 1
+        node, k = prev, pk
+    for (i, j), errors in in_detour.items():
+        span = list(range(i, j))
+        wrong.update(span[:errors])
+        if errors > len(span):
+            inserted[j] += errors - len(span)
+    return distance, sorted(wrong), dict(inserted)
+
+
+def _graph_distance(base: list[str], detours: dict[int, list[tuple[list[str], int]]], hyp: list[str]) -> int:
+    """Least word edits turning the transcript into any path through the reading graph."""
+    return _graph_align(base, detours, hyp)[0]
+
+
+def score_readings(references: Sequence[str], hypothesis: str) -> dict[str, Any]:
+    """Word errors against the closest reading, choosing among the references word by word.
+
+    The first reference is the spoken one and sets the word count; the text as
+    sent and any accepted alternative readings join it as detours. ``wrong``
+    lists the spoken reference's words the transcript got wrong and
+    ``inserted`` its extra words by position, so transcribers can be compared word by word.
+    """
+    refs = [_words(r) for r in references]
+    hyp = _words(hypothesis)
+    base, detours = _reading_graph(refs)
+    errors, wrong, inserted = _graph_align(base, detours, hyp)
+    return {"errors": errors, "reference_words": len(base), "wer": round(errors / max(len(base), 1), 4),
+            "normalized_reference": " ".join(base), "normalized_hypothesis": " ".join(hyp),
+            "wrong": wrong, "inserted": {str(k): v for k, v in sorted(inserted.items())}}
 
 
 def _canonical_amounts(text: str) -> str:
@@ -120,18 +250,64 @@ def _spoken_digits(text: str) -> str:
     return "".join(out)
 
 
+_WORD_FOR_DIGIT = {digit: word for word, digit in _DIGIT_WORDS.items() if digit != "0"}
+_TLD = r"(?:com|org|net|edu|gov|io|co|us|ai)"
+
+
+def _spell_address(m: re.Match[str]) -> str:
+    """``billing.support@example.com/a/b-c`` as it is read: billing dot support at example dot com slash a slash b dash c."""
+    text = m.group(0).replace("@", " at ")
+    return re.sub(r"[./-]", lambda c: {".": " dot ", "/": " slash ", "-": " dash "}[c.group(0)], text)
+
+
+_WRITTEN_FORMS = (
+    (re.compile(r"\(\s*(\d+)\s*\)"), r"\1"),                       # (555) 020-8816: the normaliser drops a bracketed group
+    (re.compile(r"\bo'?clock\b", re.IGNORECASE), ""),              # eight o'clock is eight; the normaliser glues it into 80
+    (re.compile(r"\b(\d{1,2}):00\b"), r"\1"),
+    # 2.15am or "6.40 this morning": a transcriber's way of writing a time; an amount or a rate ($12.50, 3.75%) is left alone
+    (re.compile(r"(?<![$\d.,])\b([1-9]|1\d|2[0-3])\.([0-5]\d)(?!\s*(?:%|per\s?cent|dollars?|cents?|[.,]?\d))", re.IGNORECASE), r"\1:\2"),
+    (re.compile(r"(\d+)\s*'\s*(\d+)\s*(?:''|\"|″|”)"), r"\1 foot \2"),
+    (re.compile(r"(?<![\w-])[-−](?=\d)"), "minus "),
+    (re.compile(r"(?<=\w)\+(?=\w)"), " plus "),
+    (re.compile(r"\bco[\s-]pay", re.IGNORECASE), "copay"),
+    (re.compile(r"\bninth\b", re.IGNORECASE), "nine th"),           # the normaliser makes every ordinal "9 th" except this one
+    (re.compile(rf"[\w.+-]+@[\w-]+(?:\.[\w-]+)+(?:/[\w/.-]*\w)?"), _spell_address),
+    (re.compile(rf"\b[\w.+-]*[.][\w.+-]*(?=\s+at\s+[\w-]+(?:\.[\w-]+)*\.{_TLD}\b)"), _spell_address),
+    (re.compile(rf"\b[\w-]+(?:\.[\w-]+)*\.{_TLD}\b(?:/[\w/.-]*\w)?"), _spell_address),
+    (re.compile(r"°\s*F\b", re.IGNORECASE), " degrees fahrenheit"),
+    (re.compile(r"°\s*C\b", re.IGNORECASE), " degrees celsius"),
+    (re.compile(r"°"), " degrees"),
+    (re.compile(r"(?<![\d.,:/-])(\d{1,2})\s*[-–]\s*(\d{1,2})(?![\d.,:/-])"), r"\1 to \2"),
+    (re.compile(r"(?<![\d.,:/-])0([1-9])(?![\d.,:/])"), lambda m: "oh " + _WORD_FOR_DIGIT[m.group(1)]),
+)
+
+
+def _spoken_form(text: str) -> str:
+    """How written shorthand is said: ``36°F``, ``the 2-4 window``, ``class of 09``, ``2.15am``, an email or a web address.
+
+    The normaliser reads these as ``36 f``, ``2 4``, ``9``, ``2.15`` and
+    ``billing support example com``, which no spoken reading matches, so a
+    correct reading would fail on how the transcriber chose to write it.
+    Applied alike to the reference, the accepted readings and every transcript,
+    for the word error rate and the hard parts.
+    """
+    for pattern, replacement in _WRITTEN_FORMS:
+        text = pattern.sub(replacement, text)
+    return text
+
+
 def score_spans(spans: Sequence[dict[str, Any]], hypothesis: str) -> list[dict[str, Any]]:
     """Each labelled span: did one of its accepted readings come through, after the same normaliser as WER.
 
     A span marked for a listener is carried through unscored, so its count is
     visible beside the scored ones rather than silently dropped.
     """
-    heard = " " + " ".join(normalize(hypothesis)) + " "
+    heard = " " + " ".join(normalize(_spoken_form(hypothesis))) + " "
     out = []
     for span in spans:
         row = {"text": span["text"], "category": span["category"], "check": span.get("check", "transcript")}
         if row["check"] == "transcript":
-            forms = [" ".join(normalize(form)) for form in span.get("accept", ())]
+            forms = [" ".join(normalize(_spoken_form(form))) for form in span.get("accept", ())]
             row["pass"] = any(form and f" {form} " in heard for form in forms)
             digits = "".join(re.findall(r"[0-9]", span["text"]))
             if span["category"] == "sequence" and digits and not row["pass"]:
@@ -141,10 +317,12 @@ def score_spans(spans: Sequence[dict[str, Any]], hypothesis: str) -> list[dict[s
 
 
 def score_transcript(text: str, spoken_reference: str, hypothesis: str,
-                     spans: Sequence[dict[str, Any]] = ()) -> dict[str, Any]:
+                     spans: Sequence[dict[str, Any]] = (), readings: Sequence[str] = ()) -> dict[str, Any]:
+    """``best`` counts errors against the closest of the spoken reference, the text as sent and any accepted
+    reading, chosen word by word; ``against_text`` and ``against_spoken`` keep each whole reference on its own."""
     against_text = score_pair(text, hypothesis)
     against_spoken = score_pair(spoken_reference, hypothesis)
-    best = min((against_text, against_spoken), key=lambda s: s["wer"])
+    best = score_readings([spoken_reference, text, *readings], hypothesis)
     # Digits come from the written text, in order; the hypothesis is read after
     # the same normaliser has turned its number words into digits. An item with
     # no digit in its text has no digit check.
@@ -152,7 +330,6 @@ def score_transcript(text: str, spoken_reference: str, hypothesis: str,
     hyp_digits = "".join(re.findall(r"[0-9]", " ".join(normalize(hypothesis))))
     return {
         "best": best,
-        "best_reference": "text" if best is against_text else "spoken_reference",
         "against_text": against_text,
         "against_spoken": against_spoken,
         "digits_expected": ref_digits,
@@ -214,6 +391,195 @@ class OpenAIWhisperInstrument(Instrument):
 INSTRUMENTS = {"deepgram": (DeepgramInstrument, "DEEPGRAM_API_KEY"), "openai-whisper": (OpenAIWhisperInstrument, "OPENAI_API_KEY")}
 
 
+def _pcm16k(path: Path) -> bytes:
+    """Mono 16-bit PCM at 16 kHz, low-passed before resampling so nothing above 8 kHz folds back."""
+    import numpy as np
+    import soundfile as sf
+
+    audio, rate = sf.read(str(path), dtype="float64", always_2d=True)
+    audio = audio.mean(axis=1)
+    if rate != 16000:
+        if rate > 16000:
+            cutoff = 0.45 * 16000 / rate
+            n = np.arange(-63, 64)
+            taps = 2 * cutoff * np.sinc(2 * cutoff * n) * np.hamming(len(n))
+            audio = np.convolve(audio, taps / taps.sum(), mode="same")
+        audio = np.interp(np.arange(0, len(audio) * 16000 / rate) * rate / 16000, np.arange(len(audio)), audio)
+    return (np.clip(audio, -1, 1) * 32767).astype("<i2").tobytes()
+
+
+class ZoomScribeInstrument(Instrument):
+    """Zoom Scribe Pro live mode, used only to settle a hard part the two transcribers disagree on.
+
+    The recording is streamed in 20 ms frames at real-time pace, the way the
+    live endpoint expects; Zoom's own voice activity detection segments it and
+    each segment's final transcript is joined in order. The model is requested
+    inside ``config`` and the server's echo in ``session.updated`` is checked.
+    """
+
+    name = "zoom"
+    model = "zoom-scribe-en-pro-v2.1"
+    url = "wss://api.zoom.us/v2/aiservices/scribe/live"
+    frame = 640                                  # 20 ms of 16 kHz 16-bit audio
+
+    async def transcribe(self, session: aiohttp.ClientSession, wav_path: Path) -> str:
+        from websockets.asyncio.client import connect
+
+        pcm = _pcm16k(wav_path) + b"\0" * self.frame * 15        # 300 ms of silence closes the last segment
+        async with connect(self.url, subprotocols=["live-asr"], additional_headers={"Authorization": f"Bearer {self.api_key}"},
+                           open_timeout=15, close_timeout=5) as ws:
+            await ws.send(json.dumps({"type": "session.update", "language": "en-US", "audio": {"format": "pcm16"},
+                                      "config": {"model": self.model}}))
+            order: list[str] = []
+            finals: dict[str, str] = {}
+            ready = asyncio.Event()
+
+            async def read() -> None:
+                async for raw in ws:
+                    if isinstance(raw, bytes):
+                        continue
+                    message = json.loads(raw)
+                    kind = message.get("type")
+                    if kind == "session.updated":
+                        if message.get("model") != self.model:
+                            raise RuntimeError(f"zoom served {message.get('model')!r}, not {self.model}")
+                        ready.set()
+                    elif kind in ("input_audio_buffer.speech_started", "transcription.completed") and message.get("item_id"):
+                        if message["item_id"] not in order:
+                            order.append(message["item_id"])
+                        if kind == "transcription.completed":
+                            finals[message["item_id"]] = message.get("transcript", "")
+                    elif kind == "error":
+                        raise RuntimeError(f"zoom error: {str(message.get('error') or message)[:200]}")
+                    elif kind == "session.closed":
+                        return
+
+            reader = asyncio.create_task(read())
+            await asyncio.wait({reader, asyncio.create_task(ready.wait())}, timeout=15, return_when=asyncio.FIRST_COMPLETED)
+            if reader.done():
+                reader.result()
+            if not ready.is_set():
+                reader.cancel()
+                raise RuntimeError("zoom session.updated not received")
+            for start in range(0, len(pcm), self.frame):
+                await ws.send(pcm[start:start + self.frame])
+                await asyncio.sleep(0.02)
+            await ws.send(json.dumps({"type": "input_audio_buffer.commit"}))
+            await ws.send(json.dumps({"type": "session.close"}))
+            await asyncio.wait_for(reader, 15)
+        return " ".join(" ".join(finals.get(item, "") for item in order).split())
+
+
+ARBITERS = {"zoom": (ZoomScribeInstrument, "ZOOM_API_KEY")}
+
+# A misread drug or medical name is often written as the real word by a transcriber
+# whose language model knows it, so one transcriber hearing it wrong is the evidence.
+UNANIMOUS = frozenset({"term"})
+
+
+def hard_part_verdicts(instruments: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    """One verdict per hard part from every transcriber's reading of it.
+
+    A term passes only if every transcriber heard it right. Any other kind
+    passes or fails when the transcribers agree; when they split, the majority
+    of three decides, and with two it is unresolved (``pass: None``) until the
+    arbiter has transcribed the recording.
+    """
+    readings = {name: [s for s in r["spans"] if s.get("check", "transcript") == "transcript"]
+                for name, r in instruments.items() if r.get("spans") is not None and "best" in r}
+    if not readings:
+        return []
+    out = []
+    for k, span in enumerate(next(iter(readings.values()))):
+        votes = {name: spans[k]["pass"] for name, spans in readings.items() if k < len(spans)}
+        heard = sum(votes.values())
+        if span["category"] in UNANIMOUS or heard in (0, len(votes)):
+            verdict: bool | None = heard == len(votes)
+        elif len(votes) >= 3:
+            verdict = 2 * heard > len(votes)
+        else:
+            verdict = None
+        out.append({"text": span["text"], "category": span["category"], "pass": verdict, "votes": votes})
+    return out
+
+
+def word_verdict(instruments: dict[str, dict[str, Any]], names: frozenset[int] = frozenset()) -> dict[str, Any] | None:
+    """Word errors the transcribers agree on: a reference word is wrong, or an extra word was said, when most of them hear it so.
+
+    One transcriber mishearing a word the others heard right is the
+    transcriber's error, not the model's. A name (``names``, positions in the
+    spoken reference) is wrong only when every transcriber missed it:
+    transcribers garble unusual names that were said right, while writing one
+    exactly is hard to do by chance. With two transcribers that disagree, or
+    that both missed a name, the count is unresolved (``errors: None``) until
+    the arbiter has heard the recording; ``mean`` keeps the two transcribers'
+    average meanwhile.
+    """
+    heard = [r["best"] for r in instruments.values() if "wrong" in (r.get("best") or {})]
+    if not heard:
+        return None
+    words = heard[0]["reference_words"]
+    mean = sum(h["errors"] for h in heard) / len(heard)
+    marks = [(set(h["wrong"]), {int(k): v for k, v in h["inserted"].items()}) for h in heard]
+    if len(heard) == 2 and (marks[0] != marks[1] or names & marks[0][0]):
+        return {"errors": None, "reference_words": words, "transcribers": 2, "mean": mean}
+    need = len(heard) // 2 + 1                   # most of them: 1 of 1, 2 of 2, 2 of 3
+    wrong = sum(1 for i in range(words) if sum(i in w for w, _ in marks) >= (len(heard) if i in names else need))
+    gaps = {g for _, ins in marks for g in ins}
+    extra = sum(sorted((ins.get(g, 0) for _, ins in marks), reverse=True)[need - 1] for g in gaps)
+    return {"errors": wrong + extra, "reference_words": words, "transcribers": len(heard), "mean": mean}
+
+
+async def arbitrate_run(run_dir: Path, arbiter: Instrument, concurrency: int = 10) -> dict[str, int]:
+    """Transcribe, with the arbiter, every recording whose transcribers split on a hard part or a word; then rescore.
+
+    Only one-shot recordings, the ones hard parts are reported from, and only
+    those are sent, so the arbiter's cost follows the disagreements, not the
+    run. Its transcripts are journalled like the others and kept in the scores,
+    so a later rescore keeps them.
+    """
+    rescore_run(run_dir)
+    path = run_dir / "scores-all.jsonl"
+    rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    pending = [r for r in rows if r["probe"] == "one_shot" and arbiter.name not in r["instruments"]
+               and (any(v["pass"] is None for v in r.get("hardParts", ())) or (r.get("words") or {}).get("errors", 0) is None)]
+    semaphore = asyncio.Semaphore(concurrency)
+    counts = {"split": len(pending), "transcribed": 0, "failed": 0, "no_audio": 0}
+    journal = open(run_dir / JOURNAL, "a", encoding="utf-8")
+
+    async def one(session: aiohttp.ClientSession, row: dict[str, Any]) -> None:
+        audio = run_dir / row["audio"]
+        if not audio.exists():               # recorded as WAV, kept as FLAC once the run is archived
+            audio = audio.with_suffix(".flac")
+        if not audio.exists():
+            counts["no_audio"] += 1
+            return
+        async with semaphore:
+            entry: dict[str, Any] = {"cell_id": row["cell_id"], "context": row["context"], "instrument": arbiter.name, "model": arbiter.model}
+            for attempt in range(2):
+                try:
+                    entry["hypothesis"] = await arbiter.transcribe(session, audio)
+                    entry.pop("error", None)
+                    break
+                except Exception as exc:  # noqa: BLE001 -- the arbiter failed, not the provider
+                    entry["error"] = repr(exc)[:300]
+            append_line(journal, entry)
+            if "hypothesis" in entry:
+                row["instruments"][arbiter.name] = {"model": arbiter.model, "hypothesis": entry["hypothesis"]}
+                counts["transcribed"] += 1
+            else:
+                counts["failed"] += 1
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            await asyncio.gather(*(one(session, r) for r in pending))
+    finally:
+        journal.close()
+    _write_scores(run_dir, rows)
+    rescore_run(run_dir)
+    return counts
+
+
 # ── the pass ──────────────────────────────────────────────────────────────────
 
 def rescore_run(run_dir: Path) -> int:
@@ -221,21 +587,24 @@ def rescore_run(run_dir: Path) -> int:
 
     The transcript is the expensive, external part; the comparison is ours. A
     change to the normaliser or the digit rule must be applicable to every run
-    ever scored without paying for the audio to be transcribed again.
+    ever scored without paying for the audio to be transcribed again, or
+    even having the audio at hand.
     """
     path = run_dir / "scores-all.jsonl"
     rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
-    texts = {t["cell_id"]: t for t in _targets(run_dir)}
+    texts = {cell["cell_id"]: cell for _, cell in _scorable_cells(run_dir)}
     for row in rows:
         target = texts.get(row["cell_id"])
         if target is None:
             continue
         for name, score in row["instruments"].items():
             if "hypothesis" in score:
-                row["instruments"][name] = {"model": score["model"], **score_transcript(target["text"], target["spoken_reference"], score["hypothesis"], target["spans"])}
-        wers = [r["best"]["wer"] for r in row["instruments"].values() if "best" in r]
+                row["instruments"][name] = {"model": score["model"], **score_transcript(target["text"], target["spoken_reference"], score["hypothesis"], target["spans"], target["readings"])}
+        wers = [r["best"]["wer"] for name, r in row["instruments"].items() if "best" in r and name not in ARBITERS]
         row["normalizer"] = {"name": NORMALIZER_NAME, "version": NORMALIZER_VERSION}
         row["instruments_disagree"] = len(wers) >= 2 and (max(wers) - min(wers)) > DISAGREE_WER
+        row["hardParts"] = hard_part_verdicts(row["instruments"])
+        row["words"] = word_verdict(row["instruments"], name_positions(target["spoken_reference"], target["names"]))
     _write_scores(run_dir, rows)
     return len(rows)
 
@@ -253,22 +622,53 @@ def _write_scores(run_dir: Path, rows: list[dict[str, Any]]) -> None:
     write_manifest(run_dir)              # the run changed on purpose; the manifest follows it
 
 
-def _targets(run_dir: Path) -> list[dict[str, Any]]:
-    """Every (cell, audio file) pair that has text to score against."""
+def name_positions(spoken_reference: str, names: Sequence[str]) -> frozenset[int]:
+    """The spoken reference's word positions that belong to a name, after the same normaliser as WER."""
+    tokens = {token for name in names for token in _words(name)}
+    return frozenset(i for i, word in enumerate(_words(spoken_reference)) if word in tokens)
+
+
+def _with_current_readings(item_id: str, spans: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """A run's spans plus any reading the corpus has accepted since the run was recorded.
+
+    Accepted readings are a scoring rule like the normaliser, so a rescore
+    applies the current list to every run; a span whose text changed is left as recorded.
+    """
+    item = corpus.by_id().get(item_id)
+    current = {span.text: span.accept for span in (item.spans if item else ())}
+    return [{**span, "accept": list(dict.fromkeys([*span.get("accept", ()), *current.get(span["text"], ())]))}
+            for span in spans]
+
+
+def _scorable_cells(run_dir: Path) -> list[tuple[Path, dict[str, Any]]]:
+    """Every cell with text to score against, from the run's records alone; no audio is read."""
     out = []
     corpus_path = run_dir / "corpus.json"
     spans = {} if not corpus_path.exists() else {
-        item["id"]: item.get("spans", []) for item in json.loads(corpus_path.read_text())["items"]}
+        item["id"]: _with_current_readings(item["id"], item.get("spans", []))
+        for item in json.loads(corpus_path.read_text())["items"]}
     for cell in latest_cells(run_dir):
         if cell.get("void") or cell.get("probe") == "cancel":
             continue                         # a cancelled utterance is partial by design; its transcript scores nothing
         directory = cell_dir(run_dir, cell)
         record = json.loads((directory / "cell.json").read_text())
+        item = corpus.by_id().get(cell["item"])
+        out.append((directory, {"cell_id": cell["artifacts"]["slug"], "text": record["text"]["sent"],
+                                "spoken_reference": record["text"]["spoken_reference"], "cohort": cell["cohort"],
+                                "probe": cell["probe"], "spans": spans.get(cell["item"], []),
+                                # accepted readings are a scoring rule, so the current list applies to every run
+                                "readings": list(item.readings) if item and item.text == record["text"]["sent"] else [],
+                                "names": list(item.names) if item and item.text == record["text"]["sent"] else []}))
+    return out
+
+
+def _targets(run_dir: Path) -> list[dict[str, Any]]:
+    """Every (cell, audio file) pair that has text to score against."""
+    out = []
+    for directory, cell in _scorable_cells(run_dir):
         # Audio is WAV as recorded, or FLAC once the run is archived; the samples are the same.
         for wav in sorted([*directory.glob("audio-*.wav"), *directory.glob("audio-*.flac")]):
-            out.append({"cell_id": cell["artifacts"]["slug"], "context": wav.stem.split("-", 1)[1], "wav": wav,
-                        "text": record["text"]["sent"], "spoken_reference": record["text"]["spoken_reference"],
-                        "cohort": cell["cohort"], "probe": cell["probe"], "spans": spans.get(cell["item"], [])})
+            out.append({**cell, "context": wav.stem.split("-", 1)[1], "wav": wav})
     return out
 
 
@@ -327,16 +727,18 @@ async def score_run(run_dir: Path, instruments: Sequence[Instrument], concurrenc
         results: dict[str, Any] = {}
         for name, entry in latest.get((target["cell_id"], target["context"]), {}).items():
             if "hypothesis" in entry:
-                results[name] = {"model": entry["model"], **score_transcript(target["text"], target["spoken_reference"], entry["hypothesis"], target["spans"])}
+                results[name] = {"model": entry["model"], **score_transcript(target["text"], target["spoken_reference"], entry["hypothesis"], target["spans"], target["readings"])}
             else:
                 results[name] = {"model": entry["model"], "error": entry["error"]}
-        wers = [r["best"]["wer"] for r in results.values() if "best" in r]
+        wers = [r["best"]["wer"] for name, r in results.items() if "best" in r and name not in ARBITERS]
         rows.append({
             "cell_id": target["cell_id"], "context": target["context"], "cohort": target["cohort"], "probe": target["probe"],
             "audio": str(target["wav"].relative_to(run_dir)),
             "normalizer": {"name": NORMALIZER_NAME, "version": NORMALIZER_VERSION},
             "instruments": results,
             "instruments_disagree": len(wers) >= 2 and (max(wers) - min(wers)) > DISAGREE_WER,
+            "hardParts": hard_part_verdicts(results),
+            "words": word_verdict(results, name_positions(target["spoken_reference"], target["names"])),
         })
     _write_scores(run_dir, rows)   # scores.jsonl holds one row per cell (the main context); scores-all.jsonl everything
     return len(rows)
@@ -389,17 +791,35 @@ def main(argv: Sequence[str]) -> int:
     parser.add_argument("--instrument", action="append", choices=sorted(INSTRUMENTS), help="default: every one with a key")
     parser.add_argument("--env", help="dotenv file holding instrument credentials")
     parser.add_argument("--concurrency", type=int, default=4)
+    parser.add_argument("--arbitrate", action="store_true",
+                        help="then send each recording whose transcribers split on a hard part or a word to Zoom Scribe (ZOOM_API_KEY)")
     args = parser.parse_args(argv)
 
-    if args.rescore:
-        for run in args.runs:
-            print(f"{run}: {rescore_run(Path(run))} rows rescored with {NORMALIZER_NAME} {NORMALIZER_VERSION}")
-        return 0
     values: dict[str, str] = {}
     if args.env:
         from dotenv import dotenv_values
 
         values = {k: v for k, v in dotenv_values(args.env).items() if v}
+    arbiter = None
+    if args.arbitrate:
+        cls, env = ARBITERS["zoom"]
+        key = os.environ.get(env) or values.get(env)
+        if not key:
+            print(f"{env} is not set for --arbitrate", file=sys.stderr)
+            return 2
+        arbiter = cls(key)
+
+    def settle(run: str) -> None:
+        if arbiter:
+            counts = asyncio.run(arbitrate_run(Path(run), arbiter, max(args.concurrency, 10)))
+            print(f"{run}: {counts['split']} recordings split on a hard part or a word; {counts['transcribed']} sent to "
+                  f"{arbiter.name}:{arbiter.model}, {counts['failed']} failed, {counts['no_audio']} without audio")
+
+    if args.rescore:
+        for run in args.runs:
+            print(f"{run}: {rescore_run(Path(run))} rows rescored with {NORMALIZER_NAME} {NORMALIZER_VERSION}")
+            settle(run)
+        return 0
     chosen = args.instrument or list(INSTRUMENTS)
     instruments = []
     for name in chosen:
@@ -422,6 +842,7 @@ def main(argv: Sequence[str]) -> int:
     for run in args.runs:
         n = asyncio.run(score_run(Path(run), instruments, args.concurrency))
         print(f"{run}: {n} recordings scored -> scores.jsonl")
+        settle(run)
     return 0
 
 

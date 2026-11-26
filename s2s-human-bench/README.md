@@ -34,14 +34,28 @@ holds none of them.
   The scorer reads that metric's verdict (`metrics.task` in the config) unless a task file
   is given. Calls without a verdict from it fall back to the expected-outcome share, and
   `site-export` warns about them.
+* **Entity capture** (with `--entities`): the skill the entity file names (1.2) passes when the
+  agent's first use of the detail the caller gave is right, whether that use is a tool call or
+  a line it says; reading it back is not required. A line is read from the agent's own words
+  when the run carries them (the reference agent writes them into the run record; older runs
+  have them in the execution log), else from the transcript; a value blanked out of a log
+  leaves that line to the transcript. Where a service only produces audio, its text is a
+  transcription and counts as a second hearing: when it disagrees with the transcript, a later
+  tool value decides, and without one the call is not reached. When only the transcript says
+  the first use was wrong, the model's next tool value can settle it: letters often misheard
+  (M/N, B/P/D) are a fail only if the tool carries the same letters, and any other wrong reading
+  is a pass if the tool carries the right value and the caller did not give it again in between.
+  See [`entities.py`](src/s2s_human_bench/entities.py). Without the flag the skill comes from
+  its platform metric.
 * **Pass**: call score of at least 80. **pass³**: the scenario passed in all three runs.
 * **ELO**: per scenario, a model's call score averaged over its runs; two models draw when
   their scores are within 5 points, otherwise the higher wins. Ranked models get
   Bradley-Terry ratings (1000 = average) with a 95% interval from a seeded bootstrap
   over scenarios. A reference system (the cascade) is rated afterwards against the ranked
   models with their ratings held fixed, so it moves no one else. A model's `scenarioSwap`
-  takes the listed scenarios from another agent's runs, run by run; the cascade uses it to
-  answer English callers with English speech-to-text and language switchers with multilingual.
+  takes the listed scenarios from another agent's runs, run by run (a list takes them from
+  several agents, each its own scenarios); the cascade uses it to answer English callers with
+  English speech-to-text and language switchers with multilingual.
 * **Runs**: a model is published only with three usable runs. A run is usable when it was
   fully exported and the agent spoke on all but at most 7 calls; a run where it stayed
   silent on more is a throttled or broken run, not model behaviour.
@@ -75,8 +89,16 @@ uv run --locked s2s-human-bench site-export \
   The file names each scenario's tools and the values the caller gives, so it is test-set
   grading detail and stays out of this repository; without the flag nothing changes.
 
-Output depends only on the inputs, the config, `--date` and the task file. Run data,
-transcripts, the task file and clip picks stay out of this repository.
+* `--entities` scores the skill it names from the call itself (see Scoring). Like the task
+  file, it holds each scenario's true detail, so it stays out of this repository. The agent's
+  own words come from `call_additional_metadata.json` next to `call.json` when the export has it.
+* `--agent-logs` (with `--entities`) is a folder of execution logs exported from the platform,
+  one `<call id>.json` per call, for runs recorded before the agent wrote its words into the run
+  record; the agent's "agent said" lines are read instead.
+
+Output depends only on the inputs, the config, `--date`, the task file, the entity file and the
+agent logs. Run data, transcripts, logs, the task and entity files and clip picks stay out of this
+repository.
 
 ```sh
 uv run --locked pytest

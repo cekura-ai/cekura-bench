@@ -46,8 +46,9 @@ seconds a vendor reports are not the seconds a pipeline ran.
 - Some rows bill something the record cannot see, such as a transcription
   charge whose usage the framework drops. The row lists it under `unmetered`,
   and the figure travels with that note rather than with an estimate.
-- A rate read from anywhere but the vendor's own page stays `verified: false`,
-  and an unverified row is computed but not published.
+- A rate read from anywhere but the vendor's own page, or given to us by the
+  vendor itself for the model tested, stays `verified: false`, and an
+  unverified row is computed but not published.
 
 Audio tokens cost several times text tokens, and cached input a fraction of
 fresh input, so a price table that collapses them is not a price table. Every

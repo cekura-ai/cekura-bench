@@ -8,7 +8,8 @@ Two steps, so a run never has to move to be published:
   newer reading of a cell wins, the rest keep theirs.
 * ``combine(summaries, models)`` joins the per-run summaries into the one file
   the site reads, with each model's display name and, where a sourced list
-  price exists, its cost.
+  price exists, its cost. A model listed with ``streamedFrom`` is one row from
+  two endpoints of its provider: see ``with_streamed_input``.
 
 Every number says which cells it came from. Latency is P50/P90 (P95 from 30
 cells) with a bootstrap interval on the median; word error is pooled (errors
@@ -18,6 +19,7 @@ protocol cannot serve is ``null`` with the reason, never a zero.
 
 from __future__ import annotations
 
+import copy
 import json
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -28,6 +30,7 @@ import numpy as np
 
 from tts_bench.common.stats import latency_summary, rate_summary
 from tts_bench.naturalness import rows as naturalness_rows
+from tts_bench.score import ARBITERS
 from tts_bench.store import latest_cells, read_jsonl
 
 SCHEMA = "tts-bench/site-summary/1"
@@ -91,6 +94,56 @@ def _spans(rows: Sequence[dict[str, Any]], instrument: str) -> dict[str, Any]:
         "byCategory": {k: {"passed": v[0], "n": v[1], "rate": round(v[0] / v[1], 4)} for k, v in sorted(by.items())},
         "forListener": listener,
     }
+
+
+HARD_PARTS_RULE = ("one verdict per hard part: a term counts only if every transcriber heard it right; any other kind "
+                   "by the transcribers' majority, with Zoom Scribe as the third where Deepgram and Whisper split")
+
+
+def _hard_parts(rows: Sequence[dict[str, Any]]) -> dict[str, Any] | None:
+    """Hard parts read right, one verdict per part per recording; ``None`` for runs scored before verdicts existed."""
+    by: dict[str, list[int]] = defaultdict(lambda: [0, 0])
+    unresolved = 0
+    seen = False
+    for row in rows:
+        if "hardParts" not in row:
+            continue
+        seen = True
+        for verdict in row["hardParts"]:
+            by[verdict["category"]][1] += 1
+            by[verdict["category"]][0] += 1 if verdict["pass"] else 0
+            unresolved += verdict["pass"] is None
+    if not seen:
+        return None
+    total = [sum(v[0] for v in by.values()), sum(v[1] for v in by.values())]
+    return {
+        "all": None if not total[1] else {"passed": total[0], "n": total[1], "rate": round(total[0] / total[1], 4)},
+        "byCategory": {k: {"passed": v[0], "n": v[1], "rate": round(v[0] / v[1], 4)} for k, v in sorted(by.items())},
+        "unresolved": unresolved,
+        "rule": HARD_PARTS_RULE,
+    }
+
+
+WORD_ERROR_RULE = ("a word counts as wrong when most transcribers hear it wrong, and a name only when every "
+                   "transcriber does, with Zoom Scribe as the third where Deepgram and Whisper differ or both miss a name")
+
+
+def _agreed_words(rows: Sequence[dict[str, Any]]) -> dict[str, Any] | None:
+    """Word error over the errors the transcribers agree on; an unresolved recording counts at their mean."""
+    errors = words = n = unresolved = 0.0
+    for row in rows:
+        verdict = row.get("words")
+        if not verdict:
+            continue
+        n += 1
+        words += verdict["reference_words"]
+        if verdict["errors"] is None:
+            unresolved += 1
+            errors += verdict["mean"]
+        else:
+            errors += verdict["errors"]
+    return None if not words else {"wer": round(errors / words, 4), "recordings": int(n), "referenceWords": int(words),
+                                   "unresolved": int(unresolved)}
 
 
 def _provenance(root: Path) -> dict[str, Any]:
@@ -178,7 +231,7 @@ def summarize(run_dir: str | Path, amendments: Iterable[str | Path] = (), first_
         ended_by[str(s.get("ended_by"))] += 1
     timeouts = ended_by.get("timeout", 0)
 
-    instruments = sorted({name for row in scores for name in row["instruments"]})
+    instruments = sorted({name for row in scores for name in row["instruments"]} - set(ARBITERS))
     def rows(probe: str, cohort: str | None = None) -> list[dict[str, Any]]:
         return [r for r in scores if r["probe"] == probe and (cohort is None or r["cohort"] == cohort)]
     accuracy = {}
@@ -271,6 +324,12 @@ def summarize(run_dir: str | Path, amendments: Iterable[str | Path] = (), first_
             "runawayRule": f"a recording over {RUNAWAY_FACTOR:g}x and {RUNAWAY_EXCESS_MS} ms longer than the model's median for the same text",
         },
         "accuracy": accuracy,
+        "hardParts": _hard_parts(rows("one_shot")),
+        "wordError": None if not _agreed_words(rows("one_shot")) else {
+            "oneShot": _agreed_words(rows("one_shot")),
+            "byCohort": {cohort: _agreed_words(rows("one_shot", cohort)) for cohort in sorted(by_cohort)},
+            "rule": WORD_ERROR_RULE,
+        },
         "instrumentDisagreements": disagreements,
         "naturalness": _naturalness(roots),
     }
@@ -292,12 +351,54 @@ def _naturalness(roots: Sequence[Path]) -> dict[str, Any] | None:
     }
 
 
+def with_streamed_input(base: dict[str, Any], streamed: dict[str, Any]) -> dict[str, Any]:
+    """One site row from two endpoints of the same model and voice.
+
+    ``base`` was measured on an endpoint that takes the whole text, so it gives
+    every one-shot figure (latency, playout, accuracy, naturalness, repeat);
+    ``streamed`` on one that takes text in pieces, and gives only what the base
+    cannot measure: streamed input and continuation. Both runs stay named, the
+    base in ``run`` and the other in ``streamedFrom``. The other run's
+    syntheses join the count only when every one of them ended cleanly, so no
+    timeout or failure is ever attributed to the wrong endpoint.
+    """
+    if (base["model"], base["voice"]) != (streamed["model"], streamed["voice"]):
+        raise ValueError(f"{streamed['provider']}/{streamed['model']} ({streamed['voice']}) is not the model and voice "
+                         f"of {base['provider']}/{base['model']} ({base['voice']})")
+    if base["streamedInput"] is not None or streamed["streamedInput"] is None:
+        raise ValueError("the base must exclude streamed input and the other endpoint must measure it")
+    rel, cells = streamed["reliability"], streamed["cells"]
+    if rel["timeouts"] or rel["runaways"] or set(rel["endedBy"]) != {"provider"} or cells["failed"] or cells["providerRefused"]:
+        raise ValueError(f"{streamed['run']} has failures that cannot be attributed to its streamed-input cells")
+    added = streamed["streamedInput"]["ttfaFromFirstWord"]["n"]
+    added_cells = added + (streamed["continuation"]["durationDeltaMs"]["n"] if streamed["continuation"] else 0)
+    added_syntheses = added + 2 * (streamed["continuation"]["durationDeltaMs"]["n"] if streamed["continuation"] else 0)
+    row = copy.deepcopy(base)
+    row["streamedInput"] = streamed["streamedInput"]
+    row["continuation"] = streamed["continuation"]
+    row["capabilities"] = {**base["capabilities"], **{k: streamed["capabilities"][k]
+                                                     for k in ("transport", "streamed_input", "continuation")}}
+    for name, entry in row["accuracy"].items():
+        entry["streamedInput"] = (streamed["accuracy"].get(name) or {}).get("streamedInput")
+    row["cells"]["excludedByProbe"] = {probe: reason for probe, reason in base["cells"]["excludedByProbe"].items()
+                                       if probe in streamed["cells"]["excludedByProbe"]}
+    row["cells"]["graded"] += added_cells
+    row["reliability"]["syntheses"] += added_syntheses
+    row["reliability"]["endedBy"]["provider"] = row["reliability"]["endedBy"].get("provider", 0) + added_syntheses
+    row["streamedFrom"] = {"run": streamed["run"], "provider": streamed["provider"], "adapter": streamed["adapter"],
+                           "harnessCommit": streamed["harnessCommit"], "startedUtc": streamed["startedUtc"],
+                           "gives": ["streamedInput", "continuation", "accuracy.*.streamedInput"]}
+    return row
+
+
 def combine(summaries: Sequence[dict[str, Any]], models: dict[str, Any]) -> dict[str, Any]:
     """The site file: one entry per model, in the order the model list gives."""
     by_key = {f"{s['provider']}/{s['model']}": s for s in summaries}
     entries, results = [], []
     for key, meta in models["models"].items():
         s = by_key.get(key)
+        if s is not None and meta.get("streamedFrom"):
+            s = with_streamed_input(s, by_key[meta["streamedFrom"]])
         entries.append({**{k: v for k, v in meta.items() if k != "price"}, "key": key, "measured": s is not None,
                         "price": meta.get("price")})
         if s is not None:

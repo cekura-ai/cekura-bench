@@ -11,11 +11,12 @@ import shutil
 LABELS = {
     'assemblyai-universal-3-5-pro': 'AssemblyAI Universal 3.5 Pro',
     'assemblyai-universal-3-5-pro-min-latency': 'AssemblyAI Universal 3.5 Pro · Min latency',
+    'assemblyai-stt-3-7-realtime-agent-min-latency': 'AssemblyAI STT 3.7 Realtime Agent',
     'deepgram-flux-en': 'Deepgram Flux English', 'deepgram-flux-multilingual': 'Deepgram Flux Multilingual',
     'deepgram-nova-3': 'Deepgram Nova-3', 'cartesia-ink-2': 'Cartesia Ink 2',
     'elevenlabs-scribe-v2-realtime': 'ElevenLabs Scribe v2', 'gemini-3.5-transcribe-live': 'Gemini 3.5',
     'google-chirp-2': 'Google Chirp 2', 'google-chirp-3': 'Google Chirp 3',
-    'gradium-default': 'Gradium', 'inworld-stt-1': 'Inworld STT-1', 'zoom-scribe-live': 'Zoom Scribe', 'zoom-scribe-pro-live': 'Zoom Scribe Pro', 'zoom-scribe-pro-v2-1-live': 'Zoom Scribe Pro v2.1', 'murf-finch-global': 'Murf Finch',
+    'gradium-default': 'Gradium', 'inworld-stt-1': 'Inworld STT-1', 'zoom-scribe-live': 'Zoom Scribe', 'zoom-scribe-pro-live': 'Zoom Scribe Pro', 'zoom-scribe-pro-v2-1-live': 'Zoom Scribe Pro v2.1', 'murf-finch-global': 'Murf Finch', 'mistral-voxtral-realtime-3': 'Mistral Voxtral Realtime 3', 'rime-stt': 'Rime STT',
     'openai-gpt-4o-mini-transcribe': 'GPT-4o Mini Transcribe', 'openai-gpt-4o-transcribe': 'GPT-4o Transcribe',
     'openai-gpt-realtime-whisper': 'GPT Realtime Whisper', 'reson8-realtime': 'Reson8',
     'sarvam-saaras-v3-realtime': 'Sarvam Saaras v3', 'smallest-pulse': 'Smallest Pulse',

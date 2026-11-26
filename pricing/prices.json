@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "note": "Rates marked verified were read from the vendor's own pricing page on read_on. A row whose rate is not verified may be computed but must not be published. See README.md.",
+  "note": "Rates marked verified were read from the vendor's own pricing page, or given to us by the vendor for the model tested, on read_on. A row whose rate is not verified may be computed but must not be published. See README.md.",
   "units": {
     "per_million_tokens": "USD per 1,000,000 tokens, by lane",
     "per_minute": "USD per minute of the named measure",
@@ -32,7 +32,7 @@
         }
       ],
       "unmetered": [
-        "Caller transcription is billed per minute and the framework drops its usage, so it is not in this figure."
+        "Caller transcription (whisper-1, $0.006 a minute) is billed per minute and the framework drops its usage, so it is not in this figure."
       ]
     },
     "openai-realtime-mini": {
@@ -161,9 +161,9 @@
       "note": "The vendor lists no cached-input rate for its Live models; a call reporting cached tokens is refused until one is read."
     },
     "grok-realtime": {
-      "read_on": "2026-09-23",
+      "read_on": "2026-11-23",
       "verified": true,
-      "source": "https://docs.x.ai/docs/models",
+      "source": "https://docs.x.ai/docs/pricing.md",
       "components": [
         {
           "name": "grok-voice-think-fast-2.0",
@@ -175,13 +175,13 @@
         }
       ],
       "unmetered": [
-        "The vendor also lists a text-input charge without stating its unit, so it is not in this figure."
+        "xAI also charges $0.004 per text input message; the call record does not count them, so they are not in this figure."
       ]
     },
     "nova-sonic": {
-      "read_on": "2026-09-23",
-      "verified": false,
-      "source": "third-party listings; the AWS Bedrock pricing page did not show a figure when read",
+      "read_on": "2026-11-23",
+      "verified": true,
+      "source": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonBedrock/current/us-east-1/index.json (Nova Sonic 2.0, us-east-1; AWS's price list API, version of 2026-11-11)",
       "reasoning_in_output": true,
       "components": [
         {
@@ -207,30 +207,38 @@
       "components": []
     },
     "phonic": {
-      "read_on": "2026-09-25",
+      "read_on": "2026-10-22",
       "verified": true,
-      "source": "https://phonic.ai/pricing",
+      "source": "Phonic's rate for phonic-1, given to Cekura on 2026-10-22; https://phonic.ai/pricing lists $0.07 a minute on Starter",
       "components": [
         {
           "name": "phonic_v1",
           "basis": "per_minute",
           "measure": "call_seconds",
           "rates": {
-            "minute": 0.14
+            "minute": 0.06
+          }
+        }
+      ],
+      "unmetered": []
+    },
+    "deepslate": {
+      "read_on": "2026-11-23",
+      "verified": true,
+      "source": "https://deepslate.eu/ (Pricing section)",
+      "components": [
+        {
+          "name": "opal",
+          "basis": "per_minute",
+          "measure": "call_seconds",
+          "rates": {
+            "minute": 0.0224
           }
         }
       ],
       "unmetered": [
-        "The Starter plan's rate; the Pro plan lists $0.12 a minute against a monthly fee."
-      ]
-    },
-    "deepslate": {
-      "read_on": null,
-      "verified": false,
-      "source": null,
-      "components": [],
-      "unmetered": [
-        "No public price list. The ElevenLabs voicing the service calls is billed to this deployment's ElevenLabs account, separately."
+        "Deepslate's release offer of \u20ac0.02 a minute, converted at the ECB rate of 5 Oct 2026 as published on the board; the regular price is \u20ac0.10 a minute.",
+        "The ElevenLabs voicing the service calls is billed to this deployment's ElevenLabs account, separately."
       ]
     },
     "polyai-dialog": {
@@ -279,9 +287,9 @@
       ]
     },
     "rime-prism": {
-      "read_on": "2026-11-04",
-      "verified": false,
-      "source": "a third-party blog post, not the vendor's own page",
+      "read_on": "2026-11-23",
+      "verified": true,
+      "source": "https://www.rime.ai/pricing",
       "components": [
         {
           "name": "prism",
@@ -293,7 +301,7 @@
         }
       ],
       "unmetered": [
-        "The Flex rate as reported second-hand; the same source gives $0.064 a minute on the Scale plan."
+        "The Flex plan's rate, with no monthly fee; the Scale plan lists $0.064 a minute for $100 a month."
       ]
     },
     "azure-realtime": {
@@ -341,6 +349,25 @@
       "unmetered": [
         "Pay-as-you-go rate; Growth lists $0.059 a minute. Billed on WebSocket connection time.",
         "The text model (GPT-4.1) runs on this deployment's OpenAI account and is billed there by token; the session reports no token usage, so it is not priced here."
+      ]
+    },
+    "zoom-voice-agent": {
+      "read_on": "2026-10-26",
+      "verified": true,
+      "source": "https://www.zoom.com/en/products/ai-services/voice-agent-api/",
+      "components": [
+        {
+          "name": "gemma-4",
+          "basis": "per_minute",
+          "measure": "call_seconds",
+          "rates": {
+            "minute": 0.025
+          }
+        }
+      ],
+      "unmetered": [
+        "Zoom lists $1.50 an hour of active session time for the Standard API, which serves its own text model; that is the rate used. Bring-your-own-LLM sessions are $1.08 an hour plus the customer's own model costs.",
+        "The service reports the text model's tokens on every reply, but Zoom bills by session time, not tokens."
       ]
     }
   },

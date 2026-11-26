@@ -27,6 +27,9 @@ A measure with no data for any model is dropped and the rest renormalized.
   a failed clip scores 0. Draws, short replies and entities count 1×. A garbled turn costs more than one wrong word,
   and the log scale keeps a few garbled clips from swamping the rest.
 - Matches are weighted by the clip's word count; each measure's matches are scaled to its weight.
+- Word errors come from the bench scorer (`english-wer-v3-backchannels` from release r15): every spelling of a
+  backchannel ("uh-huh", "mm-hmm", "mhm", "mm-hm", "hm") is dropped on both sides, so a model is not
+  charged for its spelling; "uh-uh" (no) stays one word.
 - The per-measure WER in the output table is plain WER: all word errors over all reference words of the model's valid
   clips, with no floor. Only the match scores are floored at 0.
 - A failed clip (model error or timeout) loses to a valid one. Clips that failed for our own reasons (sender pacing,

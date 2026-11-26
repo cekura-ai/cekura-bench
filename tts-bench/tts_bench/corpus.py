@@ -79,18 +79,22 @@ class Item:
     spoken_reference: str
     note: str = ""
     spans: tuple[Span, ...] = ()
+    readings: tuple[str, ...] = ()     # other whole readings that are right, as words; scored like the spoken reference
+    names: tuple[str, ...] = ()        # its words that are a name, as words; misread only when no transcriber heard one
 
     @property
     def words(self) -> int:
         return len(self.text.split())
 
 
-def _i(id: str, cohort: str, text: str, spoken: str, note: str = "", spans: tuple[Span, ...] = ()) -> Item:
+def _i(id: str, cohort: str, text: str, spoken: str, note: str = "", spans: tuple[Span, ...] = (),
+       readings: tuple[str, ...] = (), names: tuple[str, ...] = ()) -> Item:
     assert cohort in COHORTS, cohort
     for span in spans:
         assert span.category in CATEGORIES and span.text in text, (id, span.text)
         assert span.check == "audio" or span.accept, (id, span.text)
-    return Item(id, cohort, text, spoken, note, spans)
+    assert all(name in spoken.split() for name in names), (id, names)
+    return Item(id, cohort, text, spoken, note, spans, readings, names)
 
 
 def _s(text: str, category: str, *accept: str, check: str = "transcript", note: str = "") -> Span:
@@ -100,7 +104,8 @@ def _s(text: str, category: str, *accept: str, check: str = "transcript", note: 
 ITEMS: tuple[Item, ...] = (
     # ── prose ─────────────────────────────────────────────────────────────
     _i("prose.greet", "prose", "Thanks for calling Cedar Valley Family Practice, this is Riley. How can I help you today?",
-       "thanks for calling cedar valley family practice this is riley how can i help you today"),
+       "thanks for calling cedar valley family practice this is riley how can i help you today",
+       readings=("thanks for calling cedar valley family practice this is rylee how can i help you today",)),
     _i("prose.hold", "prose", "Sure, give me just a moment while I pull that up for you.",
        "sure give me just a moment while i pull that up for you"),
     _i("prose.confirm", "prose", "All set. I've booked that for you and you'll get a text confirmation shortly.",
@@ -187,11 +192,15 @@ ITEMS: tuple[Item, ...] = (
     _i("contact.email_digits", "contact", "I have m.rivera88@example.org, is that still current?",
        "i have m dot rivera eighty eight at example dot org is that still current"),
     # ── names ─────────────────────────────────────────────────────────────
-    _i("names.nguyen", "names", "I have Dr. Nguyen available on Monday.", "i have doctor nguyen available on monday"),
-    _i("names.siobhan", "names", "Siobhan Ó Briain called about the invoice.", "siobhan o'brien called about the invoice"),
-    _i("names.joaquin", "names", "The appointment is with Joaquín Ibarra.", "the appointment is with joaquin ibarra"),
-    _i("names.ngozi", "names", "Please hold for Ngozi Okonkwo.", "please hold for ngozi okonkwo"),
-    _i("names.place", "names", "The clinic is in Worcester, near the Leicester exit.", "the clinic is in worcester near the leicester exit"),
+    _i("names.nguyen", "names", "I have Dr. Nguyen available on Monday.", "i have doctor nguyen available on monday",
+       names=("nguyen",)),
+    _i("names.siobhan", "names", "Siobhan Ó Briain called about the invoice.", "siobhan o'brien called about the invoice",
+       names=("siobhan", "o'brien")),
+    _i("names.joaquin", "names", "The appointment is with Joaquín Ibarra.", "the appointment is with joaquin ibarra",
+       names=("joaquin", "ibarra")),
+    _i("names.ngozi", "names", "Please hold for Ngozi Okonkwo.", "please hold for ngozi okonkwo", names=("ngozi", "okonkwo")),
+    _i("names.place", "names", "The clinic is in Worcester, near the Leicester exit.", "the clinic is in worcester near the leicester exit",
+       names=("worcester", "leicester")),
     # ── repair ────────────────────────────────────────────────────────────
     _i("repair.actually", "repair", "That's on the 4th... actually, no, the 5th. Sorry about that.",
        "that's on the fourth actually no the fifth sorry about that"),
@@ -216,7 +225,8 @@ ITEMS: tuple[Item, ...] = (
     # ── units ─────────────────────────────────────────────────────────────
     _i("units.dose", "units", "Take 500 mg twice a day, with food.", "take five hundred milligrams twice a day with food"),
     _i("units.eta", "units", "The ETA is 3 PM ET, and the driver will text when they're 10 min away.",
-       "the e t a is three p m eastern and the driver will text when they're ten minutes away"),
+       "the e t a is three p m eastern and the driver will text when they're ten minutes away",
+       readings=("the e t a is three p m eastern time and the driver will text when they're ten minutes away",)),
     _i("units.titles", "units", "Dr. Patel and Mr. St. John will both be at the 2 o'clock.",
        "doctor patel and mister saint john will both be at the two o'clock"),
     _i("units.measure", "units", "It's about 2.5 km from the station, roughly a 30-minute walk.",
@@ -302,7 +312,14 @@ ITEMS: tuple[Item, ...] = (
        "merchant i've frozen the card ending in four four one seven so no new charges can go through and i've opened a "
        "dispute for both amounts you'll see a temporary credit within two business days while we investigate a "
        "replacement card will arrive in five to seven days and you'll get a text when it ships is there anything else "
-       "on the account you'd like me to check"),
+       "on the account you'd like me to check",
+       # "I've verified" and "I verified" sound alike: the v of "I've" runs into "verified"
+       readings=("thanks i verified your identity i can see two charges from september third that you don't recognize one "
+                 "for eighty nine dollars and ninety nine cents and one for twelve dollars and fifty cents both from an "
+                 "online merchant i've frozen the card ending in four four one seven so no new charges can go through and "
+                 "i've opened a dispute for both amounts you'll see a temporary credit within two business days while we "
+                 "investigate a replacement card will arrive in five to seven days and you'll get a text when it ships is "
+                 "there anything else on the account you'd like me to check",)),
     # ── heteronym ─────────────────────────────────────────────────────────
     _i("heteronym.read", "heteronym", "Please read the notice. I read it to you yesterday, but it's worth another look.",
        "please read the notice i read it to you yesterday but it's worth another look",
@@ -402,20 +419,21 @@ ITEMS: tuple[Item, ...] = (
               _s("3,400", "shorthand", "3400", "3,400"))),
     _i("numbers.apostrophe", "numbers", "The class of '09 meets on 9/9 this year, in the 3rd Fl. lounge.",
        "the class of oh nine meets on september ninth this year in the third floor lounge",
-       spans=(_s("'09", "shorthand", "class of oh nine", "class of o nine", "class of two thousand nine", "class of twenty oh nine",
+       spans=(_s("'09", "shorthand", "class of oh nine", "class of o nine", "class of o9", "class of two thousand nine", "class of twenty oh nine",
                  note="the normaliser keeps a spoken leading zero (oh nine) but drops a written one (09), so the readings are words"),
               _s("9/9", "shorthand", "september 9th", "september ninth", "september 9", "9th of september", "ninth of september"),
               _s("3rd Fl.", "shorthand", "3rd floor", "third floor"))),
     _i("numbers.height", "numbers", "The patient is 5'11\" and weighs 182 lb, so the dose is 1 tsp twice daily.",
        "the patient is five foot eleven and weighs one hundred eighty two pounds so the dose is one teaspoon twice daily",
-       spans=(_s("5'11\"", "shorthand", "5 foot 11", "five foot eleven", "5 feet 11", "5 foot 11 inches", "five eleven", "5 11"),
+       spans=(_s("5'11\"", "shorthand", "5 foot 11", "five foot eleven", "5 feet 11", "5 foot 11 inches", "five eleven", "5 11",
+                 "5 ft 11 in"),
               _s("182 lb", "shorthand", "182 pounds", "182 lbs"),
               _s("1 tsp", "shorthand", "1 teaspoon", "one teaspoon", "a teaspoon"))),
     # ── tech ──────────────────────────────────────────────────────────────
     _i("tech.version", "tech", "You'll need version 7.2.1 or later; you're on 6.9, and the update is about 180 MB.",
        "you'll need version seven point two point one or later you're on six point nine and the update is about one "
        "hundred eighty megabytes",
-       spans=(_s("7.2.1", "shorthand", "7.2.1", "7 point 2 point 1", "seven point two point one"),
+       spans=(_s("7.2.1", "shorthand", "7.2.1", "7 point 2 point 1", "seven point two point one", "seven dot two dot one"),
               _s("180 MB", "shorthand", "180 MB", "180 megabytes", "180 megs", "180 meg"))),
     _i("tech.error", "tech", "The display shows error E-2208, which means the printer has lost its network connection.",
        "the display shows error e twenty two oh eight which means the printer has lost its network connection",
@@ -423,14 +441,15 @@ ITEMS: tuple[Item, ...] = (
     _i("tech.alert", "tech", "CPU usage peaked at 94% at 2:15 AM and was back under 60% by 3 o'clock.",
        "c p u usage peaked at ninety four percent at two fifteen a m and was back under sixty percent by three o'clock",
        spans=(_s("CPU", "sequence", "cpu", "c p u"), _s("94%", "shorthand", "94%", "94 percent"),
-              _s("2:15 AM", "shorthand", "2:15 am", "215 am", "2 15 am", "two fifteen am", "2:15 a m"))),
+              _s("2:15 AM", "shorthand", "2:15 am", "215 am", "2 15 am", "two fifteen am", "2:15 a m", "2.15 am"))),
     _i("tech.keys", "tech", "Press Ctrl+Shift+T to reopen the tab you just closed, then sign in again.",
        "press control shift t to reopen the tab you just closed then sign in again",
-       spans=(_s("Ctrl+Shift+T", "sequence", "control shift t", "ctrl shift t", "control shift tee"),)),
+       spans=(_s("Ctrl+Shift+T", "sequence", "control shift t", "ctrl shift t", "control shift tee",
+                     "control plus shift plus t", "ctrl plus shift plus t"),)),
     # ── worded ────────────────────────────────────────────────────────────
     _i("worded.time", "worded", "The driver scanned it at three forty-seven, so that's inside the two-to-four window.",
        "the driver scanned it at three forty seven so that's inside the two to four window",
-       spans=(_s("three forty-seven", "shorthand", "three forty seven", "3:47", "347", "3 47"),
+       spans=(_s("three forty-seven", "shorthand", "three forty seven", "3:47", "347", "3 47", "3.47"),
               _s("two-to-four", "shorthand", "two to four", "2 to 4"))),
     _i("worded.money", "worded", "That comes to forty-eight dollars and twenty cents, plus a two-dollar delivery fee.",
        "that comes to forty eight dollars and twenty cents plus a two dollar delivery fee",
@@ -446,7 +465,7 @@ ITEMS: tuple[Item, ...] = (
        "your package tracking nine four zero zero one one zero two eight eight three six five five one nine two two zero "
        "seven left our reno hub at six oh five a m and should arrive thursday before eight p m",
        spans=(_s("9400 1102 8836 5519 2207", "sequence", "9400 1102 8836 5519 2207", "94001102883655192207"),
-              _s("6:05 AM", "shorthand", "6:05 am", "6 05 am", "605 am", "six oh five am", "six o five am"),
+              _s("6:05 AM", "shorthand", "6:05 am", "6 05 am", "605 am", "six oh five am", "six o five am", "6.05 am"),
               _s("8 PM", "shorthand", "8 pm", "eight pm"))),
     _i("dense.renewal", "dense",
        "Your plan renews on 11/02 at $64.99 a month; cancel before 10/31 to avoid the charge, or call ext. 118 to downgrade.",
@@ -462,7 +481,8 @@ ITEMS: tuple[Item, ...] = (
        "one eighteen milligrams per deciliter so no change to the metformin for now",
        spans=(_s("A1C", "sequence", "a1c", "a one c", "a 1 c"), _s("6.4%", "shorthand", "6.4%", "6.4 percent", "6 point 4 percent"),
               _s("118 mg/dL", "shorthand", "118 milligrams per deciliter", "118 mg dl", "118 mg per dl",
-                 "one eighteen milligrams per deciliter"),
+                 "one eighteen milligrams per deciliter", "118 mg per deciliter", "118 mg per decilitre",
+                 "118 milligrams per decilitre"),
               _s("metformin", "term", "metformin"))),
 )
 
@@ -493,5 +513,7 @@ def load(path: str | Path) -> tuple[str, list[Item]]:
     for raw in payload["items"]:
         fields = {k: v for k, v in raw.items() if k in Item.__dataclass_fields__}
         fields["spans"] = tuple(Span(**{**span, "accept": tuple(span.get("accept", ()))}) for span in raw.get("spans", ()))
+        fields["readings"] = tuple(raw.get("readings", ()))
+        fields["names"] = tuple(raw.get("names", ()))
         items.append(Item(**fields))
     return str(payload.get("version", "external")), items

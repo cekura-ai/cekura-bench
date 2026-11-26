@@ -19,10 +19,12 @@ from .full_benchmark import classify
 
 MANIFEST=os.environ.get('STT_TURN_MANIFEST','datasets/private-turns-v1/automatic-v1/manifest.json')  # STT_TURN_MANIFEST selects a frozen noise-condition turn set
 # Profiles added after the original 23 run only when a plan names them.
-OPT_IN=frozenset({'assemblyai-universal-3-6-pro-min-latency','zoom-scribe-live','zoom-scribe-pro-live','zoom-scribe-pro-v2-1-live','elevenlabs-scribe-v3-live','murf-finch-global'})
+OPT_IN=frozenset({'assemblyai-universal-3-6-pro-min-latency','assemblyai-stt-3-7-realtime-agent-min-latency','zoom-scribe-live','zoom-scribe-pro-live','zoom-scribe-pro-v2-1-live','elevenlabs-scribe-v3-live','murf-finch-global','mistral-voxtral-realtime-3','rime-stt'})
 
 
-def prepare(root,models=None):
+def prepare(root,models=None,assemblyai_starts_per_minute=5):
+    # AssemblyAI caps new sessions per minute per account; five was the original account's limit.
+    require(type(assemblyai_starts_per_minute) is int and 1<=assemblyai_starts_per_minute<=100,'AssemblyAI start limit must be 1-100 per minute')
     root=Path(root);root.mkdir(parents=True,exist_ok=True)
     require(not (root/'plan.json').exists(),'Frozen plan already exists')
     m=verify_turn_manifest(Path(MANIFEST))
@@ -40,7 +42,11 @@ def prepare(root,models=None):
             'gradium':3,'inworld':32,'reson8':32,'smallest':32,'soniox':32,'sarvam':16,
             'cartesia':16,'elevenlabs':16,'gemini':10,'zoom':16,
             # Murf refused a tenth concurrent Finch stream in the full run and held at five.
-            'murf':5}
+            'murf':5,
+            # Mistral publishes no realtime ceiling; ten concurrent streams were accepted live.
+            'mistral':10,
+            # Rime publishes no realtime ceiling; twenty concurrent streams were accepted live.
+            'rime':16}
     files=[Path('pyproject.toml'),Path('uv.lock'),*Path('src/stt_bench').glob('*.py'),
            *Path('src/stt_bench').glob('*.html'),*Path('tests').glob('*.py'),
            *[p for p in Path('config/models').glob('*.json') if '3.8' not in p.stem],*paths,
@@ -57,7 +63,7 @@ def prepare(root,models=None):
         models=list(configs),smoke_ids=smoke_selection(m),clip_ids=[c['clip_id'] for c in m['clips']],
         durations={c['clip_id']:c['submitted_seconds'] for c in m['clips']},
         provider_limits=limits,max_workers=128,max_workers_per_model=32,
-        assemblyai_new_sessions_per_minute=5,attempts_per_turn=1,
+        assemblyai_new_sessions_per_minute=assemblyai_starts_per_minute,attempts_per_turn=1,
         planned_sessions=len(configs)*len(m['clips']),audio_seconds_per_model=sum(c['submitted_seconds'] for c in m['clips']),
         authorization=('User explicitly authorized all remaining models on the automatic turn dataset in Vercel; Gemini 3.8 excluded.' if not models
             else 'User explicitly authorized '+', '.join(models)+' on the automatic turn dataset in Vercel.'),
@@ -228,8 +234,9 @@ def main():
     p.add_argument('--root',type=Path);p.add_argument('--plan',type=Path,default=Path('turn-input/plan.json'))
     p.add_argument('--plan-hash');p.add_argument('--assignment',type=Path);p.add_argument('--out',type=Path);p.add_argument('--batch')
     p.add_argument('--models',nargs='+')
+    p.add_argument('--assemblyai-starts-per-minute',type=int,default=5)
     a=p.parse_args()
-    if a.mode=='prepare':result=prepare(a.root,a.models)
+    if a.mode=='prepare':result=prepare(a.root,a.models,a.assemblyai_starts_per_minute)
     elif a.mode=='verify':verify(a.plan,a.plan_hash);result={'verified':True}
     elif a.mode=='worker':result=asyncio.run(worker(a.plan,a.plan_hash,a.assignment,a.out))
     elif a.mode=='unpack':result=unpack(a.root,a.batch);result={k:result[k] for k in ('status','error_type','error') if k in result}

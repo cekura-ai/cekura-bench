@@ -893,7 +893,7 @@
     "unresolved": 0
    }
   },
-  "rule": "a word counts as wrong when most transcribers hear it wrong, with Zoom Scribe as the third where Deepgram and Whisper differ"
+  "rule": "a word counts as wrong when most transcribers hear it wrong, and a name only when every transcriber does, with Zoom Scribe as the third where Deepgram and Whisper differ or both miss a name"
  },
  "instrumentDisagreements": 80,
  "naturalness": {

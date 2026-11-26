@@ -547,7 +547,7 @@
     "version": "0.1.15"
    },
    "oneShot": {
-    "wer": 0.0267,
+    "wer": 0.0262,
     "recordings": 315,
     "referenceWords": 5496
    },
@@ -605,7 +605,7 @@
      "referenceWords": 309
     },
     "paragraph": {
-     "wer": 0.0025,
+     "wer": 0.0,
      "recordings": 12,
      "referenceWords": 1185
     },

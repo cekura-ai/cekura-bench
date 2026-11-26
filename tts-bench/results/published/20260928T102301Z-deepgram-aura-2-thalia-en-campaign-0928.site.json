@@ -664,17 +664,17 @@
     "version": "0.1.15"
    },
    "oneShot": {
-    "wer": 0.0275,
+    "wer": 0.0269,
     "recordings": 315,
     "referenceWords": 5496
    },
    "streamedInput": {
-    "wer": 0.0266,
+    "wer": 0.0262,
     "recordings": 312,
     "referenceWords": 5448
    },
    "underLoad": {
-    "wer": 0.0174,
+    "wer": 0.0167,
     "recordings": 264,
     "referenceWords": 4482
    },
@@ -730,7 +730,7 @@
      "referenceWords": 309
     },
     "paragraph": {
-     "wer": 0.011,
+     "wer": 0.0084,
      "recordings": 12,
      "referenceWords": 1185
     },

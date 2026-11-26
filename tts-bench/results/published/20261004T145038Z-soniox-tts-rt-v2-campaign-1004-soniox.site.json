@@ -630,7 +630,7 @@
     "version": "0.1.15"
    },
    "oneShot": {
-    "wer": 0.026,
+    "wer": 0.0262,
     "recordings": 315,
     "referenceWords": 5496
    },
@@ -662,7 +662,7 @@
      "referenceWords": 225
     },
     "datetime": {
-     "wer": 0.0802,
+     "wer": 0.0844,
      "recordings": 18,
      "referenceWords": 237
     },
@@ -692,7 +692,7 @@
      "referenceWords": 309
     },
     "paragraph": {
-     "wer": 0.0093,
+     "wer": 0.0042,
      "recordings": 12,
      "referenceWords": 1185
     },
@@ -712,7 +712,7 @@
      "referenceWords": 123
     },
     "repair": {
-     "wer": 0.0377,
+     "wer": 0.0464,
      "recordings": 18,
      "referenceWords": 345
     },
@@ -742,7 +742,7 @@
      "referenceWords": 150
     },
     "worded": {
-     "wer": 0.0263,
+     "wer": 0.0526,
      "recordings": 9,
      "referenceWords": 114
     }
@@ -880,7 +880,7 @@
     "unresolved": 0
    },
    "paragraph": {
-    "wer": 0.0051,
+    "wer": 0.0,
     "recordings": 12,
     "referenceWords": 1185,
     "unresolved": 0
@@ -904,7 +904,7 @@
     "unresolved": 0
    },
    "repair": {
-    "wer": 0.0087,
+    "wer": 0.0174,
     "recordings": 18,
     "referenceWords": 345,
     "unresolved": 0
@@ -940,7 +940,7 @@
     "unresolved": 0
    },
    "worded": {
-    "wer": 0.0263,
+    "wer": 0.0526,
     "recordings": 9,
     "referenceWords": 114,
     "unresolved": 0
@@ -948,7 +948,7 @@
   },
   "rule": "a word counts as wrong when most transcribers hear it wrong, with Zoom Scribe as the third where Deepgram and Whisper differ"
  },
- "instrumentDisagreements": 70,
+ "instrumentDisagreements": 79,
  "naturalness": {
   "model": "utmos22-strong",
   "scale": "1-5, a listener model's estimate of a mean opinion score",

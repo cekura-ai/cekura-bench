@@ -28,7 +28,7 @@
   },
   "connection": "POST /v3/create-web-call, then a WebRTC web call (aiortc); tools are called back at TOOL_URL",
   "reasoning": "none offered",
-  "history": "a context note: the {{history}} dynamic variable at call creation, or update-live-call",
+  "history": "a context note: the {{history}} dynamic variable at call creation, or update-live-call; the kept turns with their tool calls and results, as ElevenAgentVoice._notes writes them (until 26 Nov 2026 the note had no tool rounds)",
   "reply": "Retell's transcript of the agent's speech",
   "greeting": "Hi! How can I help you today? (redteam/tau2_airline/first-message.txt)",
   "caller_audio": "the caller's newest line as audio: OpenAI gpt-4o-mini-tts, voice 'alloy', PCM16 at 24000 Hz; earlier kept turns go in as history, never as audio",

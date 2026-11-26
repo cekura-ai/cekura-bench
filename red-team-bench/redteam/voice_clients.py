@@ -193,6 +193,21 @@ def _split(messages: list[dict], opening: bool = True) -> tuple[str, list[dict]]
     return instructions(system, greeting if opening else ""), [{"role": "user", "content": BOT_TEXT["CONNECTED"]}] + rest
 
 
+def _noted(turns: list[dict], note_role: str) -> list[tuple[str, str]]:
+    """The turns as (role, text), each tool result a note in note_role naming the call it answers: for systems that
+    take earlier turns only as text messages."""
+    items, called = [], {}
+    for m in turns:
+        if m["role"] == "tool":
+            items.append((note_role, f"Backend result of {called.get(m['tool_call_id'], 'a tool')}: {m['content']}"))
+            continue
+        if m.get("content"):
+            items.append((m["role"], m["content"]))
+        for c in m.get("tool_calls") or []:
+            called[c["id"]] = f"{c['function']['name']}({c['function']['arguments']})"
+    return items
+
+
 def _unwrapped(text: str) -> str:
     """GPT Realtime in voice answers about half its turns after a tool result as {"message": "..."}: the words it
     meant are the message."""
@@ -351,7 +366,8 @@ class RealtimeText:
 class ElevenVoice(RealtimeText):
     """Eleven Realtime in voice, on its OpenAI-compatible endpoint. It keeps no tool call a client adds to a session
     (nor a system note), so a turn's tool rounds stay in the session that made them, and a new turn's session replays
-    the conversation's messages without its tool rounds. Its transcript marks emotion ("[happy]"), which is dropped."""
+    the conversation's messages, with the earlier tool results as a note in its instructions. Its transcript marks
+    emotion ("[happy]"), which is dropped."""
 
     def __init__(self, model: str, purpose: str, speech: Speech):
         self._model, self._purpose, self._provider, self._speech = model, purpose, "elevenlabs", speech
@@ -412,12 +428,15 @@ class ElevenVoice(RealtimeText):
         cm = AsyncOpenAI(base_url=ELEVEN_URL, api_key=r.json()["value"]).realtime.connect(model=self._model)
         conn = await cm.__aenter__()
         self._open = (cm, conn, turns, [])
+        k = None if typed else _spoken_turn(turns)
+        results = [text for role, text in _noted(turns if k is None else turns[:k], "note") if role == "note"]
+        if results:  # the session drops replayed tool rounds and system notes: earlier results go in the instructions
+            told += "\n\nTool results from earlier in this call, oldest first:\n" + "\n".join(results)
         pcm = {"format": {"type": "audio/pcm", "rate": PCM_RATE}}
         await conn.session.update(session={
             "type": "realtime", "instructions": told, "output_modalities": ["audio"],
             "audio": {"input": {**pcm, "turn_detection": None}, "output": {**pcm, "voice": VOICES["elevenlabs"]}},
             "tools": [{"type": "function", **t["function"]} for t in tools or []]})
-        k = None if typed else _spoken_turn(turns)
         said = [m for m in (turns if k is None else turns[:k]) if m["role"] != "tool" and m.get("content")]
         for item in self._items([{"role": m["role"], "content": m["content"]} for m in said]):
             await conn.conversation.item.create(item=item)
@@ -541,8 +560,9 @@ class VapiVoice:
     to the model, while turns added mid-call are recorded but never reach it. So a refused turn is erased by leaving it
     out of the next call. The newest caller turn is streamed as speech at speaking pace and Vapi decides when it ends.
     Tools are Vapi's usual kind, called at our address: a request waits there while the conversation runs the tool,
-    and is answered when the next turn of this class brings the result. Earlier tool rounds are not replayed. Each
-    call's bill is read back from Vapi."""
+    and is answered when the next turn of this class brings the result. Earlier tool rounds go into the starting
+    messages as system notes, in order, as starting messages carry no tool turns. Each call's bill is read back from
+    Vapi."""
 
     def __init__(self, model: str, purpose: str, speech: Speech, config: Path | None = None):
         self._model, self._purpose, self._speech = model, purpose, speech
@@ -590,8 +610,7 @@ class VapiVoice:
         import httpx
         import websockets
         k = _spoken_turn(turns)
-        said = [{"role": m["role"], "content": m["content"]} for m in (turns if k is None else turns[:k])
-                if m["role"] != "tool" and m.get("content")]
+        said = [{"role": role, "content": text} for role, text in _noted(turns if k is None else turns[:k], "system")]
         model = {"provider": "openai", "model": self._model,
                  "tools": [{**_inlined(t), "async": False, "server": {"url": self._tool_url}} for t in tools or []],
                  "messages": [{"role": "system", "content": told}] + said}
@@ -856,8 +875,7 @@ class RetellVoice(VapiVoice):
         from aiortc import RTCConfiguration, RTCIceServer, RTCPeerConnection, RTCSessionDescription
         from aiortc.contrib.media import MediaBlackhole
         k = _spoken_turn(turns)
-        said = [m for m in (turns if k is None else turns[:k])[1:] if m["role"] != "tool" and m.get("content")]
-        history = "\n".join(f"{'Customer' if m['role'] == 'user' else 'Agent'}: {m['content']}" for m in said)
+        history = ElevenAgentVoice._notes((turns if k is None else turns[:k])[1:])  # with its tool rounds
         note = f"The call so far, oldest first. Carry on from here:\n{history}" if history else ""
         queue = asyncio.Queue()
         async with httpx.AsyncClient(timeout=30) as http:
@@ -1036,17 +1054,9 @@ class GptLiveVoice(VapiVoice):
 
     @staticmethod
     def _history(turns: list[dict]) -> list[dict]:
-        items, called = [], {}
-        for m in turns:
-            if m["role"] == "tool":
-                items.append(("developer", f"Backend result of {called.get(m['tool_call_id'], 'a tool')}: {m['content']}"))
-                continue
-            if m.get("content"):
-                items.append((m["role"], m["content"]))
-            for c in m.get("tool_calls") or []:
-                called[c["id"]] = f"{c['function']['name']}({c['function']['arguments']})"
         return [{"type": "message", "role": role, "content": [
-            {"type": "output_text" if role == "assistant" else "input_text", "text": text}]} for role, text in items]
+            {"type": "output_text" if role == "assistant" else "input_text", "text": text}]}
+            for role, text in _noted(turns, "developer")]
 
     async def _start(self, told: str, turns: list[dict], tools: list[dict] | None) -> None:
         import websockets

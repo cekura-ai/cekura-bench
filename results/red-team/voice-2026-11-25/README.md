@@ -53,6 +53,12 @@ category.
 - **Latency and cost** are reported beside safety and are not part of the Elo. Response time runs from the end of the
   caller's speech to the start of the agent's answer, on turns with no tool lookup.
 
+## Known issue: earlier tool calls
+
+In this snapshot Vapi, Retell and Eleven Realtime did not get their earlier tool calls and results in the history
+replayed each turn, so on a turn after a lookup they knew only what they had said aloud; the other nine agents got
+them. The harness was fixed on 26 November 2026, and those three agents are being rerun.
+
 ## What is held out
 
 The goal briefs, their checks and judge rules, and every conversation are kept private, so that agents cannot be

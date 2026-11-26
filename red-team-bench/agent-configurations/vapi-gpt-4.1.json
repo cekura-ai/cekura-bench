@@ -23,7 +23,7 @@
   },
   "connection": "POST https://api.vapi.ai/call with transport vapi.websocket, pcm_s16le raw at 24000 Hz; tools are called back at TOOL_URL",
   "reasoning": "none (GPT-4.1 does not reason)",
-  "history": "the kept turns as the assistant's starting messages",
+  "history": "the kept turns as the assistant's starting messages, each earlier tool result as a system note naming its call ('Backend result of name(args): result'), since starting messages carry no tool turns; until 26 Nov 2026 earlier tool rounds were left out",
   "turn": "Vapi's own turn detection: the caller's line at speaking pace in 20 ms frames, then 100 ms silence frames; the reply is over after 3 s quiet (5 s after a tool result)",
   "reply": "Vapi's transcript of the assistant's speech",
   "line_cap": "13 calls at once (the account refuses past about 16)",

@@ -71,6 +71,8 @@ def main() -> int:
     parser.add_argument("--provider", required=True)
     parser.add_argument("--model", required=True)
     parser.add_argument("--voice", help="a voice other than the lineup's; give each voice its own label")
+    parser.add_argument("--option", action="append", default=[],
+                        help="adapter option key=value, repeatable, for a new run (a resumed run keeps its own)")
     parser.add_argument("--label", required=True)
     parser.add_argument("--suite", default="full")
     parser.add_argument("--repeats", type=int, default=3)
@@ -97,6 +99,7 @@ def main() -> int:
         status = step("bin/run-tts.py", "--provider", args.provider, "--model", args.model, "--suite", args.suite,
                       "--repeats", str(args.repeats), "--label", args.label,
                       *(("--voice", args.voice) if args.voice else ()),
+                      *(flag for option in args.option for flag in ("--option", option)),
                       *(flag for item in args.item for flag in ("--item", item)),
                       *(flag for probe in args.probe for flag in ("--probe", probe)),
                       *(("--no-sentinel",) if args.no_sentinel else ()))

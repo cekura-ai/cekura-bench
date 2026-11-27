@@ -8,7 +8,8 @@ The next context reconnects before t0, including the warm repeat probe.
 ``flush`` forces buffered text to generate without ending input. Previous
 audio conditions subsequent chunks for voice consistency. There is no
 documented cancel/clear operation; ``stop`` finishes synthesis rather than
-interrupting it. Option ``latency`` defaults to ``balanced`` for voice agents.
+interrupting it. Option ``latency`` defaults to ``balanced`` for voice agents;
+``language`` and ``normalize`` are sent only when the run names them.
 
 Reference: https://docs.fish.audio/api-reference/endpoint/websocket/tts-live
 PCM rates: https://docs.fish.audio/api-reference/endpoint/openapi-v1/text-to-speech
@@ -21,7 +22,25 @@ from typing import Any, ClassVar
 import msgpack
 
 from tts_bench.adapters._ws import WebSocketAdapter
-from tts_bench.adapters.base import AdapterError
+from tts_bench.adapters.base import AdapterError, TTSConfig
+
+_BOOLEANS = {"true": True, "false": False}
+
+
+def request_options(config: TTSConfig, adapter: str) -> dict[str, Any]:
+    """The run's Fish request settings, shared by the websocket and HTTP adapters.
+
+    ``latency`` is always sent (default ``balanced``); ``language`` and ``normalize``
+    only when named, so every request is what the run recorded.
+    """
+    options: dict[str, Any] = {"latency": config.option("latency", "balanced")}
+    if (language := config.option("language")) is not None:
+        options["language"] = language
+    if (normalize := config.option("normalize")) is not None:
+        if normalize not in _BOOLEANS:
+            raise AdapterError(f"{adapter}: normalize must be true or false, not {normalize!r}")
+        options["normalize"] = _BOOLEANS[normalize]
+    return options
 
 
 class FishAudioAdapter(WebSocketAdapter):
@@ -46,8 +65,8 @@ class FishAudioAdapter(WebSocketAdapter):
         self._active = context_id
         await self._send_json({"event": "start", "request": {
             "text": "", "reference_id": self.config.voice, "format": "pcm",
-            "sample_rate": self.config.sample_rate, "latency": self.config.option("latency", "balanced"),
-            "condition_on_previous_chunks": True,
+            "sample_rate": self.config.sample_rate, "condition_on_previous_chunks": True,
+            **request_options(self.config, self.name),
         }})
 
     async def _send_json(self, payload: dict[str, Any]) -> None:

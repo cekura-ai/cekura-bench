@@ -55,7 +55,7 @@ def progress(root: Path) -> list[dict]:
 
 class TestResume:
     async def test_a_killed_run_resumes_and_keeps_the_cells_it_finished(self, tmp_path, monkeypatch):
-        connect_failing_on(monkeypatch, {2}, Killed())
+        connect_failing_on(monkeypatch, {3}, Killed())      # connection 1 is the warm-up
         first = Runner(spec(tmp_path), "unused")
         with pytest.raises(Killed):
             await first.run()
@@ -74,10 +74,11 @@ class TestResume:
         assert json.loads((root / "summary.json").read_text())["finished"] is True
         sessions = store.read_jsonl(root / "sessions.jsonl")
         assert [(s["session"], s["kept"], s["to_run"]) for s in sessions] == [(1, 0, 3), (2, 1, 2)]
+        assert [e["kind"] for e in progress(root)].count("warm_up") == 2           # a resumed session warms up again
         assert store.verify(root) == []
 
     async def test_a_void_is_run_again_and_the_first_attempt_is_kept_aside(self, tmp_path, monkeypatch):
-        connect_failing_on(monkeypatch, {1}, AdapterError("connect failed: reset by peer"))
+        connect_failing_on(monkeypatch, {2}, AdapterError("connect failed: reset by peer"))
         first = Runner(spec(tmp_path), "unused")
         await first.run()
         assert first.cells[0].void.startswith("provider refused")
@@ -111,7 +112,7 @@ class TestResume:
             Runner(changed, "unused", resume=first.root).open_run()
 
     async def test_different_code_is_refused_unless_allowed_and_then_recorded(self, tmp_path, monkeypatch):
-        connect_failing_on(monkeypatch, {3}, Killed())
+        connect_failing_on(monkeypatch, {4}, Killed())
         first = Runner(spec(tmp_path), "unused")
         with pytest.raises(Killed):
             await first.run()
@@ -217,7 +218,7 @@ class TestRecords:
         first = Runner(spec(tmp_path), "unused")
         await first.run()
         kinds = [e["kind"] for e in progress(first.root)]
-        assert kinds == ["run_start"] + ["cell_start", "cell_end"] * 3 + ["run_end"]
+        assert kinds == ["run_start", "warm_up"] + ["cell_start", "cell_end"] * 3 + ["run_end"]
         end = progress(first.root)[-1]
         assert end["done"] == 3 and end["errors"] == 0
         assert store.verify(first.root) == []                                    # the manifest covers the final log lines

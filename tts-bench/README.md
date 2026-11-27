@@ -154,7 +154,8 @@ vendored):
 | `gradium` | `default` | websocket, `client_req_id` | yes | no | yes | yes | setup/ready before t0; text frames share one utterance, split on whitespace with punctuation attached; `<flush>` forces generation; no cancel message |
 | `rime` | `coda`, `mistv3` | websocket `/ws3`, JSON, sequential contexts | yes | no | yes | yes | `segment=never`: concatenated text waits for finish/flush; `done` ends that batch; `clear` only drops unsubmitted text; Coda replaces retired Arcana |
 | `murf` | `falcon-2.1` | websocket `/v1/speech/stream-input`, named contexts | yes | `clear` | yes | no | 24 kHz PCM; per-context `voice_config` is sent before t0, with the style name the voice's catalog entry lists (`Conversational` for Judith; option `style`); clear drops queued audio but cannot retract audio already received by the player; Falcon's documented predictive-chunking default is `strict` |
-| `fish-audio` | `s2.1-pro`, `drama-3-preview` | websocket, MessagePack, one utterance per socket | yes | no | yes | no | start before t0; `latency=balanced` (option); previous audio conditions later chunks; `flush` forces generation; `stop` drains input, `finish` ends output and closes; repeat reconnects before t0 |
+| `fish-audio` | `s2.1-pro`, `drama-3-preview` | websocket, MessagePack, one utterance per socket | yes | no | yes | no | start before t0; `latency=balanced` (option); `language` and `normalize` sent only when the run names them; previous audio conditions later chunks; `flush` forces generation; `stop` drains input, `finish` ends output and closes; repeat reconnects before t0 |
+| `fish-audio-http` | none: a run names its model and voice | HTTP streaming, `POST /v1/tts` | no | no | no | no | whole text per request; model header, voice as `reference_id`, raw PCM at the run's rate; `latency=balanced` unless the run names it; `language` and `normalize` sent only when the run names them; pre-warm `GET /model/<voice>` |
 | `hume` | `octave-2` | websocket, input streaming | yes | no | yes | no | Octave 2 (preview); voice from the library by id; one utterance per socket, `close` ends it and the server closes the socket; 48 kHz PCM only, so the lineup names the rate |
 | `xai` | `grok-tts` | websocket, one utterance at a time | yes | `text.clear` | yes | yes | voice fixed per socket; the API has no model parameter |
 | `smallest` | `lightning_v3.1_pro` | websocket, `context_id` continuation | yes | no | yes | no | no end-of-utterance message: a context ends when its stream goes quiet; `cancel_request` drops only unreleased text |
@@ -200,7 +201,11 @@ Suites: `smoke`, `latency` (one_shot, repeat), `streaming` (streamed_input at
 `load` (concurrency 8), `full` (every probe except `load`: concurrency measured the
 account's limits more than the model, and was 65% of a run's requests). Every run starts with the **sentinel**: three
 one-shots of one fixed prose item, published beside the results and never
-folded in. Its spread across runs is the noise a ranking gap has to exceed.
+folded in. Its spread across runs is the noise a ranking gap has to exceed. Before
+the first cell of every session, fresh or resumed, one **warm-up** request synthesises a
+sentence outside the corpus and is never scored: a provider's first request after an idle
+period can pay one-off setup (a key check, loading) that no later request pays. Its time to
+first chunk is logged as `warm_up` in `progress.jsonl`.
 
 ## Running a campaign on Vercel Sandbox
 
@@ -214,7 +219,13 @@ node scripts/sandbox.mjs plan --label campaign-a                              # 
 node scripts/sandbox.mjs prepare --live                                       # snapshot this pushed commit after its tests pass there
 node scripts/sandbox.mjs launch --live --label campaign-a --env <dotenv>      # every group in parallel
 node scripts/sandbox.mjs status --label campaign-a
+node scripts/sandbox.mjs launch --live --label <label> --env <dotenv> \
+  --providers fish-audio-http --model <model> --voice <id> --option latency=low  # a model outside the lineup
 ```
+
+A model outside the lineup (one not yet released, say) is named at launch with
+`--model`, for one provider, so its name is never committed; `--option` sets
+the run's adapter options, which the run records. Give each voice its own label.
 
 - **One sandbox per account.** Protocols that share a key (a provider's second
   endpoint) share its rate limits, so their models run in sequence in one

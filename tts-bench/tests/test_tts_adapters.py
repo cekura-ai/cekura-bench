@@ -595,8 +595,30 @@ class TestFishAudio:
         assert FishAudioAdapter.unsupported_reason(TTSConfig("s2.1-pro", SARAH, sample_rate=48000)) == "fish-audio does not emit 48000 Hz PCM"
         assert not FishAudioAdapter.native_mulaw_8k and not FishAudioAdapter.ends_on_quiet and "fish-audio" not in PENDING
 
-    async def test_messagepack_streams_two_syntheses_on_two_sockets_without_logging_the_key(self, tmp_path):
+    async def test_language_and_normalize_go_in_the_start_request_only_when_the_run_names_them(self):
+        import pytest
+
+        from tts_bench.adapters.base import AdapterError
+        from tts_bench.adapters.fish_audio import FishAudioAdapter
+        from tts_bench.registry import SARAH
+
+        fish, sent = adapter(FishAudioAdapter, "s2.1-pro", SARAH)
+        await fish.open_context("main")
+        assert {"language", "normalize"}.isdisjoint(sent[0]["request"]) and sent[0]["request"]["latency"] == "balanced"
+        fish, sent = adapter(FishAudioAdapter, "s2.1-pro", SARAH)
+        fish.config = TTSConfig("s2.1-pro", SARAH, options=(("latency", "low"), ("language", "en"), ("normalize", "true")))
+        await fish.open_context("main")
+        request = sent[0]["request"]
+        assert (request["latency"], request["language"], request["normalize"]) == ("low", "en", True)
+        fish, sent = adapter(FishAudioAdapter, "s2.1-pro", SARAH)
+        fish.config = TTSConfig("s2.1-pro", SARAH, options=(("normalize", "yes"),))
+        with pytest.raises(AdapterError, match="fish-audio: normalize must be true or false"):
+            await fish.open_context("main")
+
+    async def test_messagepack_streams_two_syntheses_on_two_sockets_without_logging_the_key_or_cookies(self, tmp_path):
         import msgpack
+        import json
+
         import websockets
 
         from tts_bench.adapters.fish_audio import FishAudioAdapter
@@ -620,10 +642,14 @@ class TestFishAudio:
                     await ws.send(msgpack.packb({"event": "finish", "reason": "stop"}, use_bin_type=True))
                     await ws.close()
 
+        def upgrade(connection, request, response):
+            response.headers["x-fish-trace-id"] = "trace-1"
+            response.headers["set-cookie"] = "session=private"
+
         clock = Clock()
         log = EventLog(clock, raw_path=tmp_path / "raw.jsonl")
         fish = FishAudioAdapter(TTSConfig("s2.1-pro", SARAH), "secret-key", log, clock)
-        async with websockets.serve(serve, "127.0.0.1", 0) as server:
+        async with websockets.serve(serve, "127.0.0.1", 0, process_response=upgrade) as server:
             fish.url = f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}"
             async with fish:
                 for context_id in ("first", "repeat"):
@@ -638,6 +664,51 @@ class TestFishAudio:
         assert all(h["authorization"] == "Bearer secret-key" and h["model"] == "s2.1-pro" for h in headers)
         raw = (tmp_path / "raw.jsonl").read_text()
         assert "secret-key" not in raw and "secret-key" not in str(log.events) and "<480 bytes>" in raw
+        upgrades = [json.loads(line)["payload"] for line in raw.splitlines() if "http_status" in line]
+        assert [(u["http_status"], u["headers"]["x-fish-trace-id"]) for u in upgrades] == [(101, "trace-1")] * 2
+        assert "session=private" not in raw
+
+
+class TestFishAudioHTTP:
+    def test_the_request_is_fish_audios_tts_endpoint_with_only_the_options_the_run_names(self):
+        from tts_bench.adapters.fish_audio_http import FishAudioHTTPAdapter
+        from tts_bench.registry import SARAH
+
+        fish, _ = adapter(FishAudioHTTPAdapter, "a-model", SARAH)
+        assert f"{fish.base}{fish.speech_path}" == "https://api.fish.audio/v1/tts"
+        assert fish._prewarm_url() == f"https://api.fish.audio/model/{SARAH}"
+        assert fish._headers() == {"Authorization": "Bearer unused", "model": "a-model"}
+        assert fish._request_args("Hello there.")["json"] == {
+            "text": "Hello there.", "reference_id": SARAH, "format": "pcm", "sample_rate": 24000, "latency": "balanced"}
+        fish.config = TTSConfig("a-model", SARAH, sample_rate=44100,
+                                options=(("latency", "low"), ("language", "en"), ("normalize", "true")))
+        assert fish._request_args("Hello there.")["json"] == {
+            "text": "Hello there.", "reference_id": SARAH, "format": "pcm", "sample_rate": 44100, "latency": "low",
+            "language": "en", "normalize": True}
+        assert not (fish.supports_streamed_input or fish.supports_cancel or fish.supports_continuation)
+        assert FishAudioHTTPAdapter.unsupported_reason(TTSConfig("a-model", SARAH, sample_rate=48000)) == \
+            "fish-audio-http does not emit 48000 Hz PCM"
+
+    def test_a_normalize_that_is_not_a_boolean_is_refused_not_guessed(self):
+        import pytest
+
+        from tts_bench.adapters.base import AdapterError
+        from tts_bench.adapters.fish_audio_http import FishAudioHTTPAdapter
+
+        fish, _ = adapter(FishAudioHTTPAdapter, "a-model", "v")
+        fish.config = TTSConfig("a-model", "v", options=(("normalize", "yes"),))
+        with pytest.raises(AdapterError, match="normalize must be true or false"):
+            fish._request_args("Hello.")
+
+    def test_it_runs_only_a_model_and_voice_the_run_names(self, tmp_path):
+        import pytest
+
+        assert all(key != "fish-audio-http" for key, _ in lineup())
+        assert PROVIDERS["fish-audio-http"].credential_env == PROVIDERS["fish-audio"].credential_env
+        with pytest.raises(ValueError, match="fish-audio-http has no lineup model"):
+            PROVIDERS["fish-audio-http"].voice_for("a-model")
+        spec = RunSpec(provider="fish-audio-http", probes=[OneShot()], model="a-model", voice="v", store=str(tmp_path))
+        assert Runner(spec, "unused").config.voice == "v"
 
 
 class TestSmallest:
@@ -1177,8 +1248,8 @@ class TestSpeechify:
         assert {(p.probe.name, p.item.id) for p in runner.pending()} == {
             ("one_shot", "prose.hold"), ("repeat", "prose.hold"), ("streamed_input", "prose.hold")}
 
-        # One utterance per session: one_shot 3, repeat 6, streamed 3, continuation 2 (whole and framed), cancel none.
-        assert len(sessions) == 14
+        # One utterance per session: warm-up 1, one_shot 3, repeat 6, streamed 3, continuation 2 (whole and framed), cancel none.
+        assert len(sessions) == 15
         for session in sessions:
             kinds = [frame["type"] for frame in session["frames"]]
             assert kinds[-1] == "input.close" and kinds.count("input.close") == 1 and set(kinds[:-1]) == {"input.text"}
@@ -1323,8 +1394,8 @@ class TestSpeechifyHTTP:
             assert cells[(probe, "prose.hold")].void.startswith("provider refused: HTTP 402"), probe
         assert {(p.probe.name, p.item.id) for p in runner.pending()} == {("one_shot", "prose.hold"), ("repeat", "prose.hold")}
 
-        # One request per utterance (one_shot 3, repeat 6), the settings in the body and the key only in the header.
-        assert len(requests) == 9
+        # One request per utterance (warm-up 1, one_shot 3, repeat 6), the settings in the body and the key only in the header.
+        assert len(requests) == 10
         for request in requests:
             assert request["auth"] == "Bearer secret-key"
             assert {k: v for k, v in request["body"].items() if k != "input"} == {
@@ -1617,7 +1688,7 @@ class TestHeyGen:
         assert "one_shot/prose.greet/r1" not in {p.cell_id for p in runner.pending()}
         assert runner.config.model == "heygen-voice-1-turbo" and runner.config.voice == NADINE
         speech = [r for r in fake_heygen.requests if r["method"] == "POST"]
-        assert len(speech) == 6                              # one_shot once per item, repeat twice per item
+        assert len(speech) == 7                              # the warm-up, then one_shot once per item, repeat twice per item
 
     def test_the_lineup_and_the_sandbox_allowlist(self):
         entry = PROVIDERS["heygen"]

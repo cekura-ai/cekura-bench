@@ -13,11 +13,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def drive(tmp_path: Path) -> tuple[int, dict]:
+def drive(tmp_path: Path, *extra: str) -> tuple[int, dict]:
     env = {**os.environ, "TTS_BENCH_STORE": str(tmp_path / "store")}
     proc = subprocess.run(
         [sys.executable, "bin/campaign-model.py", "--provider", "fake", "--model", "fake-1", "--label", "camp",
-         "--suite", "smoke", "--repeats", "1", "--out", str(tmp_path / "out"), "--skip-scoring", "--allow-dirty"],
+         "--suite", "smoke", "--repeats", "1", "--out", str(tmp_path / "out"), "--skip-scoring", "--allow-dirty", *extra],
         cwd=ROOT, env=env, capture_output=True, text=True, timeout=600)
     line = [l for l in proc.stdout.splitlines() if l.startswith("CAMPAIGN_RESULT ")]
     return proc.returncode, (json.loads(line[-1].split(" ", 1)[1]) if line else {"stderr": proc.stderr[-2000:]})
@@ -38,3 +38,10 @@ def test_a_model_is_run_packed_and_checksummed_and_a_repeat_runs_nothing_again(t
     assert code == 0 and second["run"] == first["run"]
     sessions = (tmp_path / "store" / first["run"] / "sessions.jsonl").read_text().splitlines()
     assert len(sessions) == 1                       # the finished run was not opened again
+
+
+def test_adapter_options_reach_the_run_and_are_recorded(tmp_path):
+    code, result = drive(tmp_path, "--option", "latency=low", "--option", "normalize=true")
+    assert code == 0, result
+    provenance = json.loads((tmp_path / "store" / result["run"] / "provenance.json").read_text())
+    assert provenance["config"]["options"] == {"latency": "low", "normalize": "true"}

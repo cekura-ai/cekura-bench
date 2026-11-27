@@ -466,6 +466,23 @@
         "setting": "Server VAD: threshold 0.35, 1,000 ms silence, 300 ms prefix padding",
         "sampleRateHz": 24000
       }
+    },
+    {
+      "key": "telnyx-agents",
+      "name": "Telnyx AI Agents",
+      "vendor": "Telnyx",
+      "siteId": "telnyx-agents",
+      "runs": [
+        "fullrun_telnyx_r1",
+        "fullrun_telnyx_r2",
+        "fullrun_telnyx_r3"
+      ],
+      "details": {
+        "modelId": "GLM-5.2 on Telnyx AI Assistants",
+        "voice": "Telnyx Ultra",
+        "setting": "Over a phone call to a Telnyx number; Deepgram Nova-3 with automatic language detection",
+        "turns": "Telnyx turn handling and interruptions"
+      }
     }
   ],
   "suites": [

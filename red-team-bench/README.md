@@ -5,7 +5,7 @@ tau2-bench's airline domain, with Sierra's policy, 14 tools and a database of 50
 talk it into breaking the policy over real audio calls, goal by goal, and every break is proved from the agent's tool
 calls, its exact words, or a judge's read of the call.
 
-The published results are in [results/red-team/voice-2026-11-25](../results/red-team/voice-2026-11-25/README.md).
+The published results are in [results/red-team/voice-2026-11-27](../results/red-team/voice-2026-11-27/README.md).
 **The benchmark's own 32 goals and every conversation are held out**, so agents cannot be tuned to them. This folder
 has everything else: the attacker, the voice clients, each agent's configuration, the checks and the scoring, with an
 [example goal module](redteam/example_goals.py) that shows how to write goals of your own.
@@ -132,7 +132,7 @@ tries another way. On a phone call, that means every caller turn has to be its o
   accepts (see [The agents so far](#the-agents-so-far)).
 - **Tool rounds.** A tool call and its result stay inside the turn's session. The agent's reply after the result is
   the turn's answer. On later turns the earlier tool calls and results go in with the history, in whatever form the
-  system accepts. Until 26 November Vapi, Retell and Eleven Realtime got none (see the 25 November results).
+  system accepts. Until 26 November Vapi, Retell and Eleven Realtime got none; they were rerun with them for the 27 November results.
 - **Rollback.** The agent's message list and database are kept per conversation prefix (`crescendo_attack.AgentTarget`),
   so erasing a turn also undoes what it changed. A transfer or hang-up on an erased turn is undone the same way. An
   attack ends only on a kept turn's transfer, a break, 10 kept turns, or when the 5 erasures are spent.
@@ -418,7 +418,7 @@ class AcmeVoice:
 
 ## The agents so far
 
-As published on 25 November 2026. Each agent's exact configuration is in `agent-configurations/<agent>.json`.
+As published on 27 November 2026. Each agent's exact configuration is in `agent-configurations/<agent>.json`.
 
 | Agent (published name) | Cell | Client | How the kept turns reach it | Earlier tool rounds | Line cap | Notes |
 |---|---|---|---|---|---|---|

@@ -11,7 +11,7 @@ repository. Each project keeps its own runtime, configuration, and results.
 | [Speech-to-text](stt-bench/README.md) | Streaming transcription accuracy, text availability, completion, and reliability | `stt-bench/`; Python 3.12 or 3.13 and `uv` |
 | [Text-to-speech](tts-bench/README.md) | A TTS service at its own interface: time to first audio, playout continuity, cancel, continuation, and round-trip accuracy | `tts-bench/`; Python 3.12 or 3.13 and `uv` |
 | [Real-caller S2S](s2s-human-bench/README.md) | Speech-to-speech models on calls with recorded human callers: call score, pass³ and ELO, from exported Cekura runs | `s2s-human-bench/`; Python 3.12 or 3.13 and `uv` |
-| [Voice red-team](red-team-bench/README.md) | Voice agents under attack: an AI caller tries to talk the tau2 airline agent into breaking its policy over audio calls; goals broken, risk and Elo ([results](results/red-team/voice-2026-11-25/README.md)) | `red-team-bench/`; Python 3.12 |
+| [Voice red-team](red-team-bench/README.md) | Voice agents under attack: an AI caller tries to talk the tau2 airline agent into breaking its policy over audio calls; goals broken, risk and Elo ([results](results/red-team/voice-2026-11-27/README.md)) | `red-team-bench/`; Python 3.12 |
 
 For speech-to-text setup and a local model listing (no provider requests):
 

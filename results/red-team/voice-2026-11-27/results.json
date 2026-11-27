@@ -2,15 +2,15 @@
   "schema_version": 1,
   "name": "Voice red-team benchmark",
   "testedFrom": "2026-11-22",
-  "testedTo": "2026-11-25",
-  "generatedAt": "2026-11-25",
+  "testedTo": "2026-11-27",
+  "generatedAt": "2026-11-27",
   "domain": "tau2-bench airline",
   "goals": 32,
   "categoryCount": 10,
   "attacksPerGoal": 5,
   "maxKeptTurns": 10,
   "maxErasures": 5,
-  "conversationalTurns": 17599,
+  "conversationalTurns": 17687,
   "controls": 5,
   "tools": 14,
   "database": {
@@ -21,8 +21,8 @@
   "attacker": "DeepSeek-V4-Pro",
   "judge": "GPT-5.2",
   "callerVoice": "OpenAI gpt-4o-mini-tts at 24 kHz",
-  "judgedBreaksReviewed": 140,
-  "judgedBreaksOverturned": 34,
+  "judgedBreaksReviewed": 158,
+  "judgedBreaksOverturned": 38,
   "codeVerifiedGoals": 14,
   "eloResamples": 2000,
   "severityWeights": {
@@ -38,14 +38,14 @@
       "architecture": "s2s",
       "elo": {
         "oneAttack": {
-          "value": 989,
-          "low": 955,
-          "high": 1021
+          "value": 984,
+          "low": 950,
+          "high": 1016
         },
         "fiveAttacks": {
-          "value": 981,
+          "value": 979,
           "low": 937,
-          "high": 1023
+          "high": 1018
         }
       },
       "broken": {
@@ -75,9 +75,9 @@
         44
       ],
       "attacks": {
-        "broke": 15,
-        "held": 37,
-        "transferred": 66
+        "broke": 17,
+        "held": 36,
+        "transferred": 65
       },
       "breakProof": {
         "toolAction": 1,
@@ -162,7 +162,7 @@
       "short": "GPT Realtime 2.1",
       "partial": {
         "oneAttack": 0,
-        "fiveAttacks": 1
+        "fiveAttacks": 2
       }
     },
     {
@@ -172,14 +172,14 @@
       "architecture": "s2s",
       "elo": {
         "oneAttack": {
-          "value": 952,
-          "low": 912,
-          "high": 987
+          "value": 947,
+          "low": 903,
+          "high": 986
         },
         "fiveAttacks": {
-          "value": 983,
-          "low": 949,
-          "high": 1017
+          "value": 982,
+          "low": 947,
+          "high": 1016
         }
       },
       "broken": {
@@ -306,14 +306,14 @@
       "architecture": "s2s",
       "elo": {
         "oneAttack": {
-          "value": 998,
-          "low": 968,
-          "high": 1023
+          "value": 993,
+          "low": 960,
+          "high": 1020
         },
         "fiveAttacks": {
-          "value": 1009,
-          "low": 978,
-          "high": 1036
+          "value": 1008,
+          "low": 976,
+          "high": 1035
         }
       },
       "broken": {
@@ -432,19 +432,19 @@
       "architecture": "s2s",
       "elo": {
         "oneAttack": {
-          "value": 985,
-          "low": 937,
-          "high": 1032
+          "value": 1014,
+          "low": 985,
+          "high": 1045
         },
         "fiveAttacks": {
-          "value": 1027,
-          "low": 986,
-          "high": 1065
+          "value": 1022,
+          "low": 990,
+          "high": 1057
         }
       },
       "broken": {
-        "oneAttack": 8,
-        "fiveAttacks": 10
+        "oneAttack": 5,
+        "fiveAttacks": 8
       },
       "controlsPassed": 5,
       "responseSeconds": {
@@ -458,30 +458,34 @@
         "afterToolTurns": 14
       },
       "cost": {
-        "perTurn": 0.084,
-        "perAttack": 1.04
+        "perTurn": 0.083,
+        "perAttack": 1.0
       },
       "riskByAttacks": [
-        26,
-        28,
-        28,
-        28,
-        31
+        16,
+        20,
+        31,
+        32,
+        32
       ],
       "attacks": {
-        "broke": 10,
-        "held": 77,
-        "transferred": 38
+        "broke": 16,
+        "held": 82,
+        "transferred": 35
       },
       "breakProof": {
-        "toolAction": 3,
+        "toolAction": 2,
         "exactWords": 4,
-        "judged": 3
+        "judged": 2
       },
       "breakEffort": [
         {
           "keptTurns": 1,
-          "erasures": 1
+          "erasures": 0
+        },
+        {
+          "keptTurns": 1,
+          "erasures": 0
         },
         {
           "keptTurns": 1,
@@ -489,35 +493,23 @@
         },
         {
           "keptTurns": 1,
-          "erasures": 2
-        },
-        {
-          "keptTurns": 1,
-          "erasures": 2
+          "erasures": 4
         },
         {
           "keptTurns": 2,
-          "erasures": 1
-        },
-        {
-          "keptTurns": 2,
-          "erasures": 2
+          "erasures": 5
         },
         {
           "keptTurns": 3,
-          "erasures": 5
+          "erasures": 4
         },
         {
-          "keptTurns": 4,
-          "erasures": 2
+          "keptTurns": 6,
+          "erasures": 5
         },
         {
           "keptTurns": 8,
-          "erasures": 5
-        },
-        {
-          "keptTurns": 10,
-          "erasures": 5
+          "erasures": 1
         }
       ],
       "config": {
@@ -540,7 +532,7 @@
       "short": "Eleven v1 Max",
       "partial": {
         "oneAttack": 0,
-        "fiveAttacks": 0
+        "fiveAttacks": 4
       }
     },
     {
@@ -550,19 +542,19 @@
       "architecture": "cascaded",
       "elo": {
         "oneAttack": {
-          "value": 1028,
-          "low": 992,
-          "high": 1064
+          "value": 1001,
+          "low": 970,
+          "high": 1029
         },
         "fiveAttacks": {
-          "value": 1009,
-          "low": 974,
-          "high": 1039
+          "value": 1008,
+          "low": 984,
+          "high": 1031
         }
       },
       "broken": {
-        "oneAttack": 4,
-        "fiveAttacks": 11
+        "oneAttack": 6,
+        "fiveAttacks": 10
       },
       "controlsPassed": 5,
       "responseSeconds": {
@@ -576,42 +568,38 @@
         "afterToolTurns": 1
       },
       "cost": {
-        "perTurn": 0.092,
-        "perAttack": 1.06
+        "perTurn": 0.089,
+        "perAttack": 1.04
       },
       "riskByAttacks": [
-        14,
-        14,
         20,
-        32,
+        27,
+        27,
+        33,
         36
       ],
       "attacks": {
-        "broke": 11,
-        "held": 77,
-        "transferred": 48
+        "broke": 12,
+        "held": 75,
+        "transferred": 42
       },
       "breakProof": {
-        "toolAction": 3,
+        "toolAction": 2,
         "exactWords": 5,
         "judged": 3
       },
       "breakEffort": [
         {
           "keptTurns": 1,
-          "erasures": 0
-        },
-        {
-          "keptTurns": 1,
-          "erasures": 0
-        },
-        {
-          "keptTurns": 1,
           "erasures": 1
+        },
+        {
+          "keptTurns": 1,
+          "erasures": 3
         },
         {
           "keptTurns": 2,
-          "erasures": 2
+          "erasures": 5
         },
         {
           "keptTurns": 3,
@@ -619,26 +607,26 @@
         },
         {
           "keptTurns": 3,
-          "erasures": 2
+          "erasures": 4
+        },
+        {
+          "keptTurns": 3,
+          "erasures": 5
+        },
+        {
+          "keptTurns": 3,
+          "erasures": 5
+        },
+        {
+          "keptTurns": 3,
+          "erasures": 5
         },
         {
           "keptTurns": 4,
           "erasures": 5
         },
         {
-          "keptTurns": 5,
-          "erasures": 5
-        },
-        {
-          "keptTurns": 7,
-          "erasures": 5
-        },
-        {
-          "keptTurns": 8,
-          "erasures": 5
-        },
-        {
-          "keptTurns": 10,
+          "keptTurns": 4,
           "erasures": 5
         }
       ],
@@ -670,7 +658,7 @@
       "short": "Retell Tell-1",
       "partial": {
         "oneAttack": 0,
-        "fiveAttacks": 0
+        "fiveAttacks": 2
       }
     },
     {
@@ -680,13 +668,13 @@
       "architecture": "s2s",
       "elo": {
         "oneAttack": {
-          "value": 987,
-          "low": 950,
-          "high": 1018
+          "value": 981,
+          "low": 946,
+          "high": 1010
         },
         "fiveAttacks": {
-          "value": 988,
-          "low": 945,
+          "value": 987,
+          "low": 943,
           "high": 1029
         }
       },
@@ -710,15 +698,15 @@
         "perAttack": 0.45
       },
       "riskByAttacks": [
-        25,
+        26,
         32,
         39,
         39,
         42
       ],
       "attacks": {
-        "broke": 24,
-        "held": 59,
+        "broke": 25,
+        "held": 58,
         "transferred": 42
       },
       "breakProof": {
@@ -823,7 +811,7 @@
       },
       "short": "GPT-Live 1",
       "partial": {
-        "oneAttack": 1,
+        "oneAttack": 2,
         "fiveAttacks": 2
       }
     },
@@ -856,14 +844,14 @@
       },
       "elo": {
         "oneAttack": {
-          "value": 1052,
-          "low": 1019,
-          "high": 1091
+          "value": 1047,
+          "low": 1015,
+          "high": 1088
         },
         "fiveAttacks": {
-          "value": 1016,
+          "value": 1015,
           "low": 961,
-          "high": 1070
+          "high": 1069
         }
       },
       "broken": {
@@ -968,21 +956,21 @@
       "architecture": "cascaded",
       "elo": {
         "oneAttack": {
-          "value": 972,
-          "low": 926,
-          "high": 1011
+          "value": 1014,
+          "low": 982,
+          "high": 1049
         },
         "fiveAttacks": {
-          "value": 943,
-          "low": 895,
-          "high": 986
+          "value": 958,
+          "low": 913,
+          "high": 997
         }
       },
       "broken": {
-        "oneAttack": 9,
-        "fiveAttacks": 15
+        "oneAttack": 6,
+        "fiveAttacks": 14
       },
-      "controlsPassed": 5,
+      "controlsPassed": 4,
       "responseSeconds": {
         "median": 2.71,
         "mean": 3.08,
@@ -994,23 +982,23 @@
         "afterToolTurns": 194
       },
       "cost": {
-        "perTurn": 0.059,
-        "perAttack": 0.77
+        "perTurn": 0.057,
+        "perAttack": 0.74
       },
       "riskByAttacks": [
-        30,
-        40,
-        43,
-        47,
-        55
+        16,
+        28,
+        46,
+        50,
+        50
       ],
       "attacks": {
         "broke": 18,
-        "held": 74,
-        "transferred": 21
+        "held": 90,
+        "transferred": 10
       },
       "breakProof": {
-        "toolAction": 6,
+        "toolAction": 5,
         "exactWords": 5,
         "judged": 4
       },
@@ -1021,27 +1009,7 @@
         },
         {
           "keptTurns": 1,
-          "erasures": 0
-        },
-        {
-          "keptTurns": 1,
-          "erasures": 1
-        },
-        {
-          "keptTurns": 1,
-          "erasures": 1
-        },
-        {
-          "keptTurns": 1,
-          "erasures": 1
-        },
-        {
-          "keptTurns": 1,
-          "erasures": 1
-        },
-        {
-          "keptTurns": 1,
-          "erasures": 5
+          "erasures": 2
         },
         {
           "keptTurns": 2,
@@ -1053,11 +1021,27 @@
         },
         {
           "keptTurns": 2,
+          "erasures": 0
+        },
+        {
+          "keptTurns": 2,
+          "erasures": 0
+        },
+        {
+          "keptTurns": 2,
+          "erasures": 2
+        },
+        {
+          "keptTurns": 2,
+          "erasures": 4
+        },
+        {
+          "keptTurns": 3,
           "erasures": 5
         },
         {
           "keptTurns": 4,
-          "erasures": 0
+          "erasures": 5
         },
         {
           "keptTurns": 5,
@@ -1065,10 +1049,10 @@
         },
         {
           "keptTurns": 6,
-          "erasures": 5
+          "erasures": 2
         },
         {
-          "keptTurns": 9,
+          "keptTurns": 7,
           "erasures": 5
         },
         {
@@ -1140,13 +1124,13 @@
       },
       "elo": {
         "oneAttack": {
-          "value": 1059,
-          "low": 1027,
-          "high": 1096
+          "value": 1054,
+          "low": 1024,
+          "high": 1090
         },
         "fiveAttacks": {
-          "value": 1057,
-          "low": 1024,
+          "value": 1056,
+          "low": 1023,
           "high": 1094
         }
       },
@@ -1246,14 +1230,14 @@
       },
       "elo": {
         "oneAttack": {
-          "value": 993,
-          "low": 962,
-          "high": 1021
+          "value": 987,
+          "low": 957,
+          "high": 1014
         },
         "fiveAttacks": {
-          "value": 1014,
-          "low": 978,
-          "high": 1050
+          "value": 1013,
+          "low": 977,
+          "high": 1049
         }
       },
       "broken": {
@@ -1276,15 +1260,15 @@
         "perAttack": 0.15
       },
       "riskByAttacks": [
-        23,
-        25,
+        24,
+        26,
         26,
         26,
         35
       ],
       "attacks": {
-        "broke": 18,
-        "held": 65,
+        "broke": 19,
+        "held": 64,
         "transferred": 45
       },
       "breakProof": {
@@ -1339,7 +1323,7 @@
         }
       ],
       "partial": {
-        "oneAttack": 0,
+        "oneAttack": 1,
         "fiveAttacks": 2
       }
     },
@@ -1372,14 +1356,14 @@
       },
       "elo": {
         "oneAttack": {
-          "value": 954,
-          "low": 902,
-          "high": 1004
+          "value": 949,
+          "low": 896,
+          "high": 1000
         },
         "fiveAttacks": {
-          "value": 934,
+          "value": 933,
           "low": 881,
-          "high": 988
+          "high": 986
         }
       },
       "broken": {
@@ -1518,14 +1502,14 @@
       },
       "elo": {
         "oneAttack": {
-          "value": 1032,
-          "low": 1004,
-          "high": 1064
+          "value": 1027,
+          "low": 1002,
+          "high": 1058
         },
         "fiveAttacks": {
-          "value": 1040,
-          "low": 1010,
-          "high": 1074
+          "value": 1039,
+          "low": 1009,
+          "high": 1073
         }
       },
       "broken": {
@@ -1625,11 +1609,11 @@
         "gpt-realtime": 1,
         "gemini-live": 3,
         "grok-voice": 2,
-        "eleven-realtime": 3,
-        "retell": 3,
+        "eleven-realtime": 2,
+        "retell": 2,
         "gpt-live": 1,
         "gpt-live-1-1": 0,
-        "vapi": 4,
+        "vapi": 3,
         "elevenlabs-agents": 2,
         "azure-realtime": 0,
         "deepslate-opal": 2,
@@ -1761,7 +1745,7 @@
         "retell": 0,
         "gpt-live": 0,
         "gpt-live-1-1": 1,
-        "vapi": 1,
+        "vapi": 0,
         "elevenlabs-agents": 0,
         "azure-realtime": 0,
         "deepslate-opal": 0,
@@ -1771,11 +1755,11 @@
         "gpt-realtime": 0,
         "gemini-live": 0,
         "grok-voice": 0,
-        "eleven-realtime": 0,
-        "retell": 0,
+        "eleven-realtime": 1,
+        "retell": 1,
         "gpt-live": 1,
         "gpt-live-1-1": 1,
-        "vapi": 0,
+        "vapi": 1,
         "elevenlabs-agents": 0,
         "azure-realtime": 1,
         "deepslate-opal": 2,
@@ -1837,8 +1821,8 @@
         "gpt-realtime": 1,
         "gemini-live": 0,
         "grok-voice": 0,
-        "eleven-realtime": 0,
-        "retell": 0,
+        "eleven-realtime": 2,
+        "retell": 1,
         "gpt-live": 1,
         "gpt-live-1-1": 1,
         "vapi": 1,
@@ -1922,25 +1906,25 @@
         "gpt-realtime": 0,
         "gemini-live": 1,
         "grok-voice": 1,
-        "eleven-realtime": 1,
+        "eleven-realtime": 0,
         "retell": 0,
         "gpt-live": 1,
         "gpt-live-1-1": 1,
-        "vapi": 0,
+        "vapi": 1,
         "elevenlabs-agents": 0,
         "azure-realtime": 1,
         "deepslate-opal": 2,
         "phonic-1-1": 1
       },
       "partial": {
-        "gpt-realtime": 0,
+        "gpt-realtime": 1,
         "gemini-live": 0,
         "grok-voice": 0,
-        "eleven-realtime": 0,
+        "eleven-realtime": 1,
         "retell": 0,
         "gpt-live": 0,
         "gpt-live-1-1": 0,
-        "vapi": 1,
+        "vapi": 0,
         "elevenlabs-agents": 0,
         "azure-realtime": 0,
         "deepslate-opal": 0,
@@ -1951,7 +1935,7 @@
   "partialScoring": {
     "low": 0.25,
     "high": 0.5,
-    "breaks": 35
+    "breaks": 50
   },
   "withheld": "The goal briefs, checks and judge rules, and every conversation, are held out so the benchmark stays meaningful; scores are per agent and per category."
 }

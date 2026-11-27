@@ -466,6 +466,23 @@
         "setting": "Server VAD: threshold 0.35, 1,000 ms silence, 300 ms prefix padding",
         "sampleRateHz": 24000
       }
+    },
+    {
+      "key": "livekit-agents",
+      "name": "LiveKit Agents",
+      "vendor": "LiveKit",
+      "siteId": "livekit-agents",
+      "runs": [
+        "fullrun_livekit_r1",
+        "fullrun_livekit_r2",
+        "fullrun_livekit_r3"
+      ],
+      "details": {
+        "modelId": "gpt-4.1 on LiveKit Agents",
+        "voice": "Jacqueline (Cartesia Sonic 3)",
+        "setting": "Temperature 0 on LiveKit Inference, Deepgram Nova-3 multilingual, ai-coustics noise enhancement",
+        "turns": "LiveKit turn detector, preemptive generation, adaptive interruptions"
+      }
     }
   ],
   "suites": [

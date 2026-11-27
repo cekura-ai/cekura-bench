@@ -1,14 +1,13 @@
 """Replace Cisco's November 24 calls with its November 27 rerun; every other provider is unchanged.
 
-Voice tone is provisional: the `audio` value of each call is the platform Voice Tone + Clarity score,
-not the isolated-AI NISQA score the other providers use. Replace those values in cisco-calls.json with
-the NISQA scores, set AUDIO_SOURCE to "nisqa", and rebuild.
+Voice tone uses isolated-AI NISQA scores with the same November 24 checkpoint and preparation.
+The tested phone number is omitted from this snapshot at Luis's request.
 """
 import copy, importlib.util, json, pathlib, sys
 
 P = pathlib.Path(__file__).resolve().parent
 PREVIOUS = P.parent / '2026-11-24'
-AUDIO_SOURCE = 'platform_voice_tone_provisional'
+AUDIO_SOURCE = 'nisqa'
 
 # Reuse the November 24 aggregation unchanged (its module imports render.py from its own folder).
 sys.path.insert(0, str(PREVIOUS))
@@ -29,7 +28,7 @@ def build():
     composite = sum(weights[k] * provider_metrics[k]['normalized'] for k in weights if weights[k] > 0)
     cisco = {'provider': 'Cisco', 'phone_number_count': 1, 'selected_calls': len(calls), 'composite': composite,
              'metrics': provider_metrics,
-             'numbers': [{'phone_number': '+18164620618', 'calls': calls, 'metrics': number_metrics}]}
+             'numbers': [{'calls': calls, 'metrics': number_metrics}]}
     data = copy.deepcopy(previous)
     for key in ('report_sha256', 'cisco_execution_lineage'):
         data.pop(key, None)
@@ -43,6 +42,7 @@ def build():
                                        'selected_calls': len(calls), 'replacements': []}
     data['providers'] = [p for p in data['providers'] if p['provider'] != 'Cisco'] + [cisco]
     data['providers'].sort(key=lambda p: -p['composite'])
+    data['audio_model']['scored_calls'] = sum(p['metrics']['audio']['scored_calls'] for p in data['providers'])
     return data
 
 

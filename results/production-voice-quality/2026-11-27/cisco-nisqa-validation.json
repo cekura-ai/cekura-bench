@@ -1,0 +1,813 @@
+{
+  "project_id": 8793,
+  "result_id": 1194670,
+  "agent_id": 28004,
+  "checkpoint_sha256": "7ec4cf937514dd3f8860b21e66fabd8ca87a168572675ef8d979c4c4ad2e805c",
+  "audio_source": "nisqa",
+  "scored_calls": 45,
+  "scope": "Interactive AI speech after the substantive caller request and before goodbye, using the November published report preprocessing. Stereo AI channel; at least5seconds; tile short clips to30seconds; cap inference at60seconds.",
+  "scores": [
+    {
+      "run_id": 4840822,
+      "score": 4.522251129150391,
+      "source_seconds": 51.68,
+      "model_seconds": 51.68,
+      "spans": [
+        [
+          31.21,
+          55.1
+        ],
+        [
+          59,
+          86.79
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "957f24ff780dd6acce48c373d086117de9de5e49c7f2d8bbe9d2abbef5c40027"
+    },
+    {
+      "run_id": 4840823,
+      "score": 4.519946098327637,
+      "source_seconds": 37.61,
+      "model_seconds": 37.61,
+      "spans": [
+        [
+          30.03,
+          58.54
+        ],
+        [
+          65.11,
+          74.21
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "a0bf15ff785719418a7389fc82ba5fec55114b2ea3ebc29c3d8ab774d2624327"
+    },
+    {
+      "run_id": 4840824,
+      "score": 4.513012886047363,
+      "source_seconds": 34.76,
+      "model_seconds": 34.76,
+      "spans": [
+        [
+          32.89,
+          56.9
+        ],
+        [
+          60.83,
+          63.95
+        ],
+        [
+          63.23,
+          70.86
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "1b78cb951483350947280bb8dc922ded0db1a5e61dcc43cd208846f08edc18e0"
+    },
+    {
+      "run_id": 4840825,
+      "score": 4.526943683624268,
+      "source_seconds": 44.68,
+      "model_seconds": 44.68,
+      "spans": [
+        [
+          31.07,
+          53.76
+        ],
+        [
+          56.81,
+          78.8
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "1db69ee057e8dcd5b4d3a856984e0d9968b6464a9ad2549eadbd451aacbc0167"
+    },
+    {
+      "run_id": 4840826,
+      "score": 4.516082763671875,
+      "source_seconds": 26.66,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          27.06,
+          53.72
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "8a45144069e797457fc25359aaa1a8662f8326044119f086af4b83290d643dc0"
+    },
+    {
+      "run_id": 4840827,
+      "score": 4.50206184387207,
+      "source_seconds": 43.58,
+      "model_seconds": 43.58,
+      "spans": [
+        [
+          27.83,
+          54.13
+        ],
+        [
+          57.66,
+          74.94
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "b954183791129f1a856ebf3e2d0628c314149a7b431f578d7b65136e16a1c249"
+    },
+    {
+      "run_id": 4840828,
+      "score": 4.560681343078613,
+      "source_seconds": 26.908,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          27.207,
+          45.952
+        ],
+        [
+          53.794,
+          61.957
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "e76515c8ea776a80e9802b9df447e243e942c8dbf84618b1de77684e3351fa7c"
+    },
+    {
+      "run_id": 4840829,
+      "score": 4.49456262588501,
+      "source_seconds": 56.01,
+      "model_seconds": 56.01,
+      "spans": [
+        [
+          29.68,
+          66.45
+        ],
+        [
+          71.91,
+          91.15
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "9a792a1f20b86dce12587dd130c369f2e2ac68eb41c69b462350d98774033c87"
+    },
+    {
+      "run_id": 4840830,
+      "score": 4.410624980926514,
+      "source_seconds": 47.51,
+      "model_seconds": 47.51,
+      "spans": [
+        [
+          27.73,
+          52.82
+        ],
+        [
+          56.09,
+          61.34
+        ],
+        [
+          66.58,
+          83.75
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "1dfe8fb9f55e1835eab7b0fc8d7ec2b9c3c8f4b756d1c3a5b109d1f7c877aa99"
+    },
+    {
+      "run_id": 4840831,
+      "score": 4.518625736236572,
+      "source_seconds": 19.426,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          28.089,
+          32.81
+        ],
+        [
+          37.231,
+          51.936
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "5408e3e467ee37577196372bedab40661983eccc110f720b94d2c1ccb94b4fd8"
+    },
+    {
+      "run_id": 4840832,
+      "score": 4.487748622894287,
+      "source_seconds": 27.08,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          32.82,
+          59.9
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "3f0d0053c4a9310641f9b412e86ef1757412889da6dae130237095fde60953f0"
+    },
+    {
+      "run_id": 4840833,
+      "score": 4.4961018562316895,
+      "source_seconds": 38.56,
+      "model_seconds": 38.56,
+      "spans": [
+        [
+          27.12,
+          47.43
+        ],
+        [
+          51.98,
+          70.23
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "35ee86799c3a97a33804192773656cba08566512e7d9274ad4b4a9bc0d897078"
+    },
+    {
+      "run_id": 4840834,
+      "score": 4.539193153381348,
+      "source_seconds": 39.72,
+      "model_seconds": 39.72,
+      "spans": [
+        [
+          26.93,
+          55.74
+        ],
+        [
+          59.81,
+          70.72
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "02f0d9158d1b947fcd15082bb8fec23efd7a86cda62328a8b8a9a6be81446362"
+    },
+    {
+      "run_id": 4840835,
+      "score": 4.512175559997559,
+      "source_seconds": 27.35,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          27.37,
+          54.72
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "ddfbe670e4e09828ac4fd7c83ecf163ace91aa451d20fa8f88e9c8bda9a05ec0"
+    },
+    {
+      "run_id": 4840836,
+      "score": 4.517432689666748,
+      "source_seconds": 38.39,
+      "model_seconds": 38.39,
+      "spans": [
+        [
+          29.31,
+          55.01
+        ],
+        [
+          60.98,
+          73.67
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "cf1d3959a55f69f702cca538f97c95ac7dbde9a6df7118e102ac91d745a687e1"
+    },
+    {
+      "run_id": 4840837,
+      "score": 4.48084831237793,
+      "source_seconds": 49.3,
+      "model_seconds": 49.3,
+      "spans": [
+        [
+          31.05,
+          54.05
+        ],
+        [
+          58.04,
+          84.34
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "eeba8f16ad5263f0e19e90f5dd0b6e2911f236024120a1279b8f670e32f83515"
+    },
+    {
+      "run_id": 4840838,
+      "score": 4.5007734298706055,
+      "source_seconds": 41.05,
+      "model_seconds": 41.05,
+      "spans": [
+        [
+          30.04,
+          60.75
+        ],
+        [
+          67,
+          77.34
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "448d72f1a6b140156902b0b243a4deee0c77c11c90a2b40620face0a7b776307"
+    },
+    {
+      "run_id": 4840839,
+      "score": 4.458635330200195,
+      "source_seconds": 39.58,
+      "model_seconds": 39.58,
+      "spans": [
+        [
+          28.31,
+          57.9
+        ],
+        [
+          61.85,
+          64.52
+        ],
+        [
+          64.49,
+          71.81
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "ef20690475163b852dee89a239ea35a9ea8e18d5f68156d799ab4ddc2c09c26f"
+    },
+    {
+      "run_id": 4840840,
+      "score": 4.534196376800537,
+      "source_seconds": 47.86,
+      "model_seconds": 47.86,
+      "spans": [
+        [
+          30.81,
+          53.7
+        ],
+        [
+          56.9,
+          81.87
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "6af3b1d9ebac7ba46e7f227f9660dc40b98f917d428cf95d2a91fe42410c3f7a"
+    },
+    {
+      "run_id": 4840841,
+      "score": 4.502154350280762,
+      "source_seconds": 26.01,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          28.22,
+          54.23
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "77db598cdb976a4c3e8bc0681df5b032153ac53f7bb5eef4e31dedb233f80799"
+    },
+    {
+      "run_id": 4840842,
+      "score": 4.519676208496094,
+      "source_seconds": 42.61,
+      "model_seconds": 42.61,
+      "spans": [
+        [
+          28.54,
+          52.6
+        ],
+        [
+          55.37,
+          73.92
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "3eea593e2b33efaa2b366e3ca7424ef6529c2b6c3b602a9fd92cdbf8956dda1d"
+    },
+    {
+      "run_id": 4840843,
+      "score": 4.5069098472595215,
+      "source_seconds": 31.428,
+      "model_seconds": 31.428,
+      "spans": [
+        [
+          27.467,
+          46.111
+        ],
+        [
+          53.713,
+          66.497
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "b925e4028de1edd3d77cf8aca8dc5a83e14c264cac91972994e32d01462ec8c7"
+    },
+    {
+      "run_id": 4840844,
+      "score": 4.513759613037109,
+      "source_seconds": 48.67,
+      "model_seconds": 48.67,
+      "spans": [
+        [
+          29,
+          61.96
+        ],
+        [
+          67.35,
+          83.06
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "c128916ffbaab2be47b0be62f8d9499a1b3d6e09553fd6d0d4d15a8386e67a9e"
+    },
+    {
+      "run_id": 4840845,
+      "score": 4.518421173095703,
+      "source_seconds": 44.52,
+      "model_seconds": 44.52,
+      "spans": [
+        [
+          27.67,
+          55.77
+        ],
+        [
+          59.32,
+          64.17
+        ],
+        [
+          68.74,
+          80.31
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "dce9a5030a9ce50973565cdf968a08942d11a93ff8fc44d41b5216e92235e9e7"
+    },
+    {
+      "run_id": 4840846,
+      "score": 3.6135621070861816,
+      "source_seconds": 11.324,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          27.57,
+          31.951
+        ],
+        [
+          37.453,
+          44.396
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "b5cafe7af90806b6f1b4748b57111a34bdfe11645a2939468fc7d31f02c6353a"
+    },
+    {
+      "run_id": 4840847,
+      "score": 3.7886674404144287,
+      "source_seconds": 28.87,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          27,
+          27.35
+        ],
+        [
+          31.77,
+          60.29
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "33e0eb71c932aef4c16753704206ce49958aad52260bbc1fd3a7577d5ed89e37"
+    },
+    {
+      "run_id": 4840848,
+      "score": 4.526026725769043,
+      "source_seconds": 46.86,
+      "model_seconds": 46.86,
+      "spans": [
+        [
+          27.99,
+          50.06
+        ],
+        [
+          54.85,
+          79.64
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "11ad9a6551d45e8e054d80f855413ca0abd70b281e6053039b1d4812a5118391"
+    },
+    {
+      "run_id": 4840849,
+      "score": 4.461058616638184,
+      "source_seconds": 39.95,
+      "model_seconds": 39.95,
+      "spans": [
+        [
+          27.08,
+          53.49
+        ],
+        [
+          57.39,
+          70.93
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "57464c05a43f2971c0c0f7100832c2cc626854cbfa252727f6f373d93867a6e8"
+    },
+    {
+      "run_id": 4840850,
+      "score": 4.525678634643555,
+      "source_seconds": 24.23,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          27.6,
+          51.83
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "88af2b309d8b10cd189af6a918853b870261c659d69f639fbf43b4f60dfec0cc"
+    },
+    {
+      "run_id": 4840851,
+      "score": 4.526335716247559,
+      "source_seconds": 36.730125,
+      "model_seconds": 36.730125,
+      "spans": [
+        [
+          32.12,
+          51.89
+        ],
+        [
+          57.87,
+          74.83
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "805216db3af875dbae8528a12f3eb057c8f5225dadd38baac48613b9d215bfe4"
+    },
+    {
+      "run_id": 4840852,
+      "score": 4.496939659118652,
+      "source_seconds": 53.55,
+      "model_seconds": 53.55,
+      "spans": [
+        [
+          31.52,
+          54.55
+        ],
+        [
+          58.6,
+          89.12
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "0803c4b870ce9bb748888c2c4a2ed0a45684225e8bab06f348995b20411afb75"
+    },
+    {
+      "run_id": 4840853,
+      "score": 4.451234817504883,
+      "source_seconds": 38.35,
+      "model_seconds": 38.35,
+      "spans": [
+        [
+          34.3,
+          59.35
+        ],
+        [
+          66.01,
+          79.31
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "ca8604eb6b8abe61a6305272e2c371177c8e1b7aa84890ca663da702aab39f5c"
+    },
+    {
+      "run_id": 4840854,
+      "score": 4.503623008728027,
+      "source_seconds": 37.26,
+      "model_seconds": 37.26,
+      "spans": [
+        [
+          27.67,
+          54.46
+        ],
+        [
+          58.35,
+          61.16
+        ],
+        [
+          60.84,
+          68.5
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "da9cf7ce202e2d26fbac3268218bcc5b7dbfdda7b2d2cc5c8865a2e73949d4b6"
+    },
+    {
+      "run_id": 4840855,
+      "score": 4.543130874633789,
+      "source_seconds": 48.5,
+      "model_seconds": 48.5,
+      "spans": [
+        [
+          31.68,
+          57.46
+        ],
+        [
+          60.69,
+          83.41
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "213e17ee6b5f8ac9bf05655313aafd4f149a3c5502a9005cade0f009aac64711"
+    },
+    {
+      "run_id": 4840856,
+      "score": 4.4631452560424805,
+      "source_seconds": 22.947,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          28.209,
+          51.156
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "551c01239a8490c3fd8077c6aa9d9f7b20ebad55f1399f93dcd064af7ceed82c"
+    },
+    {
+      "run_id": 4840857,
+      "score": 4.493528366088867,
+      "source_seconds": 43.88,
+      "model_seconds": 43.88,
+      "spans": [
+        [
+          28.09,
+          53.75
+        ],
+        [
+          56.45,
+          74.67
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "b584efc3db437d92ceeb7548e29d4da6d44fbf9d270b0e6d52cd7fc6b6f77ce8"
+    },
+    {
+      "run_id": 4840858,
+      "score": 4.4621076583862305,
+      "source_seconds": 33.15,
+      "model_seconds": 33.15,
+      "spans": [
+        [
+          27.17,
+          45.92
+        ],
+        [
+          49.85,
+          64.25
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "d5207abef77b59b31cc01aca49733b0cdaa1f1f678989dbc9acc8b900b96390a"
+    },
+    {
+      "run_id": 4840859,
+      "score": 4.492910385131836,
+      "source_seconds": 46.81,
+      "model_seconds": 46.81,
+      "spans": [
+        [
+          29.7,
+          62.01
+        ],
+        [
+          67.73,
+          82.23
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "ff38a960703b6526e3edb544de24f486748491d93b6c1a18ea40ba01798753d6"
+    },
+    {
+      "run_id": 4840860,
+      "score": 4.400885581970215,
+      "source_seconds": 50.64,
+      "model_seconds": 50.64,
+      "spans": [
+        [
+          27.39,
+          52.7
+        ],
+        [
+          55.67,
+          61.05
+        ],
+        [
+          65.84,
+          85.79
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "e2cb6499270b302f2e3f1a82f0e2636cee4805abd9b4a7ef068ad64f5d2db5f3"
+    },
+    {
+      "run_id": 4840861,
+      "score": 3.757995843887329,
+      "source_seconds": 20.487,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          27.228,
+          31.97
+        ],
+        [
+          36.531,
+          52.276
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "18e4d75928f65dcf138365235063fdc50d6cb86744e0a710917bae731783a0b6"
+    },
+    {
+      "run_id": 4840862,
+      "score": 4.522251129150391,
+      "source_seconds": 25.72,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          33.82,
+          59.54
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "aeb9d3ab21aa55f50ac51d8e42ada891cf80efc78fb62a0d5673544b9c2a860c"
+    },
+    {
+      "run_id": 4840863,
+      "score": 4.503928184509277,
+      "source_seconds": 43.14,
+      "model_seconds": 43.14,
+      "spans": [
+        [
+          27.07,
+          50.68
+        ],
+        [
+          55.61,
+          75.14
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "053ba82401b76d8083f9d0c0f6d962deb6153ad2caa8b3ffe3bf861b8c6da884"
+    },
+    {
+      "run_id": 4840864,
+      "score": 4.452026844024658,
+      "source_seconds": 34.05,
+      "model_seconds": 34.05,
+      "spans": [
+        [
+          27.7,
+          50.87
+        ],
+        [
+          54.79,
+          65.67
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "611c606b16193a5a285f38f1dc382855d80fa6f43f6c8213e6f1732fcaf2a0df"
+    },
+    {
+      "run_id": 4840865,
+      "score": 4.507737636566162,
+      "source_seconds": 23.6,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          27.68,
+          51.28
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "5ad10bcf91b22d83e38b51e83d51021b14aa9f685e8bcd9862f92a219f3e0cf8"
+    },
+    {
+      "run_id": 4840866,
+      "score": 4.493393421173096,
+      "source_seconds": 41.580125,
+      "model_seconds": 41.580125,
+      "spans": [
+        [
+          32.51,
+          56.46
+        ],
+        [
+          62.39,
+          80.02
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "d093772386846638c6ed73775b7753bc8955c175756e7a2e88fbcea4a19a73e4"
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "_comment": "PolyAI Agent Studio on Real Calls (s2s-human-bench row polyai-agent-studio): the Finance and Healthcare agents used for the 210 calls, read back from PolyAI Agent Studio (main) on 2026-11-28. Both run PolyAI's Dialog-RSN-1 model with the same settings below; they differ only in the prompt and tools, which are the Real Calls agent prompt and fixture tools shared by every row and are not published (as for the scenarios), and in one setting: the Finance voice channel sets LLM temperature 0.4, the Healthcare one leaves PolyAI's default. Ids, phone numbers, URLs, function code and credentials are removed.",
+  "model": {
+    "llm": "Dialog-RSN-1 (PolyAI)",
+    "voiceChannelTemperature": {
+      "finance": 0.4,
+      "healthcare": "PolyAI default"
+    },
+    "prompt": "<Real Calls agent prompt (not published)>",
+    "tools": "<Real Calls fixture tools as PolyAI functions (not published)>",
+    "personality": [
+      "Polite"
+    ]
+  },
+  "languages": {
+    "default": "en-US",
+    "additional": [
+      "es-US",
+      "hi-IN"
+    ],
+    "voices": "one PolyAI library voice per language (en-US, es-US, hi-IN)"
+  },
+  "asr": {
+    "bargeIn": false,
+    "latencyConfig": {
+      "interactionStyle": "balanced"
+    }
+  },
+  "voiceChannel": {
+    "vadConfig": {
+      "speechEndWindowSeconds": 0.8
+    },
+    "bargeInConfig": {
+      "enabled": true,
+      "allowedFirstTurn": false,
+      "maxPerCall": 5
+    },
+    "silenceFillerUtterances": {
+      "enabled": false
+    },
+    "audioEnhancement": {
+      "provider": "aiCoustics",
+      "enabled": true,
+      "noiseReduction": 0,
+      "voiceGain": 0,
+      "noiseGate": false
+    },
+    "safetyFilters": {
+      "type": "azure",
+      "disabled": true
+    }
+  },
+  "guardrails": {
+    "JAILBREAK_DEFENCE": true,
+    "HALLUCINATION_CONTROL": true,
+    "AI_IDENTITY": true,
+    "EMERGENCY_ESCALATION": true,
+    "TOOL_CALL_INTEGRITY": true
+  },
+  "experimentalConfig": "none (an earlier language_switching_instructions experiment was removed before the runs)",
+  "harness": {
+    "transport": "phone call from a Cekura caller number to the agent's PolyAI number",
+    "callVariables": "per-call variables (names, dates, opening line) fetched by the agent's start function from a small service keyed by the dialled and calling numbers, filled by Cekura's pre-run webhook",
+    "transcript": "the agent's end function posts the conversation and its tool calls to Cekura's custom-provider transcript webhook",
+    "endCall": "the agent ends calls with its end_call function"
+  }
+}

@@ -17,10 +17,8 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
-from tts_bench.adapters.base import AdapterError
+from tts_bench.adapters.fish_audio import request_options
 from tts_bench.adapters.openai_tts import OpenAITTSAdapter
-
-_BOOLEANS = {"true": True, "false": False}
 
 
 class FishAudioHTTPAdapter(OpenAITTSAdapter):
@@ -37,13 +35,6 @@ class FishAudioHTTPAdapter(OpenAITTSAdapter):
 
     def _request_args(self, text: str) -> dict[str, Any]:
         payload: dict[str, Any] = {"text": text, "reference_id": self.config.voice, "format": "pcm",
-                                   "sample_rate": self.config.sample_rate,
-                                   "latency": self.config.option("latency", "balanced")}
-        if (language := self.config.option("language")) is not None:
-            payload["language"] = language
-        if (normalize := self.config.option("normalize")) is not None:
-            if normalize not in _BOOLEANS:
-                raise AdapterError(f"fish-audio-http: normalize must be true or false, not {normalize!r}")
-            payload["normalize"] = _BOOLEANS[normalize]
+                                   "sample_rate": self.config.sample_rate, **request_options(self.config, self.name)}
         self.log.raw({**payload, "text": f"<{len(text)} chars>"}, direction="out")
         return {"json": payload}

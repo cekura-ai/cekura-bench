@@ -584,8 +584,30 @@ class TestFishAudio:
         assert FishAudioAdapter.unsupported_reason(TTSConfig("s2.1-pro", SARAH, sample_rate=48000)) == "fish-audio does not emit 48000 Hz PCM"
         assert not FishAudioAdapter.native_mulaw_8k and not FishAudioAdapter.ends_on_quiet and "fish-audio" not in PENDING
 
-    async def test_messagepack_streams_two_syntheses_on_two_sockets_without_logging_the_key(self, tmp_path):
+    async def test_language_and_normalize_go_in_the_start_request_only_when_the_run_names_them(self):
+        import pytest
+
+        from tts_bench.adapters.base import AdapterError
+        from tts_bench.adapters.fish_audio import FishAudioAdapter
+        from tts_bench.registry import SARAH
+
+        fish, sent = adapter(FishAudioAdapter, "s2.1-pro", SARAH)
+        await fish.open_context("main")
+        assert {"language", "normalize"}.isdisjoint(sent[0]["request"]) and sent[0]["request"]["latency"] == "balanced"
+        fish, sent = adapter(FishAudioAdapter, "s2.1-pro", SARAH)
+        fish.config = TTSConfig("s2.1-pro", SARAH, options=(("latency", "low"), ("language", "en"), ("normalize", "true")))
+        await fish.open_context("main")
+        request = sent[0]["request"]
+        assert (request["latency"], request["language"], request["normalize"]) == ("low", "en", True)
+        fish, sent = adapter(FishAudioAdapter, "s2.1-pro", SARAH)
+        fish.config = TTSConfig("s2.1-pro", SARAH, options=(("normalize", "yes"),))
+        with pytest.raises(AdapterError, match="fish-audio: normalize must be true or false"):
+            await fish.open_context("main")
+
+    async def test_messagepack_streams_two_syntheses_on_two_sockets_without_logging_the_key_or_cookies(self, tmp_path):
         import msgpack
+        import json
+
         import websockets
 
         from tts_bench.adapters.fish_audio import FishAudioAdapter
@@ -609,10 +631,14 @@ class TestFishAudio:
                     await ws.send(msgpack.packb({"event": "finish", "reason": "stop"}, use_bin_type=True))
                     await ws.close()
 
+        def upgrade(connection, request, response):
+            response.headers["x-fish-trace-id"] = "trace-1"
+            response.headers["set-cookie"] = "session=private"
+
         clock = Clock()
         log = EventLog(clock, raw_path=tmp_path / "raw.jsonl")
         fish = FishAudioAdapter(TTSConfig("s2.1-pro", SARAH), "secret-key", log, clock)
-        async with websockets.serve(serve, "127.0.0.1", 0) as server:
+        async with websockets.serve(serve, "127.0.0.1", 0, process_response=upgrade) as server:
             fish.url = f"ws://127.0.0.1:{server.sockets[0].getsockname()[1]}"
             async with fish:
                 for context_id in ("first", "repeat"):
@@ -627,6 +653,9 @@ class TestFishAudio:
         assert all(h["authorization"] == "Bearer secret-key" and h["model"] == "s2.1-pro" for h in headers)
         raw = (tmp_path / "raw.jsonl").read_text()
         assert "secret-key" not in raw and "secret-key" not in str(log.events) and "<480 bytes>" in raw
+        upgrades = [json.loads(line)["payload"] for line in raw.splitlines() if "http_status" in line]
+        assert [(u["http_status"], u["headers"]["x-fish-trace-id"]) for u in upgrades] == [(101, "trace-1")] * 2
+        assert "session=private" not in raw
 
 
 class TestFishAudioHTTP:

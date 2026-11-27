@@ -309,7 +309,7 @@ class TTSAdapter(abc.ABC):
     _PRIVATE_HEADERS = frozenset({"set-cookie", "cookie", "authorization", "x-api-key", "x-goog-api-key",
                                   "openai-organization", "openai-project"})
 
-    def _on_response(self, context_id: str, status: int, headers: Any) -> None:
+    def _on_response(self, context_id: str | None, status: int, headers: Any) -> None:
         """An HTTP response's status line arrived: when, and what the server said about the request.
 
         The gap from t0 to the headers is the server's time before it streamed

@@ -84,6 +84,26 @@ class TestRecord:
         assert [c.sentinel for c in runner.planned[:3]] == [True, True, True]
         assert runner.planned[0].cell_id == "sentinel/prose.greet/r1"
 
+    async def test_one_unscored_warm_up_request_comes_before_the_first_cell(self, tmp_path, monkeypatch):
+        from tts_bench import store
+        from tts_bench.runner import WARM_UP_TEXT
+
+        sent = []
+        original = FakeTTSAdapter._send_text
+
+        async def spy(self, context_id, text, first):
+            sent.append(text)
+            await original(self, context_id, text, first)
+
+        monkeypatch.setattr(FakeTTSAdapter, "_send_text", spy)
+        runner = await run(tmp_path, [OneShot()])
+        kinds = [e["kind"] for e in store.read_jsonl(runner.root / "progress.jsonl")]
+        assert kinds.index("warm_up") < kinds.index("cell_start") and kinds.count("warm_up") == 1
+        warm_up = next(e for e in store.read_jsonl(runner.root / "progress.jsonl") if e["kind"] == "warm_up")
+        assert warm_up["error"] is None and warm_up["first_chunk_ms"] > 0
+        assert sent[0] == WARM_UP_TEXT and WARM_UP_TEXT not in sent[1:]
+        assert len(runner.cells) == len(ITEMS) and all(WARM_UP_TEXT != item.text for item in corpus.ITEMS)
+
     async def test_an_unsupported_feature_is_an_exclusion_not_a_connection(self, tmp_path, monkeypatch):
         monkeypatch.setattr(FakeTTSAdapter, "supports_cancel", False)
         connected = []

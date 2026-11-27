@@ -27,6 +27,8 @@ class WebSocketAdapter(TTSAdapter):
             self._ws = await websockets.connect(self.url, additional_headers=self._headers(), max_size=None, open_timeout=20)
         except Exception as exc:  # noqa: BLE001
             raise AdapterError(f"{self.name} connect failed: {exc}") from exc
+        # The upgrade response's headers, as HTTP adapters keep theirs: a provider's trace id is how it looks a session up.
+        self._on_response(None, self._ws.response.status_code, dict(self._ws.response.headers.raw_items()))
         self._receiver = asyncio.create_task(self._receive_loop())
 
     async def _close(self) -> None:

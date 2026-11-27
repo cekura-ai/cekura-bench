@@ -30,7 +30,7 @@ from tts_bench import corpus as corpus_mod
 from tts_bench import store
 from tts_bench.adapters.base import AdapterError, TTSAdapter, TTSConfig, is_refusal
 from tts_bench.corpus import CORPUS_VERSION, ITEMS, SENTINEL_ITEM, Item
-from tts_bench.probes import OneShot, Probe, ProbeContext, ProbeResult, probe_from_json
+from tts_bench.probes import OneShot, Probe, ProbeContext, ProbeResult, one_shot, probe_from_json
 from tts_bench.registry import PROVIDERS
 
 # The sentinel: one fixed cell -- one-shot, one prose item -- at the head of
@@ -40,6 +40,10 @@ from tts_bench.registry import PROVIDERS
 SENTINEL_PROBE = OneShot()
 SENTINEL_REPEATS = 3
 HEARTBEAT_S = 60.0
+# One unscored request at the start of every session, fresh or resumed: a provider's first
+# request after an idle period can pay one-off setup (key check, loading) no later request pays.
+# Not a corpus sentence, so no scored text can be served from a cache it filled.
+WARM_UP_TEXT = "This request only warms up the service before the measured ones."
 
 
 class ResumeRefused(RuntimeError):
@@ -336,6 +340,8 @@ class Runner:
         beat = asyncio.create_task(self._heartbeat())
         completed = False
         try:
+            if any(not self.entry.adapter.unsupported_reason(self.config, c.probe.needs) for c in self._todo):
+                await self._warm_up()
             for planned in self._todo:
                 cell = await self.run_cell(planned)
                 if on_cell:
@@ -361,6 +367,21 @@ class Runner:
                 self.log.close()
             store.write_manifest(self.root)          # last, so it covers the logs' final lines
         return self.root
+
+    async def _warm_up(self) -> None:
+        clock = Clock()
+        adapter = self._make_adapter(EventLog(clock), clock)
+        try:
+            async with adapter:
+                synthesis = await one_shot(adapter, "warm_up", WARM_UP_TEXT)
+            error = synthesis.error
+            first_chunk = (None if synthesis.t_first_chunk is None or synthesis.t0 is None
+                           else round((synthesis.t_first_chunk - synthesis.t0) * 1000, 1))
+        except Exception as exc:  # noqa: BLE001 -- a failed warm-up is recorded; the cells report their own failures
+            error, first_chunk = f"{type(exc).__name__}: {exc}", None
+        if self.log:
+            self.log.event("warm_up", f"warm-up request: first chunk {first_chunk} ms" + (f", error {error}" if error else ""),
+                           first_chunk_ms=first_chunk, error=error)
 
     def _make_adapter(self, log: EventLog, clock: Clock) -> TTSAdapter:
         return self.entry.adapter(self.config, self.api_key, log, clock)

@@ -466,6 +466,23 @@
         "setting": "Server VAD: threshold 0.35, 1,000 ms silence, 300 ms prefix padding",
         "sampleRateHz": 24000
       }
+    },
+    {
+      "key": "polyai-agent-studio",
+      "name": "PolyAI Agent Studio",
+      "vendor": "PolyAI",
+      "siteId": "polyai-agent-studio",
+      "runs": [
+        "fullrun_polyai_r1",
+        "fullrun_polyai_r2",
+        "fullrun_polyai_r3"
+      ],
+      "details": {
+        "modelId": "Dialog-RSN-1 on PolyAI Agent Studio",
+        "voice": "PolyAI voices per language (en, es, hi)",
+        "setting": "Over a phone call to a PolyAI number; English, Spanish and Hindi enabled",
+        "turns": "PolyAI Agent Studio turn handling and interruptions"
+      }
     }
   ],
   "suites": [

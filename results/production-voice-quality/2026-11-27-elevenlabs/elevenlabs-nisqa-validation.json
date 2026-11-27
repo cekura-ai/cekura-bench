@@ -1,0 +1,3888 @@
+{
+  "engine": "Cekura predefined NISQA discontinuity",
+  "checkpoint_sha256": "7ec4cf937514dd3f8860b21e66fabd8ca87a168572675ef8d979c4c4ad2e805c",
+  "audio_source": "nisqa",
+  "selected_calls": 135,
+  "scores": [
+    {
+      "run_id": 4788812,
+      "file": "4788812.wav",
+      "source_seconds": 22.447,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          18.566,
+          33.351
+        ],
+        [
+          41.293,
+          41.413
+        ],
+        [
+          45.475,
+          53.017
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "60fcdc9335c0781f6cbc68f23b0fa045dcc46175209573e4b660423db2b0ae91",
+      "score": 4.376962661743164,
+      "agent_id": 28261,
+      "scenario_id": 461454,
+      "result_id": 1176174,
+      "unique_source_seconds": 22.447,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "5900ee7f65f57eeeafa7e28188abce0e96c6f3350aee62dd37a4fdf3c6a4e712",
+      "prepared_float32_samples_sha256": "9359e9d9c7a84ddf56d5ad5403864a7e328e4523a3a4acfc856e2c2f7749dc7d",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788811,
+      "file": "4788811.wav",
+      "source_seconds": 28.688,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          18.706,
+          33.71
+        ],
+        [
+          42.413,
+          56.097
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "c54cadf4f500e813d98a3f99115e4683704ab22b4ffba9be44c49c2590eb7511",
+      "score": 4.39772891998291,
+      "agent_id": 28261,
+      "scenario_id": 461453,
+      "result_id": 1176174,
+      "unique_source_seconds": 28.688,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "4d6d2076cb5f4bf5857e3048fb57177b5cb7790f5dc036ffae788406365e145a",
+      "prepared_float32_samples_sha256": "f3dbb02ca3afe06358f2fe990c052608724dac06c09d091f82162ab8e215a62a",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788810,
+      "file": "4788810.wav",
+      "source_seconds": 18.207,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          24.769,
+          42.976
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "0f3660681e500650a1a27f1ae01c28330d09454902ebbb7dada196a082a22932",
+      "score": 4.489758491516113,
+      "agent_id": 28261,
+      "scenario_id": 461452,
+      "result_id": 1176174,
+      "unique_source_seconds": 18.207,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "df758fb944964eff1cb99f786991e3f994c718a97b1bc514edc938645e1c020f",
+      "prepared_float32_samples_sha256": "c1d11b0e322d9200ae3c8e44054291ecf638be244964f706d9c45f329b607c37",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788809,
+      "file": "4788809.wav",
+      "source_seconds": 6.023,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          18.49,
+          22.212
+        ],
+        [
+          26.874,
+          29.175
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "eeb318db647bc8ebf07399fcb0db7053e8e057cc48f6852b2d9e0c9fae806b1f",
+      "score": 4.414149284362793,
+      "agent_id": 28261,
+      "scenario_id": 461451,
+      "result_id": 1176174,
+      "unique_source_seconds": 6.023,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "91dfdc71e5bde1e8015f77dbce1383899a83d96a5759720012aea3f5a39d6dfe",
+      "prepared_float32_samples_sha256": "4e51011f67ad0ad2e62de1b8755bf43f5eab425a0fc6676d2d48518324fe3931",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788808,
+      "file": "4788808.wav",
+      "source_seconds": 21.407,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          22.627,
+          38.852
+        ],
+        [
+          48.675,
+          53.857
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "362443a51ec404c344fdcc9dc498af762e10c6aef52dcf0e7cf3ae40893b0faa",
+      "score": 4.456552982330322,
+      "agent_id": 28261,
+      "scenario_id": 461449,
+      "result_id": 1176174,
+      "unique_source_seconds": 21.407,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "9a92a961680912604a808cccb074e6be3316559d2425de29086d33fb4dccb766",
+      "prepared_float32_samples_sha256": "deb29a65900341297bda11fa46dac4529acbbbaac840d8028745cfa02878cbf6",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788807,
+      "file": "4788807.wav",
+      "source_seconds": 25.768,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          20.907,
+          38.272
+        ],
+        [
+          45.534,
+          53.937
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "762e2ebee4aa56456e3e2fba0141b30e4caf99647b4cedc8a7efaf95dc330910",
+      "score": 4.443328380584717,
+      "agent_id": 28261,
+      "scenario_id": 461447,
+      "result_id": 1176174,
+      "unique_source_seconds": 25.768,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "1f154618c15237270fdf0ee656222cb3722a641fdf6e8d8b822f9aa59da39938",
+      "prepared_float32_samples_sha256": "0e2f193c4969f836ca29437e31c9c041406b8affc82a28e9bb64404639190922",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788806,
+      "file": "4788806.wav",
+      "source_seconds": 30.609,
+      "model_seconds": 30.609,
+      "spans": [
+        [
+          19.786,
+          41.192
+        ],
+        [
+          47.494,
+          56.697
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "06540632d374a7ae8bd1eae07d593a209977ce247ad49393d6697ce04b5cc7b2",
+      "score": 4.485992431640625,
+      "agent_id": 28261,
+      "scenario_id": 461445,
+      "result_id": 1176174,
+      "unique_source_seconds": 30.609,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "684bcc0533f123255c3c1a4e408f475dc8416636d5d9b232563563bd2164092a",
+      "prepared_float32_samples_sha256": "cd8e1bf80b24e51c6c410b3eb25600e25d71303084116744d606d9a5e29fd6ed",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4790122,
+      "file": "4790122.wav",
+      "source_seconds": 53.752,
+      "model_seconds": 53.752,
+      "spans": [
+        [
+          19.244,
+          41.009
+        ],
+        [
+          48.711,
+          80.698
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "d691e8049f4389ce6c21f40fd3701ea6b5919d5eaf4ad82c804b691521f6451b",
+      "score": 4.473837852478027,
+      "agent_id": 28261,
+      "scenario_id": 461444,
+      "result_id": 1176689,
+      "unique_source_seconds": 53.752,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "2fb06059b944b0c19335375eaf01d7f9bc8356751a982f45d7cc3f5a421f27aa",
+      "prepared_float32_samples_sha256": "5c7efc9d117483da3bb3f18448aef6652bf7a81738165dc8783da29755911369",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/caller-rerun-audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788804,
+      "file": "4788804.wav",
+      "source_seconds": 16.266,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          26.428,
+          38.792
+        ],
+        [
+          49.615,
+          53.517
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "42820c1989cea546bccdcc704cb5d084555f2d4909230e64451f75cd3621d9b7",
+      "score": 4.497326850891113,
+      "agent_id": 28261,
+      "scenario_id": 461443,
+      "result_id": 1176174,
+      "unique_source_seconds": 16.266,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "86c88a8e3082dc57990c77cec1b5cf6bf88e58408eacedeb56523b8ccef61f7a",
+      "prepared_float32_samples_sha256": "061027816cf6c576f36f7311a5b72e29f17d80b3ff46290a7a9aa368f8d2bdcc",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788803,
+      "file": "4788803.wav",
+      "source_seconds": 55.172,
+      "model_seconds": 55.172,
+      "spans": [
+        [
+          19.084,
+          40.929
+        ],
+        [
+          48.971,
+          82.298
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "a9ac213820e4961b772b65aac0a1b4186040792b9926e3633bf70589b7e57be6",
+      "score": 4.456245422363281,
+      "agent_id": 28261,
+      "scenario_id": 461442,
+      "result_id": 1176174,
+      "unique_source_seconds": 55.172,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "c7cd0a6b306631a831fc39be692cfe471d281c12cee9eaa71a550d88da91190d",
+      "prepared_float32_samples_sha256": "3115651e0f547f7f39270fd3161f225643d2420de6a0e4b849095e7e9de6aae9",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788802,
+      "file": "4788802.wav",
+      "source_seconds": 19.746,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          24.488,
+          36.631
+        ],
+        [
+          46.234,
+          53.837
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "e760015de68dbd2319fbe1c034bb26475c469eef9e29215a954863444ceb03d7",
+      "score": 4.485642433166504,
+      "agent_id": 28261,
+      "scenario_id": 461456,
+      "result_id": 1176174,
+      "unique_source_seconds": 19.746,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "d5bac55a5efac2ae116ed0f7adc24be499bcca4788292ed4a675456be9dea3ae",
+      "prepared_float32_samples_sha256": "c4276dc2a1d4baf1a1475d65ec2418248e59bd62b9a1603bc091b7d28fa6344f",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788801,
+      "file": "4788801.wav",
+      "source_seconds": 15.447,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          20.089,
+          35.536
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "21ab6fe8f6d7af6d38e5156aadb8ecdbe365a11c89e0d2135dcecd55c4086595",
+      "score": 4.426754951477051,
+      "agent_id": 28261,
+      "scenario_id": 461455,
+      "result_id": 1176174,
+      "unique_source_seconds": 15.447,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "243e7dc21c1d49dea44548348e3137ecd92d8d749de5998ba2b04baaa62ad983",
+      "prepared_float32_samples_sha256": "03f9d8a4f8b8342771b43aff8309a0fbb8c90dab061c07d39d35848f0ec668bb",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788800,
+      "file": "4788800.wav",
+      "source_seconds": 27.467,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          18.766,
+          37.191
+        ],
+        [
+          49.735,
+          58.777
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "c1164991fad27dca4ca55eb4f70bdd17039d09ab4c13fe98a5b12db72ab77b20",
+      "score": 4.465564250946045,
+      "agent_id": 28261,
+      "scenario_id": 461454,
+      "result_id": 1176174,
+      "unique_source_seconds": 27.467,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "a752a16448a57993a43890f5b122a56a394f6871a078e44440a6d21e7776120e",
+      "prepared_float32_samples_sha256": "8dc141331a656ea3869de7f82fa954cdbff5c2600d0d4eb7653f8a09903556c5",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788799,
+      "file": "4788799.wav",
+      "source_seconds": 30.949,
+      "model_seconds": 30.949,
+      "spans": [
+        [
+          18.566,
+          36.751
+        ],
+        [
+          45.153,
+          57.917
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "3bb863424d15c141513aff7ed5d43f5e41f733546ece4a3401157991df0e94c8",
+      "score": 4.4737935066223145,
+      "agent_id": 28261,
+      "scenario_id": 461453,
+      "result_id": 1176174,
+      "unique_source_seconds": 30.949,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "a5140c45b604ebd946a9186f7e5627911c432c1d3e56c3f487d15350d8a9d862",
+      "prepared_float32_samples_sha256": "5d762a34bac1c5c0a1bbf63e26866314acceaa7011988fa0acf54866e0320733",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788798,
+      "file": "4788798.wav",
+      "source_seconds": 15.626,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          25.65,
+          41.276
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "164f99c9291094b7eb4d710edd4cdbce8e49aeb056f36b9d37b2ce607d31cea3",
+      "score": 4.466215133666992,
+      "agent_id": 28261,
+      "scenario_id": 461452,
+      "result_id": 1176174,
+      "unique_source_seconds": 15.626,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "114aa623e29342679f46a817c9a13f49958a27ca0d786afb7f9c6e5b02ea84bb",
+      "prepared_float32_samples_sha256": "7a70d5afc1cdb717d21a433b81d8cd3f8d48d93a9a9aec1cc6e30f4e1fa37ab8",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788797,
+      "file": "4788797.wav",
+      "source_seconds": 12.945,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          18.828,
+          22.309
+        ],
+        [
+          27.652,
+          37.116
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "6414e0dcd24982214119451abf7baa1d38f9c582601972587d3400a992a13511",
+      "score": 4.440988063812256,
+      "agent_id": 28261,
+      "scenario_id": 461451,
+      "result_id": 1176174,
+      "unique_source_seconds": 12.945,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "1173bc928db958ed5c91af86a31940f01da9ddc665b50ef010077d32351a3683",
+      "prepared_float32_samples_sha256": "590bcfa6a28fb41acf5333b4f88f05571e499664cce2cd813722c05f05002af9",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788796,
+      "file": "4788796.wav",
+      "source_seconds": 24.728,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          20.126,
+          39.852
+        ],
+        [
+          49.875,
+          54.877
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "383b05f13f9f4fbde45e00e97dfdedf4930d0da643e9d44bc2af0d512b2f8193",
+      "score": 4.517958641052246,
+      "agent_id": 28261,
+      "scenario_id": 461449,
+      "result_id": 1176174,
+      "unique_source_seconds": 24.728,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "9ad48612ae736a8233b2a6f9156fd26d7c28d5740919f8969132c31b95c2c908",
+      "prepared_float32_samples_sha256": "5cd9beacf61e64c8e9bb05893d7e4df6f2c6ed7d8e6a4cd02fba86dd9622c02a",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788795,
+      "file": "4788795.wav",
+      "source_seconds": 27.008,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          20.926,
+          37.511
+        ],
+        [
+          45.374,
+          55.797
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "6961690598d822bcfa470e29cecc8be2e73d040957ac68d4585f844268b51e15",
+      "score": 4.4260358810424805,
+      "agent_id": 28261,
+      "scenario_id": 461447,
+      "result_id": 1176174,
+      "unique_source_seconds": 27.008,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "903b9d0aaec941b24041bda8683dd803657d0853374ecdbde95cedeb9cc32948",
+      "prepared_float32_samples_sha256": "e310459214bd62c38293231a3c68d3f6fbe458d90a9e4e753607152612f5bedb",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788794,
+      "file": "4788794.wav",
+      "source_seconds": 30.129,
+      "model_seconds": 30.129,
+      "spans": [
+        [
+          19.546,
+          40.512
+        ],
+        [
+          47.334,
+          56.497
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "34498af718882c2446d82e8d05a68b9af9e4a25f61a40527c377c5c6ab0822df",
+      "score": 4.443087577819824,
+      "agent_id": 28261,
+      "scenario_id": 461445,
+      "result_id": 1176174,
+      "unique_source_seconds": 30.129,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "2cbdc73297fc85a8e8fd32da533f15f3b6dbed11d1291bb010afa4a663ce363b",
+      "prepared_float32_samples_sha256": "979ecbe7ea6b3e38e0d94b6565788545b61923f1357240de731c6b971f7dadf5",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788793,
+      "file": "4788793.wav",
+      "source_seconds": 53.29,
+      "model_seconds": 53.29,
+      "spans": [
+        [
+          19.544,
+          40.708
+        ],
+        [
+          49.59,
+          51.11
+        ],
+        [
+          58.572,
+          89.178
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "8412af1e26c9cdef2c2773164b9b5cc38218a3b9bd47d5028cff1fe3f78c9c8b",
+      "score": 4.553062438964844,
+      "agent_id": 28261,
+      "scenario_id": 461444,
+      "result_id": 1176174,
+      "unique_source_seconds": 53.29,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "da7d97abfcb5d764e1ebe1a637f75f35d580b8fb3600420e7c3e6efa424eff25",
+      "prepared_float32_samples_sha256": "f5b83e40032f884aa9af78e3e4506669df2430be939c4bf88f9a90c9c11c924d",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788792,
+      "file": "4788792.wav",
+      "source_seconds": 20.826,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          26.388,
+          44.453
+        ],
+        [
+          55.056,
+          57.817
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "4200226a2a08d8bd64566ef96fe7a7011c638a7221aeea5732cbdebfc1a8ff59",
+      "score": 4.441397190093994,
+      "agent_id": 28261,
+      "scenario_id": 461443,
+      "result_id": 1176174,
+      "unique_source_seconds": 20.826,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "1f436c47873cd068b9885f43c09744bf330c927644a5cddcc201faf197b86d7b",
+      "prepared_float32_samples_sha256": "d4416b6f09aded51b5862195a2608d14928e74a88cf08873d591837b93452b5e",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788791,
+      "file": "4788791.wav",
+      "source_seconds": 55.453,
+      "model_seconds": 55.453,
+      "spans": [
+        [
+          19.384,
+          40.529
+        ],
+        [
+          48.05,
+          82.358
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "6fe70bba249f829eac53b64d79c61353e4590a01d629d8191974e965e7e9a4d0",
+      "score": 4.475057125091553,
+      "agent_id": 28261,
+      "scenario_id": 461442,
+      "result_id": 1176174,
+      "unique_source_seconds": 55.453,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "ca14805c50655fa37cc6b4f37846a4f824acb080c3183b91fc7108c5b198fa63",
+      "prepared_float32_samples_sha256": "ddd7b901ab4dd956151a00e933bb65b74dbde9a87eb7cab6befb33e35d25815b",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788790,
+      "file": "4788790.wav",
+      "source_seconds": 50.592125,
+      "model_seconds": 50.592125,
+      "spans": [
+        [
+          19.304,
+          57.753
+        ],
+        [
+          64.374,
+          68.335
+        ],
+        [
+          73.436,
+          81.618
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "f16593068b8b48599997a13327bb9b1624eb3fc3fe990132ea557b2db2b6138d",
+      "score": 4.54874324798584,
+      "agent_id": 28260,
+      "scenario_id": 461435,
+      "result_id": 1176173,
+      "unique_source_seconds": 50.592125,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "2caf8cd408032d2fbac45f5063b54fbba06e35ffc006f2e48bf6497973d4194f",
+      "prepared_float32_samples_sha256": "59688992cdb690aa0c3711f91c55da2d994b5d952406780844a6a41776531e6c",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788789,
+      "file": "4788789.wav",
+      "source_seconds": 25.089,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          19.806,
+          34.231
+        ],
+        [
+          42.633,
+          53.297
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "65cbe1e40c69edbe783d94c4ac39c7c4fb72d68375df2a8c2681c3af8ca88cfa",
+      "score": 4.472276210784912,
+      "agent_id": 28260,
+      "scenario_id": 461433,
+      "result_id": 1176173,
+      "unique_source_seconds": 25.089,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "352e0a6047a664407091a23563295bfbea5d7463d7690ac240470bc37f8f60b7",
+      "prepared_float32_samples_sha256": "6360d2408c74e3dd76ec53f179341ff8a3de382a5fba537a6a7da7dd8ee16763",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788788,
+      "file": "4788788.wav",
+      "source_seconds": 12.446,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          19.55,
+          31.996
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "28f25a718c27b7e5812fad5330c3a4584b304314925364bea3ab563cd289b5b5",
+      "score": 4.482179164886475,
+      "agent_id": 28260,
+      "scenario_id": 461431,
+      "result_id": 1176173,
+      "unique_source_seconds": 12.446,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "945fb279c67ec219a0b0132cc310d35bceae1c2f88a2f5a332df6cdb80747488",
+      "prepared_float32_samples_sha256": "3c1ff8e7214d1a61104501075a414f56708fe5920a3730be86a047536dd8b422",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788787,
+      "file": "4788787.wav",
+      "source_seconds": 43.951,
+      "model_seconds": 43.951,
+      "spans": [
+        [
+          19.925,
+          46.491
+        ],
+        [
+          52.352,
+          56.193
+        ],
+        [
+          61.114,
+          74.658
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "ccd880848c8ee33770cc345b8d9a9d9be69eae802d72bee8c868f379e2f12473",
+      "score": 4.5156707763671875,
+      "agent_id": 28260,
+      "scenario_id": 461435,
+      "result_id": 1176173,
+      "unique_source_seconds": 43.951,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "1a6cff1edca48339c673cc26b06a58a3671d45dbf6b4a3acd34215a64ce86372",
+      "prepared_float32_samples_sha256": "bb2d8af110fa641ee744abec18ada12499f572cb2ecf161bee40751491675904",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788786,
+      "file": "4788786.wav",
+      "source_seconds": 21.906,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          20.687,
+          34.831
+        ],
+        [
+          43.754,
+          51.516
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "5d72ea7c84a4a53152308b5cbb29768e3ea4196ea3991f7bf49a319cbd8632b6",
+      "score": 4.468358039855957,
+      "agent_id": 28260,
+      "scenario_id": 461433,
+      "result_id": 1176173,
+      "unique_source_seconds": 21.906,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "184eddd0af6f8a0924c6d01df13ce6da290eb79c491734ecdfea88dc6cf72e2d",
+      "prepared_float32_samples_sha256": "afff531bf4e20a1bea1e0ef2801e591027729dbab76593a5d36f254efd4a496a",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788785,
+      "file": "4788785.wav",
+      "source_seconds": 15.427,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          19.869,
+          35.296
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "afe47a3e6ebd8e509ce67f8b3c6d800064b33bb56f37bb7b264e25c60cf26b84",
+      "score": 4.492323398590088,
+      "agent_id": 28260,
+      "scenario_id": 461431,
+      "result_id": 1176173,
+      "unique_source_seconds": 15.427,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "57d621218c8aedb8b9ab4002f57640b0a76e32893c9c69cb2e012fa98a8be614",
+      "prepared_float32_samples_sha256": "f81dda60c2abcce1536340f263e0c72efba44bce8363e8061cb3ed3865d04020",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788784,
+      "file": "4788784.wav",
+      "source_seconds": 19.966,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          24.908,
+          37.232
+        ],
+        [
+          46.935,
+          54.577
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "b684e1ea97ac36a86e68516965667fce35b2b5d5c2626be6c854cd8305490e49",
+      "score": 4.408838748931885,
+      "agent_id": 28260,
+      "scenario_id": 461441,
+      "result_id": 1176172,
+      "unique_source_seconds": 19.966,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "b5ee46c852d6870db34e5cadb5b05098cad41ba3b793f6555aa91e4c7c0d4a8d",
+      "prepared_float32_samples_sha256": "c5071dd60ad0058281dac49dda2783d7e948d8335da5fb8d621e5097ce924add",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788783,
+      "file": "4788783.wav",
+      "source_seconds": 17.207,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          20.429,
+          37.636
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "6ef230a67c9cdedb48787740ec297fef8342ed35c7a0c9215e05da880585e253",
+      "score": 4.471207618713379,
+      "agent_id": 28260,
+      "scenario_id": 461440,
+      "result_id": 1176172,
+      "unique_source_seconds": 17.207,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "b27c3491e35764625acac3ee71e75619c1855cd8bc661844e609d055e718552a",
+      "prepared_float32_samples_sha256": "f31c2e6a759987b3a7b45a81558df87068595bf98ff4f21906a33f4b360d56ff",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788782,
+      "file": "4788782.wav",
+      "source_seconds": 22.687,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          18.806,
+          33.171
+        ],
+        [
+          41.113,
+          41.453
+        ],
+        [
+          45.755,
+          53.737
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "4d7629bb541fcab8cd9deb65a9a0bc3b89c43793ca8bffc17538614ef86e9b09",
+      "score": 4.512703895568848,
+      "agent_id": 28260,
+      "scenario_id": 461439,
+      "result_id": 1176172,
+      "unique_source_seconds": 22.687,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "cfdc32327ada7a62d208d76eb652dde0153f6d1087abf649e7f2ffcbd9421fb0",
+      "prepared_float32_samples_sha256": "9cb1c1e6759372385c5fe7a9b5ebdab1f2b6a8b1a11513b7ac424bf9d977ac20",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788781,
+      "file": "4788781.wav",
+      "source_seconds": 28.088,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          19.806,
+          34.17
+        ],
+        [
+          43.253,
+          56.977
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "9784561ea53c2d142e97dcf71b8af1eb9e1fd0465a3c7c9a6f0be15d2b32b512",
+      "score": 4.496809482574463,
+      "agent_id": 28260,
+      "scenario_id": 461438,
+      "result_id": 1176172,
+      "unique_source_seconds": 28.088,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "39b0570a6593047239b4169249ac486ace2a5cffe4c92becd1f2f3d42ebe3929",
+      "prepared_float32_samples_sha256": "1d77946c7182ee7ef8c7762c01e55e365e085e669f157f85fc76deed0f92069d",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788780,
+      "file": "4788780.wav",
+      "source_seconds": 14.306,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          25.15,
+          39.456
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "827f724943a9cb2051ddbe064c31d22612e8f189cc0e3b91d7b560bbeb8b49e2",
+      "score": 4.433651924133301,
+      "agent_id": 28260,
+      "scenario_id": 461437,
+      "result_id": 1176172,
+      "unique_source_seconds": 14.306,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "1d14a27ca2d09bea70c05b92715d27ef9a22d3905561d18d9cb3f75807cd6510",
+      "prepared_float32_samples_sha256": "d3f5b9148365d2668c0c50dd427a4bd6afe28cdf812f51a8889b576069c6079a",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788779,
+      "file": "4788779.wav",
+      "source_seconds": 6.583,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          20.57,
+          24.852
+        ],
+        [
+          29.594,
+          31.895
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "e3f8b6341b87eddf846d7f3bd6fb75767921eec9e1058db595a35e5ae237beee",
+      "score": 3.2936229705810547,
+      "agent_id": 28260,
+      "scenario_id": 461436,
+      "result_id": 1176172,
+      "unique_source_seconds": 6.583,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "b66b6d5a89609a81243a6b15bd1a01b28bd901e6d9471a2c4aad9ec9e73a2fa5",
+      "prepared_float32_samples_sha256": "6d3893032095c7d5a18ed33ab2b4119fbd2afacf75da80ae201e7e199f2ed173",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788778,
+      "file": "4788778.wav",
+      "source_seconds": 45.67,
+      "model_seconds": 45.67,
+      "spans": [
+        [
+          21.985,
+          62.254
+        ],
+        [
+          72.157,
+          77.558
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "986bac5c7c5fbb328669d39b14067388fed31ce5839990c8a3d60ed7dc3bcccb",
+      "score": 4.535529613494873,
+      "agent_id": 28260,
+      "scenario_id": 461434,
+      "result_id": 1176172,
+      "unique_source_seconds": 45.67,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "67251d6a00772674a3c366fd815a444c208818acbf23544dded10525641cc68b",
+      "prepared_float32_samples_sha256": "5432ad026abbe2d316c3210b6bbc96b8c5fb568f8465e8e6b074616a563123fc",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788777,
+      "file": "4788777.wav",
+      "source_seconds": 22.768,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          20.927,
+          36.012
+        ],
+        [
+          43.554,
+          51.237
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "2eda290342e3c396d47fc423a9f3431806a904ea1b13fe694d812e4cc2d04f7b",
+      "score": 4.499144554138184,
+      "agent_id": 28260,
+      "scenario_id": 461432,
+      "result_id": 1176172,
+      "unique_source_seconds": 22.768,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "96e26234956fca3b9c214525bc4ebb4d13339156908d1332b73911da34f7f622",
+      "prepared_float32_samples_sha256": "6384dc3dd116f424b76a6124be6def9b528d45bc9267cbd1c5770e192682efba",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788776,
+      "file": "4788776.wav",
+      "source_seconds": 29.169,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          20.346,
+          40.532
+        ],
+        [
+          47.654,
+          56.637
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "c479c17a086b411a710f9cbeffe7a07350f25b20a40e93cb44af7fb3dea1911a",
+      "score": 4.4454545974731445,
+      "agent_id": 28260,
+      "scenario_id": 461430,
+      "result_id": 1176172,
+      "unique_source_seconds": 29.169,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "32ac6da26d0c377f4616a93dcf360914bd6588a84883acda3dc075af46cdbfb6",
+      "prepared_float32_samples_sha256": "e93948f490b79c8d3d38686e80c679b165a16a49816c9326094bd635b34424ed",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4790077,
+      "file": "4790077.wav",
+      "source_seconds": 45.771,
+      "model_seconds": 45.771,
+      "spans": [
+        [
+          19.645,
+          37.149
+        ],
+        [
+          44.391,
+          72.658
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "130b754bf6602c23851f806a0dcfb15a6388f1df1fea28d93596b85147633890",
+      "score": 4.468436241149902,
+      "agent_id": 28260,
+      "scenario_id": 461429,
+      "result_id": 1176669,
+      "unique_source_seconds": 45.771,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "f8239976b2e784953d74e152e6e6952acc7160564ef7b7bf1e8f2522656869ad",
+      "prepared_float32_samples_sha256": "975d23cd33e581592f38376e36de8f3c54ac0adff92bcc156c7695c5f91a7deb",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/caller-rerun-audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788774,
+      "file": "4788774.wav",
+      "source_seconds": 20.706,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          27.648,
+          45.573
+        ],
+        [
+          56.476,
+          59.257
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "f98dc5060f153894ff798e986ad4aface134f8b487db889653ae700cb112145d",
+      "score": 4.434277534484863,
+      "agent_id": 28260,
+      "scenario_id": 461428,
+      "result_id": 1176172,
+      "unique_source_seconds": 20.706,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "75038bd4d19ad796c8f1fd1f2ee58e5d37339ec326ac50881021c2f6c80e2dd3",
+      "prepared_float32_samples_sha256": "280e89052382e00e8054a4a959d6680c8f67ac072e2a72cb2a3b962c2039018d",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788773,
+      "file": "4788773.wav",
+      "source_seconds": 54.312,
+      "model_seconds": 54.312,
+      "spans": [
+        [
+          20.424,
+          38.888
+        ],
+        [
+          47.21,
+          83.058
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "06ab54a9660397c9b9fd000561b5ddf498db9aa5c50432cfd77a86755a068579",
+      "score": 4.427273750305176,
+      "agent_id": 28260,
+      "scenario_id": 461427,
+      "result_id": 1176172,
+      "unique_source_seconds": 54.312,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "a37945d4ab2c75117474aee90a9cb1486fb6503493f08ebed8dbd45cd7cd212b",
+      "prepared_float32_samples_sha256": "18038cc0f23ca47efa882380c39dac702d3d8b379c4fac2ef18440605dc6ed54",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788772,
+      "file": "4788772.wav",
+      "source_seconds": 19.726,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          25.288,
+          37.372
+        ],
+        [
+          47.495,
+          55.137
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "aca4d8dccd42dce5e52ca53bf7826230815f5a6735ce21bc874141f110c6ffcc",
+      "score": 4.464805603027344,
+      "agent_id": 28260,
+      "scenario_id": 461441,
+      "result_id": 1176172,
+      "unique_source_seconds": 19.726,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "165c1e1d19d4e321ada9eefb53eab48f75df03bd1d239a13828886054fdee14f",
+      "prepared_float32_samples_sha256": "917f265f42cae10d5fd0a6a1425cfcb836643b07bf80cae012dba01bf61ee02a",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788771,
+      "file": "4788771.wav",
+      "source_seconds": 14.447,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          21.209,
+          35.656
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "cd6c82f41ea60ef51c2f25c393c667c8cb2a5179919712bba3516da178457b0f",
+      "score": 4.452348709106445,
+      "agent_id": 28260,
+      "scenario_id": 461440,
+      "result_id": 1176172,
+      "unique_source_seconds": 14.447,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "04add3873b824e33ee2b5e672d2cf1bd20006d2b64c71e91898ba2d62f55dd45",
+      "prepared_float32_samples_sha256": "e5279c24383b3b63efc1f1355c2295615629c29863ed39fd602447ebe7f30703",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788770,
+      "file": "4788770.wav",
+      "source_seconds": 23.787,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          19.006,
+          33.37
+        ],
+        [
+          41.453,
+          41.673
+        ],
+        [
+          45.754,
+          54.957
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "df85de5acd3b28edce5f86721cc7e964a56c8ad43d6d1704045d380dbf30797d",
+      "score": 4.452238082885742,
+      "agent_id": 28260,
+      "scenario_id": 461439,
+      "result_id": 1176172,
+      "unique_source_seconds": 23.787,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "bb670c007b21912119ea04535c8cfa70f58251271b2eb251259241f6e27f1a45",
+      "prepared_float32_samples_sha256": "b3e50fd07d5654209bc270108dabe8269d9c597c83128bb5e42e816c609d5391",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788769,
+      "file": "4788769.wav",
+      "source_seconds": 27.388,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          19.646,
+          34.17
+        ],
+        [
+          43.173,
+          56.037
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "bd7bd835b5b22890b1505a5e88b880785d81b23834479c4412d3ce26a72cc3df",
+      "score": 4.458828926086426,
+      "agent_id": 28260,
+      "scenario_id": 461438,
+      "result_id": 1176172,
+      "unique_source_seconds": 27.388,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "3beaefdbbceaec9148271699e47199155fcd75b5b1d3b06e9edcaa2c44ec525a",
+      "prepared_float32_samples_sha256": "5192dcd1c1832e8f513c225832cd91bf42d16b7f14bd80764052ecbfdc2751bb",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788768,
+      "file": "4788768.wav",
+      "source_seconds": 15.926,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          25.23,
+          41.156
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "d8ad505c1fc554e657a8272a65dcce2c0f78677c54e545c3daa0debc9dc6c24a",
+      "score": 4.4281439781188965,
+      "agent_id": 28260,
+      "scenario_id": 461437,
+      "result_id": 1176172,
+      "unique_source_seconds": 15.926,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "4b0d2dc4dde42a83a9b0986d1e075afe61c09bf42d5cc4a1d6cda333086c3f82",
+      "prepared_float32_samples_sha256": "1fe452783cbe72b30ef81f6aee12d238442302703c5a210efb8a82bd1cbe2627",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788767,
+      "file": "4788767.wav",
+      "source_seconds": 6.003,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          18.97,
+          23.072
+        ],
+        [
+          27.474,
+          29.375
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "305370a81de8ca2a34f53f0e19e8923d4a70675bc7377d522e1fe74fd0b2589b",
+      "score": 3.509617805480957,
+      "agent_id": 28260,
+      "scenario_id": 461436,
+      "result_id": 1176172,
+      "unique_source_seconds": 6.003,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "cfce26e7ddfa1fde3e6f1293ace964a5efb8d2e77feb653cbce4c2d9ef4e9b3a",
+      "prepared_float32_samples_sha256": "fb83ff032d2001e5b92ab59c79c006752d4e0fc40f21e0007a26ac5d0c3a4b39",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788766,
+      "file": "4788766.wav",
+      "source_seconds": 45.211,
+      "model_seconds": 45.211,
+      "spans": [
+        [
+          20.085,
+          59.234
+        ],
+        [
+          69.036,
+          75.098
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "72bd618fd6909782b634f86dce93967b3666660ba99c35c695c353377807743a",
+      "score": 4.529787063598633,
+      "agent_id": 28260,
+      "scenario_id": 461434,
+      "result_id": 1176172,
+      "unique_source_seconds": 45.211,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "d827ace22d9db27c131f1e7230541235e9f1127161a21d7df141fd635303a013",
+      "prepared_float32_samples_sha256": "504c25063b3a216ee07568cda08bcd950d8b6c36f8e7719f4a08295a4cb2e8f5",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788765,
+      "file": "4788765.wav",
+      "source_seconds": 22.347,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          20.967,
+          35.211
+        ],
+        [
+          43.154,
+          51.257
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "f385e0efd0a5cdc1a232bf7901df5760db90722928253774e291406eae8760b4",
+      "score": 4.438941955566406,
+      "agent_id": 28260,
+      "scenario_id": 461432,
+      "result_id": 1176172,
+      "unique_source_seconds": 22.347,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "3c7ba9900cfe7fd3501a5fe5ae8cc2c58ed868b83a86788bc83afd8e9ca09d23",
+      "prepared_float32_samples_sha256": "cd2085f4017164101daef8eb294b5df0cf8de1189b41cfa6ad22db6511acc15b",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788764,
+      "file": "4788764.wav",
+      "source_seconds": 27.149,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          20.066,
+          37.592
+        ],
+        [
+          44.054,
+          53.677
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "ec7e0cfe4aab9671d577c70ddbfdad0511a62903d356f561ffc29fb891f462d1",
+      "score": 4.449962139129639,
+      "agent_id": 28260,
+      "scenario_id": 461430,
+      "result_id": 1176172,
+      "unique_source_seconds": 27.149,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "d63cf22c0900baa0424c33fb79665ca90b0e5eee236215ef038961d055914e45",
+      "prepared_float32_samples_sha256": "4749c09f1d214b54826425846ca85dbc29b2017977352c8038c895ab6f9cc399",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788763,
+      "file": "4788763.wav",
+      "source_seconds": 54.012,
+      "model_seconds": 54.012,
+      "spans": [
+        [
+          20.304,
+          40.489
+        ],
+        [
+          48.351,
+          82.178
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "5af4d31f82993dba1b87c98b630c03e68fa2f2ff617c36280972525f4da7ea73",
+      "score": 4.455225944519043,
+      "agent_id": 28260,
+      "scenario_id": 461429,
+      "result_id": 1176172,
+      "unique_source_seconds": 54.012,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "3488e59b65145372cbcb673c66f66882f1c8710603538c0340b6d20a322ec4d9",
+      "prepared_float32_samples_sha256": "49b3fda10caa848944eb7ff7394bd005dbc57c548eea30766fe06e62fc3f1c50",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788762,
+      "file": "4788762.wav",
+      "source_seconds": 20.746,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          28.088,
+          46.073
+        ],
+        [
+          57.376,
+          60.137
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "953646b6d006dcc697c4b6f6fb369c357569bec4531d8e990de305239e60121e",
+      "score": 4.411877155303955,
+      "agent_id": 28260,
+      "scenario_id": 461428,
+      "result_id": 1176172,
+      "unique_source_seconds": 20.746,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "aecbc9e9abf52838a42e944f144ee7ef253b1def2ec0f69661c2985da01b7b1c",
+      "prepared_float32_samples_sha256": "7b8fe4387a73fe4c469d9604e9a11cfc7d511259b5148d47efbd87947b863e7e",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788761,
+      "file": "4788761.wav",
+      "source_seconds": 49.671,
+      "model_seconds": 49.671,
+      "spans": [
+        [
+          19.745,
+          39.749
+        ],
+        [
+          47.771,
+          77.438
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "e10acb8898f9a7c774f04ddc095e940b047dc168c8e13a14a34a6eda26b3df0b",
+      "score": 4.423639297485352,
+      "agent_id": 28260,
+      "scenario_id": 461427,
+      "result_id": 1176172,
+      "unique_source_seconds": 49.671,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "83acb5b4574c3d9a83bf064230e1595d28798f4edb547dfc9b313efd0671b77d",
+      "prepared_float32_samples_sha256": "a9339fe6a4b9e277bccd3bac23d64c6adac6f3774cc60a7de0a2e99b7f3d39fd",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788760,
+      "file": "4788760.wav",
+      "source_seconds": 19.666,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          26.128,
+          38.192
+        ],
+        [
+          48.115,
+          55.717
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "3d9705b2fe1a3d866c3f4b705de19922b68895be31dd5bee06fc97e843d94d7e",
+      "score": 4.481564044952393,
+      "agent_id": 28260,
+      "scenario_id": 461441,
+      "result_id": 1176172,
+      "unique_source_seconds": 19.666,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "bd0a493ebc032974603f762abac921058dc77e0405387fe8c7a796aa27e1ca6d",
+      "prepared_float32_samples_sha256": "a848f3de520a53d97de71d460a6a4f2a29740f85c7ddae02f3b8de8bd632f4f0",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788759,
+      "file": "4788759.wav",
+      "source_seconds": 12.226,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          20.689,
+          32.915
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "f5f9decacc951bc4c1e939a8caa9e7d290d8a3163ef7b4e98386ea0c43133b20",
+      "score": 4.489353179931641,
+      "agent_id": 28260,
+      "scenario_id": 461440,
+      "result_id": 1176172,
+      "unique_source_seconds": 12.226,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "1294d79a80a2ac9825e6aae651e5cc5fa8d8ade63aad5523bec0590b90145c05",
+      "prepared_float32_samples_sha256": "534948846841a00e19c31db96afa50a3bed466e43dce8d900bcaad45c4106289",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788758,
+      "file": "4788758.wav",
+      "source_seconds": 21.847,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          18.746,
+          31.41
+        ],
+        [
+          39.273,
+          39.593
+        ],
+        [
+          43.854,
+          52.717
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "87a6e5631b27d8497fbf3c741f1b73f014d6d3af2a7ffb6493a727acabd34076",
+      "score": 4.493252754211426,
+      "agent_id": 28260,
+      "scenario_id": 461439,
+      "result_id": 1176172,
+      "unique_source_seconds": 21.847,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "767c4f6c65cea0d3548d65bb2e99298f3276cf49910d5ad3f8f16c5b475ef616",
+      "prepared_float32_samples_sha256": "38147b6bfca967bce53782765c19facda1b7026784d33fb67e6574218b95e8a0",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788757,
+      "file": "4788757.wav",
+      "source_seconds": 27.948,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          19.826,
+          34.11
+        ],
+        [
+          42.913,
+          56.577
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "e89a6e6d9cf887b236010cbfd911729f806643af148d806496dfc08a317282d6",
+      "score": 4.433559417724609,
+      "agent_id": 28260,
+      "scenario_id": 461438,
+      "result_id": 1176172,
+      "unique_source_seconds": 27.948,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "daeeff7febe821e4defda81f00e0a77b828cddc889de81ed4172f5e304f1d231",
+      "prepared_float32_samples_sha256": "98eb198105e82e764efcaa648f1da1bcef49445bd185d6cfc645bd9ef06c6ce9",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788756,
+      "file": "4788756.wav",
+      "source_seconds": 15.946,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          24.97,
+          40.916
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "799f6aa7b0bf374eec5d368c745c24744d50cb7ba7c0b45055c2ee1d960f4d68",
+      "score": 4.4946393966674805,
+      "agent_id": 28260,
+      "scenario_id": 461437,
+      "result_id": 1176172,
+      "unique_source_seconds": 15.946,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "ec3a6dd7e3c12e124608d37febdf2677749e7b1ab7be6536a18730ee8e7b163d",
+      "prepared_float32_samples_sha256": "1db26525a5704f8e3425b3561963fd49c38fc4ac876f49fe30e4a28ce7daefab",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788755,
+      "file": "4788755.wav",
+      "source_seconds": 6.203,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          19.61,
+          23.532
+        ],
+        [
+          28.994,
+          31.275
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "2db8a5b9784f364ce883823be47ef2cf5c88c691c717a0ffa9de6d7d9647f898",
+      "score": 4.486577987670898,
+      "agent_id": 28260,
+      "scenario_id": 461436,
+      "result_id": 1176172,
+      "unique_source_seconds": 6.203,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "6e04a87bb01e7bd8442be134b5e15c2fcfde8faae29b954a69c1f881b07a66f2",
+      "prepared_float32_samples_sha256": "2d39b610ef2f31c20f33ed9d0b3efde795e012fa50e55456633328ee99328cb7",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788754,
+      "file": "4788754.wav",
+      "source_seconds": 45.071,
+      "model_seconds": 45.071,
+      "spans": [
+        [
+          21.645,
+          60.534
+        ],
+        [
+          70.856,
+          77.038
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "5cf4b3ee8220f7e7de5b11c9d95529e296861ceaeab715f918e5f20b756ea68a",
+      "score": 4.4978742599487305,
+      "agent_id": 28260,
+      "scenario_id": 461434,
+      "result_id": 1176172,
+      "unique_source_seconds": 45.071,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "1939fa36161d928d8065c5cad8c673e8d36ee2165cafa62daaa5cd70218722a4",
+      "prepared_float32_samples_sha256": "c2e2396b94d89e104138edd45dba22ab0416f9bdd996395334d15ea9451d926c",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788753,
+      "file": "4788753.wav",
+      "source_seconds": 22.668,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          20.967,
+          35.712
+        ],
+        [
+          43.674,
+          51.597
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "e691b112350d50f902f420d7008c25d4f4318a79166e3d2024554a3ef2a9a40b",
+      "score": 4.489711761474609,
+      "agent_id": 28260,
+      "scenario_id": 461432,
+      "result_id": 1176172,
+      "unique_source_seconds": 22.668,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "48c18f440f39eb670001e238a67966009f7f491388258275ae24c18b7aa4403b",
+      "prepared_float32_samples_sha256": "c71b842ed74ff39fa0bbaecc5535ea6bb65c5210a634f97fca615fd194383b98",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788752,
+      "file": "4788752.wav",
+      "source_seconds": 30.189,
+      "model_seconds": 30.189,
+      "spans": [
+        [
+          20.866,
+          40.952
+        ],
+        [
+          48.154,
+          58.257
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "973a6729c65acaa33448fbd9649ed496579a464d1b60bc011b4e6fecce417029",
+      "score": 4.439046382904053,
+      "agent_id": 28260,
+      "scenario_id": 461430,
+      "result_id": 1176172,
+      "unique_source_seconds": 30.189,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "df2acf6529d52a63c372b5f10782bacd0d2552f6f5f48e214a499cb45f335dc7",
+      "prepared_float32_samples_sha256": "3fcb55042751cbaae025b2649c9b053872f320edd65f49d3beaf2037fc3a05ff",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4790076,
+      "file": "4790076.wav",
+      "source_seconds": 56.261,
+      "model_seconds": 56.261,
+      "spans": [
+        [
+          19.064,
+          40.469
+        ],
+        [
+          48.371,
+          83.227
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "f489b6518ff7675bf81f9e99ec953b7c117e097426c4cbe29a3132d0aa777ce8",
+      "score": 4.503013610839844,
+      "agent_id": 28260,
+      "scenario_id": 461429,
+      "result_id": 1176669,
+      "unique_source_seconds": 56.261,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "b89c0c09f4d25d188324869004c727691eeee45c2fba0335abda97ff18661cba",
+      "prepared_float32_samples_sha256": "c9aad303b88bb962b3877714cf7a2281f156c52777ce4450c1894a795724d916",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/caller-rerun-audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788750,
+      "file": "4788750.wav",
+      "source_seconds": 18.206,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          27.368,
+          42.933
+        ],
+        [
+          53.796,
+          56.437
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "310b9292ccaeb27d8af4f164dfb7e5969de7d76aa3df3e642a251e6f2542c5f8",
+      "score": 4.4146575927734375,
+      "agent_id": 28260,
+      "scenario_id": 461428,
+      "result_id": 1176172,
+      "unique_source_seconds": 18.206,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "04640c90ae5c5868631f4c90dc3cd0b41aa595bbf7f2dae0d76f0cac8f9a54c6",
+      "prepared_float32_samples_sha256": "667f0a71c00bcde276b0930dd06c554aadc8bd50f565528fd6fcfa0dfa378727",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788749,
+      "file": "4788749.wav",
+      "source_seconds": 52.212,
+      "model_seconds": 52.212,
+      "spans": [
+        [
+          19.704,
+          39.989
+        ],
+        [
+          47.831,
+          79.758
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "caf4d36069b707b6e116786cef7bf60f0400781e6f934f3ca4f6b81abfda370a",
+      "score": 4.4976654052734375,
+      "agent_id": 28260,
+      "scenario_id": 461427,
+      "result_id": 1176172,
+      "unique_source_seconds": 52.212,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "461a2a6f95f9b744b069f0646bccfa5af927ade3272be359fb8b9e35235c70e2",
+      "prepared_float32_samples_sha256": "538fc17d8272b62ba9c5b6790f53f1e4a72fd3658c7bcefe375bac3580077683",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788675,
+      "file": "4788675.wav",
+      "source_seconds": 45.47,
+      "model_seconds": 45.47,
+      "spans": [
+        [
+          20.185,
+          50.471
+        ],
+        [
+          57.153,
+          60.994
+        ],
+        [
+          66.295,
+          77.638
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "7d8e3378bf9c7429703e8fff29c04bb2ed1b2b555063772bf4bdb187dbdeeab4",
+      "score": 4.495361328125,
+      "agent_id": 28261,
+      "scenario_id": 461450,
+      "result_id": 1176115,
+      "unique_source_seconds": 45.47,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "4069a0583e723381eeabe8bb7d5b319a9c80d2fd26bd7e89eb949320ea80b12d",
+      "prepared_float32_samples_sha256": "90e11505d8874f385651073126858ee8e0848afa1b59b87c1916fcce3f36ae51",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788674,
+      "file": "4788674.wav",
+      "source_seconds": 20.747,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          19.407,
+          31.931
+        ],
+        [
+          39.734,
+          47.957
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "8b94adaed0da90562225e3eddefe702cbe849d2342ea4186e2fdeb3afa08c2e1",
+      "score": 4.483697891235352,
+      "agent_id": 28261,
+      "scenario_id": 461448,
+      "result_id": 1176115,
+      "unique_source_seconds": 20.747,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "c555f86205d176d9e80a99297c07fc7216207659c6e0161e0d400e9eb0ef73d9",
+      "prepared_float32_samples_sha256": "5ed9b27159c8b6ef8c6ae0fd1e82ea3eb7e29fb42aba1fc0a2d4999caa844182",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788673,
+      "file": "4788673.wav",
+      "source_seconds": 14.287,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          19.369,
+          33.656
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "7b11a5ca14f17055981dd06756a3aa788857f4856e9730a498d4a7b4928c89f0",
+      "score": 4.4609808921813965,
+      "agent_id": 28261,
+      "scenario_id": 461446,
+      "result_id": 1176115,
+      "unique_source_seconds": 14.287,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "689cc898c1b41df0afdb79e5c7133b4b7b21e5cd53cb44a40852d3810f36e4c8",
+      "prepared_float32_samples_sha256": "988458aaaaaa88ec4f719165871dcc9af6753a6bcb3fc7addfe3a16770cdbd94",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788672,
+      "file": "4788672.wav",
+      "source_seconds": 57.651,
+      "model_seconds": 57.651,
+      "spans": [
+        [
+          20.584,
+          62.252
+        ],
+        [
+          68.954,
+          72.595
+        ],
+        [
+          77.556,
+          89.898
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "9b241d166586177dfdaf9080f215e57736116c9ef50551d4fe13576165c06d74",
+      "score": 4.553791046142578,
+      "agent_id": 28260,
+      "scenario_id": 461435,
+      "result_id": 1176114,
+      "unique_source_seconds": 57.651,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "1866afbea3e90debeccf459aa289312165e848b9dbae771483c76a889ef4fb13",
+      "prepared_float32_samples_sha256": "6eb37e9f55ea9689bd6b5797292f76e8df3bb59be6c57993708411a926326c1a",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788671,
+      "file": "4788671.wav",
+      "source_seconds": 19.128,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          18.807,
+          31.532
+        ],
+        [
+          39.154,
+          45.557
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "954c9790b99a2384022095055f7e8cc72f65fdb37c93f5c01fb8bc2ed595b0c4",
+      "score": 4.488018035888672,
+      "agent_id": 28260,
+      "scenario_id": 461433,
+      "result_id": 1176114,
+      "unique_source_seconds": 19.128,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "07fb29f1c3f5550456a8dc5aa3be4de599a5adc6ca503a43140bd74f0e113d79",
+      "prepared_float32_samples_sha256": "7fc9e40544a431d4a5391a60a4cde716fcddcd33ae276bb3a2a21894ad2dc7f6",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788670,
+      "file": "4788670.wav",
+      "source_seconds": 15.367,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          19.389,
+          34.756
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "67904d189351b0a24b2cbe159b405f8262a9459980c3ed40353a14cd37dffe97",
+      "score": 4.485708236694336,
+      "agent_id": 28260,
+      "scenario_id": 461431,
+      "result_id": 1176114,
+      "unique_source_seconds": 15.367,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "b7e850caba0d2b813f04cf5d9cbf7f5236932a743e3f84c95f13d279a137a9a7",
+      "prepared_float32_samples_sha256": "59e7ceef78a9ff64df55b6f840dff7a97595fbe291c37688626a9905a4c70a29",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788874,
+      "file": "4788874.wav",
+      "source_seconds": 59.712,
+      "model_seconds": 59.712,
+      "spans": [
+        [
+          19.824,
+          63.613
+        ],
+        [
+          69.694,
+          73.255
+        ],
+        [
+          78.156,
+          90.518
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "5166b7c6e674d7e6110f2aaaf44ed26197b2e8a1fe351f3b519eef80f6a0d673",
+      "score": 4.478559494018555,
+      "agent_id": 28262,
+      "scenario_id": 461465,
+      "result_id": 1176177,
+      "unique_source_seconds": 59.712,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "b82a2072abde694006222a0537a34bd0cc415e73cbbf1de4c6735110d4798109",
+      "prepared_float32_samples_sha256": "156d9564b8408dc2a39947267987c256ead0cc9fd57f5c8c0ee383155a24ef1a",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788873,
+      "file": "4788873.wav",
+      "source_seconds": 22.028,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          19.226,
+          33.511
+        ],
+        [
+          42.314,
+          50.057
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "5a3c73f9b4126d3347df9aefffe72e1b5ab8a49d049afa545d97df0ea216b67b",
+      "score": 4.443078994750977,
+      "agent_id": 28262,
+      "scenario_id": 461463,
+      "result_id": 1176177,
+      "unique_source_seconds": 22.028,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "b255615b4c881a92de66b74ac95db3ab5b2c96f13b9d9cbbea61ac0b8c8e2337",
+      "prepared_float32_samples_sha256": "1ae10c44c4655bb4bf7c5c1592821e6459f4c0b48e49e544a24e0fe2f802251b",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788872,
+      "file": "4788872.wav",
+      "source_seconds": 14.306,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          18.889,
+          33.195
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "6bd646ae4ec937449fad3ce718512ab4b357ae9fdf65417390e18508687ecd5c",
+      "score": 4.444293022155762,
+      "agent_id": 28262,
+      "scenario_id": 461461,
+      "result_id": 1176177,
+      "unique_source_seconds": 14.306,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "fe353bfa1524355011b368f359f4877e268471e2c7d2214ab2064936472aebd2",
+      "prepared_float32_samples_sha256": "af259bc6140e07adc23f46061e03e328cda0ad1875bc90e58f6a6e80c757f92d",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788871,
+      "file": "4788871.wav",
+      "source_seconds": 49.451,
+      "model_seconds": 49.451,
+      "spans": [
+        [
+          19.104,
+          55.872
+        ],
+        [
+          61.934,
+          65.075
+        ],
+        [
+          70.136,
+          79.678
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "56a3c4d97af0f97e5136eb3596d81189bc45728b5fda4c79140f795b5bcad60c",
+      "score": 4.513027667999268,
+      "agent_id": 28262,
+      "scenario_id": 461465,
+      "result_id": 1176177,
+      "unique_source_seconds": 49.451,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "a35aa8c600ea9455cb6b2a9f293daee4d7863e8b3501b33eebe7062795fa17a9",
+      "prepared_float32_samples_sha256": "b2a3419dc490038e746781476e534ca29253028556ad843b7372c4b4e6ca31c2",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788870,
+      "file": "4788870.wav",
+      "source_seconds": 20.907,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          19.567,
+          34.232
+        ],
+        [
+          42.274,
+          48.516
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "f407c04e94415f9e8395c18211529575b161e5e2b7c3057d8067079a0aff5927",
+      "score": 4.497493743896484,
+      "agent_id": 28262,
+      "scenario_id": 461463,
+      "result_id": 1176177,
+      "unique_source_seconds": 20.907,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "6a6997fa0d1f9321c5466865e7be70960eb22f099ca21532ec08556f9833de53",
+      "prepared_float32_samples_sha256": "be473584a3935140da31b74ac8fdbcc7ed6de3ed6d0cc9bf471a2ee916d83cc4",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788869,
+      "file": "4788869.wav",
+      "source_seconds": 14.407,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          19.009,
+          33.416
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "86e31d926bfcfe51f0e2dd7b25314ebac727c11f78213b448109565b7ffa8e9c",
+      "score": 4.445833206176758,
+      "agent_id": 28262,
+      "scenario_id": 461461,
+      "result_id": 1176177,
+      "unique_source_seconds": 14.407,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "1a87a670ac05b2eccc228c4f9cb04edcd2aa5917c026795e65d025229cd0811a",
+      "prepared_float32_samples_sha256": "8ada6f05b465bd06234542eefeb85c02174c6afcf37d5ca2726990f761614b39",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788868,
+      "file": "4788868.wav",
+      "source_seconds": 19.166,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          24.988,
+          37.132
+        ],
+        [
+          47.775,
+          54.797
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "97fced21091c620c651a687f42a788c8a395dcfe6ea9bfc26cfd82e4d311da2a",
+      "score": 4.463710308074951,
+      "agent_id": 28262,
+      "scenario_id": 461471,
+      "result_id": 1176176,
+      "unique_source_seconds": 19.166,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "674837b23245ed3dfffc6a31392d763f440d5048703a78d79b15ccb6a237940d",
+      "prepared_float32_samples_sha256": "dcc6c97903ad5f6bb5417d9fa2d6be2d8453dccab9db2b27fa716576712eba33",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788867,
+      "file": "4788867.wav",
+      "source_seconds": 14.307,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          19.949,
+          34.256
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "3a683f1382d781128f8cad69e7ea26507cb28a79390ab8dcfc106dcd2e0711db",
+      "score": 4.498823165893555,
+      "agent_id": 28262,
+      "scenario_id": 461470,
+      "result_id": 1176176,
+      "unique_source_seconds": 14.307,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "aaa567638b1dfd0a4777ea05187f631fff43faea07a0ba4e1a07c7e58162fe3c",
+      "prepared_float32_samples_sha256": "4c0c8e28b0c9c35e18f55ae6b02bf92931746ecae89a8267d80dc0f9c33427e3",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4790080,
+      "file": "4790080.wav",
+      "source_seconds": 27.507,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          18.586,
+          36.791
+        ],
+        [
+          48.375,
+          57.677
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "74f74db4d04c1c6590091ffdd19450f02aa9527fefdfb73732d545d68fcba1b7",
+      "score": 4.504579544067383,
+      "agent_id": 28262,
+      "scenario_id": 461469,
+      "result_id": 1176671,
+      "unique_source_seconds": 27.507,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "cb519f663881f3e08c1980ad3936ae06911fef9a5752dd12fa67afe08fe5ed66",
+      "prepared_float32_samples_sha256": "d2045f91436cd0cb122ca6710480213e98567850301b10e545666316ada73030",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/caller-rerun-audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788865,
+      "file": "4788865.wav",
+      "source_seconds": 32.129,
+      "model_seconds": 32.129,
+      "spans": [
+        [
+          18.986,
+          36.951
+        ],
+        [
+          45.313,
+          59.477
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "90e2e3e14e69e9fe35c0137af314ef36c61eeff34d21596f79c28397fe68dfc8",
+      "score": 4.426455020904541,
+      "agent_id": 28262,
+      "scenario_id": 461468,
+      "result_id": 1176176,
+      "unique_source_seconds": 32.129,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "a19cbf203ac91f6b5ad6c19a09a617fbd2dea0324ac61e893a684c948fdc13b1",
+      "prepared_float32_samples_sha256": "565221401c59ede5189f14d7f7cb469a64b7ef65e3ec84d1605632b7d2973f25",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788864,
+      "file": "4788864.wav",
+      "source_seconds": 15.806,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          24.89,
+          40.696
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "15dcc787b3715e70da1e6080572493fbd4bf81046a977a5b2e32ae2fd9f08c24",
+      "score": 4.487553596496582,
+      "agent_id": 28262,
+      "scenario_id": 461467,
+      "result_id": 1176176,
+      "unique_source_seconds": 15.806,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "ae3b1143ddb10b79728747dcbb6e6f60227f6b3564c1dcdecd2d25bf5c5d4855",
+      "prepared_float32_samples_sha256": "264f5003f1435ea28b2d9037d949cdf0c86005e75993f5e5ddb38638addfce58",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788863,
+      "file": "4788863.wav",
+      "source_seconds": 6.263,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          20.07,
+          24.052
+        ],
+        [
+          29.395,
+          31.676
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "e8bc7ffc863019e9e4a946e05b9b8358127104629fb743986c9841608acb6835",
+      "score": 2.721750259399414,
+      "agent_id": 28262,
+      "scenario_id": 461466,
+      "result_id": 1176176,
+      "unique_source_seconds": 6.263,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "3a3ab031580241fa70fdbd149d51e7d0ecff4953d8ff1dccd44389d477beda37",
+      "prepared_float32_samples_sha256": "a6aab3c51ca03bc0c81f74d01988c03b75cd9415e029bf1cf733fb673c6e8f57",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788862,
+      "file": "4788862.wav",
+      "source_seconds": 27.148,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          20.166,
+          42.733
+        ],
+        [
+          52.776,
+          57.357
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "45fec083a19e7cb55e56eb4012fdce6257be2a1fbdbb6c701d1dcea336c31119",
+      "score": 4.4876508712768555,
+      "agent_id": 28262,
+      "scenario_id": 461464,
+      "result_id": 1176176,
+      "unique_source_seconds": 27.148,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "2962b4e4e7861383eec8ad3672457bac9812868cd1d3d5a4b925f61e17d25e7e",
+      "prepared_float32_samples_sha256": "8a781ee866046b8ea09fbdbccc360778c95f5b12c84966c65ca061e98da7eae2",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788861,
+      "file": "4788861.wav",
+      "source_seconds": 20.206,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          21.127,
+          33.391
+        ],
+        [
+          40.934,
+          48.876
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "890eff8486004d4fadf3df524e9ad4c904d797a61b1dbcdd42db53d9ff867485",
+      "score": 4.409937858581543,
+      "agent_id": 28262,
+      "scenario_id": 461462,
+      "result_id": 1176176,
+      "unique_source_seconds": 20.206,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "2a8ab69331ed38e2d71f10f8ebe62d898b2c2a41e08a4b84662bdf6a788dc823",
+      "prepared_float32_samples_sha256": "c67dd14fc1f19ee591d684964e0fd60ee483cac075414aff557630cac4490313",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788860,
+      "file": "4788860.wav",
+      "source_seconds": 29.169,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          20.706,
+          40.972
+        ],
+        [
+          47.654,
+          56.557
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "bd4d455bac18f17e789f21ff6d7055a4ce15d0db2b8d8759fa0ab6316c18753c",
+      "score": 4.437871932983398,
+      "agent_id": 28262,
+      "scenario_id": 461460,
+      "result_id": 1176176,
+      "unique_source_seconds": 29.169,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "8bf08825d5f02aab4434958313bfec92abd0efee3da9b9285571fab8e8b00c63",
+      "prepared_float32_samples_sha256": "940ccf98394e98b0ff902efde7f4b586b2b1bc6bd6c84e2c5b88ad4f1b020d6b",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788859,
+      "file": "4788859.wav",
+      "source_seconds": 50.932,
+      "model_seconds": 50.932,
+      "spans": [
+        [
+          19.864,
+          40.229
+        ],
+        [
+          48.791,
+          79.358
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "d9ee49dbc761e9d392649ee37e825e03eebeedf34dae894cf6091dfc60a3f4da",
+      "score": 4.4744672775268555,
+      "agent_id": 28262,
+      "scenario_id": 461459,
+      "result_id": 1176176,
+      "unique_source_seconds": 50.932,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "125cc7ebad924156e11ca4c937a1beaee2e8069a31b24ed8f349d48c4606eb8c",
+      "prepared_float32_samples_sha256": "ee3472d8b851c09ee585e640c2060260058ddf1b960e7fafb8b109e5c0823dc6",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788858,
+      "file": "4788858.wav",
+      "source_seconds": 20.906,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          26.968,
+          45.093
+        ],
+        [
+          56.036,
+          58.817
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "934e287db55a432d075defdd33a61cd5a2046f6caa1c3aab8ffbc0e833de245a",
+      "score": 4.408069133758545,
+      "agent_id": 28262,
+      "scenario_id": 461458,
+      "result_id": 1176176,
+      "unique_source_seconds": 20.906,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "d3078e96f77fcf4115f268e0c61ebe52eaa29dab4ea107d288a9008ca0192f0a",
+      "prepared_float32_samples_sha256": "e2c005ffb1ec4da6642515f54bd8c0eb4b927311f069fb9e9dc13a5ec3d63a43",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788857,
+      "file": "4788857.wav",
+      "source_seconds": 49.151,
+      "model_seconds": 49.151,
+      "spans": [
+        [
+          19.525,
+          39.769
+        ],
+        [
+          47.391,
+          76.298
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "0f7725fd55f2298c7108169be023b84262e68e56f5fd81926df2ca530a398661",
+      "score": 4.45890998840332,
+      "agent_id": 28262,
+      "scenario_id": 461457,
+      "result_id": 1176176,
+      "unique_source_seconds": 49.151,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "5ef883de78a17a38b175ef4d3a5fc2ed569d64ccd77d0a6d40f912a3b361de3a",
+      "prepared_float32_samples_sha256": "784bdeace73fecc293c35e88139698b5f37f9637b981772c27a6f6d91d721ea9",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788856,
+      "file": "4788856.wav",
+      "source_seconds": 17.266,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          24.408,
+          36.532
+        ],
+        [
+          46.595,
+          51.737
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "e5956e8df4cd8b5da48db542b3d967b31b78899fbea09e43d8be2ebbf3d02356",
+      "score": 4.537567138671875,
+      "agent_id": 28262,
+      "scenario_id": 461471,
+      "result_id": 1176176,
+      "unique_source_seconds": 17.266,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "2684337c423e37ebe8fb60bdda8c1244689e3e30f5a2a22cf9c850c0391f0459",
+      "prepared_float32_samples_sha256": "60a7f4ca53af06df000876a224aab7f8141041b5b73f661d38c5bc94bf9a34af",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788855,
+      "file": "4788855.wav",
+      "source_seconds": 12.246,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          21.109,
+          33.355
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "12181c49fea1de6778bcd3251817297b7104a2a43c7373844df825db2fe718eb",
+      "score": 4.509234428405762,
+      "agent_id": 28262,
+      "scenario_id": 461470,
+      "result_id": 1176176,
+      "unique_source_seconds": 12.246,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "93841049c4bb678d74c0c10825472a0bd1fbd87dc1a55f543f49473b8a18070b",
+      "prepared_float32_samples_sha256": "c47af3762fbec7f2c1ca9684f683892fd65915473d26e0a8947ae9f94c1fbcd7",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788854,
+      "file": "4788854.wav",
+      "source_seconds": 24.707,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          18.466,
+          36.511
+        ],
+        [
+          44.534,
+          44.814
+        ],
+        [
+          48.855,
+          55.237
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "7e01274ec5976cd54403edd518a3596e5ca05605722ba5828533190a1a02e5a6",
+      "score": 4.179628849029541,
+      "agent_id": 28262,
+      "scenario_id": 461469,
+      "result_id": 1176176,
+      "unique_source_seconds": 24.707,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "cb9f60dad0fa9d7a3cd962d45172621795b2db7c39160ed012c620d42c53ad3b",
+      "prepared_float32_samples_sha256": "cde0ec71c7374cd44a6183aa704430d6da0b65e018bf5abe9c131ab74ea455af",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788853,
+      "file": "4788853.wav",
+      "source_seconds": 27.828,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          19.166,
+          36.991
+        ],
+        [
+          45.994,
+          55.997
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "5211833501c1f464eb1cea2db546c612bcf2a59c9133e1a915626dcc36c93f6a",
+      "score": 4.448354721069336,
+      "agent_id": 28262,
+      "scenario_id": 461468,
+      "result_id": 1176176,
+      "unique_source_seconds": 27.828,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "7d3e4b4ff8963ef7e1cd948686d9b6f8cac831cfa3e8fe8f00f0e47fa4218ead",
+      "prepared_float32_samples_sha256": "c9ee5c4122b7236e0579609cd65b856409f83b1fdb02887bfcef549be15a8b51",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788852,
+      "file": "4788852.wav",
+      "source_seconds": 15.866,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          25.83,
+          41.696
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "2000fec889b1903dec159d24d040c1de33cf920e3745559e403bb76c694d859d",
+      "score": 4.541666507720947,
+      "agent_id": 28262,
+      "scenario_id": 461467,
+      "result_id": 1176176,
+      "unique_source_seconds": 15.866,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "955783a9f025607cfd635bd267a2e6092c5eef7b32a115e8e31bbeefa41888e2",
+      "prepared_float32_samples_sha256": "71738c90664f222091239402a00a1c7e47e0afd4a57495f05370743293b637b5",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788851,
+      "file": "4788851.wav",
+      "source_seconds": 12.806,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          18.328,
+          21.83
+        ],
+        [
+          26.392,
+          35.696
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "37fe8d2068a311970ceb999fc136d6a7eff76e1feeac3e2414ac3f977f2174d3",
+      "score": 4.488796234130859,
+      "agent_id": 28262,
+      "scenario_id": 461466,
+      "result_id": 1176176,
+      "unique_source_seconds": 12.806,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "c191f7ecd41e29f1617000ab84c6556db811cfed0fa44cadcfe2a3395c7ef916",
+      "prepared_float32_samples_sha256": "7671ea618f198b9d042463a54bf3b3760634e02847dd4cbf0a43b002bff60c70",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788850,
+      "file": "4788850.wav",
+      "source_seconds": 26.588,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          20.306,
+          42.353
+        ],
+        [
+          51.896,
+          56.437
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "50464cbe4e0692e8c60d43c1339cd0a64e07c90bf912f94cfb4bf65960673a68",
+      "score": 4.463089942932129,
+      "agent_id": 28262,
+      "scenario_id": 461464,
+      "result_id": 1176176,
+      "unique_source_seconds": 26.588,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "45bd34818b1231f5cf3cb9d7ac32666c9c9e5a4ba80cf3e1eb65761141d3361c",
+      "prepared_float32_samples_sha256": "bc78f17b62fd7b343337e0f3ddf721a10a5a4ad58ac51d156cac02f41197ae82",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788849,
+      "file": "4788849.wav",
+      "source_seconds": 23.488,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          20.607,
+          33.031
+        ],
+        [
+          40.533,
+          51.597
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "c6ff7e81a60acbf73276d5150bf59420c73ed6c0aea5595cb51cec6ec343b306",
+      "score": 4.509614944458008,
+      "agent_id": 28262,
+      "scenario_id": 461462,
+      "result_id": 1176176,
+      "unique_source_seconds": 23.488,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "7230ae13415c76aa55ced50544dcd7df593764753827b378007f5eeceef82a2c",
+      "prepared_float32_samples_sha256": "4ecd2e1eb430d218d66053ccfadb5c05d9303de0a920b6ed8b17a1362a8d2599",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788848,
+      "file": "4788848.wav",
+      "source_seconds": 29.049,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          19.426,
+          39.552
+        ],
+        [
+          46.654,
+          55.577
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "84a513e4dc113d2143cf3d79e7fc933ea8077a8226850d91c5a38b351cdd0ff1",
+      "score": 4.460644721984863,
+      "agent_id": 28262,
+      "scenario_id": 461460,
+      "result_id": 1176176,
+      "unique_source_seconds": 29.049,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "f52c5e5d7f4b517f4762da5e31a1e9b11498b03e88aa3a803e7d915bee793a8a",
+      "prepared_float32_samples_sha256": "013bd85dd166ecb1cb43fe09be962fe4c0be68bfe73816d0437ad8f4fc1b1d3b",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4790081,
+      "file": "4790081.wav",
+      "source_seconds": 49.152,
+      "model_seconds": 49.152,
+      "spans": [
+        [
+          19.285,
+          37.649
+        ],
+        [
+          44.79,
+          75.578
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "41bd928e388be8196f3c0e226436dd1f4c3df79a5914e43e7e23b005f033ce80",
+      "score": 4.429681301116943,
+      "agent_id": 28262,
+      "scenario_id": 461459,
+      "result_id": 1176671,
+      "unique_source_seconds": 49.152,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "51776af270b2818dd151a26c66c773384006437f181d6c6658019143bd347b18",
+      "prepared_float32_samples_sha256": "62cbe67cbcb855d7add7aeba24166309480f5286e9cee612485e3a2220a75192",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/caller-rerun-audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788846,
+      "file": "4788846.wav",
+      "source_seconds": 20.566,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          26.688,
+          44.453
+        ],
+        [
+          55.456,
+          58.257
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "4bad491661dc593dd1c7bea667896c741f70269c82958463c9152ba84aa017f2",
+      "score": 4.423110485076904,
+      "agent_id": 28262,
+      "scenario_id": 461458,
+      "result_id": 1176176,
+      "unique_source_seconds": 20.566,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "106ef5825a3628ee4afedf24cdccd6df2e0be21880ceb79f5c79e303acfc3205",
+      "prepared_float32_samples_sha256": "4e7c0ec5232257da6207fd93d344355402bbceee0f90d4974c38f46a1917b1f9",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788845,
+      "file": "4788845.wav",
+      "source_seconds": 50.092,
+      "model_seconds": 50.092,
+      "spans": [
+        [
+          19.685,
+          41.63
+        ],
+        [
+          49.011,
+          77.158
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "8bfb11de76beeacd300b49bdf1aaae7ea0bda09f1df0a56ed97d10f210f856e1",
+      "score": 4.41943359375,
+      "agent_id": 28262,
+      "scenario_id": 461457,
+      "result_id": 1176176,
+      "unique_source_seconds": 50.092,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "e02c135e50fbf45950e066c0fd54b9fa97fe350620a1f40d78ed2c6f78637e8d",
+      "prepared_float32_samples_sha256": "d7be7b1bd6cc4900ad7b6b842e2337e358ddfdf340bdf72b51c9849de913fd7e",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788844,
+      "file": "4788844.wav",
+      "source_seconds": 20.466,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          25.468,
+          38.052
+        ],
+        [
+          47.875,
+          55.757
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "f7ab34cfd580c56e23dc9e40cd52b9c33660963f33325c8913d8fd66e3ccc940",
+      "score": 4.477870941162109,
+      "agent_id": 28262,
+      "scenario_id": 461471,
+      "result_id": 1176176,
+      "unique_source_seconds": 20.466,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "2fffc05c85f7820cce44d0aebd81d43c250bd4656e50d9299c51666bb5c2b2f5",
+      "prepared_float32_samples_sha256": "679fc01bf732361956bdb07add40c626f361b08043059d40e7ce5ddf413dfb32",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788843,
+      "file": "4788843.wav",
+      "source_seconds": 14.227,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          20.389,
+          34.616
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "d0e09dadb8d992937a53507f8de99cdf6588398200ac581331c026777d257687",
+      "score": 4.498666763305664,
+      "agent_id": 28262,
+      "scenario_id": 461470,
+      "result_id": 1176176,
+      "unique_source_seconds": 14.227,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "6d966b8a96f47213e4a3a9d197b4a981ffe0aec1b5471813c5ea0ae30f018f89",
+      "prepared_float32_samples_sha256": "e9e90ca9bcd18d8e1a1f9b509570bdf287521068effce813421cb1fed754c4ce",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788842,
+      "file": "4788842.wav",
+      "source_seconds": 25.607,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          18.666,
+          37.671
+        ],
+        [
+          45.674,
+          45.994
+        ],
+        [
+          50.155,
+          56.437
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "2b632f946949feb23174623e819008734a490ecc0847b7677d09c67b6b392b9f",
+      "score": 4.40675163269043,
+      "agent_id": 28262,
+      "scenario_id": 461469,
+      "result_id": 1176176,
+      "unique_source_seconds": 25.607,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "a08db4dd4a3e2e19e7946cbbdbed330cfdea49caab3bf9a894dbdb485f3f1981",
+      "prepared_float32_samples_sha256": "765a864fcfa9b319fb4366052222ee2dc1e2e0366a3957dd572930e8b90d847a",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788841,
+      "file": "4788841.wav",
+      "source_seconds": 27.608,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          19.206,
+          37.971
+        ],
+        [
+          47.874,
+          56.717
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "aa0527c9f034af5cd4b7825c75eb26a179f595161e751b415d59c1f17d2f1f3f",
+      "score": 4.482905864715576,
+      "agent_id": 28262,
+      "scenario_id": 461468,
+      "result_id": 1176176,
+      "unique_source_seconds": 27.608,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "fdf07411af918e47946bf275c08ab1cfe9a606219820234189c31faf056a2464",
+      "prepared_float32_samples_sha256": "603a350e4eb13a3e6022efa9ecdb0f309f106155d1ea7f6873a33e98d5cb6585",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788840,
+      "file": "4788840.wav",
+      "source_seconds": 16.026,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          24.59,
+          40.616
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "a4888d8887d11f462e7950ac0d52aacc94c696fdd5b08ed3b8d7877cb316083a",
+      "score": 4.470287322998047,
+      "agent_id": 28262,
+      "scenario_id": 461467,
+      "result_id": 1176176,
+      "unique_source_seconds": 16.026,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "db4aa1470c5868cc494be8bad2f1741d711b068d6282f202429bf452df13a208",
+      "prepared_float32_samples_sha256": "fdb7e26aefc8b2aae240a441a6288f6740885a5d6d01633b6bb1d5a9fc05a84c",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788839,
+      "file": "4788839.wav",
+      "source_seconds": 6.323,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          18.95,
+          23.052
+        ],
+        [
+          27.654,
+          29.875
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "5ea8ac078a2ba2fab2fb2cf3023201aec2cc6dfda83c3ef36879226b8c37af17",
+      "score": 4.486372470855713,
+      "agent_id": 28262,
+      "scenario_id": 461466,
+      "result_id": 1176176,
+      "unique_source_seconds": 6.323,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "92e268a0e91caeefaadcfd2b6a7d4fdcd083b7edd0092da84f1ffd7bccad488a",
+      "prepared_float32_samples_sha256": "1265a225c2aae288eafc830bc943ac1acca01bd934a41132855106c0c73ac6f3",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788838,
+      "file": "4788838.wav",
+      "source_seconds": 33.67,
+      "model_seconds": 33.67,
+      "spans": [
+        [
+          19.605,
+          46.693
+        ],
+        [
+          56.375,
+          62.957
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "a5e809674bcd64b7daece467722ffdf37e92a0f13f315b0cd11989b8a0e02ccf",
+      "score": 4.453991889953613,
+      "agent_id": 28262,
+      "scenario_id": 461464,
+      "result_id": 1176176,
+      "unique_source_seconds": 33.67,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "b577d0b2e189725b8b4589a316f52dd443c066f5eb0c13d170eb69cbaabf3ce4",
+      "prepared_float32_samples_sha256": "e80ce1d5051c4b5613169c593779e1f6d98aed9f582973ef28ab1c14865b0832",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788837,
+      "file": "4788837.wav",
+      "source_seconds": 20.386,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          20.307,
+          32.711
+        ],
+        [
+          40.594,
+          48.576
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "ebbabe4fd8708e5f9db1438cd814055937a553cb8e7c1fc2d90ca746a9170538",
+      "score": 4.475239276885986,
+      "agent_id": 28262,
+      "scenario_id": 461462,
+      "result_id": 1176176,
+      "unique_source_seconds": 20.386,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "dd9a6c6e5f4c0e60ce6d5d63531b4ce92001239f774eea885cc51f6b0445203c",
+      "prepared_float32_samples_sha256": "b9e242b5dac624a218577b9f2002cb17c12b9de095034813c1528fa45cd290b5",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788836,
+      "file": "4788836.wav",
+      "source_seconds": 30.569,
+      "model_seconds": 30.569,
+      "spans": [
+        [
+          19.546,
+          41.433
+        ],
+        [
+          48.215,
+          56.897
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "7b0f03b8998fa2b967447791722662c8a6f1e140418e9b4972aac4e30b861996",
+      "score": 4.479002952575684,
+      "agent_id": 28262,
+      "scenario_id": 461460,
+      "result_id": 1176176,
+      "unique_source_seconds": 30.569,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "b1082affe25c7c2f1add87112f6864ece79b707a01dd953529a5de0ed867fd3d",
+      "prepared_float32_samples_sha256": "e1e5e4877806ebcc65b27273d8abbc199894cb56a16afc2a2c921a7006e4e307",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788835,
+      "file": "4788835.wav",
+      "source_seconds": 46.85,
+      "model_seconds": 46.85,
+      "spans": [
+        [
+          19.104,
+          41.229
+        ],
+        [
+          48.991,
+          51.011
+        ],
+        [
+          58.433,
+          81.138
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "aa53fee03b6eea9f1397f034eec638794e4f407c189e08fd1a652c0f882c4048",
+      "score": 4.443185806274414,
+      "agent_id": 28262,
+      "scenario_id": 461459,
+      "result_id": 1176176,
+      "unique_source_seconds": 46.85,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "1bfbf9a04020c5844a504602f7f31a4c62292eaaaa6e9892ee7e89afacf12dcf",
+      "prepared_float32_samples_sha256": "94207bd785ab2382b4e4c910ba0327c34d7ee64534561fd7d55efb758de22a03",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788834,
+      "file": "4788834.wav",
+      "source_seconds": 20.626,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          26.668,
+          44.453
+        ],
+        [
+          55.136,
+          57.977
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "c93a55d7e6661c181625078c29692f89529acf17b8a663788ff4abd10f8ab6f9",
+      "score": 4.452719688415527,
+      "agent_id": 28262,
+      "scenario_id": 461458,
+      "result_id": 1176176,
+      "unique_source_seconds": 20.626,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "4ed02c54d032c3f373c8d8c9291b85317c917dd0417146f8681b7735d9f22e2a",
+      "prepared_float32_samples_sha256": "f1ffc71bad9f1341b05d3537e2590080328cd7b0e54926445cd870f2513b7f22",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788833,
+      "file": "4788833.wav",
+      "source_seconds": 48.892,
+      "model_seconds": 48.892,
+      "spans": [
+        [
+          19.965,
+          40.49
+        ],
+        [
+          47.851,
+          76.218
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "829378659ccac2522853c951ad3a10298376018a9054c6165d1d2353eeada127",
+      "score": 4.499299049377441,
+      "agent_id": 28262,
+      "scenario_id": 461457,
+      "result_id": 1176176,
+      "unique_source_seconds": 48.892,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "605f968303c0a5fde0c1df69ef0bfeda56de597ee46fb1925917229ab4c62cc4",
+      "prepared_float32_samples_sha256": "82141b9b3ff267e707bff2242cfe42c7e1da41e0a5630a87fbe855e334558d77",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788832,
+      "file": "4788832.wav",
+      "source_seconds": 45.777,
+      "model_seconds": 45.777,
+      "spans": [
+        [
+          19.432000000000002,
+          50.226
+        ],
+        [
+          56.093,
+          59.674
+        ],
+        [
+          64.555,
+          75.957
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "ea011a790f32636ccfef8e28ee83be53283847e9069f2d9d59d53e40fbb36a4b",
+      "score": 4.489195823669434,
+      "agent_id": 28261,
+      "scenario_id": 461450,
+      "result_id": 1176175,
+      "unique_source_seconds": 45.777,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "f0231d6315c940e49e50a8282eb253611ae0d5bab7a77b52e8947c8f61484807",
+      "prepared_float32_samples_sha256": "0af5676064e3dcad939513de1ad7588e756c0097581879dbd67eb5b390d198e0",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788831,
+      "file": "4788831.wav",
+      "source_seconds": 27.089,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          19.306,
+          37.592
+        ],
+        [
+          46.114,
+          54.917
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "ada8bdf8f068e7f06c00c8d3bdee49def9570c7aeabc123444cd0eab0c20dc4b",
+      "score": 4.380239486694336,
+      "agent_id": 28261,
+      "scenario_id": 461448,
+      "result_id": 1176175,
+      "unique_source_seconds": 27.089,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "bd3966d1be6c4124d34cc3b270ca3638ba187b3d846010d7fd227db2ed6d1cbd",
+      "prepared_float32_samples_sha256": "56aaefa60528601b4212ce7fa9d1dbecf1df8a13f10974c84df0d7fb7c7d2941",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788830,
+      "file": "4788830.wav",
+      "source_seconds": 14.347,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          19.329,
+          33.676
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "f2090748b3a06cf28efed2e4ba838fd9ae2c251861057885d2bf9a88bd964e85",
+      "score": 4.55645227432251,
+      "agent_id": 28261,
+      "scenario_id": 461446,
+      "result_id": 1176175,
+      "unique_source_seconds": 14.347,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "7156767cfea533d040b15796438d7c1df23672facbb7c0a86492073a73572aee",
+      "prepared_float32_samples_sha256": "83513067e50c330fc08c3ff14b11166ef9f9cd90d960467b77a84d945c4b38b3",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788829,
+      "file": "4788829.wav",
+      "source_seconds": 56.532,
+      "model_seconds": 56.532,
+      "spans": [
+        [
+          19.964,
+          58.792
+        ],
+        [
+          65.193,
+          69.454
+        ],
+        [
+          74.715,
+          88.158
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "c95352c006188f324e0c58406ae2a5b6bbe83f1aa71b2c5a5ad06d6842d09b78",
+      "score": 4.305199146270752,
+      "agent_id": 28261,
+      "scenario_id": 461450,
+      "result_id": 1176175,
+      "unique_source_seconds": 56.532,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "d020ce8c255909e14da3de02be6b1ac724d7e1059a3082e7ecff287eb4ac7c06",
+      "prepared_float32_samples_sha256": "cb0271131c51a59e51c0d8ab512c84c356ed6f36b155c1ed983ee3f7c552d032",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788828,
+      "file": "4788828.wav",
+      "source_seconds": 27.168,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          19.446,
+          37.211
+        ],
+        [
+          46.034,
+          55.437
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "304bc25bb064b90c3d48a4bc1e93f23ceab79e6aa34932ee6150ad0af46492b7",
+      "score": 4.365086555480957,
+      "agent_id": 28261,
+      "scenario_id": 461448,
+      "result_id": 1176175,
+      "unique_source_seconds": 27.168,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "f8de16da0fe10c8d4cdc7b7a851cbd2b46ce2b0cc7da47ca17f8bb26fc9e9d1f",
+      "prepared_float32_samples_sha256": "51130ff10681e04687cb547423f85a9ffa5d1a6be26da3eeeea87781156954c9",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788827,
+      "file": "4788827.wav",
+      "source_seconds": 14.127,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          18.909,
+          33.036
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "4262490a0cb15c2c26ce7c26fe9e5da712b6c9fef779231af7bb58e93e07d77f",
+      "score": 4.441063404083252,
+      "agent_id": 28261,
+      "scenario_id": 461446,
+      "result_id": 1176175,
+      "unique_source_seconds": 14.127,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "a153999555e67ef8eb921569ddee62ab016b8f74fe1718c568b865f4128358f5",
+      "prepared_float32_samples_sha256": "c9f351cbf1ccab450d021efe9c5efa162d81c409e0c5f39ce7918d809f5fb117",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788826,
+      "file": "4788826.wav",
+      "source_seconds": 19.925,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          24.708,
+          36.871
+        ],
+        [
+          46.655,
+          54.417
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "8d83812a2676d330c92644f129a4d0e4744665cc465c006188b44045a0645028",
+      "score": 4.500439643859863,
+      "agent_id": 28261,
+      "scenario_id": 461456,
+      "result_id": 1176174,
+      "unique_source_seconds": 19.925,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "1b75b46b52c7d4e6370fda3b55824656bfd5175081bf1fdbd8b51e96d6900780",
+      "prepared_float32_samples_sha256": "828165ca26624420258a829cd6bc02e1c66a28d49015d56a863c033e96569007",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788825,
+      "file": "4788825.wav",
+      "source_seconds": 14.506,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          20.789,
+          35.295
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "f6aacec4df5814507831572be0207d75b1075071e1eb6cafbbb0fe4f8346af46",
+      "score": 4.525353908538818,
+      "agent_id": 28261,
+      "scenario_id": 461455,
+      "result_id": 1176174,
+      "unique_source_seconds": 14.506,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "0d5313b2e9eec789e6047bd866774deae655e92d3eb20b0254a936a66e17b6e9",
+      "prepared_float32_samples_sha256": "f5987deec8bc52b241f9f89099d48e4fe0e87da55be92314c5c48c0542756661",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788824,
+      "file": "4788824.wav",
+      "source_seconds": 24.767,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          19.246,
+          37.231
+        ],
+        [
+          45.414,
+          45.734
+        ],
+        [
+          49.675,
+          56.137
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "e0527d89423c188c7bfa92d196c6db0249d9fa146db52d14f576d7b04927526f",
+      "score": 4.14255952835083,
+      "agent_id": 28261,
+      "scenario_id": 461454,
+      "result_id": 1176174,
+      "unique_source_seconds": 24.767,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "972138e4adc735fbe0e8eb1870953208fdad95b4cc69e9dea51f6963621821a8",
+      "prepared_float32_samples_sha256": "f3b5acfe28d6c4de8ffcf49e0a7ae27aeb0276d6e213e0fe8e7d10bf0600e2ca",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788823,
+      "file": "4788823.wav",
+      "source_seconds": 27.549,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          18.966,
+          37.032
+        ],
+        [
+          45.234,
+          54.717
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "3c93f1d276b547f698a63cb4f6461274040feb1484776c5b9d5cc23e50b67564",
+      "score": 4.502375602722168,
+      "agent_id": 28261,
+      "scenario_id": 461453,
+      "result_id": 1176174,
+      "unique_source_seconds": 27.549,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "3e487b85846c1c5b643608add17e322d940e1dfd93c93a4a81e85f608cb9a090",
+      "prepared_float32_samples_sha256": "b2bfbdbee126bb383ca0946e2f7b25a265e1081122ed69a85c57edc3f8490bae",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788822,
+      "file": "4788822.wav",
+      "source_seconds": 17.587,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          24.809,
+          42.396
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "e82b93b23e2d4531e77c78eadcc160fad139faaaac918f524da1ef084129e069",
+      "score": 4.406341552734375,
+      "agent_id": 28261,
+      "scenario_id": 461452,
+      "result_id": 1176174,
+      "unique_source_seconds": 17.587,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "9ea04e26f84acb0653853c9c6d19b29bd109b138af8d2b3cd8b1fc8d17f31bd6",
+      "prepared_float32_samples_sha256": "4dbb3cc6064bc15c85a72b5fc54f90e9f1e846f402da558bcdf490e22c0bb994",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788821,
+      "file": "4788821.wav",
+      "source_seconds": 5.823,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          18.45,
+          21.952
+        ],
+        [
+          26.554,
+          28.875
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "14872f19d8abe976bc767278e4c049c442f55af728c83489bc2b847ffcb5fca2",
+      "score": 4.430159568786621,
+      "agent_id": 28261,
+      "scenario_id": 461451,
+      "result_id": 1176174,
+      "unique_source_seconds": 5.823,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "b285c7401574f20dda17f989400d925d57096eaf4987ac5eb144c82f70d927c4",
+      "prepared_float32_samples_sha256": "4ea05ca7cd121c5df9a66dc8de154c6f78c36e1f8b57c7d18113df28fd2780b7",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788820,
+      "file": "4788820.wav",
+      "source_seconds": 25.667,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          20.566,
+          40.872
+        ],
+        [
+          50.936,
+          56.297
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "01125ef75b306a0dab60dcbe9b73973856ad51b5015b9f9d96b325ba2808250b",
+      "score": 4.525284767150879,
+      "agent_id": 28261,
+      "scenario_id": 461449,
+      "result_id": 1176174,
+      "unique_source_seconds": 25.667,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "2e28db54016dac38186f7ecf278d9be9b366f5e3246bcbb04c417a8bde29d9e8",
+      "prepared_float32_samples_sha256": "d3fd4bee79ce68470b489842ef73a4e8a5ca75c1e11339d30471f1f317349e34",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788819,
+      "file": "4788819.wav",
+      "source_seconds": 25.989,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          20.986,
+          37.932
+        ],
+        [
+          45.554,
+          54.597
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "2be8e2b9408ddbdf2e79e660fe274910aa7869fc965155cff87293b45d761df9",
+      "score": 4.403217315673828,
+      "agent_id": 28261,
+      "scenario_id": 461447,
+      "result_id": 1176174,
+      "unique_source_seconds": 25.989,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "3fc50445e0fcbd226680ee8cd00aedb1e826feaffa9ea5ce70fb8ee538cb6321",
+      "prepared_float32_samples_sha256": "4cecd6c7fbbb8663225c2a13b9604345f3e400fe0df5820c5115a369611cbe69",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788818,
+      "file": "4788818.wav",
+      "source_seconds": 30.529,
+      "model_seconds": 30.529,
+      "spans": [
+        [
+          19.626,
+          40.952
+        ],
+        [
+          47.514,
+          56.717
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "8497c9d057eb30c538a90a76914eba020ae2cf792f480198b38ec5a1398f3cb6",
+      "score": 4.430647850036621,
+      "agent_id": 28261,
+      "scenario_id": 461445,
+      "result_id": 1176174,
+      "unique_source_seconds": 30.529,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "294b4033fe3391d3668b7525023d94bd77be9830307c54bdd2b2d1b2e10e55e4",
+      "prepared_float32_samples_sha256": "117dbcffdad2b90fcd467dca8a40f5ad0dcdb175b6cb78fde808662182c02ccd",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4790212,
+      "file": "4790212.wav",
+      "source_seconds": 57.804,
+      "model_seconds": 57.804,
+      "spans": [
+        [
+          19.044,
+          40.489
+        ],
+        [
+          48.311,
+          84.67
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "0adf953f3304baed1d2d394d971a9cadcbe4f34bb31d49eec89638556c453939",
+      "score": 4.509664535522461,
+      "agent_id": 28261,
+      "scenario_id": 461444,
+      "result_id": 1176727,
+      "unique_source_seconds": 57.804,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "2958dc4476b46add40421101484721b2a0bc51c9cac192cf09e83cbd0dcabc2c",
+      "prepared_float32_samples_sha256": "ab7744524d479ec61fc6307f1bf7336a7fd6b8fc3da318edec818ebe12325e33",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/caller-rerun-audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788816,
+      "file": "4788816.wav",
+      "source_seconds": 16.325,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          26.288,
+          38.732
+        ],
+        [
+          49.835,
+          53.716
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "9383f5040d2031c8424343e4d201a3971a65c3c6f9bebd18ad4a93e03aa323cf",
+      "score": 4.41516637802124,
+      "agent_id": 28261,
+      "scenario_id": 461443,
+      "result_id": 1176174,
+      "unique_source_seconds": 16.325,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "af97d776f265e5354d3d94e15f2e302347f252beace3f0f2a4beb14c31433232",
+      "prepared_float32_samples_sha256": "bbf47482d06cf4865f67ea760920c13f648ecd96369cf303508caa708827b002",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788815,
+      "file": "4788815.wav",
+      "source_seconds": 55.693,
+      "model_seconds": 55.693,
+      "spans": [
+        [
+          19.424,
+          40.569
+        ],
+        [
+          48.03,
+          82.578
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "bc9f0c0969bd2645b9cafca6d776acd1ba89c711b32d20e7fc855a6a8006274b",
+      "score": 4.501555442810059,
+      "agent_id": 28261,
+      "scenario_id": 461442,
+      "result_id": 1176174,
+      "unique_source_seconds": 55.693,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "a0d3917d3de9244aa67b5c72f6793d3e37ac206170acffed7c4f1bbef4ea8088",
+      "prepared_float32_samples_sha256": "0b66f362f43b7b662b3170096fda4e1cacc85ac636acc22ea454c84a1cea5db2",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788814,
+      "file": "4788814.wav",
+      "source_seconds": 19.646,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          24.588,
+          36.631
+        ],
+        [
+          46.694,
+          54.297
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "f2daf5c11d110dc93e59024eb79254bc319c51a7c12d8dfa49b13a2ea1474246",
+      "score": 4.445093154907227,
+      "agent_id": 28261,
+      "scenario_id": 461456,
+      "result_id": 1176174,
+      "unique_source_seconds": 19.646,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "7e68f1ef7609bacb413b8c872a3c1ae7abad510b4bf92de9e3fc4ad4200be7ad",
+      "prepared_float32_samples_sha256": "0d4a20899aba6a07f551da8e439db991afe028903fff39afc354e95b7fe1eb1e",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788813,
+      "file": "4788813.wav",
+      "source_seconds": 14.346,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          20.689,
+          35.035
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "084f4dbecdd17a5a5bad6db7b9ae119896a1f9536a5a8eeac4efc251e119c955",
+      "score": 4.449949264526367,
+      "agent_id": 28261,
+      "scenario_id": 461455,
+      "result_id": 1176174,
+      "unique_source_seconds": 14.346,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "216a3f244a521025994914f1f0ee48f1faefc4a732df2dd39d6fdf85598cf7a4",
+      "prepared_float32_samples_sha256": "b05f048f6b4f1fcee46a9889fadf587d6ca199f18a8de1ec29f00a49f4e180f1",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788678,
+      "file": "4788678.wav",
+      "source_seconds": 48.472,
+      "model_seconds": 48.472,
+      "spans": [
+        [
+          20.404,
+          53.512
+        ],
+        [
+          60.073,
+          64.294
+        ],
+        [
+          69.595,
+          80.738
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "2ff2d467b785ea8a39284c38898c4c635ae4c31fd321a243ef2bca2ffa6ad378",
+      "score": 4.404445648193359,
+      "agent_id": 28262,
+      "scenario_id": 461465,
+      "result_id": 1176116,
+      "unique_source_seconds": 48.472,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "a30f4f31f0f4fde28b27a625eee6f35fd11b7419b4bc87eff8f7f6557d83721f",
+      "prepared_float32_samples_sha256": "f5d3191cd8539c0bc17df68b474f197e749d915309a2c838bbf50e3c5b55608f",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788677,
+      "file": "4788677.wav",
+      "source_seconds": 21.787875,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          18.466,
+          32.571
+        ],
+        [
+          40.554,
+          48.237
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "31724cd222cb4efaf1b0a4125627057897f79b4d2839c137b4d51b2be258e3fc",
+      "score": 4.482851982116699,
+      "agent_id": 28262,
+      "scenario_id": 461463,
+      "result_id": 1176116,
+      "unique_source_seconds": 21.787875,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "6b21156173f62053bfa8437a62d51a7089afde57f69adb4d191ffdde5c08979f",
+      "prepared_float32_samples_sha256": "a61dce6cec27bb260ceea73fd2bd11ff37b469a117ffff894c08c68949a02dba",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    },
+    {
+      "run_id": 4788676,
+      "file": "4788676.wav",
+      "source_seconds": 16.347,
+      "model_seconds": 30.0,
+      "spans": [
+        [
+          19.109,
+          35.456
+        ]
+      ],
+      "main_channel": 0,
+      "recording_sha256": "b4664a81141c27f842443ac410379f9d4f32342cd457261ef54f70b962a6ee5a",
+      "score": 4.515832901000977,
+      "agent_id": 28262,
+      "scenario_id": 461461,
+      "result_id": 1176116,
+      "unique_source_seconds": 16.347,
+      "sample_rate": 8000,
+      "prepared_file_sha256": "8f1349e03d1e1f8d1101edc3c3c0f768be00c59a396d8341a85a0c73e7868fc9",
+      "prepared_float32_samples_sha256": "6ae08f041f2727f7d709c007aaccef6d252a784a59738e9b2bdb8663a463f2f0",
+      "input_samples_regenerated_byte_identically": true,
+      "prediction_csv_matches": true,
+      "source_artifact": "qc/audio-processing/scoped-audio-scores.json"
+    }
+  ],
+  "scored_calls": 135
+}

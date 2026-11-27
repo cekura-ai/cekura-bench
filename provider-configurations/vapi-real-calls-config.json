@@ -1,0 +1,161 @@
+{
+  "_comment": "Vapi Agents on Real Calls (s2s-human-bench row vapi-agents): the Finance and Healthcare assistants used for the 210 calls, read back from Vapi on 2026-11-27. They are identical apart from the prompt and tools, which are the Real Calls agent prompt and fixture tools shared by every row and are not published (as for the scenarios). Ids, server URLs and credentials are removed. Differences from vapi-agent-config.json (our earlier benchmark): background-speech denoising off (it removed the recorded caller in our simulation), and no custom vocabulary or context from that benchmark.",
+  "model": {
+    "provider": "openai",
+    "model": "gpt-4.1-2025-04-14",
+    "temperature": 0,
+    "maxTokens": 1000,
+    "messages": "<Real Calls agent prompt (not published)>",
+    "tools": "<Real Calls fixture tools (not published)>"
+  },
+  "firstMessageInterruptionsEnabled": true,
+  "voice": {
+    "version": "2",
+    "voiceId": "Clara",
+    "language": "auto",
+    "provider": "vapi",
+    "chunkPlan": {
+      "enabled": true,
+      "formatPlan": {
+        "enabled": true,
+        "replacements": [
+          {
+            "type": "regex",
+            "regex": "\\bDr\\.",
+            "value": "Doctor",
+            "options": [
+              {
+                "type": "ignore-case",
+                "enabled": false
+              }
+            ]
+          },
+          {
+            "type": "regex",
+            "regex": "\\b([A-Za-z])([A-Za-z])-(\\d)([A-Za-z0-9])([A-Za-z0-9])([A-Za-z0-9])\\b",
+            "value": "$1. $2. $3. $4. $5. $6."
+          }
+        ],
+        "numberToDigitsCutoff": 0
+      },
+      "minCharacters": 80
+    },
+    "cachingEnabled": true
+  },
+  "transcriber": {
+    "model": "stt-rt-v5",
+    "language": "en",
+    "provider": "soniox",
+    "fallbackPlan": {
+      "transcribers": [
+        {
+          "model": "nova-3",
+          "language": "en",
+          "numerals": true,
+          "provider": "deepgram"
+        }
+      ]
+    },
+    "maxEndpointDelayMs": 1500
+  },
+  "startSpeakingPlan": {
+    "waitSeconds": 0.4
+  },
+  "stopSpeakingPlan": {
+    "numWords": 2,
+    "backoffSeconds": 1,
+    "acknowledgementPhrases": [
+      "i understand",
+      "i see",
+      "i got it",
+      "i hear you",
+      "im listening",
+      "im with you",
+      "right",
+      "okay",
+      "ok",
+      "sure",
+      "alright",
+      "got it",
+      "understood",
+      "yeah",
+      "yes",
+      "uh-huh",
+      "mm-hmm",
+      "gotcha",
+      "mhmm",
+      "ah",
+      "yeah okay",
+      "yeah sure",
+      "thank you",
+      "thanks",
+      "thank you so much",
+      "thanks so much",
+      "got it thank you",
+      "okay thank you",
+      "okay great",
+      "okay perfect",
+      "sounds good",
+      "that sounds good",
+      "perfect",
+      "great",
+      "wonderful",
+      "youre welcome",
+      "you're welcome",
+      "no problem",
+      "that works",
+      "all right",
+      "alright thanks",
+      "okay thanks",
+      "got it thanks"
+    ]
+  },
+  "hooks": [
+    {
+      "do": [
+        {
+          "type": "say",
+          "exact": "Sorry, are you still there?"
+        }
+      ],
+      "on": "customer.speech.timeout",
+      "name": "silence-reask-1",
+      "options": {
+        "timeoutSeconds": 10,
+        "triggerMaxCount": 1,
+        "triggerResetMode": "onUserSpeech"
+      }
+    },
+    {
+      "do": [
+        {
+          "type": "say",
+          "exact": "Just checking in. Are you still with me?"
+        }
+      ],
+      "on": "customer.speech.timeout",
+      "name": "silence-reask-2",
+      "options": {
+        "timeoutSeconds": 25,
+        "triggerMaxCount": 1,
+        "triggerResetMode": "onUserSpeech"
+      }
+    }
+  ],
+  "silenceTimeoutSeconds": 300,
+  "maxDurationSeconds": 1800,
+  "backgroundSound": "off",
+  "backgroundSpeechDenoisingPlan": {
+    "smartDenoisingPlan": {
+      "enabled": false
+    }
+  },
+  "analysisPlan": {
+    "summaryPlan": {
+      "enabled": false
+    },
+    "successEvaluationPlan": {
+      "enabled": false
+    }
+  }
+}

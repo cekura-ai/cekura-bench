@@ -7,6 +7,7 @@ readers inspect the tested runtime choices rather than infer them from results.
 | --- | --- | --- |
 | ElevenLabs | `elevenlabs-agent-config.json` | Provider agent configuration JSON |
 | Vapi | `vapi-agent-config.json` | Provider assistant configuration JSON |
+| Vapi (Real Calls) | `vapi-real-calls-config.json` | Assistant configuration for the `vapi-agents` Real Calls row (prompt and tools not published) |
 | Retell | `retell-agent-config.json` | Provider agent configuration JSON |
 | Pipecat | `pipecat-bot.py` | Submitted runtime source configuration |
 | LiveKit | `livekit-agent.py` | Submitted runtime source configuration |

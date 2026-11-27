@@ -31,6 +31,8 @@ from tts_bench.adapters.fish_audio import FishAudioAdapter
 from tts_bench.adapters.fish_audio_http import FishAudioHTTPAdapter
 from tts_bench.adapters.gemini_tts import GeminiTTSAdapter
 from tts_bench.adapters.gradium import GradiumAdapter
+from tts_bench.adapters.heygen import HeyGenTTSAdapter
+from tts_bench.adapters.heygen_ws import HeyGenStreamingAdapter
 from tts_bench.adapters.hume import HumeAdapter
 from tts_bench.adapters.inworld import InworldAdapter
 from tts_bench.adapters.mistral_realtime import MistralRealtimeAdapter
@@ -39,6 +41,8 @@ from tts_bench.adapters.openai_tts import OpenAITTSAdapter
 from tts_bench.adapters.rime import RimeAdapter
 from tts_bench.adapters.smallest import SmallestAdapter
 from tts_bench.adapters.soniox import SonioxAdapter
+from tts_bench.adapters.speechify import SpeechifyAdapter
+from tts_bench.adapters.speechify_http import SpeechifyHTTPAdapter
 from tts_bench.adapters.xai import XaiTTSAdapter
 
 
@@ -96,7 +100,9 @@ SARAH = "933563129e564b19a115bedd57b7406a"              # Fish Official, female 
 DELIA = "c70cfb98867a4bfb9ae20d2401257b92"              # Fish Audio, female US English, from its Drama 3 voice cast
 AVA = "5bb7de05-c8fe-426a-8fcc-ba4fc4ce9f9c"           # Hume "Ava Song", female US English, from its Voice Library
 AUDREY = "49c443a4-8a1d-5f7e-b70b-98bdbd9823c3"        # AssemblyAI "Audrey", female US English, the voice AssemblyAI chose
+HARPER = "harper_32"                                  # Speechify, its first staff pick of female US English voices
 JUDITH = "en-US-judith"                              # Murf Falcon 2.1, female US English, first on Murf's Falcon voice recommendations
+NADINE = "83548de556df48ba8c09c42a57c51d85"            # HeyGen "Nadine - Calm & Gentle", female English, the public voice HeyGen's docs start with
 MARGARET = "voice_447"                                  # Mistral "Margaret", female US English, the realtime session's default voice
 
 PROVIDERS: dict[str, ProviderEntry] = {
@@ -212,6 +218,20 @@ PROVIDERS: dict[str, ProviderEntry] = {
         (Model("Qwen/Qwen3-TTS", "Vivian"),),
         notes="OpenAI-compatible HTTP streaming, raw PCM; whole text per request; any hosted model is a lineup entry",
     ),
+    "speechify": ProviderEntry(
+        "speechify", SpeechifyAdapter, "SPEECHIFY_API_KEY",
+        (Model("simba-3.5", HARPER), Model("simba-3.2", HARPER), Model("simba-3.0", HARPER)),
+        notes="text-input websocket, one session per utterance; model, voice, PCM rate and language ride the upgrade URL; "
+              "a sentence is spoken once its closing punctuation and a space arrive; input.close speaks the rest and ends "
+              "the session; no cancel; simba-3.5 is the recommended multilingual model, simba-3.2 the English-only one, "
+              "simba-3.0 the earlier six-language one",
+    ),
+    "speechify-http": ProviderEntry(
+        "speechify-http", SpeechifyHTTPAdapter, "SPEECHIFY_API_KEY",
+        (Model("simba-3.5", HARPER), Model("simba-3.2", HARPER), Model("simba-3.0", HARPER)),
+        notes="HTTP streaming (POST /v1/audio/stream), the endpoint Speechify asked us to time; whole text per "
+              "request, raw PCM back; no streamed input, cancel or continuation",
+    ),
     "azure-speech": ProviderEntry(
         "azure-speech", AzureSpeechAdapter, "AZURE_SPEECH_KEY",
         (Model("MAI-Voice-2.1-Flash", "en-US-Harper"), Model("MAI-Voice-2.1", "en-US-Harper")),
@@ -231,6 +251,22 @@ PROVIDERS: dict[str, ProviderEntry] = {
               "Flush ends the utterance (FlushDone), Cancel is the barge-in (Cancelled); one utterance at a time per "
               "socket; word timings off; US data zone; new sessions per minute are limited per account",
     ),
+    "heygen": ProviderEntry(
+        "heygen", HeyGenTTSAdapter, "HEYGEN_API_KEY",
+        (Model("heygen-voice-1-turbo", NADINE), Model("heygen-voice-1", NADINE)),
+        notes="HeyGen Voice over HTTP /v3/models/audio/tts/stream, raw PCM streamed back; whole text per request; "
+              "language sent (en); voice read and checked ACTIVE before t0; cells paced under the documented "
+              "30 requests a minute (option requests_per_minute); Turbo Free left out (shared capacity, "
+              "no latency guarantee)",
+    ),
+    "heygen-streaming": ProviderEntry(
+        "heygen-streaming", HeyGenStreamingAdapter, "HEYGEN_API_KEY",
+        (Model("heygen-voice-1-turbo", NADINE), Model("heygen-voice-1", NADINE)),
+        notes="HeyGen Voice over the multi-context input-streaming websocket (/v3/models/audio/tts/multi-stream-input); "
+              "frames as ElevenLabs' multi-context socket; flush per context; close_context is the only stop and lets "
+              "flushed audio finish, so the cancel probe measures what still arrives; language sent (en); handshakes "
+              "and contexts paced under the 30 requests a minute shared with the HTTP endpoint; Turbo Free left out",
+    ),
     "mistral-realtime": ProviderEntry(
         "mistral-realtime", MistralRealtimeAdapter, "MISTRAL_API_KEY",
         (Model("voxtral-mini-tts-3-0", MARGARET),),
@@ -242,7 +278,7 @@ PROVIDERS: dict[str, ProviderEntry] = {
 }
 
 # Protocols not yet spoken. Listed so the gap is a fact, not an oversight.
-PENDING = ("qwen-audio", "speechify", "minimax",
+PENDING = ("qwen-audio", "minimax",
            "hume", "lmnt", "google-cloud-tts", "polly")
 
 

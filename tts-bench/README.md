@@ -164,6 +164,10 @@ vendored):
 | `azure-speech` | `MAI-Voice-2.1-Flash`, `MAI-Voice-2.1` | HTTP streaming, SSML | no | no | no | yes | whole text per request; the model is the voice name's suffix (`en-US-Harper:MAI-Voice-2.1-Flash`); the region is the host, option `region` (default `eastus2`) |
 | `assemblyai` | `assemblyai-tts-1` | HTTP streaming (OpenAI-compatible) | no | no | no | no | whole text per request; the voice is `voice_id` (Audrey), and OpenAI's `voice` is left out |
 | `assemblyai-streaming` | `assemblyai-tts-1` | websocket, one utterance at a time | yes | `Cancel` | yes | yes | session configured in the URL, `Begin` before t0; `Flush` ends the utterance; new sessions per minute are limited per account |
+| `heygen` | `heygen-voice-1-turbo`, `heygen-voice-1` | HTTP streaming, raw PCM | no | no | no | yes | whole text per request; `language` always sent (`en`, option `language`); the voice is read and must be `ACTIVE` before t0; cells wait to stay under 30 requests a minute (option `requests_per_minute`); the same text gives byte-identical audio; Turbo Free is left out (shared capacity, no latency guarantee) |
+| `heygen-streaming` | `heygen-voice-1-turbo`, `heygen-voice-1` | websocket, multi-context | yes | `close_context` | yes | no | the frames of ElevenLabs' multi-context socket; `close_context` lets audio already flushed finish, so the cancel probe measures what still arrives; `language` always sent (`en`, option `language`); option `auto_mode=true\|false` (default false, HeyGen's: generate on flush or at 120 buffered characters); handshakes and contexts count toward the same 30 requests a minute as the HTTP endpoint, so cells wait before t0 (option `requests_per_minute`); Turbo Free is left out |
+| `speechify` | `simba-3.5`, `simba-3.2`, `simba-3.0` | websocket, text input, one utterance per session | yes | no | yes | yes | settings ride the upgrade URL; a sentence is spoken once its closing punctuation and a space arrive; `input.close` speaks the rest and ends the session with `speech.done`; repeat reconnects before t0 |
+| `speechify-http` | `simba-3.5`, `simba-3.2`, `simba-3.0` | HTTP streaming | no | no | no | yes | `POST /v1/audio/stream`, the endpoint Speechify asked us to time; whole text per request, raw PCM back; a chunk that ends inside a sample is held for the next |
 | `mistral-realtime` | `voxtral-mini-tts-3-0` | websocket, one generation at a time | yes | no | yes | no | `session.update` before t0, its echo checked; `input_text.flush` ends the utterance (`speech.audio.done`); `pcm` arrives as 32-bit float and is converted to 16-bit; option `streaming_mode` (default `responsive`); the US host `api.us.mistral.ai`, option `region` (default `us`, `global` for `api.mistral.ai`) |
 
 Each model runs with one fixed voice, set in the registry: a female US English
@@ -242,6 +246,10 @@ the run's adapter options, which the run records. Give each voice its own label.
 Runs are written to one store: the directory in `TTS_BENCH_STORE`, or
 `data/runs/` in this subproject when it is unset. Point the variable outside
 any checkout, so deleting a working copy never deletes a measurement.
+
+Finished runs are archived in `s3://cet-sbx-aps1-workspaces-shared-s3-bucket/tts-bench-runs/`,
+one folder per run as in the store; the speech-to-text README ("Archiving runs") covers
+access from a Claude workspace.
 
 - **Resume.** Each cell is written under `.partial/` and moved into place only
   when complete, then appended to `cells.jsonl`. A killed run keeps every

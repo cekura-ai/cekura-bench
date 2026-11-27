@@ -7,6 +7,7 @@ MODELS = {name: Path('config/models') / (name + '.json') for name in (
     'assemblyai-universal-3-5-pro',
     'assemblyai-universal-3-5-pro-min-latency',
     'assemblyai-universal-3-6-pro-min-latency',
+    'assemblyai-stt-3-7-realtime-agent-min-latency',
     'reson8-realtime',
     'gradium-default',
     'deepgram-nova-3',
@@ -36,6 +37,7 @@ MODELS = {name: Path('config/models') / (name + '.json') for name in (
     'zoom-scribe-pro-v2-1-live',
     'murf-finch-global',
     'mistral-voxtral-realtime-3',
+    'rime-stt',
 )}
 BLOCKED_MODELS = {}
 

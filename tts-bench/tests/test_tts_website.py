@@ -60,10 +60,77 @@ async def test_a_later_run_on_the_same_model_amends_the_earlier_one_cell_by_cell
         website.summarize(base.root, [other.root])
 
 
+async def test_first_reads_take_the_timings_from_each_sentences_first_read_only(tmp_path):
+    by_id = corpus.by_id()
+    runner = Runner(RunSpec(provider="fake", probes=[OneShot()], items=[by_id["prose.greet"], by_id["long.prep"]],
+                            repeats=3, sentinel=False, store=str(tmp_path)), "unused", site="lab")
+    await runner.run()
+    every, first = website.summarize(runner.root), website.summarize(runner.root, first_reads=True)
+
+    assert "timingReads" not in every and first["timingReads"] == "first"
+    assert every["latency"]["ttfa"]["n"] == 6 and first["latency"]["ttfa"]["n"] == 2
+    assert first["latency"]["roundtrip"]["n"] == first["playout"]["stallMs"]["n"] == first["throughput"]["charsPerSecond"]["n"] == 2
+    assert {c: v["n"] for c, v in first["latency"]["byCohort"].items()} == {"prose": 1, "long": 1}
+    # Only the timings change: what the cells counted and how they ended is the same.
+    assert first["cells"] == every["cells"] and first["reliability"] == every["reliability"]
+
+
 def test_published_summaries_cover_every_site_model():
     """The committed summaries rebuild the site file with every listed model measured."""
     root = Path(__file__).resolve().parent.parent
     summaries = [json.loads(path.read_text()) for path in sorted((root / "results" / "published").glob("*.site.json"))]
     site = website.combine(summaries, json.loads((root / "config" / "site-models.json").read_text()))
     assert [entry["key"] for entry in site["models"] if not entry["measured"]] == []
-    assert len(site["results"]) == len(summaries)
+    # Every published summary is used once: as a row, or as the streamed-input half of a row from two endpoints.
+    models = json.loads((root / "config" / "site-models.json").read_text())["models"]
+    used = [key for key in models] + [meta["streamedFrom"] for meta in models.values() if meta.get("streamedFrom")]
+    assert sorted(used) == sorted(f"{s['provider']}/{s['model']}" for s in summaries)
+    assert len(site["results"]) == len(models)
+
+
+def _published(provider: str, model: str) -> dict:
+    root = Path(__file__).resolve().parent.parent / "results" / "published"
+    return next(s for s in (json.loads(p.read_text()) for p in root.glob("*.site.json"))
+                if (s["provider"], s["model"]) == (provider, model))
+
+
+def test_one_row_from_two_endpoints_takes_streamed_input_only_from_the_endpoint_that_measures_it():
+    import copy
+
+    import pytest
+
+    http, ws = _published("speechify-http", "simba-3.5"), _published("speechify", "simba-3.5")
+    row = website.with_streamed_input(http, ws)
+    # Everything a whole-text request measures is the HTTP run's.
+    for section in ("latency", "playout", "determinism", "naturalness", "throughput", "sentinel"):
+        assert row[section] == http[section], section
+    for name in ("deepgram", "openai-whisper"):
+        assert row["accuracy"][name]["oneShot"] == http["accuracy"][name]["oneShot"]
+        assert row["accuracy"][name]["spans"] == http["accuracy"][name]["spans"]
+        assert row["accuracy"][name]["streamedInput"] == ws["accuracy"][name]["streamedInput"] is not None
+    # Streamed input and continuation are the websocket run's, and only cancel stays excluded.
+    assert row["streamedInput"] == ws["streamedInput"] and row["continuation"] == ws["continuation"]
+    assert set(row["cells"]["excludedByProbe"]) == {"cancel"}
+    assert row["capabilities"]["streamed_input"] is True and row["capabilities"]["cancel"] is False
+    # Both runs stay named, so which figure came from which endpoint is never lost.
+    assert row["run"] == http["run"] and row["provider"] == "speechify-http"
+    assert row["streamedFrom"]["run"] == ws["run"] and row["streamedFrom"]["provider"] == "speechify"
+    assert row["reliability"]["syntheses"] == http["reliability"]["syntheses"] + 312 + 2 * 12
+    assert sum(row["reliability"]["endedBy"].values()) == row["reliability"]["syntheses"]
+    assert http["streamedInput"] is None and "streamedFrom" not in http          # the inputs are untouched
+
+    failed = copy.deepcopy(ws)
+    failed["reliability"]["timeouts"] = 1
+    with pytest.raises(ValueError, match="cannot be attributed"):
+        website.with_streamed_input(http, failed)
+    with pytest.raises(ValueError, match="not the model and voice"):
+        website.with_streamed_input(http, _published("speechify", "simba-3.2"))
+    with pytest.raises(ValueError, match="must exclude streamed input"):
+        website.with_streamed_input(ws, http)
+
+    models = {"campaign": "t", "models": {"speechify-http/simba-3.5": {
+        "id": "speechify-simba-3-5", "name": "Simba 3.5", "vendor": "SpeechifyAI", "modelId": "simba-3.5", "voice": "Harper",
+        "streamedFrom": "speechify/simba-3.5", "price": None}}}
+    site = website.combine([ws, http], models)
+    assert site["results"] == [{"id": "speechify-simba-3-5", **{k: v for k, v in row.items() if k != "schema"}}]
+    assert site["build"]["harnessCommits"] == sorted({http["harnessCommit"], ws["harnessCommit"]})

@@ -34,6 +34,11 @@ replaces the base run's.
 | Gradium (default), voice Everly | `campaign-1018b-gradium-everly` | none |
 | Inworld TTS-2 Flash and TTS-2 (creative delivery) | `campaign-1019-inworld` | none |
 | Murf Falcon 2.1, voice Judith | `murf-falcon-judith-20261113` | none |
+| HeyGen Voice 1 Turbo, voice Nadine, over the streaming websocket | `heygen-voice-ws-20261119` | none |
+| HeyGen Voice 1, voice Nadine, over the streaming websocket | `heygen-voice-ws-20261119` | named in its summary's `amendments` |
+| SpeechifyAI Simba 3.5 and Simba 3.2, voice Harper | `speechify-simba-20261109` | none |
+| SpeechifyAI Simba 3.0, voice Harper | `speechify-simba-3.0-20261117` | none |
+| SpeechifyAI Simba 3.5, 3.2 and 3.0 over HTTP streaming, voice Harper | `speechify-http-20261117` | none |
 | Mistral Voxtral TTS 3 (preview), voice Margaret | `mistral-voxtral-margaret-us-20261106` | none |
 
 `campaign-0928-fix` re-ran the models whose recordings an early stream-end bug
@@ -50,4 +55,55 @@ transcripts were scored offline with `bin/score-tts.py`.
 `campaign-1110-elevenlabs-norm` re-ran ElevenLabs v4 Turbo and v4 with
 `apply_text_normalization=on`, as ElevenLabs recommends for v4; it replaces their
 `campaign-0928-v4` runs and their `campaign-1004` amendment.
+HeyGen's `heygen-voice-ws-20261119` run measured it over its input-streaming
+websocket; it replaces the `heygen-voice-20261105` run over the HTTP stream,
+which could not measure streaming, stopping or continuation. An earlier
+websocket run, `heygen-voice-ws-20261118`, was set aside: some of its replies
+waited out a false timeout, fixed since, and HeyGen's output changed overnight
+(identical audio on every repeat that night, a different recording on every
+read the next morning).
+
+SpeechifyAI's site rows come from two endpoints of the same model and voice, as
+`config/site-models.json` says with `streamedFrom`: every one-shot figure from
+`speechify-http-20261117` (`POST /v1/audio/stream`, the endpoint SpeechifyAI asked
+us to time), and the streamed-input and continuation figures, which a
+whole-text request cannot measure, from the websocket runs
+(`speechify-simba-20261109`, `speechify-simba-3.0-20261117`). Both sets of
+summaries are published; the site row names the HTTP run in `run` and the
+websocket run in `streamedFrom`.
 Each summary names its runs in `run` and `amendments`.
+
+On 2026-11-23 every summary except AssemblyAI TTS 1's was rescored from its
+runs' stored transcripts with `rescore_run`, after hard parts began accepting
+more written forms of a correct reading ("6.05 a.m.", "36°F", "the 2-4 window",
+"control plus shift plus T"). Only hard parts changed. AssemblyAI TTS 1 keeps
+its earlier hard parts until its run's records are rescored.
+
+On 2026-11-26 every summary except AssemblyAI TTS 1's was rescored again, with
+`bin/score-tts.py --rescore --arbitrate`:
+
+- Word error puts written shorthand into words the same way on both sides
+  (times written "2.15am", emails and web addresses, "+", "(555)", "5'11''",
+  "co-pay", "o'clock") and chooses between the text as sent, its spoken
+  reference and any accepted reading word by word, so "Chapter four covers
+  Henry VIII" costs nothing. Three readings were accepted: "Eastern Time" for
+  "ET", "Rylee" for "Riley", and "I verified" for "I've verified", which sound
+  alike.
+- Hard parts get one verdict each instead of each transcriber's check counting
+  apart: a term must be heard right by both transcribers; any other kind is
+  decided by the majority, and where Deepgram and Whisper split, Zoom Scribe
+  (`zoom-scribe-en-pro-v2.1`) transcribed that one-shot recording. 227
+  recordings across 44 runs went to Zoom; none is left unresolved. The new
+  `hardParts` field of a summary holds the verdicts; `accuracy` keeps each
+  transcriber's own figures.
+- Word error counts a word as wrong only where most transcribers hear it
+  wrong, so one transcriber's mishearing (a dropped first word, a garbled name)
+  is not the model's error. Every one-shot recording where Deepgram and Whisper
+  differ on a word went to Zoom Scribe too; none is left unresolved. The new
+  `wordError` field holds the agreed figure.
+- A name ("Ngozi Okonkwo", "Leicester") counts as wrong only where every
+  transcriber hears it wrong: transcribers garble unusual names that were said
+  right, while writing one exactly is hard to do by chance. Every one-shot
+  recording where Deepgram and Whisper both missed a name went to Zoom Scribe.
+
+Only `accuracy`, `hardParts`, `wordError` and `instrumentDisagreements` changed.

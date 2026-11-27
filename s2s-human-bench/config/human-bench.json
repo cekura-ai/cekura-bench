@@ -40,7 +40,7 @@
           "id": "1.2",
           "metric": 275303,
           "name": "Entity Extraction Accuracy",
-          "description": "Gets names, numbers and dates right as the caller says them, and reads them back before using them.",
+          "description": "Gets names, numbers and dates right the first time it uses them, whether it says them back or sends them to a tool.",
           "condition": "Spells names and numbers"
         },
         {

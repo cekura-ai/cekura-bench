@@ -1219,6 +1219,12 @@ class Provider:
     # caller's next words open a new turn.
     reports_playback: bool = False
 
+    @property
+    def agent_text(self) -> str:
+        """Whether the agent's lines are the model's own words or, for Gemini Live,
+        which sends only audio, a transcription of it; scoring reads the two differently."""
+        return "transcription" if self.module == "pipecat.services.google.gemini_live.llm" else "model"
+
 
 # Whether the caller's own words reach the record is a per-provider decision,
 # and it is not a detail: a scored run needs both halves of the conversation, and
@@ -1314,6 +1320,11 @@ AZURE_TURN_DETECTION = {
 # words in the record. Azure's own speech-to-text, pinned to the language
 # every scenario is spoken in.
 AZURE_TRANSCRIPTION = {"model": "azure-speech", "language": "en-US"}
+
+# Bounds the agent's lines in the run record, which is uploaded with the call;
+# a longer call keeps its first replies, where callers give their details.
+AGENT_TEXT_TURNS = 200
+AGENT_TEXT_CHARS = 1000
 
 
 # ``input_rate`` is load-bearing, not a tuning knob. These services do not
@@ -3392,6 +3403,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         rate = CASCADE_RATE
         realtime = False
         service_answers = False
+        agent_text_from = "model"  # the text model's reply, as the voice was given it
     else:
         if name not in PROVIDERS:
             known = sorted([*PROVIDERS, *TEXT_MODELS])
@@ -3401,6 +3413,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         model = settings.get("s2s_model", provider.default_model)
         voice = settings.get("s2s_voice", provider.default_voice)
         record = build_record(name, provider, model, voice, server, settings)
+        agent_text_from = provider.agent_text
         # See the note in the cascade branch above.
         logger.info("building {} on {}", name, model)
 
@@ -3464,15 +3477,31 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
     # What each side said, in the log as well as the transcript: the log is
     # where a reader reconstructs a call, and a transcript row without the
     # turn events around it says what was said but not when or why.
+    #
+    # The agent's lines are also kept in full for the record: the log shortens
+    # them and leaves the call with it, while scoring reads them to tell what
+    # the model captured from what a transcript of the call heard. One reply can
+    # end in several parts (a tool call between them, a service that streams it
+    # in pieces), so the parts are joined until the caller speaks again.
+    spoken: list[str] = []
+    reply_open = False
+
     @aggregators.user().event_handler("on_user_turn_message_added")
     async def _caller_said(_aggregator, message):
+        nonlocal reply_open
+        reply_open = False
         logger.info("caller said: {}", _short(message.content, 500))
 
     @aggregators.assistant().event_handler("on_assistant_turn_stopped")
     async def _agent_said(_aggregator, message):
-        logger.info(
-            "agent said{}: {}", " (interrupted)" if message.interrupted else "", _short(message.content, 500)
-        )
+        nonlocal reply_open
+        text = str(message.content or "").strip()
+        logger.info("agent said{}: {}", " (interrupted)" if message.interrupted else "", _short(text, 500))
+        if text and reply_open and spoken:
+            spoken[-1] = f"{spoken[-1]} {text}"[:AGENT_TEXT_CHARS]
+        elif text and len(spoken) < AGENT_TEXT_TURNS:
+            spoken.append(text[:AGENT_TEXT_CHARS])
+            reply_open = True
         backstop.agent_said(str(message.content or ""), message.interrupted)
 
     def publish() -> None:
@@ -3492,6 +3521,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
                 **record, **trace.as_metadata(), **meter.as_metadata(),
                 **({"timing": timing} if timing else {}),
                 "integrity": narrator.integrity(),
+                "agent_text": {"from": agent_text_from, "turns": spoken},
             })
         except Exception as exc:  # noqa: BLE001 -- never fail a call over a record
             logger.warning("could not update the run record: {!r}", exc)
@@ -3506,11 +3536,11 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments) -> Non
         checks = narrator.integrity()
         logger.info(
             "call summary: {:.0f}s, caller turns {}, agent responses {} ({} heard), barge-ins {}, "
-            "tools {} ({} exact), errors {}, usage reports {}, log lines {}{}{}",
+            "tools {} ({} exact), errors {}, usage reports {}, agent text {} replies ({}), log lines {}{}{}",
             usage["call_seconds"], narrator.caller_turns, narrator.agent_turns, narrator.audible_turns,
             narrator.barge_ins,
             tools["tool_call_count"], tools["tool_calls_matched"], narrator.errors, usage["usage_reports"],
-            len(call_log.lines), f" (+{call_log.dropped} dropped)" if call_log.dropped else "",
+            len(spoken), agent_text_from, len(call_log.lines), f" (+{call_log.dropped} dropped)" if call_log.dropped else "",
             f", reply p50 {reply['p50_ms']} ms / p90 {reply['p90_ms']} ms over {reply['count']}" if reply else "",
         )
         # On its own line and at WARNING when something broke, because this is

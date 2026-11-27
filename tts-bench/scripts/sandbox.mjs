@@ -71,13 +71,15 @@ print(json.dumps(out))`;
 }
 
 // The campaign command one model runs in its sandbox.
-export function campaignArgs({ provider, model, label, suite, repeats, out, voice, options = [], items = [] }) {
+export function campaignArgs({ provider, model, label, suite, repeats, out, voice, options = [], items = [], probes = [], sentinel = true }) {
   for (const option of options) if (!/^[A-Za-z0-9_]+=./.test(option)) throw new Error(`--option ${option}: key=value`);
   return ['-u', 'bin/campaign-model.py', '--provider', provider, '--model', model, '--label', label,
     '--suite', suite, '--repeats', String(repeats), '--out', out,
     ...(voice ? ['--voice', voice] : []),
     ...options.flatMap(option => ['--option', option]),
-    ...items.flatMap(item => ['--item', item])];
+    ...items.flatMap(item => ['--item', item]),
+    ...probes.flatMap(probe => ['--probe', probe]),
+    ...(sentinel ? [] : ['--no-sentinel'])];
 }
 
 // One sandbox per account, not per protocol: two protocols on one key (a
@@ -250,7 +252,7 @@ async function launchGroup(ctx, group) {
     } else {
       const command = await sb.runCommand({ cmd: '.venv/bin/python', cwd: REMOTE, env, detached: true, args: campaignArgs({
         provider, model, label, suite: config.suite, repeats: config.repeats, out: REMOTE_OUT, voice, options,
-        items: config.items ?? [] }) });
+        items: config.items ?? [], probes: config.probes ?? [], sentinel: config.sentinel !== false }) });
       Object.assign(m, { status: 'dispatched', commandId: command.cmdId, sessionId: session, attempts: m.attempts + 1 });
       await saveJson(path, state);
       finished = await waitFor(sb, command.cmdId);

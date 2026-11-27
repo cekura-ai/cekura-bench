@@ -79,18 +79,22 @@ class Item:
     spoken_reference: str
     note: str = ""
     spans: tuple[Span, ...] = ()
+    readings: tuple[str, ...] = ()     # other whole readings that are right, as words; scored like the spoken reference
+    names: tuple[str, ...] = ()        # its words that are a name, as words; misread only when no transcriber heard one
 
     @property
     def words(self) -> int:
         return len(self.text.split())
 
 
-def _i(id: str, cohort: str, text: str, spoken: str, note: str = "", spans: tuple[Span, ...] = ()) -> Item:
+def _i(id: str, cohort: str, text: str, spoken: str, note: str = "", spans: tuple[Span, ...] = (),
+       readings: tuple[str, ...] = (), names: tuple[str, ...] = ()) -> Item:
     assert cohort in COHORTS, cohort
     for span in spans:
         assert span.category in CATEGORIES and span.text in text, (id, span.text)
         assert span.check == "audio" or span.accept, (id, span.text)
-    return Item(id, cohort, text, spoken, note, spans)
+    assert all(name in spoken.split() for name in names), (id, names)
+    return Item(id, cohort, text, spoken, note, spans, readings, names)
 
 
 def _s(text: str, category: str, *accept: str, check: str = "transcript", note: str = "") -> Span:
@@ -100,7 +104,8 @@ def _s(text: str, category: str, *accept: str, check: str = "transcript", note: 
 ITEMS: tuple[Item, ...] = (
     # ── prose ─────────────────────────────────────────────────────────────
     _i("prose.greet", "prose", "Thanks for calling Cedar Valley Family Practice, this is Riley. How can I help you today?",
-       "thanks for calling cedar valley family practice this is riley how can i help you today"),
+       "thanks for calling cedar valley family practice this is riley how can i help you today",
+       readings=("thanks for calling cedar valley family practice this is rylee how can i help you today",)),
     _i("prose.hold", "prose", "Sure, give me just a moment while I pull that up for you.",
        "sure give me just a moment while i pull that up for you"),
     _i("prose.confirm", "prose", "All set. I've booked that for you and you'll get a text confirmation shortly.",
@@ -187,11 +192,15 @@ ITEMS: tuple[Item, ...] = (
     _i("contact.email_digits", "contact", "I have m.rivera88@example.org, is that still current?",
        "i have m dot rivera eighty eight at example dot org is that still current"),
     # ── names ─────────────────────────────────────────────────────────────
-    _i("names.nguyen", "names", "I have Dr. Nguyen available on Monday.", "i have doctor nguyen available on monday"),
-    _i("names.siobhan", "names", "Siobhan Ó Briain called about the invoice.", "siobhan o'brien called about the invoice"),
-    _i("names.joaquin", "names", "The appointment is with Joaquín Ibarra.", "the appointment is with joaquin ibarra"),
-    _i("names.ngozi", "names", "Please hold for Ngozi Okonkwo.", "please hold for ngozi okonkwo"),
-    _i("names.place", "names", "The clinic is in Worcester, near the Leicester exit.", "the clinic is in worcester near the leicester exit"),
+    _i("names.nguyen", "names", "I have Dr. Nguyen available on Monday.", "i have doctor nguyen available on monday",
+       names=("nguyen",)),
+    _i("names.siobhan", "names", "Siobhan Ó Briain called about the invoice.", "siobhan o'brien called about the invoice",
+       names=("siobhan", "o'brien")),
+    _i("names.joaquin", "names", "The appointment is with Joaquín Ibarra.", "the appointment is with joaquin ibarra",
+       names=("joaquin", "ibarra")),
+    _i("names.ngozi", "names", "Please hold for Ngozi Okonkwo.", "please hold for ngozi okonkwo", names=("ngozi", "okonkwo")),
+    _i("names.place", "names", "The clinic is in Worcester, near the Leicester exit.", "the clinic is in worcester near the leicester exit",
+       names=("worcester", "leicester")),
     # ── repair ────────────────────────────────────────────────────────────
     _i("repair.actually", "repair", "That's on the 4th... actually, no, the 5th. Sorry about that.",
        "that's on the fourth actually no the fifth sorry about that"),
@@ -216,7 +225,8 @@ ITEMS: tuple[Item, ...] = (
     # ── units ─────────────────────────────────────────────────────────────
     _i("units.dose", "units", "Take 500 mg twice a day, with food.", "take five hundred milligrams twice a day with food"),
     _i("units.eta", "units", "The ETA is 3 PM ET, and the driver will text when they're 10 min away.",
-       "the e t a is three p m eastern and the driver will text when they're ten minutes away"),
+       "the e t a is three p m eastern and the driver will text when they're ten minutes away",
+       readings=("the e t a is three p m eastern time and the driver will text when they're ten minutes away",)),
     _i("units.titles", "units", "Dr. Patel and Mr. St. John will both be at the 2 o'clock.",
        "doctor patel and mister saint john will both be at the two o'clock"),
     _i("units.measure", "units", "It's about 2.5 km from the station, roughly a 30-minute walk.",
@@ -302,7 +312,14 @@ ITEMS: tuple[Item, ...] = (
        "merchant i've frozen the card ending in four four one seven so no new charges can go through and i've opened a "
        "dispute for both amounts you'll see a temporary credit within two business days while we investigate a "
        "replacement card will arrive in five to seven days and you'll get a text when it ships is there anything else "
-       "on the account you'd like me to check"),
+       "on the account you'd like me to check",
+       # "I've verified" and "I verified" sound alike: the v of "I've" runs into "verified"
+       readings=("thanks i verified your identity i can see two charges from september third that you don't recognize one "
+                 "for eighty nine dollars and ninety nine cents and one for twelve dollars and fifty cents both from an "
+                 "online merchant i've frozen the card ending in four four one seven so no new charges can go through and "
+                 "i've opened a dispute for both amounts you'll see a temporary credit within two business days while we "
+                 "investigate a replacement card will arrive in five to seven days and you'll get a text when it ships is "
+                 "there anything else on the account you'd like me to check",)),
     # ── heteronym ─────────────────────────────────────────────────────────
     _i("heteronym.read", "heteronym", "Please read the notice. I read it to you yesterday, but it's worth another look.",
        "please read the notice i read it to you yesterday but it's worth another look",
@@ -496,5 +513,7 @@ def load(path: str | Path) -> tuple[str, list[Item]]:
     for raw in payload["items"]:
         fields = {k: v for k, v in raw.items() if k in Item.__dataclass_fields__}
         fields["spans"] = tuple(Span(**{**span, "accept": tuple(span.get("accept", ()))}) for span in raw.get("spans", ()))
+        fields["readings"] = tuple(raw.get("readings", ()))
+        fields["names"] = tuple(raw.get("names", ()))
         items.append(Item(**fields))
     return str(payload.get("version", "external")), items

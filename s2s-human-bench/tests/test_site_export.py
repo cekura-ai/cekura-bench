@@ -7,6 +7,7 @@ import pytest
 
 from conftest import BAD, config_dict, write_run
 from s2s_human_bench.config import load_config
+from s2s_human_bench.entities import EntityFileError
 from s2s_human_bench.site_export import run_site_export
 
 PUBLIC_S2S = {
@@ -28,7 +29,7 @@ def make_inputs(tmp_path):
     return runs
 
 
-def export(tmp_path, cfg, out, reviewed=None, clips=None, tasks=None):
+def export(tmp_path, cfg, out, reviewed=None, clips=None, tasks=None, entities=None):
     args = Namespace(
         config=tmp_path / "config.json",
         runs=tmp_path / "runs",
@@ -43,6 +44,8 @@ def export(tmp_path, cfg, out, reviewed=None, clips=None, tasks=None):
         reviewed_examples=reviewed,
         reviewed_clips=clips,
         tasks=tasks,
+        entities=entities,
+        agent_logs=None,
     )
     assert run_site_export(args) == 0
     return {p.name: json.loads(p.read_text()) for p in out.iterdir()}
@@ -168,3 +171,10 @@ def test_export_warns_when_calls_lack_the_task_metric(cfg, tmp_path, capsys):
         path.write_text(json.dumps(doc))
     export(tmp_path, cfg, tmp_path / "all")
     assert "warning" not in capsys.readouterr().err
+
+
+def test_entity_file_must_name_a_config_skill(tmp_path, cfg):
+    make_inputs(tmp_path)
+    (tmp_path / "entities.json").write_text(json.dumps({"skill": "9.9", "entities": {"B01": {"kind": "digits", "true": "7731", "keys": "last4"}}}))
+    with pytest.raises(EntityFileError):
+        export(tmp_path, cfg, tmp_path / "out", entities=tmp_path / "entities.json")

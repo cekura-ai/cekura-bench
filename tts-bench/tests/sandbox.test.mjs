@@ -41,3 +41,10 @@ test('the voice and adapter options reach the campaign command', () => {
   assert.throws(() => campaignArgs({ provider: 'p', model: 'm', label: 'l', suite: 'full', repeats: 3, out: '/o', options: ['low'] }),
     /key=value/);
 });
+
+test('a probe subset without the sentinel reaches the campaign command', () => {
+  const args = campaignArgs({ provider: 'p', model: 'm', label: 'l', suite: 'full', repeats: 3, out: '/o',
+    items: ['prose.greet'], probes: ['one_shot'], sentinel: false });
+  assert.deepEqual(args.slice(args.indexOf('--item')), ['--item', 'prose.greet', '--probe', 'one_shot', '--no-sentinel']);
+  assert.ok(!campaignArgs({ provider: 'p', model: 'm', label: 'l', suite: 'full', repeats: 3, out: '/o' }).includes('--no-sentinel'));
+});

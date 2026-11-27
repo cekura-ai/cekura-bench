@@ -1,0 +1,1487 @@
+{
+  "project_id": 16745,
+  "selected_calls": 135,
+  "per_agent": {
+    "28261": 45,
+    "28260": 45,
+    "28262": 45
+  },
+  "replacements": [
+    {
+      "old_run_id": 4788751,
+      "new_run_id": 4790076
+    },
+    {
+      "old_run_id": 4788775,
+      "new_run_id": 4790077
+    },
+    {
+      "old_run_id": 4788805,
+      "new_run_id": 4790122
+    },
+    {
+      "old_run_id": 4788817,
+      "new_run_id": 4790212
+    },
+    {
+      "old_run_id": 4788847,
+      "new_run_id": 4790081
+    },
+    {
+      "old_run_id": 4788866,
+      "new_run_id": 4790080
+    }
+  ],
+  "excluded_attempt_ids": [
+    4790078,
+    4790079,
+    4790121,
+    4790171,
+    4790172
+  ],
+  "coverage": [
+    {
+      "agent_id": 28260,
+      "scenario_id": 461427,
+      "calls": 3
+    },
+    {
+      "agent_id": 28260,
+      "scenario_id": 461428,
+      "calls": 3
+    },
+    {
+      "agent_id": 28260,
+      "scenario_id": 461429,
+      "calls": 3
+    },
+    {
+      "agent_id": 28260,
+      "scenario_id": 461430,
+      "calls": 3
+    },
+    {
+      "agent_id": 28260,
+      "scenario_id": 461431,
+      "calls": 3
+    },
+    {
+      "agent_id": 28260,
+      "scenario_id": 461432,
+      "calls": 3
+    },
+    {
+      "agent_id": 28260,
+      "scenario_id": 461433,
+      "calls": 3
+    },
+    {
+      "agent_id": 28260,
+      "scenario_id": 461434,
+      "calls": 3
+    },
+    {
+      "agent_id": 28260,
+      "scenario_id": 461435,
+      "calls": 3
+    },
+    {
+      "agent_id": 28260,
+      "scenario_id": 461436,
+      "calls": 3
+    },
+    {
+      "agent_id": 28260,
+      "scenario_id": 461437,
+      "calls": 3
+    },
+    {
+      "agent_id": 28260,
+      "scenario_id": 461438,
+      "calls": 3
+    },
+    {
+      "agent_id": 28260,
+      "scenario_id": 461439,
+      "calls": 3
+    },
+    {
+      "agent_id": 28260,
+      "scenario_id": 461440,
+      "calls": 3
+    },
+    {
+      "agent_id": 28260,
+      "scenario_id": 461441,
+      "calls": 3
+    },
+    {
+      "agent_id": 28261,
+      "scenario_id": 461442,
+      "calls": 3
+    },
+    {
+      "agent_id": 28261,
+      "scenario_id": 461443,
+      "calls": 3
+    },
+    {
+      "agent_id": 28261,
+      "scenario_id": 461444,
+      "calls": 3
+    },
+    {
+      "agent_id": 28261,
+      "scenario_id": 461445,
+      "calls": 3
+    },
+    {
+      "agent_id": 28261,
+      "scenario_id": 461446,
+      "calls": 3
+    },
+    {
+      "agent_id": 28261,
+      "scenario_id": 461447,
+      "calls": 3
+    },
+    {
+      "agent_id": 28261,
+      "scenario_id": 461448,
+      "calls": 3
+    },
+    {
+      "agent_id": 28261,
+      "scenario_id": 461449,
+      "calls": 3
+    },
+    {
+      "agent_id": 28261,
+      "scenario_id": 461450,
+      "calls": 3
+    },
+    {
+      "agent_id": 28261,
+      "scenario_id": 461451,
+      "calls": 3
+    },
+    {
+      "agent_id": 28261,
+      "scenario_id": 461452,
+      "calls": 3
+    },
+    {
+      "agent_id": 28261,
+      "scenario_id": 461453,
+      "calls": 3
+    },
+    {
+      "agent_id": 28261,
+      "scenario_id": 461454,
+      "calls": 3
+    },
+    {
+      "agent_id": 28261,
+      "scenario_id": 461455,
+      "calls": 3
+    },
+    {
+      "agent_id": 28261,
+      "scenario_id": 461456,
+      "calls": 3
+    },
+    {
+      "agent_id": 28262,
+      "scenario_id": 461457,
+      "calls": 3
+    },
+    {
+      "agent_id": 28262,
+      "scenario_id": 461458,
+      "calls": 3
+    },
+    {
+      "agent_id": 28262,
+      "scenario_id": 461459,
+      "calls": 3
+    },
+    {
+      "agent_id": 28262,
+      "scenario_id": 461460,
+      "calls": 3
+    },
+    {
+      "agent_id": 28262,
+      "scenario_id": 461461,
+      "calls": 3
+    },
+    {
+      "agent_id": 28262,
+      "scenario_id": 461462,
+      "calls": 3
+    },
+    {
+      "agent_id": 28262,
+      "scenario_id": 461463,
+      "calls": 3
+    },
+    {
+      "agent_id": 28262,
+      "scenario_id": 461464,
+      "calls": 3
+    },
+    {
+      "agent_id": 28262,
+      "scenario_id": 461465,
+      "calls": 3
+    },
+    {
+      "agent_id": 28262,
+      "scenario_id": 461466,
+      "calls": 3
+    },
+    {
+      "agent_id": 28262,
+      "scenario_id": 461467,
+      "calls": 3
+    },
+    {
+      "agent_id": 28262,
+      "scenario_id": 461468,
+      "calls": 3
+    },
+    {
+      "agent_id": 28262,
+      "scenario_id": 461469,
+      "calls": 3
+    },
+    {
+      "agent_id": 28262,
+      "scenario_id": 461470,
+      "calls": 3
+    },
+    {
+      "agent_id": 28262,
+      "scenario_id": 461471,
+      "calls": 3
+    }
+  ],
+  "calls": [
+    {
+      "run_id": 4788812,
+      "original_run_id": 4788812,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461454,
+      "scenario_name": "Q09 - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788811,
+      "original_run_id": 4788811,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461453,
+      "scenario_name": "Q08 - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788810,
+      "original_run_id": 4788810,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461452,
+      "scenario_name": "Q07 - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788809,
+      "original_run_id": 4788809,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461451,
+      "scenario_name": "Q06 - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788808,
+      "original_run_id": 4788808,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461449,
+      "scenario_name": "Q04 - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788807,
+      "original_run_id": 4788807,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461447,
+      "scenario_name": "Q02 - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788806,
+      "original_run_id": 4788806,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461445,
+      "scenario_name": "Office noise - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4790122,
+      "original_run_id": 4788805,
+      "replacement": true,
+      "agent_id": 28261,
+      "scenario_id": 461444,
+      "scenario_name": "Listening acknowledgment - Generic inventory parity",
+      "result_id": 1176689
+    },
+    {
+      "run_id": 4788804,
+      "original_run_id": 4788804,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461443,
+      "scenario_name": "Difficult day - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788803,
+      "original_run_id": 4788803,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461442,
+      "scenario_name": "Cough - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788802,
+      "original_run_id": 4788802,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461456,
+      "scenario_name": "Sick family member - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788801,
+      "original_run_id": 4788801,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461455,
+      "scenario_name": "Q10 - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788800,
+      "original_run_id": 4788800,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461454,
+      "scenario_name": "Q09 - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788799,
+      "original_run_id": 4788799,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461453,
+      "scenario_name": "Q08 - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788798,
+      "original_run_id": 4788798,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461452,
+      "scenario_name": "Q07 - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788797,
+      "original_run_id": 4788797,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461451,
+      "scenario_name": "Q06 - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788796,
+      "original_run_id": 4788796,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461449,
+      "scenario_name": "Q04 - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788795,
+      "original_run_id": 4788795,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461447,
+      "scenario_name": "Q02 - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788794,
+      "original_run_id": 4788794,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461445,
+      "scenario_name": "Office noise - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788793,
+      "original_run_id": 4788793,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461444,
+      "scenario_name": "Listening acknowledgment - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788792,
+      "original_run_id": 4788792,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461443,
+      "scenario_name": "Difficult day - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788791,
+      "original_run_id": 4788791,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461442,
+      "scenario_name": "Cough - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788790,
+      "original_run_id": 4788790,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461435,
+      "scenario_name": "Q05 - Generic inventory parity",
+      "result_id": 1176173
+    },
+    {
+      "run_id": 4788789,
+      "original_run_id": 4788789,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461433,
+      "scenario_name": "Q03 - Generic inventory parity",
+      "result_id": 1176173
+    },
+    {
+      "run_id": 4788788,
+      "original_run_id": 4788788,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461431,
+      "scenario_name": "Q01 - Generic inventory parity",
+      "result_id": 1176173
+    },
+    {
+      "run_id": 4788787,
+      "original_run_id": 4788787,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461435,
+      "scenario_name": "Q05 - Generic inventory parity",
+      "result_id": 1176173
+    },
+    {
+      "run_id": 4788786,
+      "original_run_id": 4788786,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461433,
+      "scenario_name": "Q03 - Generic inventory parity",
+      "result_id": 1176173
+    },
+    {
+      "run_id": 4788785,
+      "original_run_id": 4788785,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461431,
+      "scenario_name": "Q01 - Generic inventory parity",
+      "result_id": 1176173
+    },
+    {
+      "run_id": 4788784,
+      "original_run_id": 4788784,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461441,
+      "scenario_name": "Sick family member - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788783,
+      "original_run_id": 4788783,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461440,
+      "scenario_name": "Q10 - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788782,
+      "original_run_id": 4788782,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461439,
+      "scenario_name": "Q09 - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788781,
+      "original_run_id": 4788781,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461438,
+      "scenario_name": "Q08 - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788780,
+      "original_run_id": 4788780,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461437,
+      "scenario_name": "Q07 - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788779,
+      "original_run_id": 4788779,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461436,
+      "scenario_name": "Q06 - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788778,
+      "original_run_id": 4788778,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461434,
+      "scenario_name": "Q04 - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788777,
+      "original_run_id": 4788777,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461432,
+      "scenario_name": "Q02 - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788776,
+      "original_run_id": 4788776,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461430,
+      "scenario_name": "Office noise - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4790077,
+      "original_run_id": 4788775,
+      "replacement": true,
+      "agent_id": 28260,
+      "scenario_id": 461429,
+      "scenario_name": "Listening acknowledgment - Generic inventory parity",
+      "result_id": 1176669
+    },
+    {
+      "run_id": 4788774,
+      "original_run_id": 4788774,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461428,
+      "scenario_name": "Difficult day - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788773,
+      "original_run_id": 4788773,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461427,
+      "scenario_name": "Cough - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788772,
+      "original_run_id": 4788772,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461441,
+      "scenario_name": "Sick family member - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788771,
+      "original_run_id": 4788771,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461440,
+      "scenario_name": "Q10 - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788770,
+      "original_run_id": 4788770,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461439,
+      "scenario_name": "Q09 - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788769,
+      "original_run_id": 4788769,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461438,
+      "scenario_name": "Q08 - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788768,
+      "original_run_id": 4788768,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461437,
+      "scenario_name": "Q07 - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788767,
+      "original_run_id": 4788767,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461436,
+      "scenario_name": "Q06 - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788766,
+      "original_run_id": 4788766,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461434,
+      "scenario_name": "Q04 - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788765,
+      "original_run_id": 4788765,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461432,
+      "scenario_name": "Q02 - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788764,
+      "original_run_id": 4788764,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461430,
+      "scenario_name": "Office noise - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788763,
+      "original_run_id": 4788763,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461429,
+      "scenario_name": "Listening acknowledgment - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788762,
+      "original_run_id": 4788762,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461428,
+      "scenario_name": "Difficult day - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788761,
+      "original_run_id": 4788761,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461427,
+      "scenario_name": "Cough - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788760,
+      "original_run_id": 4788760,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461441,
+      "scenario_name": "Sick family member - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788759,
+      "original_run_id": 4788759,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461440,
+      "scenario_name": "Q10 - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788758,
+      "original_run_id": 4788758,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461439,
+      "scenario_name": "Q09 - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788757,
+      "original_run_id": 4788757,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461438,
+      "scenario_name": "Q08 - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788756,
+      "original_run_id": 4788756,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461437,
+      "scenario_name": "Q07 - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788755,
+      "original_run_id": 4788755,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461436,
+      "scenario_name": "Q06 - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788754,
+      "original_run_id": 4788754,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461434,
+      "scenario_name": "Q04 - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788753,
+      "original_run_id": 4788753,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461432,
+      "scenario_name": "Q02 - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788752,
+      "original_run_id": 4788752,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461430,
+      "scenario_name": "Office noise - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4790076,
+      "original_run_id": 4788751,
+      "replacement": true,
+      "agent_id": 28260,
+      "scenario_id": 461429,
+      "scenario_name": "Listening acknowledgment - Generic inventory parity",
+      "result_id": 1176669
+    },
+    {
+      "run_id": 4788750,
+      "original_run_id": 4788750,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461428,
+      "scenario_name": "Difficult day - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788749,
+      "original_run_id": 4788749,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461427,
+      "scenario_name": "Cough - Generic inventory parity",
+      "result_id": 1176172
+    },
+    {
+      "run_id": 4788675,
+      "original_run_id": 4788675,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461450,
+      "scenario_name": "Q05 - Generic inventory parity",
+      "result_id": 1176115
+    },
+    {
+      "run_id": 4788674,
+      "original_run_id": 4788674,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461448,
+      "scenario_name": "Q03 - Generic inventory parity",
+      "result_id": 1176115
+    },
+    {
+      "run_id": 4788673,
+      "original_run_id": 4788673,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461446,
+      "scenario_name": "Q01 - Generic inventory parity",
+      "result_id": 1176115
+    },
+    {
+      "run_id": 4788672,
+      "original_run_id": 4788672,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461435,
+      "scenario_name": "Q05 - Generic inventory parity",
+      "result_id": 1176114
+    },
+    {
+      "run_id": 4788671,
+      "original_run_id": 4788671,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461433,
+      "scenario_name": "Q03 - Generic inventory parity",
+      "result_id": 1176114
+    },
+    {
+      "run_id": 4788670,
+      "original_run_id": 4788670,
+      "replacement": false,
+      "agent_id": 28260,
+      "scenario_id": 461431,
+      "scenario_name": "Q01 - Generic inventory parity",
+      "result_id": 1176114
+    },
+    {
+      "run_id": 4788874,
+      "original_run_id": 4788874,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461465,
+      "scenario_name": "Q05 - Generic inventory parity",
+      "result_id": 1176177
+    },
+    {
+      "run_id": 4788873,
+      "original_run_id": 4788873,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461463,
+      "scenario_name": "Q03 - Generic inventory parity",
+      "result_id": 1176177
+    },
+    {
+      "run_id": 4788872,
+      "original_run_id": 4788872,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461461,
+      "scenario_name": "Q01 - Generic inventory parity",
+      "result_id": 1176177
+    },
+    {
+      "run_id": 4788871,
+      "original_run_id": 4788871,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461465,
+      "scenario_name": "Q05 - Generic inventory parity",
+      "result_id": 1176177
+    },
+    {
+      "run_id": 4788870,
+      "original_run_id": 4788870,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461463,
+      "scenario_name": "Q03 - Generic inventory parity",
+      "result_id": 1176177
+    },
+    {
+      "run_id": 4788869,
+      "original_run_id": 4788869,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461461,
+      "scenario_name": "Q01 - Generic inventory parity",
+      "result_id": 1176177
+    },
+    {
+      "run_id": 4788868,
+      "original_run_id": 4788868,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461471,
+      "scenario_name": "Sick family member - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788867,
+      "original_run_id": 4788867,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461470,
+      "scenario_name": "Q10 - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4790080,
+      "original_run_id": 4788866,
+      "replacement": true,
+      "agent_id": 28262,
+      "scenario_id": 461469,
+      "scenario_name": "Q09 - Generic inventory parity",
+      "result_id": 1176671
+    },
+    {
+      "run_id": 4788865,
+      "original_run_id": 4788865,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461468,
+      "scenario_name": "Q08 - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788864,
+      "original_run_id": 4788864,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461467,
+      "scenario_name": "Q07 - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788863,
+      "original_run_id": 4788863,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461466,
+      "scenario_name": "Q06 - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788862,
+      "original_run_id": 4788862,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461464,
+      "scenario_name": "Q04 - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788861,
+      "original_run_id": 4788861,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461462,
+      "scenario_name": "Q02 - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788860,
+      "original_run_id": 4788860,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461460,
+      "scenario_name": "Office noise - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788859,
+      "original_run_id": 4788859,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461459,
+      "scenario_name": "Listening acknowledgment - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788858,
+      "original_run_id": 4788858,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461458,
+      "scenario_name": "Difficult day - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788857,
+      "original_run_id": 4788857,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461457,
+      "scenario_name": "Cough - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788856,
+      "original_run_id": 4788856,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461471,
+      "scenario_name": "Sick family member - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788855,
+      "original_run_id": 4788855,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461470,
+      "scenario_name": "Q10 - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788854,
+      "original_run_id": 4788854,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461469,
+      "scenario_name": "Q09 - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788853,
+      "original_run_id": 4788853,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461468,
+      "scenario_name": "Q08 - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788852,
+      "original_run_id": 4788852,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461467,
+      "scenario_name": "Q07 - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788851,
+      "original_run_id": 4788851,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461466,
+      "scenario_name": "Q06 - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788850,
+      "original_run_id": 4788850,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461464,
+      "scenario_name": "Q04 - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788849,
+      "original_run_id": 4788849,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461462,
+      "scenario_name": "Q02 - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788848,
+      "original_run_id": 4788848,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461460,
+      "scenario_name": "Office noise - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4790081,
+      "original_run_id": 4788847,
+      "replacement": true,
+      "agent_id": 28262,
+      "scenario_id": 461459,
+      "scenario_name": "Listening acknowledgment - Generic inventory parity",
+      "result_id": 1176671
+    },
+    {
+      "run_id": 4788846,
+      "original_run_id": 4788846,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461458,
+      "scenario_name": "Difficult day - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788845,
+      "original_run_id": 4788845,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461457,
+      "scenario_name": "Cough - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788844,
+      "original_run_id": 4788844,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461471,
+      "scenario_name": "Sick family member - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788843,
+      "original_run_id": 4788843,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461470,
+      "scenario_name": "Q10 - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788842,
+      "original_run_id": 4788842,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461469,
+      "scenario_name": "Q09 - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788841,
+      "original_run_id": 4788841,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461468,
+      "scenario_name": "Q08 - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788840,
+      "original_run_id": 4788840,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461467,
+      "scenario_name": "Q07 - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788839,
+      "original_run_id": 4788839,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461466,
+      "scenario_name": "Q06 - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788838,
+      "original_run_id": 4788838,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461464,
+      "scenario_name": "Q04 - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788837,
+      "original_run_id": 4788837,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461462,
+      "scenario_name": "Q02 - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788836,
+      "original_run_id": 4788836,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461460,
+      "scenario_name": "Office noise - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788835,
+      "original_run_id": 4788835,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461459,
+      "scenario_name": "Listening acknowledgment - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788834,
+      "original_run_id": 4788834,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461458,
+      "scenario_name": "Difficult day - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788833,
+      "original_run_id": 4788833,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461457,
+      "scenario_name": "Cough - Generic inventory parity",
+      "result_id": 1176176
+    },
+    {
+      "run_id": 4788832,
+      "original_run_id": 4788832,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461450,
+      "scenario_name": "Q05 - Generic inventory parity",
+      "result_id": 1176175
+    },
+    {
+      "run_id": 4788831,
+      "original_run_id": 4788831,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461448,
+      "scenario_name": "Q03 - Generic inventory parity",
+      "result_id": 1176175
+    },
+    {
+      "run_id": 4788830,
+      "original_run_id": 4788830,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461446,
+      "scenario_name": "Q01 - Generic inventory parity",
+      "result_id": 1176175
+    },
+    {
+      "run_id": 4788829,
+      "original_run_id": 4788829,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461450,
+      "scenario_name": "Q05 - Generic inventory parity",
+      "result_id": 1176175
+    },
+    {
+      "run_id": 4788828,
+      "original_run_id": 4788828,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461448,
+      "scenario_name": "Q03 - Generic inventory parity",
+      "result_id": 1176175
+    },
+    {
+      "run_id": 4788827,
+      "original_run_id": 4788827,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461446,
+      "scenario_name": "Q01 - Generic inventory parity",
+      "result_id": 1176175
+    },
+    {
+      "run_id": 4788826,
+      "original_run_id": 4788826,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461456,
+      "scenario_name": "Sick family member - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788825,
+      "original_run_id": 4788825,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461455,
+      "scenario_name": "Q10 - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788824,
+      "original_run_id": 4788824,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461454,
+      "scenario_name": "Q09 - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788823,
+      "original_run_id": 4788823,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461453,
+      "scenario_name": "Q08 - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788822,
+      "original_run_id": 4788822,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461452,
+      "scenario_name": "Q07 - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788821,
+      "original_run_id": 4788821,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461451,
+      "scenario_name": "Q06 - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788820,
+      "original_run_id": 4788820,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461449,
+      "scenario_name": "Q04 - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788819,
+      "original_run_id": 4788819,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461447,
+      "scenario_name": "Q02 - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788818,
+      "original_run_id": 4788818,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461445,
+      "scenario_name": "Office noise - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4790212,
+      "original_run_id": 4788817,
+      "replacement": true,
+      "agent_id": 28261,
+      "scenario_id": 461444,
+      "scenario_name": "Listening acknowledgment - Generic inventory parity",
+      "result_id": 1176727
+    },
+    {
+      "run_id": 4788816,
+      "original_run_id": 4788816,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461443,
+      "scenario_name": "Difficult day - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788815,
+      "original_run_id": 4788815,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461442,
+      "scenario_name": "Cough - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788814,
+      "original_run_id": 4788814,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461456,
+      "scenario_name": "Sick family member - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788813,
+      "original_run_id": 4788813,
+      "replacement": false,
+      "agent_id": 28261,
+      "scenario_id": 461455,
+      "scenario_name": "Q10 - Generic inventory parity",
+      "result_id": 1176174
+    },
+    {
+      "run_id": 4788678,
+      "original_run_id": 4788678,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461465,
+      "scenario_name": "Q05 - Generic inventory parity",
+      "result_id": 1176116
+    },
+    {
+      "run_id": 4788677,
+      "original_run_id": 4788677,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461463,
+      "scenario_name": "Q03 - Generic inventory parity",
+      "result_id": 1176116
+    },
+    {
+      "run_id": 4788676,
+      "original_run_id": 4788676,
+      "replacement": false,
+      "agent_id": 28262,
+      "scenario_id": 461461,
+      "scenario_name": "Q01 - Generic inventory parity",
+      "result_id": 1176116
+    }
+  ],
+  "executions": 146
+}

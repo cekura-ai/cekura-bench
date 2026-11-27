@@ -1,0 +1,4209 @@
+[
+  {
+    "shop": "1st Class Auto Service",
+    "agent_id": 28260,
+    "phone_number": "+16184966093",
+    "calls": [
+      {
+        "run_id": 4788790,
+        "result_id": 1176173,
+        "scenario": "Q05",
+        "scenario_name": "Q05 - Generic inventory parity",
+        "evaluator_id": 461435,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176173?call_id=4788790",
+        "metrics": {
+          "audio": 4.54874324798584,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1480.0,
+          "stop": 340.0,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": 100.0,
+          "recovery": 5
+        },
+        "events_ms": {
+          "latency": [
+            1520.0,
+            1440.0
+          ],
+          "stop": [
+            340.0
+          ]
+        }
+      },
+      {
+        "run_id": 4788789,
+        "result_id": 1176173,
+        "scenario": "Q03",
+        "scenario_name": "Q03 - Generic inventory parity",
+        "evaluator_id": 461433,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176173?call_id=4788789",
+        "metrics": {
+          "audio": 4.472276210784912,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1300.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1250.0,
+            1350.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788788,
+        "result_id": 1176173,
+        "scenario": "Q01",
+        "scenario_name": "Q01 - Generic inventory parity",
+        "evaluator_id": 461431,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176173?call_id=4788788",
+        "metrics": {
+          "audio": 4.482179164886475,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1610.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1610.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788787,
+        "result_id": 1176173,
+        "scenario": "Q05",
+        "scenario_name": "Q05 - Generic inventory parity",
+        "evaluator_id": 461435,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176173?call_id=4788787",
+        "metrics": {
+          "audio": 4.5156707763671875,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1345.0,
+          "stop": 340.0,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": 100.0,
+          "recovery": 5
+        },
+        "events_ms": {
+          "latency": [
+            1560.0,
+            1130.0
+          ],
+          "stop": [
+            340.0
+          ]
+        }
+      },
+      {
+        "run_id": 4788786,
+        "result_id": 1176173,
+        "scenario": "Q03",
+        "scenario_name": "Q03 - Generic inventory parity",
+        "evaluator_id": 461433,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176173?call_id=4788786",
+        "metrics": {
+          "audio": 4.468358039855957,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1450.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1420.0,
+            1480.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788785,
+        "result_id": 1176173,
+        "scenario": "Q01",
+        "scenario_name": "Q01 - Generic inventory parity",
+        "evaluator_id": 461431,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176173?call_id=4788785",
+        "metrics": {
+          "audio": 4.492323398590088,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1330.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1330.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788784,
+        "result_id": 1176172,
+        "scenario": "Sick family member",
+        "scenario_name": "Sick family member - Generic inventory parity",
+        "evaluator_id": 461441,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788784",
+        "metrics": {
+          "audio": 4.408838748931885,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1290.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": 100.0,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1320.0,
+            1260.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788783,
+        "result_id": 1176172,
+        "scenario": "Q10",
+        "scenario_name": "Q10 - Generic inventory parity",
+        "evaluator_id": 461440,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788783",
+        "metrics": {
+          "audio": 4.471207618713379,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1320.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1320.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4790077,
+        "result_id": 1176669,
+        "scenario": "Listening acknowledgment",
+        "scenario_name": "Listening acknowledgment - Generic inventory parity",
+        "evaluator_id": 461429,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176669?call_id=4790077",
+        "metrics": {
+          "audio": 4.468436241149902,
+          "interruption": 5,
+          "repetition": 3.33,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1585.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": 100.0,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1770.0,
+            1400.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788782,
+        "result_id": 1176172,
+        "scenario": "Q09",
+        "scenario_name": "Q09 - Generic inventory parity",
+        "evaluator_id": 461439,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788782",
+        "metrics": {
+          "audio": 4.512703895568848,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1130.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": 5
+        },
+        "events_ms": {
+          "latency": [
+            1320.0,
+            940.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788781,
+        "result_id": 1176172,
+        "scenario": "Q08",
+        "scenario_name": "Q08 - Generic inventory parity",
+        "evaluator_id": 461438,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788781",
+        "metrics": {
+          "audio": 4.496809482574463,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1410.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1420.0,
+            1400.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788780,
+        "result_id": 1176172,
+        "scenario": "Q07",
+        "scenario_name": "Q07 - Generic inventory parity",
+        "evaluator_id": 461437,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788780",
+        "metrics": {
+          "audio": 4.433651924133301,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1570.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1570.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788779,
+        "result_id": 1176172,
+        "scenario": "Q06",
+        "scenario_name": "Q06 - Generic inventory parity",
+        "evaluator_id": 461436,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788779",
+        "metrics": {
+          "audio": 3.2936229705810547,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1900.0,
+          "stop": 420.0,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": 5
+        },
+        "events_ms": {
+          "latency": [
+            1900.0
+          ],
+          "stop": [
+            420.0
+          ]
+        }
+      },
+      {
+        "run_id": 4788778,
+        "result_id": 1176172,
+        "scenario": "Q04",
+        "scenario_name": "Q04 - Generic inventory parity",
+        "evaluator_id": 461434,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788778",
+        "metrics": {
+          "audio": 4.535529613494873,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1700.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            2050.0,
+            1350.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788777,
+        "result_id": 1176172,
+        "scenario": "Q02",
+        "scenario_name": "Q02 - Generic inventory parity",
+        "evaluator_id": 461432,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788777",
+        "metrics": {
+          "audio": 4.499144554138184,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1415.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1430.0,
+            1400.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788776,
+        "result_id": 1176172,
+        "scenario": "Office noise",
+        "scenario_name": "Office noise - Generic inventory parity",
+        "evaluator_id": 461430,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788776",
+        "metrics": {
+          "audio": 4.4454545974731445,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1330.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1260.0,
+            1400.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788774,
+        "result_id": 1176172,
+        "scenario": "Difficult day",
+        "scenario_name": "Difficult day - Generic inventory parity",
+        "evaluator_id": 461428,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788774",
+        "metrics": {
+          "audio": 4.434277534484863,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1280.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": 100.0,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1190.0,
+            1370.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788773,
+        "result_id": 1176172,
+        "scenario": "Cough",
+        "scenario_name": "Cough - Generic inventory parity",
+        "evaluator_id": 461427,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788773",
+        "metrics": {
+          "audio": 4.427273750305176,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1230.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1170.0,
+            1290.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788772,
+        "result_id": 1176172,
+        "scenario": "Sick family member",
+        "scenario_name": "Sick family member - Generic inventory parity",
+        "evaluator_id": 461441,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788772",
+        "metrics": {
+          "audio": 4.464805603027344,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1315.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": 100.0,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1290.0,
+            1340.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788771,
+        "result_id": 1176172,
+        "scenario": "Q10",
+        "scenario_name": "Q10 - Generic inventory parity",
+        "evaluator_id": 461440,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788771",
+        "metrics": {
+          "audio": 4.452348709106445,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1560.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1560.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788770,
+        "result_id": 1176172,
+        "scenario": "Q09",
+        "scenario_name": "Q09 - Generic inventory parity",
+        "evaluator_id": 461439,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788770",
+        "metrics": {
+          "audio": 4.452238082885742,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1200.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1370.0,
+            1030.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788769,
+        "result_id": 1176172,
+        "scenario": "Q08",
+        "scenario_name": "Q08 - Generic inventory parity",
+        "evaluator_id": 461438,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788769",
+        "metrics": {
+          "audio": 4.458828926086426,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1565.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1600.0,
+            1530.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788768,
+        "result_id": 1176172,
+        "scenario": "Q07",
+        "scenario_name": "Q07 - Generic inventory parity",
+        "evaluator_id": 461437,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788768",
+        "metrics": {
+          "audio": 4.4281439781188965,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1400.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1400.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788767,
+        "result_id": 1176172,
+        "scenario": "Q06",
+        "scenario_name": "Q06 - Generic inventory parity",
+        "evaluator_id": 461436,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788767",
+        "metrics": {
+          "audio": 3.509617805480957,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1320.0,
+          "stop": 320.0,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": 5
+        },
+        "events_ms": {
+          "latency": [
+            1320.0
+          ],
+          "stop": [
+            320.0
+          ]
+        }
+      },
+      {
+        "run_id": 4788766,
+        "result_id": 1176172,
+        "scenario": "Q04",
+        "scenario_name": "Q04 - Generic inventory parity",
+        "evaluator_id": 461434,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788766",
+        "metrics": {
+          "audio": 4.529787063598633,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1570.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1780.0,
+            1360.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788765,
+        "result_id": 1176172,
+        "scenario": "Q02",
+        "scenario_name": "Q02 - Generic inventory parity",
+        "evaluator_id": 461432,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788765",
+        "metrics": {
+          "audio": 4.438941955566406,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1330.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1360.0,
+            1300.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788764,
+        "result_id": 1176172,
+        "scenario": "Office noise",
+        "scenario_name": "Office noise - Generic inventory parity",
+        "evaluator_id": 461430,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788764",
+        "metrics": {
+          "audio": 4.449962139129639,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1320.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1400.0,
+            1240.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788763,
+        "result_id": 1176172,
+        "scenario": "Listening acknowledgment",
+        "scenario_name": "Listening acknowledgment - Generic inventory parity",
+        "evaluator_id": 461429,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788763",
+        "metrics": {
+          "audio": 4.455225944519043,
+          "interruption": 5,
+          "repetition": 3.33,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1345.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": 100.0,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1230.0,
+            1460.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788762,
+        "result_id": 1176172,
+        "scenario": "Difficult day",
+        "scenario_name": "Difficult day - Generic inventory parity",
+        "evaluator_id": 461428,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788762",
+        "metrics": {
+          "audio": 4.411877155303955,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1180.0,
+          "stop": null,
+          "organization": 5,
+          "style": 4.5,
+          "emotion": 100.0,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1160.0,
+            1200.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788761,
+        "result_id": 1176172,
+        "scenario": "Cough",
+        "scenario_name": "Cough - Generic inventory parity",
+        "evaluator_id": 461427,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788761",
+        "metrics": {
+          "audio": 4.423639297485352,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1455.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1360.0,
+            1550.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788760,
+        "result_id": 1176172,
+        "scenario": "Sick family member",
+        "scenario_name": "Sick family member - Generic inventory parity",
+        "evaluator_id": 461441,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788760",
+        "metrics": {
+          "audio": 4.481564044952393,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1315.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": 100.0,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1450.0,
+            1180.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788759,
+        "result_id": 1176172,
+        "scenario": "Q10",
+        "scenario_name": "Q10 - Generic inventory parity",
+        "evaluator_id": 461440,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788759",
+        "metrics": {
+          "audio": 4.489353179931641,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1400.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1400.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788758,
+        "result_id": 1176172,
+        "scenario": "Q09",
+        "scenario_name": "Q09 - Generic inventory parity",
+        "evaluator_id": 461439,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788758",
+        "metrics": {
+          "audio": 4.493252754211426,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1270.0,
+          "stop": 340.0,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": 5
+        },
+        "events_ms": {
+          "latency": [
+            1270.0
+          ],
+          "stop": [
+            340.0
+          ]
+        }
+      },
+      {
+        "run_id": 4788757,
+        "result_id": 1176172,
+        "scenario": "Q08",
+        "scenario_name": "Q08 - Generic inventory parity",
+        "evaluator_id": 461438,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788757",
+        "metrics": {
+          "audio": 4.433559417724609,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1195.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1190.0,
+            1200.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788756,
+        "result_id": 1176172,
+        "scenario": "Q07",
+        "scenario_name": "Q07 - Generic inventory parity",
+        "evaluator_id": 461437,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788756",
+        "metrics": {
+          "audio": 4.4946393966674805,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1260.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1260.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788755,
+        "result_id": 1176172,
+        "scenario": "Q06",
+        "scenario_name": "Q06 - Generic inventory parity",
+        "evaluator_id": 461436,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788755",
+        "metrics": {
+          "audio": 4.486577987670898,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1330.0,
+          "stop": 170.0,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": 5
+        },
+        "events_ms": {
+          "latency": [
+            1330.0
+          ],
+          "stop": [
+            170.0
+          ]
+        }
+      },
+      {
+        "run_id": 4788754,
+        "result_id": 1176172,
+        "scenario": "Q04",
+        "scenario_name": "Q04 - Generic inventory parity",
+        "evaluator_id": 461434,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788754",
+        "metrics": {
+          "audio": 4.4978742599487305,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 2065.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            2570.0,
+            1560.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788753,
+        "result_id": 1176172,
+        "scenario": "Q02",
+        "scenario_name": "Q02 - Generic inventory parity",
+        "evaluator_id": 461432,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788753",
+        "metrics": {
+          "audio": 4.489711761474609,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1350.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1240.0,
+            1460.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4790076,
+        "result_id": 1176669,
+        "scenario": "Listening acknowledgment",
+        "scenario_name": "Listening acknowledgment - Generic inventory parity",
+        "evaluator_id": 461429,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176669?call_id=4790076",
+        "metrics": {
+          "audio": 4.503013610839844,
+          "interruption": 5,
+          "repetition": 3.33,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1330.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": 100.0,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1200.0,
+            1460.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788752,
+        "result_id": 1176172,
+        "scenario": "Office noise",
+        "scenario_name": "Office noise - Generic inventory parity",
+        "evaluator_id": 461430,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788752",
+        "metrics": {
+          "audio": 4.439046382904053,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1280.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1370.0,
+            1190.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788750,
+        "result_id": 1176172,
+        "scenario": "Difficult day",
+        "scenario_name": "Difficult day - Generic inventory parity",
+        "evaluator_id": 461428,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788750",
+        "metrics": {
+          "audio": 4.4146575927734375,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1330.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": 100.0,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1310.0,
+            1350.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788749,
+        "result_id": 1176172,
+        "scenario": "Cough",
+        "scenario_name": "Cough - Generic inventory parity",
+        "evaluator_id": 461427,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176172?call_id=4788749",
+        "metrics": {
+          "audio": 4.4976654052734375,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1270.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1200.0,
+            1340.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788672,
+        "result_id": 1176114,
+        "scenario": "Q05",
+        "scenario_name": "Q05 - Generic inventory parity",
+        "evaluator_id": 461435,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176114?call_id=4788672",
+        "metrics": {
+          "audio": 4.553791046142578,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1435.0,
+          "stop": 410.0,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": 100.0,
+          "recovery": 5
+        },
+        "events_ms": {
+          "latency": [
+            1500.0,
+            1370.0
+          ],
+          "stop": [
+            410.0
+          ]
+        }
+      },
+      {
+        "run_id": 4788671,
+        "result_id": 1176114,
+        "scenario": "Q03",
+        "scenario_name": "Q03 - Generic inventory parity",
+        "evaluator_id": 461433,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176114?call_id=4788671",
+        "metrics": {
+          "audio": 4.488018035888672,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1370.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1320.0,
+            1420.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788670,
+        "result_id": 1176114,
+        "scenario": "Q01",
+        "scenario_name": "Q01 - Generic inventory parity",
+        "evaluator_id": 461431,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176114?call_id=4788670",
+        "metrics": {
+          "audio": 4.485708236694336,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1340.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1340.0
+          ],
+          "stop": []
+        }
+      }
+    ]
+  },
+  {
+    "shop": "Omega Auto Werks",
+    "agent_id": 28261,
+    "phone_number": "+12294046462",
+    "calls": [
+      {
+        "run_id": 4790122,
+        "result_id": 1176689,
+        "scenario": "Listening acknowledgment",
+        "scenario_name": "Listening acknowledgment - Generic inventory parity",
+        "evaluator_id": 461444,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176689?call_id=4790122",
+        "metrics": {
+          "audio": 4.473837852478027,
+          "interruption": 5,
+          "repetition": 3.33,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1365.0,
+          "stop": null,
+          "organization": 4.5,
+          "style": 5,
+          "emotion": null,
+          "cues": 100.0,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1300.0,
+            1430.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788812,
+        "result_id": 1176174,
+        "scenario": "Q09",
+        "scenario_name": "Q09 - Generic inventory parity",
+        "evaluator_id": 461454,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788812",
+        "metrics": {
+          "audio": 4.376962661743164,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1115.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1390.0,
+            840.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788811,
+        "result_id": 1176174,
+        "scenario": "Q08",
+        "scenario_name": "Q08 - Generic inventory parity",
+        "evaluator_id": 461453,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788811",
+        "metrics": {
+          "audio": 4.39772891998291,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1440.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1360.0,
+            1520.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788810,
+        "result_id": 1176174,
+        "scenario": "Q07",
+        "scenario_name": "Q07 - Generic inventory parity",
+        "evaluator_id": 461452,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788810",
+        "metrics": {
+          "audio": 4.489758491516113,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1410.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1410.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788809,
+        "result_id": 1176174,
+        "scenario": "Q06",
+        "scenario_name": "Q06 - Generic inventory parity",
+        "evaluator_id": 461451,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788809",
+        "metrics": {
+          "audio": 4.414149284362793,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1320.0,
+          "stop": 370.0,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": 5
+        },
+        "events_ms": {
+          "latency": [
+            1320.0
+          ],
+          "stop": [
+            370.0
+          ]
+        }
+      },
+      {
+        "run_id": 4788808,
+        "result_id": 1176174,
+        "scenario": "Q04",
+        "scenario_name": "Q04 - Generic inventory parity",
+        "evaluator_id": 461449,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788808",
+        "metrics": {
+          "audio": 4.456552982330322,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 2890.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            4440.0,
+            1340.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788807,
+        "result_id": 1176174,
+        "scenario": "Q02",
+        "scenario_name": "Q02 - Generic inventory parity",
+        "evaluator_id": 461447,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788807",
+        "metrics": {
+          "audio": 4.443328380584717,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1435.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1480.0,
+            1390.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788806,
+        "result_id": 1176174,
+        "scenario": "Office noise",
+        "scenario_name": "Office noise - Generic inventory parity",
+        "evaluator_id": 461445,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788806",
+        "metrics": {
+          "audio": 4.485992431640625,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1395.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1610.0,
+            1180.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788804,
+        "result_id": 1176174,
+        "scenario": "Difficult day",
+        "scenario_name": "Difficult day - Generic inventory parity",
+        "evaluator_id": 461443,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788804",
+        "metrics": {
+          "audio": 4.497326850891113,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1275.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": 100.0,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1200.0,
+            1350.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788803,
+        "result_id": 1176174,
+        "scenario": "Cough",
+        "scenario_name": "Cough - Generic inventory parity",
+        "evaluator_id": 461442,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788803",
+        "metrics": {
+          "audio": 4.456245422363281,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1240.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1060.0,
+            1420.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788802,
+        "result_id": 1176174,
+        "scenario": "Sick family member",
+        "scenario_name": "Sick family member - Generic inventory parity",
+        "evaluator_id": 461456,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788802",
+        "metrics": {
+          "audio": 4.485642433166504,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1345.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": 100.0,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1380.0,
+            1310.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788801,
+        "result_id": 1176174,
+        "scenario": "Q10",
+        "scenario_name": "Q10 - Generic inventory parity",
+        "evaluator_id": 461455,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788801",
+        "metrics": {
+          "audio": 4.426754951477051,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1210.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1210.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788800,
+        "result_id": 1176174,
+        "scenario": "Q09",
+        "scenario_name": "Q09 - Generic inventory parity",
+        "evaluator_id": 461454,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788800",
+        "metrics": {
+          "audio": 4.465564250946045,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1340.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1410.0,
+            1270.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788799,
+        "result_id": 1176174,
+        "scenario": "Q08",
+        "scenario_name": "Q08 - Generic inventory parity",
+        "evaluator_id": 461453,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788799",
+        "metrics": {
+          "audio": 4.4737935066223145,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1390.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1280.0,
+            1500.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788798,
+        "result_id": 1176174,
+        "scenario": "Q07",
+        "scenario_name": "Q07 - Generic inventory parity",
+        "evaluator_id": 461452,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788798",
+        "metrics": {
+          "audio": 4.466215133666992,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1460.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1460.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788797,
+        "result_id": 1176174,
+        "scenario": "Q06",
+        "scenario_name": "Q06 - Generic inventory parity",
+        "evaluator_id": 461451,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788797",
+        "metrics": {
+          "audio": 4.440988063812256,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1490.0,
+          "stop": 380.0,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": 5
+        },
+        "events_ms": {
+          "latency": [
+            1490.0
+          ],
+          "stop": [
+            380.0
+          ]
+        }
+      },
+      {
+        "run_id": 4788796,
+        "result_id": 1176174,
+        "scenario": "Q04",
+        "scenario_name": "Q04 - Generic inventory parity",
+        "evaluator_id": 461449,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788796",
+        "metrics": {
+          "audio": 4.517958641052246,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1410.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1810.0,
+            1010.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788795,
+        "result_id": 1176174,
+        "scenario": "Q02",
+        "scenario_name": "Q02 - Generic inventory parity",
+        "evaluator_id": 461447,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788795",
+        "metrics": {
+          "audio": 4.4260358810424805,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1445.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1440.0,
+            1450.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788794,
+        "result_id": 1176174,
+        "scenario": "Office noise",
+        "scenario_name": "Office noise - Generic inventory parity",
+        "evaluator_id": 461445,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788794",
+        "metrics": {
+          "audio": 4.443087577819824,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1380.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1380.0,
+            1380.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788793,
+        "result_id": 1176174,
+        "scenario": "Listening acknowledgment",
+        "scenario_name": "Listening acknowledgment - Generic inventory parity",
+        "evaluator_id": 461444,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788793",
+        "metrics": {
+          "audio": 4.553062438964844,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1170.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": 100.0,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1190.0,
+            1150.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788792,
+        "result_id": 1176174,
+        "scenario": "Difficult day",
+        "scenario_name": "Difficult day - Generic inventory parity",
+        "evaluator_id": 461443,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788792",
+        "metrics": {
+          "audio": 4.441397190093994,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1145.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": 100.0,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1050.0,
+            1240.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788791,
+        "result_id": 1176174,
+        "scenario": "Cough",
+        "scenario_name": "Cough - Generic inventory parity",
+        "evaluator_id": 461442,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788791",
+        "metrics": {
+          "audio": 4.475057125091553,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1315.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1310.0,
+            1320.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788675,
+        "result_id": 1176115,
+        "scenario": "Q05",
+        "scenario_name": "Q05 - Generic inventory parity",
+        "evaluator_id": 461450,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176115?call_id=4788675",
+        "metrics": {
+          "audio": 4.495361328125,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1490.0,
+          "stop": 340.0,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": 100.0,
+          "recovery": 5
+        },
+        "events_ms": {
+          "latency": [
+            1580.0,
+            1400.0
+          ],
+          "stop": [
+            340.0
+          ]
+        }
+      },
+      {
+        "run_id": 4788674,
+        "result_id": 1176115,
+        "scenario": "Q03",
+        "scenario_name": "Q03 - Generic inventory parity",
+        "evaluator_id": 461448,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176115?call_id=4788674",
+        "metrics": {
+          "audio": 4.483697891235352,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1355.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1340.0,
+            1370.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788673,
+        "result_id": 1176115,
+        "scenario": "Q01",
+        "scenario_name": "Q01 - Generic inventory parity",
+        "evaluator_id": 461446,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176115?call_id=4788673",
+        "metrics": {
+          "audio": 4.4609808921813965,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1270.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1270.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788832,
+        "result_id": 1176175,
+        "scenario": "Q05",
+        "scenario_name": "Q05 - Generic inventory parity",
+        "evaluator_id": 461450,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176175?call_id=4788832",
+        "metrics": {
+          "audio": 4.489195823669434,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1550.0,
+          "stop": 340.0,
+          "organization": 4,
+          "style": 5,
+          "emotion": null,
+          "cues": 100.0,
+          "recovery": 5
+        },
+        "events_ms": {
+          "latency": [
+            1680.0,
+            1420.0
+          ],
+          "stop": [
+            340.0
+          ]
+        }
+      },
+      {
+        "run_id": 4788831,
+        "result_id": 1176175,
+        "scenario": "Q03",
+        "scenario_name": "Q03 - Generic inventory parity",
+        "evaluator_id": 461448,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176175?call_id=4788831",
+        "metrics": {
+          "audio": 4.380239486694336,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1335.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1270.0,
+            1400.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788830,
+        "result_id": 1176175,
+        "scenario": "Q01",
+        "scenario_name": "Q01 - Generic inventory parity",
+        "evaluator_id": 461446,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176175?call_id=4788830",
+        "metrics": {
+          "audio": 4.55645227432251,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1520.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1520.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788829,
+        "result_id": 1176175,
+        "scenario": "Q05",
+        "scenario_name": "Q05 - Generic inventory parity",
+        "evaluator_id": 461450,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176175?call_id=4788829",
+        "metrics": {
+          "audio": 4.305199146270752,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1660.0,
+          "stop": 300.0,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": 100.0,
+          "recovery": 5
+        },
+        "events_ms": {
+          "latency": [
+            1660.0,
+            1660.0
+          ],
+          "stop": [
+            300.0
+          ]
+        }
+      },
+      {
+        "run_id": 4788828,
+        "result_id": 1176175,
+        "scenario": "Q03",
+        "scenario_name": "Q03 - Generic inventory parity",
+        "evaluator_id": 461448,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176175?call_id=4788828",
+        "metrics": {
+          "audio": 4.365086555480957,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1405.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1350.0,
+            1460.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788827,
+        "result_id": 1176175,
+        "scenario": "Q01",
+        "scenario_name": "Q01 - Generic inventory parity",
+        "evaluator_id": 461446,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176175?call_id=4788827",
+        "metrics": {
+          "audio": 4.441063404083252,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1180.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1180.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788826,
+        "result_id": 1176174,
+        "scenario": "Sick family member",
+        "scenario_name": "Sick family member - Generic inventory parity",
+        "evaluator_id": 461456,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788826",
+        "metrics": {
+          "audio": 4.500439643859863,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1185.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": 100.0,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1260.0,
+            1110.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788825,
+        "result_id": 1176174,
+        "scenario": "Q10",
+        "scenario_name": "Q10 - Generic inventory parity",
+        "evaluator_id": 461455,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788825",
+        "metrics": {
+          "audio": 4.525353908538818,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1520.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1520.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4790212,
+        "result_id": 1176727,
+        "scenario": "Listening acknowledgment",
+        "scenario_name": "Listening acknowledgment - Generic inventory parity",
+        "evaluator_id": 461444,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176727?call_id=4790212",
+        "metrics": {
+          "audio": 4.509664535522461,
+          "interruption": 5,
+          "repetition": 3.33,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1320.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": 100.0,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1350.0,
+            1290.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788824,
+        "result_id": 1176174,
+        "scenario": "Q09",
+        "scenario_name": "Q09 - Generic inventory parity",
+        "evaluator_id": 461454,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788824",
+        "metrics": {
+          "audio": 4.14255952835083,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1320.0,
+          "stop": 280.0,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": 5
+        },
+        "events_ms": {
+          "latency": [
+            1320.0
+          ],
+          "stop": [
+            280.0
+          ]
+        }
+      },
+      {
+        "run_id": 4788823,
+        "result_id": 1176174,
+        "scenario": "Q08",
+        "scenario_name": "Q08 - Generic inventory parity",
+        "evaluator_id": 461453,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788823",
+        "metrics": {
+          "audio": 4.502375602722168,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1575.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1490.0,
+            1660.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788822,
+        "result_id": 1176174,
+        "scenario": "Q07",
+        "scenario_name": "Q07 - Generic inventory parity",
+        "evaluator_id": 461452,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788822",
+        "metrics": {
+          "audio": 4.406341552734375,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1470.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1470.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788821,
+        "result_id": 1176174,
+        "scenario": "Q06",
+        "scenario_name": "Q06 - Generic inventory parity",
+        "evaluator_id": 461451,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788821",
+        "metrics": {
+          "audio": 4.430159568786621,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1260.0,
+          "stop": 280.0,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": 5
+        },
+        "events_ms": {
+          "latency": [
+            1260.0
+          ],
+          "stop": [
+            280.0
+          ]
+        }
+      },
+      {
+        "run_id": 4788820,
+        "result_id": 1176174,
+        "scenario": "Q04",
+        "scenario_name": "Q04 - Generic inventory parity",
+        "evaluator_id": 461449,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788820",
+        "metrics": {
+          "audio": 4.525284767150879,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1690.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            2010.0,
+            1370.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788819,
+        "result_id": 1176174,
+        "scenario": "Q02",
+        "scenario_name": "Q02 - Generic inventory parity",
+        "evaluator_id": 461447,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788819",
+        "metrics": {
+          "audio": 4.403217315673828,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1470.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1510.0,
+            1430.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788818,
+        "result_id": 1176174,
+        "scenario": "Office noise",
+        "scenario_name": "Office noise - Generic inventory parity",
+        "evaluator_id": 461445,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788818",
+        "metrics": {
+          "audio": 4.430647850036621,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1435.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1500.0,
+            1370.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788816,
+        "result_id": 1176174,
+        "scenario": "Difficult day",
+        "scenario_name": "Difficult day - Generic inventory parity",
+        "evaluator_id": 461443,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788816",
+        "metrics": {
+          "audio": 4.41516637802124,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1265.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": 100.0,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1170.0,
+            1360.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788815,
+        "result_id": 1176174,
+        "scenario": "Cough",
+        "scenario_name": "Cough - Generic inventory parity",
+        "evaluator_id": 461442,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788815",
+        "metrics": {
+          "audio": 4.501555442810059,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1335.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1290.0,
+            1380.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788814,
+        "result_id": 1176174,
+        "scenario": "Sick family member",
+        "scenario_name": "Sick family member - Generic inventory parity",
+        "evaluator_id": 461456,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788814",
+        "metrics": {
+          "audio": 4.445093154907227,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1305.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": 100.0,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1260.0,
+            1350.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788813,
+        "result_id": 1176174,
+        "scenario": "Q10",
+        "scenario_name": "Q10 - Generic inventory parity",
+        "evaluator_id": 461455,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176174?call_id=4788813",
+        "metrics": {
+          "audio": 4.449949264526367,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1480.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1480.0
+          ],
+          "stop": []
+        }
+      }
+    ]
+  },
+  {
+    "shop": "Laurel Heights Automotive",
+    "agent_id": 28262,
+    "phone_number": "+18163233616",
+    "calls": [
+      {
+        "run_id": 4790080,
+        "result_id": 1176671,
+        "scenario": "Q09",
+        "scenario_name": "Q09 - Generic inventory parity",
+        "evaluator_id": 461469,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176671?call_id=4790080",
+        "metrics": {
+          "audio": 4.504579544067383,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1390.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1490.0,
+            1290.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788874,
+        "result_id": 1176177,
+        "scenario": "Q05",
+        "scenario_name": "Q05 - Generic inventory parity",
+        "evaluator_id": 461465,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176177?call_id=4788874",
+        "metrics": {
+          "audio": 4.478559494018555,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1400.0,
+          "stop": 320.0,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": 100.0,
+          "recovery": 5
+        },
+        "events_ms": {
+          "latency": [
+            1430.0,
+            1370.0
+          ],
+          "stop": [
+            320.0
+          ]
+        }
+      },
+      {
+        "run_id": 4788873,
+        "result_id": 1176177,
+        "scenario": "Q03",
+        "scenario_name": "Q03 - Generic inventory parity",
+        "evaluator_id": 461463,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176177?call_id=4788873",
+        "metrics": {
+          "audio": 4.443078994750977,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1460.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1440.0,
+            1480.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788872,
+        "result_id": 1176177,
+        "scenario": "Q01",
+        "scenario_name": "Q01 - Generic inventory parity",
+        "evaluator_id": 461461,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176177?call_id=4788872",
+        "metrics": {
+          "audio": 4.444293022155762,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1270.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1270.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788871,
+        "result_id": 1176177,
+        "scenario": "Q05",
+        "scenario_name": "Q05 - Generic inventory parity",
+        "evaluator_id": 461465,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176177?call_id=4788871",
+        "metrics": {
+          "audio": 4.513027667999268,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1280.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": 100.0,
+          "recovery": 5
+        },
+        "events_ms": {
+          "latency": [
+            1290.0,
+            1360.0,
+            1190.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788870,
+        "result_id": 1176177,
+        "scenario": "Q03",
+        "scenario_name": "Q03 - Generic inventory parity",
+        "evaluator_id": 461463,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176177?call_id=4788870",
+        "metrics": {
+          "audio": 4.497493743896484,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1445.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1500.0,
+            1390.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788869,
+        "result_id": 1176177,
+        "scenario": "Q01",
+        "scenario_name": "Q01 - Generic inventory parity",
+        "evaluator_id": 461461,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176177?call_id=4788869",
+        "metrics": {
+          "audio": 4.445833206176758,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1390.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1390.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788868,
+        "result_id": 1176176,
+        "scenario": "Sick family member",
+        "scenario_name": "Sick family member - Generic inventory parity",
+        "evaluator_id": 461471,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788868",
+        "metrics": {
+          "audio": 4.463710308074951,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1335.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": 100.0,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1310.0,
+            1360.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788867,
+        "result_id": 1176176,
+        "scenario": "Q10",
+        "scenario_name": "Q10 - Generic inventory parity",
+        "evaluator_id": 461470,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788867",
+        "metrics": {
+          "audio": 4.498823165893555,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1340.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1340.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788865,
+        "result_id": 1176176,
+        "scenario": "Q08",
+        "scenario_name": "Q08 - Generic inventory parity",
+        "evaluator_id": 461468,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788865",
+        "metrics": {
+          "audio": 4.426455020904541,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1400.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1330.0,
+            1470.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788864,
+        "result_id": 1176176,
+        "scenario": "Q07",
+        "scenario_name": "Q07 - Generic inventory parity",
+        "evaluator_id": 461467,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788864",
+        "metrics": {
+          "audio": 4.487553596496582,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1470.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1470.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788863,
+        "result_id": 1176176,
+        "scenario": "Q06",
+        "scenario_name": "Q06 - Generic inventory parity",
+        "evaluator_id": 461466,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788863",
+        "metrics": {
+          "audio": 2.721750259399414,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1530.0,
+          "stop": 330.0,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": 5
+        },
+        "events_ms": {
+          "latency": [
+            1530.0
+          ],
+          "stop": [
+            330.0
+          ]
+        }
+      },
+      {
+        "run_id": 4788862,
+        "result_id": 1176176,
+        "scenario": "Q04",
+        "scenario_name": "Q04 - Generic inventory parity",
+        "evaluator_id": 461464,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788862",
+        "metrics": {
+          "audio": 4.4876508712768555,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1540.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1730.0,
+            1350.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788861,
+        "result_id": 1176176,
+        "scenario": "Q02",
+        "scenario_name": "Q02 - Generic inventory parity",
+        "evaluator_id": 461462,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788861",
+        "metrics": {
+          "audio": 4.409937858581543,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1385.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1320.0,
+            1450.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788860,
+        "result_id": 1176176,
+        "scenario": "Office noise",
+        "scenario_name": "Office noise - Generic inventory parity",
+        "evaluator_id": 461460,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788860",
+        "metrics": {
+          "audio": 4.437871932983398,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1410.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1560.0,
+            1260.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788859,
+        "result_id": 1176176,
+        "scenario": "Listening acknowledgment",
+        "scenario_name": "Listening acknowledgment - Generic inventory parity",
+        "evaluator_id": 461459,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788859",
+        "metrics": {
+          "audio": 4.4744672775268555,
+          "interruption": 5,
+          "repetition": 3.33,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1555.0,
+          "stop": null,
+          "organization": 4,
+          "style": 5,
+          "emotion": null,
+          "cues": 100.0,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1460.0,
+            1650.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788858,
+        "result_id": 1176176,
+        "scenario": "Difficult day",
+        "scenario_name": "Difficult day - Generic inventory parity",
+        "evaluator_id": 461458,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788858",
+        "metrics": {
+          "audio": 4.408069133758545,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1265.0,
+          "stop": null,
+          "organization": 5,
+          "style": 4,
+          "emotion": 100.0,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1280.0,
+            1250.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788857,
+        "result_id": 1176176,
+        "scenario": "Cough",
+        "scenario_name": "Cough - Generic inventory parity",
+        "evaluator_id": 461457,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788857",
+        "metrics": {
+          "audio": 4.45890998840332,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1605.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1700.0,
+            1510.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788856,
+        "result_id": 1176176,
+        "scenario": "Sick family member",
+        "scenario_name": "Sick family member - Generic inventory parity",
+        "evaluator_id": 461471,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788856",
+        "metrics": {
+          "audio": 4.537567138671875,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1190.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": 100.0,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1300.0,
+            1080.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788855,
+        "result_id": 1176176,
+        "scenario": "Q10",
+        "scenario_name": "Q10 - Generic inventory parity",
+        "evaluator_id": 461470,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788855",
+        "metrics": {
+          "audio": 4.509234428405762,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1590.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1590.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4790081,
+        "result_id": 1176671,
+        "scenario": "Listening acknowledgment",
+        "scenario_name": "Listening acknowledgment - Generic inventory parity",
+        "evaluator_id": 461459,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176671?call_id=4790081",
+        "metrics": {
+          "audio": 4.429681301116943,
+          "interruption": 5,
+          "repetition": 3.33,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1330.0,
+          "stop": null,
+          "organization": 4,
+          "style": 5,
+          "emotion": null,
+          "cues": 100.0,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1410.0,
+            1250.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788854,
+        "result_id": 1176176,
+        "scenario": "Q09",
+        "scenario_name": "Q09 - Generic inventory parity",
+        "evaluator_id": 461469,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788854",
+        "metrics": {
+          "audio": 4.179628849029541,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1175.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1410.0,
+            940.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788853,
+        "result_id": 1176176,
+        "scenario": "Q08",
+        "scenario_name": "Q08 - Generic inventory parity",
+        "evaluator_id": 461468,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788853",
+        "metrics": {
+          "audio": 4.448354721069336,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1515.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1500.0,
+            1530.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788852,
+        "result_id": 1176176,
+        "scenario": "Q07",
+        "scenario_name": "Q07 - Generic inventory parity",
+        "evaluator_id": 461467,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788852",
+        "metrics": {
+          "audio": 4.541666507720947,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1570.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1570.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788851,
+        "result_id": 1176176,
+        "scenario": "Q06",
+        "scenario_name": "Q06 - Generic inventory parity",
+        "evaluator_id": 461466,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788851",
+        "metrics": {
+          "audio": 4.488796234130859,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1225.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": 5
+        },
+        "events_ms": {
+          "latency": [
+            1200.0,
+            1250.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788850,
+        "result_id": 1176176,
+        "scenario": "Q04",
+        "scenario_name": "Q04 - Generic inventory parity",
+        "evaluator_id": 461464,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788850",
+        "metrics": {
+          "audio": 4.463089942932129,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1490.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1700.0,
+            1280.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788849,
+        "result_id": 1176176,
+        "scenario": "Q02",
+        "scenario_name": "Q02 - Generic inventory parity",
+        "evaluator_id": 461462,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788849",
+        "metrics": {
+          "audio": 4.509614944458008,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1345.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1280.0,
+            1410.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788848,
+        "result_id": 1176176,
+        "scenario": "Office noise",
+        "scenario_name": "Office noise - Generic inventory parity",
+        "evaluator_id": 461460,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788848",
+        "metrics": {
+          "audio": 4.460644721984863,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1335.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1360.0,
+            1310.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788846,
+        "result_id": 1176176,
+        "scenario": "Difficult day",
+        "scenario_name": "Difficult day - Generic inventory parity",
+        "evaluator_id": 461458,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788846",
+        "metrics": {
+          "audio": 4.423110485076904,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1270.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": 100.0,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1290.0,
+            1250.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788845,
+        "result_id": 1176176,
+        "scenario": "Cough",
+        "scenario_name": "Cough - Generic inventory parity",
+        "evaluator_id": 461457,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788845",
+        "metrics": {
+          "audio": 4.41943359375,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1400.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1420.0,
+            1380.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788844,
+        "result_id": 1176176,
+        "scenario": "Sick family member",
+        "scenario_name": "Sick family member - Generic inventory parity",
+        "evaluator_id": 461471,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788844",
+        "metrics": {
+          "audio": 4.477870941162109,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1305.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": 100.0,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1380.0,
+            1230.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788843,
+        "result_id": 1176176,
+        "scenario": "Q10",
+        "scenario_name": "Q10 - Generic inventory parity",
+        "evaluator_id": 461470,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788843",
+        "metrics": {
+          "audio": 4.498666763305664,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1420.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1420.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788842,
+        "result_id": 1176176,
+        "scenario": "Q09",
+        "scenario_name": "Q09 - Generic inventory parity",
+        "evaluator_id": 461469,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788842",
+        "metrics": {
+          "audio": 4.40675163269043,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1510.0,
+          "stop": 260.0,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": 5
+        },
+        "events_ms": {
+          "latency": [
+            1510.0
+          ],
+          "stop": [
+            260.0
+          ]
+        }
+      },
+      {
+        "run_id": 4788841,
+        "result_id": 1176176,
+        "scenario": "Q08",
+        "scenario_name": "Q08 - Generic inventory parity",
+        "evaluator_id": 461468,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788841",
+        "metrics": {
+          "audio": 4.482905864715576,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1585.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1510.0,
+            1660.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788840,
+        "result_id": 1176176,
+        "scenario": "Q07",
+        "scenario_name": "Q07 - Generic inventory parity",
+        "evaluator_id": 461467,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788840",
+        "metrics": {
+          "audio": 4.470287322998047,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1440.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1440.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788839,
+        "result_id": 1176176,
+        "scenario": "Q06",
+        "scenario_name": "Q06 - Generic inventory parity",
+        "evaluator_id": 461466,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788839",
+        "metrics": {
+          "audio": 4.486372470855713,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1420.0,
+          "stop": 390.0,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": 5
+        },
+        "events_ms": {
+          "latency": [
+            1420.0
+          ],
+          "stop": [
+            390.0
+          ]
+        }
+      },
+      {
+        "run_id": 4788838,
+        "result_id": 1176176,
+        "scenario": "Q04",
+        "scenario_name": "Q04 - Generic inventory parity",
+        "evaluator_id": 461464,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788838",
+        "metrics": {
+          "audio": 4.453991889953613,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1740.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            2060.0,
+            1420.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788837,
+        "result_id": 1176176,
+        "scenario": "Q02",
+        "scenario_name": "Q02 - Generic inventory parity",
+        "evaluator_id": 461462,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788837",
+        "metrics": {
+          "audio": 4.475239276885986,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1415.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1220.0,
+            1610.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788836,
+        "result_id": 1176176,
+        "scenario": "Office noise",
+        "scenario_name": "Office noise - Generic inventory parity",
+        "evaluator_id": 461460,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788836",
+        "metrics": {
+          "audio": 4.479002952575684,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1315.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1150.0,
+            1480.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788835,
+        "result_id": 1176176,
+        "scenario": "Listening acknowledgment",
+        "scenario_name": "Listening acknowledgment - Generic inventory parity",
+        "evaluator_id": 461459,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788835",
+        "metrics": {
+          "audio": 4.443185806274414,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1085.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": 100.0,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1080.0,
+            1090.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788834,
+        "result_id": 1176176,
+        "scenario": "Difficult day",
+        "scenario_name": "Difficult day - Generic inventory parity",
+        "evaluator_id": 461458,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788834",
+        "metrics": {
+          "audio": 4.452719688415527,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1205.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": 100.0,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1200.0,
+            1210.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788833,
+        "result_id": 1176176,
+        "scenario": "Cough",
+        "scenario_name": "Cough - Generic inventory parity",
+        "evaluator_id": 461457,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176176?call_id=4788833",
+        "metrics": {
+          "audio": 4.499299049377441,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1405.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1570.0,
+            1240.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788678,
+        "result_id": 1176116,
+        "scenario": "Q05",
+        "scenario_name": "Q05 - Generic inventory parity",
+        "evaluator_id": 461465,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176116?call_id=4788678",
+        "metrics": {
+          "audio": 4.404445648193359,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1400.0,
+          "stop": 350.0,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": 100.0,
+          "recovery": 5
+        },
+        "events_ms": {
+          "latency": [
+            1520.0,
+            1280.0
+          ],
+          "stop": [
+            350.0
+          ]
+        }
+      },
+      {
+        "run_id": 4788677,
+        "result_id": 1176116,
+        "scenario": "Q03",
+        "scenario_name": "Q03 - Generic inventory parity",
+        "evaluator_id": 461463,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176116?call_id=4788677",
+        "metrics": {
+          "audio": 4.482851982116699,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1485.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1430.0,
+            1540.0
+          ],
+          "stop": []
+        }
+      },
+      {
+        "run_id": 4788676,
+        "result_id": 1176116,
+        "scenario": "Q01",
+        "scenario_name": "Q01 - Generic inventory parity",
+        "evaluator_id": 461461,
+        "status": "completed",
+        "url": "https://dashboard.cekura.ai/16745/results/1176116?call_id=4788676",
+        "metrics": {
+          "audio": 4.515832901000977,
+          "interruption": 5,
+          "repetition": 5,
+          "relevance": 5,
+          "gibberish": 100.0,
+          "infrastructure": 100.0,
+          "latency": 1290.0,
+          "stop": null,
+          "organization": 5,
+          "style": 5,
+          "emotion": null,
+          "cues": null,
+          "recovery": null
+        },
+        "events_ms": {
+          "latency": [
+            1290.0
+          ],
+          "stop": []
+        }
+      }
+    ]
+  }
+]

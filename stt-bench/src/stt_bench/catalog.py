@@ -38,6 +38,7 @@ MODELS = {name: Path('config/models') / (name + '.json') for name in (
     'murf-finch-global',
     'mistral-voxtral-realtime-3',
     'rime-stt',
+    'fish-transcribe-stream-2',
 )}
 BLOCKED_MODELS = {}
 

@@ -24,6 +24,7 @@ def transcript_timeline(events, config):
                  adapters.assembly_adapter(config).Protocol if config['provider']=='assemblyai' else
                  adapters.reson8.Protocol if config['provider']=='reson8' else
                  adapters.rime.Protocol if config['provider']=='rime' else
+                 adapters.fish.Protocol if config['provider']=='fish' else
                  adapters.zoom.Protocol if config['provider']=='zoom' else
                  adapters.murf.Protocol if config['provider']=='murf' else
                  adapters.mistral.Protocol if config['provider']=='mistral' else

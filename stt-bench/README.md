@@ -82,6 +82,7 @@ A provider may require additional account access for a particular model.
 | Murf | Finch Global (beta) | `MURF_API_KEY` |
 | Mistral | Voxtral Mini Transcribe Realtime 3 | `MISTRAL_API_KEY` |
 | Rime | STT (one utterance per session; private recordings run as pause-aligned sessions) | `RIME_API_KEY` |
+| Fish Audio | transcribe-stream-2 (manual turns; MessagePack frames) | `FISH_API_KEY` |
 
 Environment variables take precedence over `.env`. Accepted aliases are defined in
 [credentials.py](src/stt_bench/credentials.py). Keep credentials in the environment

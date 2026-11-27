@@ -466,6 +466,23 @@
         "setting": "Server VAD: threshold 0.35, 1,000 ms silence, 300 ms prefix padding",
         "sampleRateHz": 24000
       }
+    },
+    {
+      "key": "vapi-agents",
+      "name": "Vapi Agents",
+      "vendor": "Vapi",
+      "siteId": "vapi-agents",
+      "runs": [
+        "fullrun_vapi_r1",
+        "fullrun_vapi_r2",
+        "fullrun_vapi_r3"
+      ],
+      "details": {
+        "modelId": "GPT-4.1 on Vapi assistants",
+        "voice": "Vapi Clara",
+        "setting": "Over a Vapi web call (WebRTC); Soniox stt-rt-v5 in English with Deepgram Nova-3 as fallback; background-speech denoising off",
+        "turns": "Vapi start and stop speaking plans (0.4 s wait, stop after 2 words)"
+      }
     }
   ],
   "suites": [

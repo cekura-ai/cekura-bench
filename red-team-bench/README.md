@@ -50,6 +50,7 @@ redteam/                          the harness
   azure_realtime_client.py        the Azure Realtime client (Azure Voice Live)
   deepslate_client.py             the Deepslate Opal client
   phonic_client.py                the Phonic-1.1 client (the cleanest template for a new one)
+  webex_client.py                 the Webex AI Agent client: phone calls from Twilio into a Webex Contact Center flow
   reference_bot_settings.py       the voice bot's shared rules, opening rule, "call connected" turn and reasoning levels
   harness_config.py               keys, the data directory, the spend ledger, the chat helper for the text models
   tau2_airline/                   the airline agent, fetched by scripts/fetch_tau2_airline.py (SOURCE.md)
@@ -95,14 +96,17 @@ scripts/run_agent.sh              runs the attacks and controls on one agent
    | Phonic | `PHONIC_API_KEY` |
    | Vapi | `VAPI_PRIVATE_KEY` |
    | Retell | `RETELL_API_KEY` |
+   | Webex AI Agent | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` (in the keys file, or the file `TWILIO_ENV` names); `WEBEX_NUMBER` (the entry point's number) and `TWILIO_FROM` (caller numbers, comma-separated) |
 
 4. **Data directory.** Set `RED_TEAM_DATA` to a directory outside this repository. Runs, logs, the ledger and
    platform agent ids go there (see [Files the harness writes](#files-the-harness-writes)).
 
-5. **Tool tunnel.** Only for platforms that call the agent's tools over the internet: Vapi, Retell, and any new
+5. **Tool tunnel.** Only for platforms that call the agent's tools over the internet: Vapi, Retell, Webex, and any new
    platform that works that way. Each run process starts a tool server on port 8799 (`TOOL_PORT` in
    `voice_clients.py`). Expose that port at a public HTTPS address, for example `ngrok http 8799`, and set
-   `TOOL_URL` to it. The other systems run their tools inside the session.
+   `TOOL_URL` to it. The other systems run their tools inside the session. Webex's flow also fetches each call's
+   history there, and its phone audio streams through it; the flow keeps one address, so set `TOOL_TOKEN` to a fixed
+   value and use it in the flow's URLs (`agent-configurations/webex-ai-agent.json`).
 
 ## How an attack works on voice
 
@@ -374,7 +378,7 @@ class AcmeVoice:
 
 **Register it:**
 
-- Add a route to `voice_clients.client()` with a lazy import, as the last three are.
+- Add a route to `voice_clients.client()` with a lazy import, as the last four are.
 - Add the cell to `systems_under_test.VOICE_CELLS` or `CASCADE_CELLS`, which registers `rt-airline-<cell>`.
 - Add its key names to the keys file and to the table above.
 - If the platform calls tools over HTTP, add a route for its webhook to the tool server in `voice_clients.py`, beside
@@ -418,7 +422,8 @@ class AcmeVoice:
 
 ## The agents so far
 
-As published on 27 November 2026. Each agent's exact configuration is in `agent-configurations/<agent>.json`.
+As published on 27 November 2026, plus the Webex AI Agent, whose results are not published yet. Each agent's exact
+configuration is in `agent-configurations/<agent>.json`.
 
 | Agent (published name) | Cell | Client | How the kept turns reach it | Earlier tool rounds | Line cap | Notes |
 |---|---|---|---|---|---|---|
@@ -434,6 +439,7 @@ As published on 27 November 2026. Each agent's exact configuration is in `agent-
 | Vapi (GPT-4.1) | `cascade-vapi` | `voice_clients.VapiVoice` | As the assistant's starting messages | As system notes (since 26 Nov) | 13 (about 16 for the org) | WebSocket call transport; tools via `TOOL_URL`; silence frames after the caller's line |
 | Retell (Tell-1), guarded | `cascade-retell-guard` | `voice_clients.RetellVoice` | As a context note (`update-live-call`) | In the note (since 26 Nov) | — | WebRTC web call; AI-disclosure and scope prompts on; tools via `TOOL_URL`. `cascade-retell` is the same agent with them off |
 | ElevenLabs Agents (DeepSeek V4.1 Flash, reasoning off) | `cascade-elevenagents` | `voice_clients.ElevenAgentVoice` | As a context note (`contextual_update`), with an empty first message on later turns | In the note | — | Agent built once from the config and ElevenLabs' overlay; client tools; its built-in `end_call` removed |
+| Webex AI Agent (Webex AI Pro-US 2.0) | `cascade-webex` | `webex_client.WebexVoice` | As a note in its instructions (`{{history}}`, from the flow's starting data) | In the note | 4 calls at once, 6 a minute | Built in Webex AI Agent Studio; one phone call per caller turn, from Twilio into a Contact Center flow; tools as the flow's actions, via `TOOL_URL`; its reply transcribed on our side (gpt-4o-transcribe); results not published yet |
 
 ## Files the harness writes
 
@@ -447,16 +453,19 @@ Everything goes under `RED_TEAM_DATA`:
 | `runs/azure-filter.jsonl` | Azure content-filter events |
 | `logs/` | Each conversation's full event log |
 | `ledger.jsonl` | Spend per call or session, by `purpose` (`redteam:target:<model>`, the attacker, the judge, the caller voice) |
+| `runs/webex-tool-requests.jsonl` | What the Webex flow sent the tool server: `code`, `name`, `body` |
 | `retell-agent*.json`, `eleven-agent.json` | Platform agent ids created on first use |
 
 Rows hold attack text: keep run data out of any public repository.
 
 ## Provenance
 
-This is the code the published results ran on, with three changes for publication: goals load from the module named
-by `--goals-module` and controls from the file named by `--controls` (the benchmark's own are held out), and the tau2
-airline files are fetched from Sierra's repository instead of being copied. The attacker, the clients, the agent
-configurations, the tool implementations, the judge and gate prompts and the exact-word matching are unchanged.
+This is the code the published results ran on, with four changes for publication: goals load from the module named
+by `--goals-module` and controls from the file named by `--controls` (the benchmark's own are held out), the tau2
+airline files are fetched from Sierra's repository instead of being copied, and the Webex client takes its entry-point
+and caller numbers from `WEBEX_NUMBER` and `TWILIO_FROM` instead of having ours built in. The attacker, the clients,
+the agent configurations, the tool implementations, the judge and gate prompts and the exact-word matching are
+unchanged.
 
 `reference_bot_settings.py` holds the voice bot's text, taken from the speech-to-speech reference bot
 (`reference-agents/pipecat-s2s/bot.py`) as it ran for the published results. If the bot's shared rules, opening rule

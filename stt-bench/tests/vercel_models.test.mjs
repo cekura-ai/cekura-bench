@@ -17,7 +17,7 @@ test('uncertain remote jobs retain capacity until a confirmed stop', () => {
 test('launch plan uses isolated sandboxes and protects existing Nova', async () => {
   const p = JSON.parse(await readFile('config/vercel-models.json', 'utf8'));
   validatePlan(p);
-  assert.equal(p.models.length, 12);
+  assert.equal(p.models.length, 13);
   p.models[0].sandbox = 'my-sandbox-013057';
   assert.throws(() => validatePlan(p), /reserved/);
 });

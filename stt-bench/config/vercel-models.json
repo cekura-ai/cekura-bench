@@ -86,6 +86,12 @@
       "runId": "vocera-cartesia-ink-2-20260912",
       "sandbox": "vocera-cartesia-ink-2-20260912",
       "apiHost": "api.cartesia.ai"
+    },
+    {
+      "model": "amazon-transcribe-turbo",
+      "runId": "vocera-amazon-transcribe-turbo-20261128",
+      "sandbox": "vocera-amazon-transcribe-turbo-20261128",
+      "apiHost": "transcribestreaming.us-east-2.amazonaws.com"
     }
   ],
   "existingBaseline": {

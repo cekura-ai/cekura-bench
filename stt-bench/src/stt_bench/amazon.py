@@ -198,7 +198,7 @@ async def exchange(ws, pcm, speech_frames, config, log, secret=''):
 async def transcribe(pcm, speech_frames, config, key, log):
     url = presigned_url(config, key)
     log.emit('connection_requested', url=config['endpoint'])  # The presigned query carries the key ID and signature.
-    async with connect(url, open_timeout=15, close_timeout=5, max_size=8 * 1024 * 1024) as ws:
+    async with connect(url, open_timeout=15, close_timeout=5, max_size=8 * 1024 * 1024, ping_interval=None) as ws:
         log.emit('connection_open')
         await exchange(ws, pcm, speech_frames, config, log, secret=credentials(key)['secret_access_key'])
 

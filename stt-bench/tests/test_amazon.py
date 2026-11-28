@@ -195,6 +195,17 @@ def test_local_websocket_success(text, tmp_path, monkeypatch):
     assert r['transcript_complete'] and r['model_verified'] and r['transcript'] == text
 
 
+def test_long_streams_send_no_keepalive_pings(tmp_path, monkeypatch):
+    seen = {}
+    real = wire.connect
+    def spy(url, **kwargs):
+        seen.update(kwargs)
+        return real(url, **kwargs)
+    monkeypatch.setattr(wire, 'connect', spy)
+    r = run_local(tmp_path, monkeypatch, config(), lambda ws: fake_transcribe(ws, 'hello world'))
+    assert r['transcript_complete'] and seen['ping_interval'] is None
+
+
 @pytest.mark.parametrize('fault', ['auth', 'disconnect'])
 def test_local_websocket_failure_never_becomes_success(fault, tmp_path, monkeypatch):
     c = dict(config(), close_timeout_seconds=.5)

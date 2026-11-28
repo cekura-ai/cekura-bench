@@ -22,6 +22,7 @@ NAMES = {
     'cartesia': ('CARTESIA_API_KEY', 'Cartesia'),
     'murf': ('MURF_API_KEY',),
     'mistral': ('MISTRAL_API_KEY', 'MISTRAL'),
+    'amazon': ('AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_SESSION_TOKEN'),
 }
 
 
@@ -29,6 +30,8 @@ def credential(provider, environ=None, env_file='.env'):
     """Process environment wins over the dotenv file; canonical name wins in each."""
     env = os.environ if environ is None else environ
     file = dotenv_values(env_file, interpolate=False) if env_file else {}
+    if provider == 'amazon':
+        return amazon_credential(env, file)
     for source in (env, file):
         for name in NAMES[provider]:
             if source.get(name) and source[name].strip():
@@ -41,6 +44,19 @@ def credential(provider, environ=None, env_file='.env'):
     return '', None
 
 
+def amazon_credential(*sources):
+    """AWS signs with a key pair: both halves (and any session token) come from the same source."""
+    import json
+    key_id, secret, token = NAMES['amazon']
+    for source in sources:
+        if (source.get(key_id) or '').strip() and (source.get(secret) or '').strip():
+            value = {'access_key_id': source[key_id].strip(), 'secret_access_key': source[secret].strip()}
+            if (source.get(token) or '').strip():
+                value['session_token'] = source[token].strip()
+            return json.dumps(value), key_id
+    return '', None
+
+
 def command_environment(provider, **kwargs):
     key, _ = credential(provider, **kwargs)
     if not key:
@@ -48,6 +64,11 @@ def command_environment(provider, **kwargs):
     if provider == 'google':
         from .chirp import credentials_from_json
         credentials_from_json(key)
+    if provider == 'amazon':
+        import json
+        value = json.loads(key)
+        names = dict(zip(('access_key_id', 'secret_access_key', 'session_token'), NAMES['amazon']))
+        return {names[k]: v for k, v in value.items()}
     return {NAMES[provider][0]: key}
 
 

@@ -1,5 +1,5 @@
 """Provider registry used by capture, replay and readiness checks."""
-from . import deepgram, provider_protocol, chirp, trial_providers, gradium, reson8, zoom, assemblyai, assemblyai_min_latency, speechmatics_agent, murf, mistral, rime
+from . import deepgram, provider_protocol, chirp, trial_providers, gradium, reson8, zoom, amazon, assemblyai, assemblyai_min_latency, speechmatics_agent, murf, mistral, rime
 from .credentials import credential
 from .streaming import transmitted_silence_frames
 from . import gemini_live
@@ -20,6 +20,7 @@ MODELS = {
     'murf': {'finch_global_1.0'},
     'mistral': {'voxtral-mini-transcribe-realtime-3-0'},
     'google': {'chirp_2', 'chirp_3'},
+    'amazon': {'transcribe-turbo'},
 }
 ENDPOINTS = {
     'assemblyai': {'wss://streaming.assemblyai.com/v3/ws'},
@@ -37,6 +38,7 @@ ENDPOINTS = {
     'murf': {'wss://us-east.api.murf.ai/v1/transcription/stream-input'},
     'mistral': set(mistral.ENDPOINTS.values()),
     'google': {'https://us-speech.googleapis.com', 'https://us-central1-speech.googleapis.com'},
+    'amazon': {amazon.ENDPOINT},
 }
 
 
@@ -68,6 +70,8 @@ def validate(config):
         rime.validate(config)
     if p == 'zoom':
         zoom.validate(config)
+    if p == 'amazon':
+        amazon.validate(config)
     if p == 'murf':
         murf.validate(config)
     if p == 'mistral':
@@ -103,6 +107,7 @@ async def transcribe(pcm, speech_frames, config, key, log):
                else reson8 if config['provider'] == 'reson8'
                else rime if config['provider'] == 'rime'
                else zoom if config['provider'] == 'zoom'
+               else amazon if config['provider'] == 'amazon'
                else murf if config['provider'] == 'murf'
                else mistral if config['provider'] == 'mistral'
                else trial_providers if config['provider'] in trial_providers.MODELS else provider_protocol)
@@ -126,6 +131,8 @@ def reduce_events(events, config):
         return rime.replay(events, config)[1]
     if config['provider'] == 'zoom':
         return zoom.replay(events, config)[1]
+    if config['provider'] == 'amazon':
+        return amazon.replay(events, config)[1]
     if config['provider'] == 'murf':
         return murf.replay(events, config)[1]
     if config['provider'] == 'mistral':
@@ -155,6 +162,8 @@ def transcript_at(events, cutoff, config=None):
         return rime.replay(events, config, cutoff)[0]
     if config['provider'] == 'zoom':
         return zoom.replay(events, config, cutoff)[0]
+    if config['provider'] == 'amazon':
+        return amazon.replay(events, config, cutoff)[0]
     if config['provider'] == 'murf':
         return murf.replay(events, config, cutoff)[0]
     if config['provider'] == 'mistral':

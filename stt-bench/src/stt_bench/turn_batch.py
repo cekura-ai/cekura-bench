@@ -19,7 +19,7 @@ from .full_benchmark import classify
 
 MANIFEST=os.environ.get('STT_TURN_MANIFEST','datasets/private-turns-v1/automatic-v1/manifest.json')  # STT_TURN_MANIFEST selects a frozen noise-condition turn set
 # Profiles added after the original 23 run only when a plan names them.
-OPT_IN=frozenset({'assemblyai-universal-3-6-pro-min-latency','assemblyai-stt-3-7-realtime-agent-min-latency','zoom-scribe-live','zoom-scribe-pro-live','zoom-scribe-pro-v2-1-live','elevenlabs-scribe-v3-live','murf-finch-global','mistral-voxtral-realtime-3','rime-stt'})
+OPT_IN=frozenset({'assemblyai-universal-3-6-pro-min-latency','assemblyai-stt-3-7-realtime-agent-min-latency','zoom-scribe-live','zoom-scribe-pro-live','zoom-scribe-pro-v2-1-live','elevenlabs-scribe-v3-live','murf-finch-global','mistral-voxtral-realtime-3','rime-stt','amazon-transcribe-turbo'})
 
 
 def prepare(root,models=None,assemblyai_starts_per_minute=5):
@@ -46,7 +46,9 @@ def prepare(root,models=None,assemblyai_starts_per_minute=5):
             # Mistral publishes no realtime ceiling; ten concurrent streams were accepted live.
             'mistral':10,
             # Rime publishes no realtime ceiling; twenty concurrent streams were accepted live.
-            'rime':16}
+            'rime':16,
+            # AWS's default Transcribe streaming quota is 25 concurrent streams per Region.
+            'amazon':12}
     files=[Path('pyproject.toml'),Path('uv.lock'),*Path('src/stt_bench').glob('*.py'),
            *Path('src/stt_bench').glob('*.html'),*Path('tests').glob('*.py'),
            *[p for p in Path('config/models').glob('*.json') if '3.8' not in p.stem],*paths,

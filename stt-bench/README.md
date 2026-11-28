@@ -81,6 +81,7 @@ A provider may require additional account access for a particular model.
 | Zoom | Scribe (live mode) | `ZOOM_API_KEY` |
 | Murf | Finch Global (beta) | `MURF_API_KEY` |
 | Mistral | Voxtral Mini Transcribe Realtime 3 | `MISTRAL_API_KEY` |
+| Amazon | Transcribe Turbo (preview, us-east-2) | `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` (optional `AWS_SESSION_TOKEN`) |
 | Rime | STT (one utterance per session; private recordings run as pause-aligned sessions) | `RIME_API_KEY` |
 
 Environment variables take precedence over `.env`. Accepted aliases are defined in

@@ -1,30 +1,37 @@
-"""Amazon Transcribe streaming over HTTP/2 with AWS's `amazon-transcribe` SDK.
+"""Amazon Transcribe streaming over its WebSocket API: SigV4-presigned URL, AWS event-stream frames.
 
-AWS also offers a WebSocket endpoint, but only on port 8443, which common
-egress policies block; the HTTP/2 endpoint on 443 carries the same event
-stream. The SDK signs the request and frames events; the bench still owns
-audio pacing, and every result is logged in the same JSON shape as the
-service's `TranscriptEvent` payload.
+Each audio frame travels as an `AudioEvent` message in AWS's binary
+event-stream encoding; results come back as `TranscriptEvent` messages whose
+JSON payload carries `Transcript.Results`. A result keeps its `ResultId` while
+it is partial and is final once `IsPartial` is false. An `AudioEvent` with an
+empty payload ends the stream; the service then sends its remaining results
+and closes the socket, which is the completion signal.
 
-A result keeps its `ResultId` while it is partial and is final once
-`IsPartial` is false. There is no finalize command mid-stream, so the bench's
-common tail of silence precedes `end_stream()`. The service then sends its
-remaining results and ends the response stream, which is the completion
-signal. Transcribe Turbo needs no model parameter: AWS routes supported
-languages in us-east-2 to it, so the model is not echoed back and identity
-rests on the configured endpoint and region.
+There is no finalize command mid-stream, so the bench's common tail of silence
+precedes the empty event. Transcribe Turbo needs no model parameter: AWS routes
+supported languages in us-east-2 to it, so the model is not echoed back and
+identity rests on the configured endpoint and region.
 """
+import binascii
+import datetime
+import hashlib
+import hmac
 import json
+import struct
+from urllib.parse import quote
+from websockets.asyncio.client import connect
+from websockets.exceptions import ConnectionClosedOK
 from . import provider_protocol as shared
 
 REGION = 'us-east-2'
-ENDPOINT = f'https://transcribestreaming.{REGION}.amazonaws.com'
+HOST = f'transcribestreaming.{REGION}.amazonaws.com:8443'
+ENDPOINT = f'wss://{HOST}/stream-transcription-websocket'
 END_OF_STREAM = 'end_of_stream'
 
 
 def validate(config):
     expected = dict(language='en-US', sample_rate=16000, encoding='pcm_s16le', channels=1, frame_ms=20,
-                    finalization='stream_end_after_tail', completion_basis='response_stream_ended_after_end_stream',
+                    finalization='stream_end_after_tail', completion_basis='stream_closed_after_empty_audio_event',
                     requires_final_only_completion=True, region=REGION)
     for key, value in expected.items():
         if config.get(key) != value:
@@ -38,34 +45,122 @@ def credentials(key):
     return value
 
 
-def result_object(result):
-    return {'ResultId': result.result_id, 'StartTime': result.start_time, 'EndTime': result.end_time,
-            'IsPartial': result.is_partial,
-            'Alternatives': [{'Transcript': a.transcript} for a in result.alternatives or []]}
+def _sign(key, message):
+    return hmac.new(key, message.encode(), hashlib.sha256).digest()
 
 
-class Stream:
-    """Presents an SDK stream to the shared exchange: audio and an end marker in, JSON events out."""
+def presigned_url(config, key, now=None):
+    """SigV4 query-string signature over the `host` header, as AWS documents for this endpoint."""
+    creds = credentials(key)
+    now = now or datetime.datetime.now(datetime.timezone.utc)
+    stamp, day = now.strftime('%Y%m%dT%H%M%SZ'), now.strftime('%Y%m%d')
+    scope = f'{day}/{REGION}/transcribe/aws4_request'
+    params = {'X-Amz-Algorithm': 'AWS4-HMAC-SHA256', 'X-Amz-Credential': f'{creds["access_key_id"]}/{scope}',
+              'X-Amz-Date': stamp, 'X-Amz-Expires': '300', 'X-Amz-SignedHeaders': 'host',
+              'language-code': config['language'], 'media-encoding': 'pcm',
+              'sample-rate': str(config['sample_rate'])}
+    if creds.get('session_token'):
+        params['X-Amz-Security-Token'] = creds['session_token']
+    query = '&'.join(f'{quote(k, safe="-_.~")}={quote(v, safe="-_.~")}' for k, v in sorted(params.items()))
+    canonical = '\n'.join(['GET', '/stream-transcription-websocket', query, f'host:{HOST}\n', 'host',
+                           hashlib.sha256(b'').hexdigest()])
+    to_sign = '\n'.join(['AWS4-HMAC-SHA256', stamp, scope, hashlib.sha256(canonical.encode()).hexdigest()])
+    signing = _sign(_sign(_sign(_sign(('AWS4' + creds['secret_access_key']).encode(), day), REGION),
+                          'transcribe'), 'aws4_request')
+    signature = hmac.new(signing, to_sign.encode(), hashlib.sha256).hexdigest()
+    return f'{ENDPOINT}?{query}&X-Amz-Signature={signature}'
 
-    def __init__(self, stream):
-        self.stream = stream
+
+def _crc(data):
+    return binascii.crc32(data) & 0xFFFFFFFF
+
+
+def encode_event(headers, payload):
+    """One event-stream message: prelude, CRC, string headers, payload, CRC."""
+    encoded = b''.join(struct.pack('>B', len(name)) + name.encode() + struct.pack('>BH', 7, len(value)) + value.encode()
+                       for name, value in headers.items())
+    prelude = struct.pack('>II', 16 + len(encoded) + len(payload), len(encoded))
+    message = prelude + struct.pack('>I', _crc(prelude)) + encoded + payload
+    return message + struct.pack('>I', _crc(message))
+
+
+def audio_event(frame):
+    return encode_event({':content-type': 'application/octet-stream', ':event-type': 'AudioEvent',
+                         ':message-type': 'event'}, frame)
+
+
+def _header_value(kind, data, at):
+    if kind in (0, 1):
+        return kind == 0, at
+    sizes = {2: ('>b', 1), 3: ('>h', 2), 4: ('>i', 4), 5: ('>q', 8), 8: ('>q', 8)}
+    if kind in sizes:
+        fmt, size = sizes[kind]
+        return struct.unpack_from(fmt, data, at)[0], at + size
+    if kind in (6, 7):
+        length = struct.unpack_from('>H', data, at)[0]
+        raw = data[at + 2:at + 2 + length]
+        return (raw.decode() if kind == 7 else raw.hex()), at + 2 + length
+    if kind == 9:
+        return data[at:at + 16].hex(), at + 16
+    raise shared.ProviderError('Unknown event-stream header type')
+
+
+def decode_events(data):
+    """Split one WebSocket message into event-stream messages, checking both CRCs."""
+    events, offset = [], 0
+    while offset < len(data):
+        if len(data) - offset < 16:
+            raise shared.ProviderError('Truncated event-stream message')
+        total, header_len, prelude_crc = struct.unpack_from('>III', data, offset)
+        message = data[offset:offset + total]
+        if (len(message) != total or _crc(message[:8]) != prelude_crc
+                or _crc(message[:-4]) != struct.unpack_from('>I', message, total - 4)[0]):
+            raise shared.ProviderError('Corrupt event-stream message')
+        headers, at = {}, 12
+        while at < 12 + header_len:
+            length = message[at]
+            name = message[at + 1:at + 1 + length].decode()
+            headers[name], at = _header_value(message[at + 1 + length], message, at + 2 + length)
+        body = message[12 + header_len:total - 4]
+        try:
+            payload = json.loads(body) if body else {}
+        except ValueError:
+            payload = {'raw': body.decode(errors='replace')}
+        events.append(event_object(headers, payload))
+        offset += total
+    return events
+
+
+def event_object(headers, payload):
+    """Logged form of a service message. Exceptions become `error` so the shared checks fail them."""
+    if headers.get(':message-type') == 'exception':
+        return {'type': 'error', 'exception_type': headers.get(':exception-type'), 'payload': payload}
+    return {'type': headers.get(':event-type'), 'payload': payload}
+
+
+class Socket:
+    """Adapts the shared JSON exchange to AWS's binary framing in both directions."""
+
+    def __init__(self, ws):
+        self.ws = ws
 
     async def send(self, value):
         if isinstance(value, (bytes, bytearray)):
-            await self.stream.input_stream.send_audio_event(audio_chunk=bytes(value))
+            await self.ws.send(audio_event(bytes(value)))
         elif json.loads(value).get('type') == END_OF_STREAM:
-            await self.stream.input_stream.end_stream()
+            await self.ws.send(audio_event(b''))
         else:
             raise ValueError('Amazon Transcribe accepts only audio and the end-of-stream marker')
 
     async def __aiter__(self):
         try:
-            async for event in self.stream.output_stream:
-                results = [result_object(r) for r in event.transcript.results]
-                yield json.dumps({'type': 'TranscriptEvent', 'payload': {'Transcript': {'Results': results}}})
-        except Exception as exc:
-            yield json.dumps({'type': 'error', 'exception_type': type(exc).__name__})
-            return
+            async for raw in self.ws:
+                if isinstance(raw, str):
+                    raise shared.ProviderError('Expected binary event-stream messages')
+                for event in decode_events(raw):
+                    yield json.dumps(event)
+        except ConnectionClosedOK:
+            pass
         yield json.dumps({'type': 'stream_closed'})
 
 
@@ -96,22 +191,16 @@ class Protocol(shared.Protocol):
             self.terminal = True
 
 
-async def open_stream(config, key):
-    from amazon_transcribe.auth import StaticCredentialResolver
-    from amazon_transcribe.client import TranscribeStreamingClient
-    creds = credentials(key)
-    client = TranscribeStreamingClient(region=config['region'], credential_resolver=StaticCredentialResolver(
-        creds['access_key_id'], creds['secret_access_key'], creds.get('session_token')))
-    return await client.start_stream_transcription(language_code=config['language'],
-                                                   media_sample_rate_hz=config['sample_rate'], media_encoding='pcm')
+async def exchange(ws, pcm, speech_frames, config, log, secret=''):
+    await shared.exchange(Socket(ws), pcm, speech_frames, config, log, secret, protocol_factory=Protocol)
 
 
 async def transcribe(pcm, speech_frames, config, key, log):
-    log.emit('connection_requested', url=config['endpoint'])
-    stream = await open_stream(config, key)
-    log.emit('connection_open')
-    await shared.exchange(Stream(stream), pcm, speech_frames, config, log,
-                          credentials(key)['secret_access_key'], protocol_factory=Protocol)
+    url = presigned_url(config, key)
+    log.emit('connection_requested', url=config['endpoint'])  # The presigned query carries the key ID and signature.
+    async with connect(url, open_timeout=15, close_timeout=5, max_size=8 * 1024 * 1024) as ws:
+        log.emit('connection_open')
+        await exchange(ws, pcm, speech_frames, config, log, secret=credentials(key)['secret_access_key'])
 
 
 def replay(events, config, cutoff=float('inf')):

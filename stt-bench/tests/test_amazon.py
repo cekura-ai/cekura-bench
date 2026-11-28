@@ -1,8 +1,10 @@
-"""Amazon Transcribe streaming offline fixtures and a fake SDK stream. No provider hosts."""
+"""Amazon Transcribe streaming offline fixtures and local WebSocket tests. No provider hosts."""
 import asyncio
+import datetime
 import json
-from types import SimpleNamespace
+from urllib.parse import parse_qs, urlsplit
 import pytest
+from websockets.asyncio.server import serve
 from test_providers import fast_audio
 from stt_bench import amazon as wire
 from stt_bench import full_benchmark, provider_protocol
@@ -52,9 +54,52 @@ def test_config_credentials_and_commands():
     assert wire.Protocol(c).ready and wire.Protocol(c).finalize() is None
     assert wire.Protocol(c).finish(0) == {'type': 'end_of_stream'}
     for key_name, value in [('language', 'en'), ('region', 'us-east-1'), ('sample_rate', 8000),
-                            ('finalization', 'manual_at_speech_end'), ('endpoint', 'https://example.test')]:
+                            ('finalization', 'manual_at_speech_end'), ('endpoint', 'wss://example.test/x')]:
         with pytest.raises(ValueError):
             validate(dict(c, **{key_name: value}))
+
+
+def test_presigned_url_matches_aws_sigv4_reference():
+    url = wire.presigned_url(config(), KEY, now=datetime.datetime(2026, 11, 28, 8, 0, tzinfo=datetime.timezone.utc))
+    parts = urlsplit(url)
+    assert f'{parts.scheme}://{parts.netloc}{parts.path}' == wire.ENDPOINT
+    q = {k: v[0] for k, v in parse_qs(parts.query).items()}
+    assert q['X-Amz-Credential'] == 'AKIDFIXTURE/20261128/us-east-2/transcribe/aws4_request'
+    assert (q['language-code'], q['media-encoding'], q['sample-rate']) == ('en-US', 'pcm', '16000')
+    assert 'X-Amz-Security-Token' not in q
+
+
+@pytest.mark.parametrize('token', [None, 'TOKEN/with+chars='])
+def test_presigned_signature_matches_botocore(token):
+    pytest.importorskip('botocore')
+    from botocore.auth import SigV4QueryAuth
+    from botocore.awsrequest import AWSRequest
+    from botocore.credentials import Credentials
+    request = AWSRequest(method='GET', url=wire.ENDPOINT.replace('wss://', 'https://'),
+                         params={'language-code': 'en-US', 'media-encoding': 'pcm', 'sample-rate': '16000'})
+    SigV4QueryAuth(Credentials('AKIDFIXTURE', 'fixture-secret', token), 'transcribe', 'us-east-2', expires=300).add_auth(request)
+    reference = {k: v[0] for k, v in parse_qs(urlsplit(request.url).query).items()}
+    now = datetime.datetime.strptime(reference['X-Amz-Date'], '%Y%m%dT%H%M%SZ').replace(tzinfo=datetime.timezone.utc)
+    key = dict(json.loads(KEY), **({'session_token': token} if token else {}))
+    ours = {k: v[0] for k, v in parse_qs(urlsplit(wire.presigned_url(config(), json.dumps(key), now=now)).query).items()}
+    assert ours['X-Amz-Signature'] == reference['X-Amz-Signature']
+
+
+def test_event_stream_round_trip_and_corruption():
+    frame = wire.audio_event(b'\x01\x02' * 320)
+    assert wire.decode_events(frame)[0]['type'] == 'AudioEvent'
+    payload = json.dumps(result('r1', 'hi', False)['payload']).encode()
+    event = wire.encode_event({':event-type': 'TranscriptEvent', ':message-type': 'event'}, payload)
+    both = wire.decode_events(event + event)
+    assert [e['type'] for e in both] == ['TranscriptEvent'] * 2 and both[0]['payload'] == json.loads(payload)
+    exception = wire.encode_event({':exception-type': 'BadRequestException', ':message-type': 'exception'},
+                                  b'{"Message":"bad"}')
+    assert wire.decode_events(exception) == [{'type': 'error', 'exception_type': 'BadRequestException',
+                                              'payload': {'Message': 'bad'}}]
+    with pytest.raises(ProviderError):
+        wire.decode_events(event[:-1] + bytes([event[-1] ^ 1]))
+    assert len(wire.audio_event(b'')) == len(wire.encode_event(
+        {':content-type': 'application/octet-stream', ':event-type': 'AudioEvent', ':message-type': 'event'}, b''))
 
 
 def test_results_join_in_order_and_close_completes():
@@ -68,7 +113,7 @@ def test_results_join_in_order_and_close_completes():
     assert transcript_at(events, 5, c)['partial_text'] == 'How'
 
 
-def test_completion_requires_end_after_end_stream_and_no_open_partial():
+def test_completion_requires_close_after_end_of_stream_and_no_open_partial():
     c = config()
     missing = [e for e in stream() if e.get('message', {}).get('type') != 'stream_closed']
     assert not reduce_events(missing, c)['transcript_complete']
@@ -82,7 +127,7 @@ def test_completion_requires_end_after_end_stream_and_no_open_partial():
 def test_errors_and_conflicting_finals_fail_closed():
     c = config()
     events = stream()
-    events.insert(5, msg({'type': 'error', 'exception_type': 'LimitExceededException'}, 5.1))
+    events.insert(5, msg({'type': 'error', 'exception_type': 'LimitExceededException', 'payload': {}}, 5.1))
     r = reduce_events(events, c)
     assert r['transport_failed'] and not r['transcript_complete']
     events = stream()
@@ -99,70 +144,60 @@ def test_full_benchmark_and_turn_reconstruction_use_the_amazon_protocol():
     assert transcript_timeline(events, c)[-1]['text'] == 'Hello there. How are you?'
 
 
-class FakeSdkStream:
-    """The SDK's stream surface: input_stream.send_audio_event/end_stream and an async output_stream."""
-
-    def __init__(self, text, fault=None):
-        self.text, self.fault, self.frames, self.queue = text, fault, 0, asyncio.Queue()
-        self.input_stream = SimpleNamespace(send_audio_event=self.send_audio_event, end_stream=self.end_stream)
-        self.output_stream = self.events()
-
-    def event(self, text, partial):
-        r = SimpleNamespace(result_id='r1', start_time=0.0, end_time=0.2, is_partial=partial,
-                            alternatives=[SimpleNamespace(transcript=text)])
-        return SimpleNamespace(transcript=SimpleNamespace(results=[r]))
-
-    async def send_audio_event(self, audio_chunk):
-        self.frames += 1
-        if self.fault == 'auth':
-            await self.queue.put(RuntimeError('BadRequestException'))
-        elif self.text and self.frames == 3:
-            await self.queue.put(self.event(self.text.split()[0], True))
-
-    async def end_stream(self):
-        if self.fault == 'disconnect':
-            await self.queue.put(ConnectionError('reset'))
+async def fake_transcribe(ws, text, fault=None):
+    frames = 0
+    async for raw in ws:
+        assert isinstance(raw, bytes)
+        event = wire.decode_events(raw)[0]
+        assert event['type'] == 'AudioEvent'
+        body = raw[12 + int.from_bytes(raw[4:8], 'big'):-4]
+        if fault == 'auth':
+            await ws.send(wire.encode_event({':exception-type': 'BadRequestException', ':message-type': 'exception'},
+                                            b'{"Message":"denied"}'))
             return
-        if self.text:
-            await self.queue.put(self.event(self.text, False))
-        await self.queue.put(None)
+        if body:
+            frames += 1
+            if text and frames == 3:
+                await ws.send(wire.encode_event({':event-type': 'TranscriptEvent', ':message-type': 'event'},
+                                                json.dumps(result('r1', text.split()[0], True)['payload']).encode()))
+            continue
+        # Empty AudioEvent: flush the last result, then close.
+        if fault == 'disconnect':
+            await ws.close(code=1011); return
+        if text:
+            await ws.send(wire.encode_event({':event-type': 'TranscriptEvent', ':message-type': 'event'},
+                                            json.dumps(result('r1', text, False)['payload']).encode()))
+        await ws.close()
+        return
 
-    async def events(self):
-        while (item := await self.queue.get()) is not None:
-            if isinstance(item, Exception):
-                raise item
-            yield item
 
-
-def run_local(tmp_path, monkeypatch, c, fake):
+def run_local(tmp_path, monkeypatch, c, handler):
     monkeypatch.setattr(provider_protocol, 'stream_audio', fast_audio)
-    async def opened(config, key):
-        return fake
-    monkeypatch.setattr(wire, 'open_stream', opened)
     async def scenario():
-        log = EventLog(tmp_path / 'events.jsonl'); log.emit('clip_start')
-        try:
-            await wire.transcribe(bytes(640 * 60), 10, c, KEY, log)
-        except Exception:
-            log.emit('error', error_type='FixtureFailure'); raise
-        finally:
-            log.emit('clip_end'); log.close()
+        async with serve(handler, '127.0.0.1', 0) as server:
+            url = f'ws://127.0.0.1:{server.sockets[0].getsockname()[1]}'
+            log = EventLog(tmp_path / 'events.jsonl'); log.emit('clip_start')
+            monkeypatch.setattr(wire, 'presigned_url', lambda config, key: url)
+            try:
+                await wire.transcribe(bytes(640 * 60), 10, c, KEY, log)
+            except Exception:
+                log.emit('error', error_type='FixtureFailure'); raise
+            finally:
+                log.emit('clip_end'); log.close()
     asyncio.run(scenario())
     assert 'fixture-secret' not in (tmp_path / 'events.jsonl').read_text()
     return reduce_events(read_events(tmp_path / 'events.jsonl'), c)
 
 
 @pytest.mark.parametrize('text', ['hello world', ''])
-def test_local_stream_success(text, tmp_path, monkeypatch):
-    fake = FakeSdkStream(text)
-    r = run_local(tmp_path, monkeypatch, config(), fake)
+def test_local_websocket_success(text, tmp_path, monkeypatch):
+    r = run_local(tmp_path, monkeypatch, config(), lambda ws: fake_transcribe(ws, text))
     assert r['transcript_complete'] and r['model_verified'] and r['transcript'] == text
-    assert fake.frames == 60  # 10 speech frames plus the 50-frame silence tail
 
 
 @pytest.mark.parametrize('fault', ['auth', 'disconnect'])
-def test_local_stream_failure_never_becomes_success(fault, tmp_path, monkeypatch):
+def test_local_websocket_failure_never_becomes_success(fault, tmp_path, monkeypatch):
     c = dict(config(), close_timeout_seconds=.5)
     with pytest.raises(Exception):
-        run_local(tmp_path, monkeypatch, c, FakeSdkStream('hello', fault))
+        run_local(tmp_path, monkeypatch, c, lambda ws: fake_transcribe(ws, 'hello', fault))
     assert not reduce_events(read_events(tmp_path / 'events.jsonl'), c)['transcript_complete']

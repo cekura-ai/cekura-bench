@@ -48,7 +48,7 @@ def prepare(root,models=None,assemblyai_starts_per_minute=5):
             # Rime publishes no realtime ceiling; twenty concurrent streams were accepted live.
             'rime':16,
             # AWS's default Transcribe streaming quota is 25 concurrent streams per Region.
-            'amazon':16}
+            'amazon':12}
     files=[Path('pyproject.toml'),Path('uv.lock'),*Path('src/stt_bench').glob('*.py'),
            *Path('src/stt_bench').glob('*.html'),*Path('tests').glob('*.py'),
            *[p for p in Path('config/models').glob('*.json') if '3.8' not in p.stem],*paths,

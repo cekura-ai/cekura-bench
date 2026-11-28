@@ -1,0 +1,31 @@
+{
+  "model_id": "amazon-transcribe-turbo",
+  "provider": "amazon",
+  "model": "transcribe-turbo",
+  "version": "preview-implicit-routing",
+  "identity_policy": "configured_endpoint_region_only",
+  "endpoint": "https://transcribestreaming.us-east-2.amazonaws.com",
+  "region": "us-east-2",
+  "language": "en-US",
+  "sample_rate": 16000,
+  "encoding": "pcm_s16le",
+  "channels": 1,
+  "frame_ms": 20,
+  "ready_timeout_seconds": 15,
+  "finalize_timeout_seconds": 5,
+  "close_timeout_seconds": 10,
+  "finalization": "stream_end_after_tail",
+  "completion_basis": "response_stream_ended_after_end_stream",
+  "finalize_ack_supported": false,
+  "requires_final_only_completion": true,
+  "model_source": "https://docs.aws.amazon.com/transcribe/latest/dg/streaming-http2.html",
+  "checked_on": "2026-11-28",
+  "pricing": {
+    "usd_per_minute": null,
+    "source": "https://aws.amazon.com/transcribe/pricing/",
+    "status": "account_rate_unverified",
+    "billing_basis": "duration of audio streamed, including silence and retries; rate-dependent estimate, not an invoice; the pricing page's streaming example uses $0.01 per minute but its regional table is not published as text, and the Turbo preview names no separate rate",
+    "checked_on": "2026-11-28"
+  },
+  "protocol_caveat": "Amazon Transcribe Turbo is in public preview: AWS routes standard streaming requests for supported languages in us-east-2 (Ohio) to it with no API change, so there is no model parameter and the service does not name the model; identity rests on the endpoint and region. Streaming uses the HTTP/2 endpoint on port 443 through AWS's amazon-transcribe SDK (the WebSocket endpoint listens only on 8443, which egress policies commonly block); the SDK signs and frames events while the bench paces the audio. Results are keyed by ResultId and final when IsPartial is false. There is no finalize command mid-stream, so the bench's silence tail is sent and then end_stream(); completion is the service ending the response stream after its last results. End-of-turn detection (semantic turn-taking) is off. The default quota is 25 concurrent streams per Region. Latency from regions far from Ohio is not comparable."
+}

@@ -502,7 +502,8 @@ def _inlined(tool: dict) -> dict:
 # Vapi and Retell call our tools at a public address, a tunnel to TOOL_PORT given as TOOL_URL. One server per process
 # hands each call's tool request to the turn waiting on that call, and answers the platform once the conversation has
 # run it.
-TOOL_PORT, TOOL_TOKEN = 8799, uuid.uuid4().hex
+# TOOL_TOKEN may be fixed (an address a platform keeps, such as the Webex flow's); otherwise a new one per process
+TOOL_PORT, TOOL_TOKEN = 8799, os.environ.get("TOOL_TOKEN") or uuid.uuid4().hex
 _platform_calls: dict[str, asyncio.Queue] = {}  # call id -> its turn's queue of call events and tool requests
 _tool_runner = None
 
@@ -549,6 +550,11 @@ async def _tool_server() -> None:
     app = web.Application()
     app.router.add_post("/vapi/{token}", vapi_request)
     app.router.add_post("/retell/{token}", retell_request)
+    from . import webex_client as webex  # the Webex flow's calls, and Twilio's media stream for its phone calls
+    app.router.add_get("/webex/{token}/claim", webex.claim_request)
+    app.router.add_get("/webex/{token}/session/{code}", webex.session_request)
+    app.router.add_post("/webex/{token}/tool", webex.tool_request)
+    app.router.add_get("/twilio/{token}/{code}", webex.media_socket)
     _tool_runner = web.AppRunner(app)
     await _tool_runner.setup()
     await web.TCPSite(_tool_runner, "127.0.0.1", TOOL_PORT).start()
@@ -1672,4 +1678,7 @@ def client(spec: dict):
     if spec["provider"] == "phonic":
         from .phonic_client import PhonicVoice
         return PhonicVoice(spec["model"], purpose, speech)
+    if spec["provider"] == "webex":
+        from .webex_client import WebexVoice
+        return WebexVoice(spec["model"], purpose, speech)
     return RealtimeText(spec["model"], purpose, spec["provider"], speech)

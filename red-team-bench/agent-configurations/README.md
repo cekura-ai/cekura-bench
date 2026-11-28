@@ -25,6 +25,7 @@ The files are taken from the harness's own constants (`redteam/voice_clients.py`
 | `vapi-gpt-4.1.json` | Vapi (GPT-4.1) |
 | `retell-tell-1.json` | Retell (Tell-1), guarded, and the same agent unguarded |
 | `elevenlabs-agents.json` | ElevenLabs Agents (DeepSeek V4.1 Flash, reasoning off) |
+| `webex-ai-agent.json` | Webex AI Agent (Webex AI Pro-US 2.0), built in Webex AI Agent Studio |
 
 The platforms' own agent configs, which the code reads and builds each platform agent from, sit beside these:
 `vapi-agent-config.json`, `retell-agent-config.json`, `elevenlabs-agent-config.json`, and ElevenLabs' own overlay

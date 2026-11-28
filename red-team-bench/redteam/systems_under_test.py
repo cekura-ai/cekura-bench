@@ -22,7 +22,10 @@ CASCADE_CELLS = {"cascade-vapi": ("vapi", "gpt-4.1-2025-04-14", CONFIGS / "vapi-
                  # the same, with Retell's Trust & Safety handbook prompts (AI disclosure, scope boundaries) on
                  "cascade-retell-guard": ("retell-guard", "tell-1", CONFIGS / "retell-agent-config.json"),
                  # ElevenLabs Agents with ElevenLabs' red-team overlay (voice_clients.ELEVEN_AGENT_OVERLAY) merged on
-                 "cascade-elevenagents": ("eleven-agent", "deepseek-v41-flash", CONFIGS / "elevenlabs-agent-config.json")}
+                 "cascade-elevenagents": ("eleven-agent", "deepseek-v41-flash", CONFIGS / "elevenlabs-agent-config.json"),
+                 # Webex AI Agent Studio's agent on Webex AI Pro-US 2.0, over the phone (webex_client.py); built in
+                 # Webex, so its config is a record (webex-ai-agent.json), not read by the code
+                 "cascade-webex": ("webex", "webex-ai-pro-us-2.0", CONFIGS / "webex-ai-agent.json")}
 
 
 def targets() -> dict[str, dict]:

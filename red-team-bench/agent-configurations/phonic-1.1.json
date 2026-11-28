@@ -1,0 +1,30 @@
+{
+  "agent": "Phonic-1.1 (high intelligence)",
+  "cell": "s2svoice-phonic",
+  "architecture": "speech-to-speech",
+  "client": "redteam/phonic_client.py PhonicVoice",
+  "model": "phonic-1.1",
+  "connection": "Phonic speech-to-speech socket, wss://api.phonic.ai/v1/sts/ws",
+  "session": {
+    "type": "config",
+    "model": "phonic-1.1",
+    "system_prompt": "redteam/tau2_airline/system-prompt.txt, then reference_bot_settings.SHARED_RULES (no opening rule: the greeting is already in the history), with the prompt's two optional-argument rules restated for strict tools (phonic_client.PROMPT_RULES), then the call-so-far note",
+    "voice_id": "sabrina",
+    "input_format": "pcm_16000",
+    "output_format": "pcm_16000",
+    "tools": "the 14 airline tools (redteam/tau2_airline/tool-definitions.json), as function definitions, as custom_websocket tools in strict mode (every field required, optional ones nullable; nulls are dropped before the tool runs), tool_call_output_timeout_ms 60000",
+    "intelligence_level": "high",
+    "vad_threshold": 0.38,
+    "vad_min_silence_duration_ms": 800,
+    "vad_min_speech_duration_ms": 50,
+    "vad_prebuffer_duration_ms": 500,
+    "min_words_to_interrupt": 1
+  },
+  "history": "the call so far, oldest first, appended to the system prompt as a note ('The call so far, oldest first. Carry on from here:'), since the service takes no history; no reply is asked for at the start, so it does not greet again",
+  "turn": "its detector (vad_min_silence_duration_ms 800); the caller's line in 40 ms chunks at 16 kHz",
+  "reply": "the words of its audio chunks between assistant_started_speaking and assistant_finished_speaking",
+  "line_cap": "10 conversations at once (plan limit)",
+  "greeting": "Hi! How can I help you today? (redteam/tau2_airline/first-message.txt)",
+  "caller_audio": "the caller's newest line as audio: OpenAI gpt-4o-mini-tts, voice 'alloy', PCM16 at 24000 Hz; earlier kept turns go in as history, never as audio",
+  "session_per_caller_turn": "a new session each caller turn; a tool call and its result stay in that turn's session"
+}

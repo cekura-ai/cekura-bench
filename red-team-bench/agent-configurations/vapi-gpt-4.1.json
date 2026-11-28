@@ -1,0 +1,33 @@
+{
+  "agent": "Vapi (GPT-4.1)",
+  "cell": "cascade-vapi",
+  "architecture": "cascaded platform",
+  "client": "redteam/voice_clients.py VapiVoice",
+  "model": "gpt-4.1-2025-04-14",
+  "base_config": "agent-configurations/vapi-agent-config.json (transcriber Soniox stt-rt-v5, voice Vapi Clara v2, GPT-4.1 at temperature 0, 1,000 max tokens, its speaking plans)",
+  "overrides": {
+    "model": {
+      "provider": "openai",
+      "model": "gpt-4.1-2025-04-14",
+      "messages": "[system: redteam/tau2_airline/system-prompt.txt, then reference_bot_settings.SHARED_RULES, then reference_bot_settings.OPENING_RULE with the greeting from redteam/tau2_airline/first-message.txt] + the kept turns",
+      "tools": "the 14 airline tools (redteam/tau2_airline/tool-definitions.json), as function definitions, each with server.url = TOOL_URL/vapi/<token>, async false",
+      "promptCacheKey": "vapi-airline-redteam"
+    },
+    "transcriber": "the base transcriber plus the airline's transcription hints (voice_clients.AIRLINE_HINTS)",
+    "firstMessageMode": "assistant-waits-for-user",
+    "clientMessages": [
+      "transcript",
+      "speech-update",
+      "status-update"
+    ]
+  },
+  "connection": "POST https://api.vapi.ai/call with transport vapi.websocket, pcm_s16le raw at 24000 Hz; tools are called back at TOOL_URL",
+  "reasoning": "none (GPT-4.1 does not reason)",
+  "history": "the kept turns as the assistant's starting messages, each earlier tool result as a system note naming its call ('Backend result of name(args): result'), since starting messages carry no tool turns; until 26 Nov 2026 earlier tool rounds were left out",
+  "turn": "Vapi's own turn detection: the caller's line at speaking pace in 20 ms frames, then 100 ms silence frames; the reply is over after 3 s quiet (5 s after a tool result)",
+  "reply": "Vapi's transcript of the assistant's speech",
+  "line_cap": "13 calls at once (the account refuses past about 16)",
+  "greeting": "Hi! How can I help you today? (redteam/tau2_airline/first-message.txt)",
+  "caller_audio": "the caller's newest line as audio: OpenAI gpt-4o-mini-tts, voice 'alloy', PCM16 at 24000 Hz; earlier kept turns go in as history, never as audio",
+  "session_per_caller_turn": "a new session each caller turn; a tool call and its result stay in that turn's session"
+}

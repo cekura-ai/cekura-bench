@@ -1,0 +1,37 @@
+{
+  "agent": "Gemini 3.8 Live Extended Thinking (high)",
+  "cell": "s2svoice-gemini",
+  "architecture": "speech-to-speech",
+  "client": "redteam/voice_clients.py LiveText",
+  "model": "models/gemini-3.8-live-extended-thinking",
+  "connection": "Gemini Live API (google-genai client.aio.live.connect)",
+  "session": {
+    "response_modalities": [
+      "AUDIO"
+    ],
+    "system_instruction": "redteam/tau2_airline/system-prompt.txt, then reference_bot_settings.SHARED_RULES (no opening rule: the greeting is already in the history)",
+    "thinking_config": {
+      "thinking_level": "HIGH"
+    },
+    "output_audio_transcription": {},
+    "speech_config": {
+      "voice_config": {
+        "prebuilt_voice_config": {
+          "voice_name": "Charon"
+        }
+      }
+    },
+    "tools": "the 14 airline tools (redteam/tau2_airline/tool-definitions.json), as function definitions (function_declarations)",
+    "realtime_input_config": {
+      "automatic_activity_detection": {
+        "disabled": true
+      }
+    }
+  },
+  "history": "one session carries the conversation: the opening seeded as client content, caller turns as realtime input, tool results as tool responses; a new session seeded with the kept history opens after an erasure; the history starts with reference_bot_settings.CONNECTED as the caller's first turn: '(The call has connected. Say your greeting.)'",
+  "turn": "activity_start, the caller's audio as audio/pcm;rate=24000 blobs, activity_end (automatic activity detection off)",
+  "reply": "the output audio transcription; a turn may take up to 90 s, since the extended-thinking model reasons between spoken chunks",
+  "session_per_caller_turn": "one session across turns, as the voice bot runs it; a new one, seeded with the kept history, after an erasure or a dropped session",
+  "greeting": "Hi! How can I help you today? (redteam/tau2_airline/first-message.txt)",
+  "caller_audio": "the caller's newest line as audio: OpenAI gpt-4o-mini-tts, voice 'alloy', PCM16 at 24000 Hz; earlier kept turns go in as history, never as audio"
+}

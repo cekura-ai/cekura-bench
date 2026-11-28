@@ -1,0 +1,35 @@
+{
+  "agent": "Webex AI Agent (Webex AI Pro-US 2.0)",
+  "cell": "cascade-webex",
+  "architecture": "cascaded (Cisco's own speech recognition, LLM and voice, bundled as the AI engine)",
+  "client": "redteam/webex_client.py WebexVoice",
+  "platform": "Webex AI Agent Studio (autonomous AI agent) behind Webex Contact Center",
+  "ai_agent": {
+    "name": "Cekura Red Team - Airline",
+    "system_id": "cekura-red-team-airline",
+    "ai_engine": "Webex AI Pro-US 2.0",
+    "ai_transparency": "off (optional in this region), as every other agent here runs without a disclosure",
+    "welcome_message": "Hi! How can I help you today? (redteam/tau2_airline/first-message.txt)",
+    "instructions": "redteam/tau2_airline/system-prompt.txt, then reference_bot_settings.SHARED_RULES, then: 'The call so far, oldest first. Carry on from here:' and {{history}}, filled per call from the flow's starting data",
+    "actions": "the 14 airline tools (redteam/tau2_airline/tool-definitions.json) as fulfilment actions, fulfilment 'Manage in the source flow (voice only)', each argument a field of the action's entity table (String, Number, ...): Webex sends a call's arguments only from table fields (an action defined by JSON schema arrives with none), so list and object arguments are JSON text, which the tool server parses back by the tau2 schema (webex_client._typed); Webex's built-in Agent handover action disabled (transfer_to_human_agents replaces it)",
+    "knowledge": "none"
+  },
+  "flow": {
+    "name": "Cekura_Red_Team_Airline_v2 (Webex Contact Center, published)",
+    "entry_point": "an entry point with its own number (WEBEX_NUMBER), routed to this flow",
+    "steps": [
+      "NewContact",
+      "HTTP GET <TOOL_URL>/webex/<token>/claim: the oldest call waiting, as {code, history}",
+      "Set event_data_string to that JSON (event name blank: custom data for the agent)",
+      "Virtual Agent V2 (Webex AI Agent, autonomous) with event name {{event_name}} and event data {{event_data_string}}",
+      "On Handled (an action): Parse the step's MetaData into http_input, then HTTP POST <TOOL_URL>/webex/<token>/tool?code=<session_code>&name=<StateEventName>, body {{http_input}}",
+      "Set event_name to the action's name and event_data_string to the result, and return to the agent",
+      "Escalated or errored: disconnect"
+    ]
+  },
+  "call": "Twilio, from a pool of caller numbers (TWILIO_FROM) to the entry point's number; one call per caller turn, placed one at a time until the flow has claimed it, and at most WEBEX_CALLS_PER_MIN (6) a minute: the sandbox org stopped starting AI agent sessions after about 600 in an hour at 12 a minute (26 Nov 2026); bidirectional media stream (8 kHz mu-law) to the harness",
+  "history": "the kept turns as text in the instructions ({{history}}), oldest first, with tool calls and results, as ElevenAgentVoice._notes writes them",
+  "turn": "the agent's welcome message plays first; the caller's newest line is then played at speaking pace (OpenAI gpt-4o-mini-tts, voice 'alloy', resampled to 8 kHz)",
+  "reply": "the agent's speech after the caller's line, until 1.8 s of quiet (2.5 s after a tool round); a filler or backchannel waits up to 10 s more; transcribed on our side with OpenAI gpt-4o-transcribe, as Webex gives no live transcript to a caller",
+  "session_per_caller_turn": "a new phone call each caller turn; an action and its result stay in that call"
+}

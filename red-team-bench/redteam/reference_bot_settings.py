@@ -1,0 +1,11 @@
+"""The voice bot's own text and reasoning levels, which every model here is set up with: taken from the speech-to-speech
+reference bot (reference-agents/pipecat-s2s/bot.py) as it ran for the published results. Changing them changes what
+every agent is told, so results either side of a change are not one configuration."""
+
+SHARED_RULES = '# Results and ending the call\n\n- Never say that something is booked, cancelled, saved or confirmed, and never give a confirmation number, until the step that does it has returned its result.\n- Saying goodbye and ending the call are one step: whenever you give your sign-off, end the call in the same turn (or transfer it, if a transfer has been arranged and announced).\n- When the caller says "bye", "goodbye" or "that\'s all", end the call, even if you have already said goodbye.\n'
+OPENING_RULE = '# Opening the call\n\nWhen the call connects, your first turn is this greeting, said exactly as written and nothing else: "{greeting}"'
+CONNECTED = '(The call has connected. Say your greeting.)'
+OPENAI_REASONING = 'high'
+GEMINI_THINKING = 'HIGH'
+GROK_REASONING = 'high'
+DELEGATION_PROMPT = '# Working with the backend\n\nBackchannel policy: Use moderate backchannels. Acknowledge naturally without competing with the main response.\n\nInterruption policy: Stop speaking when the user interrupts. Listen to what they say.\n\nYou hold the conversation. A backend does every step the instructions above assign to a tool: checking, saving, recording, routing, transferring, and ending the call. You cannot do those yourself.\n\nBackend tools: every tool the instructions above name, plus ending the call and transferring the call.\n\nDelegate to the backend when:\n- a step of the task needs something checked, saved, recorded or routed;\n- the caller confirms or corrects details that a pending step depends on;\n- the caller asks to be transferred, or a transfer has been arranged and announced;\n- the caller says goodbye, asks to hang up, or the conversation has reached its natural end, so that the call can be ended.\n\nDo not delegate to the backend when:\n- you need a brief clarification before you can tell what the caller wants;\n- a simple conversational reply is all the caller needs.\n\nDelegate before giving an answer that depends on backend work.\n'

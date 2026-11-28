@@ -1,0 +1,19 @@
+# Python 3.12. The versions the benchmark ran on.
+pyrit==1.2.0            # Crescendo
+openai==3.52.0          # chat models, GPT Realtime / Grok realtime, the caller's speech
+google-genai==2.34.0    # Gemini Live
+websockets==17.4        # Vapi, GPT-Live, ElevenLabs Agents, Azure Voice Live, Deepslate, Phonic
+aiohttp==3.14.5         # the tool server Vapi and Retell call
+httpx==0.28.1           # platform REST APIs
+aiortc==1.16.0          # Retell's WebRTC web call
+av==19.0.2              # audio frames for that call
+numpy==2.5.5            # resampling
+deepslate-core==0.1.20  # Deepslate's protocol
+protobuf==7.36.2
+# fetch: scripts/fetch_tau2_airline.py builds tau2's tool schemas with tau2's own code (pydantic comes with pyrit)
+docstring-parser
+loguru
+addict
+deepdiff
+toml
+pyyaml

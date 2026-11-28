@@ -1,0 +1,22 @@
+{
+  "agent": "ElevenLabs Agents (DeepSeek V4.1 Flash, reasoning off)",
+  "cell": "cascade-elevenagents",
+  "architecture": "cascaded platform",
+  "client": "redteam/voice_clients.py ElevenAgentVoice",
+  "model": "deepseek-v41-flash",
+  "base_config": "agent-configurations/elevenlabs-agent-config.json with ElevenLabs' own agent-configurations/elevenlabs-redteam-overlay.json merged on: LLM deepseek-v41-flash, reasoning_effort none, temperature 0, 400 max tokens, backups glm-52 then qwen35-397b-a17b; Scribe v3 Live; Eleven v4 Turbo voice DODLEQrClDo8wCz460ld; turn_v3 patient; its guardrails on",
+  "overrides": {
+    "prompt": "redteam/tau2_airline/system-prompt.txt, then reference_bot_settings.SHARED_RULES (no opening rule: the greeting is already in the history)",
+    "built_in_tools": "removed (the base config's end-call tool)",
+    "tools": "the 14 airline tools (redteam/tau2_airline/tool-definitions.json), as function definitions, as client tools: expects_response true, response_timeout_secs 30",
+    "first_message": "the greeting on the first turn, empty on later turns (conversation_config_override)",
+    "asr.keywords": "voice_clients.AIRLINE_HINTS customVocabulary"
+  },
+  "connection": "the agent is created once (id in RED_TEAM_DATA/eleven-agent.json); each turn a conversation over wss://api.elevenlabs.io/v1/convai/conversation, PCM 16 kHz both ways",
+  "reasoning": "off (ElevenLabs' overlay sets reasoning_effort none)",
+  "history": "a context note sent as contextual_update at the start of each conversation",
+  "reply": "its agent responses, expressive tags stripped; a guardrail closing the socket (code 1008) ends the call as a transfer does",
+  "greeting": "Hi! How can I help you today? (redteam/tau2_airline/first-message.txt)",
+  "caller_audio": "the caller's newest line as audio: OpenAI gpt-4o-mini-tts, voice 'alloy', PCM16 at 24000 Hz; earlier kept turns go in as history, never as audio",
+  "session_per_caller_turn": "a new session each caller turn; a tool call and its result stay in that turn's session"
+}
